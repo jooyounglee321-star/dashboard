@@ -218,24 +218,25 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
 
       <!-- 종목 추가 폼 -->
       <div class="form-row">
+        <div class="form-group">
+          <label>티커 심볼 *</label>
+          <input type="text" id="stk-ticker" placeholder="AAPL / 005930.KS">
+        </div>
         <div class="form-group" style="flex:1.5">
           <label>종목명</label>
           <input type="text" id="stk-name" placeholder="예: 삼성전자 / NVDA">
         </div>
         <div class="form-group">
-          <label>현재가</label>
-          <input type="number" id="stk-price" placeholder="예: 73500" min="0">
+          <label>수량</label>
+          <input type="number" id="stk-qty" placeholder="예: 10" min="0" step="any">
         </div>
         <div class="form-group">
-          <label>수량 (주)</label>
-          <input type="number" id="stk-qty" placeholder="예: 10" min="0">
-        </div>
-        <div class="form-group">
-          <label>등락률 (%)</label>
-          <input type="number" id="stk-change" placeholder="예: 1.23" step="0.01">
+          <label>평균단가</label>
+          <input type="number" id="stk-avg" placeholder="예: 73500" min="0" step="any">
         </div>
         <button class="btn-primary" onclick="addStock()">+ 추가</button>
       </div>
+      <div style="font-size:0.75rem;color:var(--ink3);margin-top:-0.4rem">💡 한국주식: <b>005930.KS</b> · 한국ETF: <b>069500.KS</b> · 현재가는 Yahoo Finance에서 자동 조회됩니다</div>
 
       <!-- 카테고리별 목록 -->
       <div class="item-list" id="stock-item-list"></div>
@@ -424,42 +425,54 @@ function addYT(){
 function delYT(i){ytChannels.splice(i,1);sv('yt_channels',ytChannels);renderYTList();toast('삭제되었습니다');}
 renderYTAccount();renderYTList();
 
-/* ── 주식 4카테고리 ── */
+/* ── 주식 4카테고리 (Yahoo Finance 실시간) ── */
 const CATS=[
   {key:'robinhood', label:'🇺🇸 Robinhood',sym:'$',cls:'robinhood'},
   {key:'us',        label:'🇺🇸 US',        sym:'$',cls:'us'},
   {key:'kor-stock', label:'🇰🇷 KOR Stock', sym:'₩',cls:'kor-stock'},
   {key:'kor-etf',   label:'📊 KOR ETF',    sym:'₩',cls:'kor-etf'}
 ];
-let stocks=ld('stocks',{robinhood:[],us:[],['kor-stock']:[],['kor-etf']:[]});
 let curCat='robinhood';
+let _stocksCache=[];
 
 function switchStockTab(cat,btn){
   curCat=cat;
   document.querySelectorAll('.stock-tab').forEach(b=>{b.classList.remove('active','robinhood','us','kor-stock','kor-etf');});
   btn.classList.add('active',cat);
   const catObj=CATS.find(c=>c.key===cat);
+  const cnt=_stocksCache.filter(s=>s.category===cat).length;
   const lbl=gel('stock-cat-label');
-  if(lbl)lbl.textContent=`현재 카테고리: ${catObj?.label||cat} (통화: ${catObj?.sym||''})`;
+  if(lbl)lbl.textContent=`현재 카테고리: ${catObj?.label||cat} (통화: ${catObj?.sym||''}) · ${cnt}/10개`;
   renderStockList();
 }
 
+async function loadStocks(){
+  try{ _stocksCache=await fetch('/api/stocks').then(r=>r.json()); }
+  catch{ _stocksCache=[]; }
+  renderStockList();
+  renderStockSummary();
+  const catObj=CATS.find(c=>c.key===curCat);
+  const cnt=_stocksCache.filter(s=>s.category===curCat).length;
+  const lbl=gel('stock-cat-label');
+  if(lbl)lbl.textContent=`현재 카테고리: ${catObj?.label||curCat} (통화: ${catObj?.sym||''}) · ${cnt}/10개`;
+}
+
 function renderStockList(){
-  const list=stocks[curCat]||[];
+  const list=_stocksCache.filter(s=>s.category===curCat);
   const catObj=CATS.find(c=>c.key===curCat);
   const sym=catObj?.sym||'₩';
   const div=gel('stock-item-list');
   if(!list.length){div.innerHTML='<div class="empty-notice">이 카테고리에 종목이 없습니다</div>';renderStockSummary();return;}
-  div.innerHTML=list.map((s,i)=>{
-    const val=(s.price||0)*(s.qty||0);
+  div.innerHTML=list.map(s=>{
+    const val=Number(s.avg_price||0)*(s.quantity||0);
+    const fmt=v=>sym==='₩'?Math.round(v).toLocaleString('ko-KR'):Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
     return `<div class="item-row">
       <span class="stock-badge badge-${curCat}">${catObj?.label||curCat}</span>
       <div class="item-info">
-        <div class="item-name">${s.name}</div>
-        <div class="item-sub">${s.qty}주 · ${sym}${(s.price||0).toLocaleString()} · 평가액 ${sym}${val.toLocaleString()} · ${s.change>=0?'▲':'▼'}${Math.abs(s.change||0).toFixed(2)}%</div>
+        <div class="item-name"><strong>${s.ticker}</strong>${s.name?` · ${s.name}`:''}</div>
+        <div class="item-sub">${s.quantity||0}주 · 평균단가 ${sym}${fmt(s.avg_price||0)} · 평가액 ${sym}${fmt(val)} · <span style="color:var(--blue);font-size:0.7rem">현재가: Yahoo Finance 자동조회</span></div>
       </div>
-      <button class="btn-danger" onclick="editPrice('${curCat}',${i})">가격 수정</button>
-      <button class="btn-danger" onclick="delStock('${curCat}',${i})">삭제</button>
+      <button class="btn-danger" onclick="delStock(${s.id})">삭제</button>
     </div>`;
   }).join('');
   renderStockSummary();
@@ -467,44 +480,53 @@ function renderStockList(){
 
 function renderStockSummary(){
   const summary=gel('stock-summary');
-  const hasAny=CATS.some(c=>(stocks[c.key]||[]).length>0);
-  if(!hasAny){summary.style.display='none';return;}
+  if(!_stocksCache.length){summary.style.display='none';return;}
   summary.style.display='grid';
   summary.innerHTML=CATS.map(cat=>{
-    const list=stocks[cat.key]||[];
-    const total=list.reduce((s,s2)=>s+(s2.price||0)*(s2.qty||0),0);
+    const list=_stocksCache.filter(s=>s.category===cat.key);
+    const total=list.reduce((a,s)=>a+Number(s.avg_price||0)*(s.quantity||0),0);
+    const fmt=v=>cat.sym==='₩'?Math.round(v).toLocaleString('ko-KR'):v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
     return `<div>
-      <div style="font-size:0.7rem;color:#a89880">${cat.label}</div>
-      <div style="font-size:0.95rem;font-weight:500;color:var(--accent2)">${cat.sym}${Math.round(total).toLocaleString()}</div>
+      <div style="font-size:0.7rem;color:#a89880">${cat.label} (${list.length}개)</div>
+      <div style="font-size:0.95rem;font-weight:500;color:var(--accent2)">${cat.sym}${fmt(total)}</div>
     </div>`;
   }).join('');
 }
 
-function addStock(){
-  const name=gel('stk-name').value.trim();
-  const price=parseFloat(gel('stk-price').value)||0;
-  const qty=parseInt(gel('stk-qty').value)||0;
-  const change=parseFloat(gel('stk-change').value)||0;
-  if(!name){toast('종목명을 입력해주세요');return;}
-  if(!stocks[curCat])stocks[curCat]=[];
-  stocks[curCat].push({name,price,qty,change});
-  sv('stocks',stocks);
-  gel('stk-name').value='';gel('stk-price').value='';gel('stk-qty').value='';gel('stk-change').value='';
-  renderStockList();toast('✓ 종목이 추가되었습니다');
+async function addStock(){
+  const ticker=(gel('stk-ticker').value||'').trim().toUpperCase();
+  const name=(gel('stk-name').value||'').trim();
+  const qty=parseFloat(gel('stk-qty').value)||null;
+  const avg=parseFloat(gel('stk-avg').value)||null;
+  if(!ticker){toast('티커 심볼을 입력해주세요');return;}
+  const catCount=_stocksCache.filter(s=>s.category===curCat).length;
+  if(catCount>=10){toast('카테고리당 최대 10개까지 추가 가능합니다');return;}
+  try{
+    const res=await fetch('/api/stocks',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({category:curCat,ticker,name:name||null,quantity:qty,avg_price:avg})
+    });
+    if(res.ok){
+      gel('stk-ticker').value='';gel('stk-name').value='';gel('stk-qty').value='';gel('stk-avg').value='';
+      await loadStocks();toast('✓ 종목이 추가되었습니다');
+    }else{
+      const err=await res.json().catch(()=>({detail:'오류'}));
+      toast(err.detail||'추가 실패');
+    }
+  }catch{toast('서버에 연결할 수 없습니다');}
 }
 
-function editPrice(cat,i){
-  const catObj=CATS.find(c=>c.key===cat);
-  const newPrice=prompt(`${stocks[cat][i].name} 현재가 (${catObj?.sym||''})`,stocks[cat][i].price);
-  if(newPrice===null)return;
-  const newChange=prompt('등락률 (%) 예: 1.23 또는 -0.5',stocks[cat][i].change);
-  stocks[cat][i].price=parseFloat(newPrice)||0;
-  if(newChange!==null)stocks[cat][i].change=parseFloat(newChange)||0;
-  sv('stocks',stocks);renderStockList();toast('✓ 가격이 수정되었습니다');
+async function delStock(id){
+  if(!confirm('삭제하시겠습니까?'))return;
+  try{
+    const res=await fetch(`/api/stocks/${id}`,{method:'DELETE'});
+    if(res.ok){await loadStocks();toast('삭제되었습니다');}
+    else toast('삭제 실패');
+  }catch{toast('서버에 연결할 수 없습니다');}
 }
-function delStock(cat,i){stocks[cat].splice(i,1);sv('stocks',stocks);renderStockList();toast('삭제되었습니다');}
 
-/* 초기 카테고리 표시 */
+/* 초기 로드 */
+loadStocks();
 switchStockTab('robinhood',document.querySelector('.stock-tab'));
 
 /* ── 즐겨찾기 사이트 ── */
