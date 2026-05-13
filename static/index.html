@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>나의 하루 대시보드</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f0e8;--card:#fffef9;--card2:#faf7f0;
+  --ink:#2c2416;--ink2:#6b5e4a;--ink3:#a89880;
+  --accent:#c4662a;--accent2:#e8a060;--gold:#d4a843;
+  --green:#4a7c59;--blue:#3a6b8a;
+  --border:rgba(100,80,50,0.15);--shadow:0 2px 12px rgba(100,70,30,0.08);
+  --nav-h:62px;
+}
+body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif;font-weight:300;min-height:100vh;}
+
+/* ── HEADER ── */
+.header{background:var(--ink);color:#f5f0e8;padding:0.9rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;}
+.header-title{font-family:'Playfair Display',serif;font-size:1.25rem;color:var(--accent2);}
+.header-right{display:flex;align-items:center;gap:0.8rem;}
+.header-date{font-size:0.78rem;color:#a89880;}
+.admin-link{font-size:0.78rem;color:var(--accent2);text-decoration:none;border:1px solid rgba(232,160,96,0.4);padding:0.28rem 0.7rem;border-radius:20px;}
+
+/* ── PC GRID ── */
+.main{max-width:1400px;margin:0 auto;padding:1.2rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;}
+
+/* ── CARD ── */
+.card{background:var(--card);border-radius:14px;border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden;}
+.card-header{display:flex;align-items:center;gap:0.45rem;padding:0.75rem 1.1rem 0.6rem;border-bottom:1px solid var(--border);background:var(--card2);}
+.card-icon{font-size:1rem;}
+.card-title{font-size:0.7rem;font-weight:500;letter-spacing:0.1em;color:var(--ink3);text-transform:uppercase;}
+.card-body{padding:0.9rem 1.1rem;}
+
+/* ── HERO: 시간 3지역 + 날씨 ── */
+.card-hero{grid-column:1/-1;background:var(--card);border-radius:14px;border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden;}
+.hero-inner{display:grid;grid-template-columns:repeat(3,1fr) 1fr;min-height:120px;}
+.time-zone{display:flex;flex-direction:column;justify-content:center;padding:1.2rem 1.4rem;border-right:1px solid var(--border);}
+.tz-region{font-size:0.7rem;letter-spacing:0.1em;color:var(--ink3);text-transform:uppercase;margin-bottom:0.3rem;}
+.tz-time{font-family:'Playfair Display',serif;font-size:2.6rem;color:var(--ink);line-height:1;}
+.tz-date{font-size:0.75rem;color:var(--ink2);margin-top:0.3rem;}
+.tz-name{font-size:0.72rem;color:var(--ink3);margin-top:0.15rem;}
+.tz-primary .tz-time{font-size:3rem;color:var(--ink);}
+.hero-weather{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:1.2rem;gap:0.2rem;background:var(--card2);}
+.w-emoji{font-size:2.2rem;}
+.w-temp{font-size:1.4rem;font-weight:500;}
+.w-desc{font-size:0.75rem;color:var(--ink2);}
+.w-loc{font-size:0.68rem;color:var(--ink3);}
+.w-btn{font-size:0.68rem;color:var(--ink3);cursor:pointer;background:none;border:none;text-decoration:underline;margin-top:2px;}
+
+/* ── 일정 (Google Calendar) ── */
+.card-schedule{grid-column:1/2;}
+.gcal-connect{display:flex;flex-direction:column;align-items:center;gap:0.6rem;padding:1rem 0;text-align:center;}
+.gcal-icon{font-size:2rem;}
+.gcal-desc{font-size:0.8rem;color:var(--ink2);line-height:1.6;}
+.gcal-btn{padding:0.5rem 1.2rem;background:#4285f4;color:#fff;border:none;border-radius:8px;font-size:0.85rem;cursor:pointer;font-family:inherit;font-weight:500;}
+.gcal-btn:hover{background:#2b6ce6;}
+.sched-list{list-style:none;display:flex;flex-direction:column;gap:0.4rem;}
+.sched-item{display:flex;align-items:flex-start;gap:0.6rem;padding:0.45rem 0.6rem;background:var(--card2);border-radius:8px;}
+.sched-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);margin-top:0.35rem;flex-shrink:0;}
+.sched-time{font-size:0.75rem;color:var(--accent);font-weight:500;min-width:40px;}
+.sched-text{font-size:0.85rem;color:var(--ink2);}
+.sched-refresh{width:100%;margin-top:0.6rem;padding:0.38rem;background:var(--card2);border:1px solid var(--border);border-radius:8px;font-size:0.75rem;color:var(--ink3);cursor:pointer;font-family:inherit;}
+.sched-refresh:hover{color:var(--ink);}
+
+/* ── 유튜브 ── */
+.card-yt{grid-column:2/3;}
+.yt-account-bar{display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.7rem;background:var(--card2);border-radius:8px;margin-bottom:0.7rem;border:1px solid var(--border);}
+.yt-account-label{font-size:0.72rem;color:var(--ink3);}
+.yt-account-val{font-size:0.82rem;color:var(--ink2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.yt-list{list-style:none;display:flex;flex-direction:column;gap:0.4rem;}
+.yt-item a{display:flex;align-items:center;gap:0.55rem;text-decoration:none;color:var(--ink2);font-size:0.85rem;padding:0.4rem 0.5rem;border-radius:8px;transition:background 0.15s;}
+.yt-item a:hover{background:var(--card2);}
+.yt-ico{width:44px;height:30px;background:#ff0000;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.8rem;color:#fff;}
+.yt-name{font-size:0.82rem;color:var(--ink);font-weight:400;}
+.yt-url{font-size:0.68rem;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px;}
+
+/* ── 주식 4카테고리 ── */
+.card-stock{grid-column:3/4;grid-row:2/5;}
+.stock-cat{margin-bottom:0.8rem;}
+.stock-cat-header{display:flex;justify-content:space-between;align-items:center;padding:0.35rem 0.6rem;border-radius:6px;margin-bottom:0.35rem;}
+.stock-cat-header.robinhood{background:#00c805;color:#004a00;}
+.stock-cat-header.ira{background:#1a73e8;color:#fff;}
+.stock-cat-header.kr-stock{background:#c4662a;color:#fff;}
+.stock-cat-header.kr-etf{background:#6b5e4a;color:#fff;}
+.stock-cat-name{font-size:0.72rem;font-weight:500;letter-spacing:0.05em;}
+.stock-cat-sum{font-size:0.78rem;font-weight:700;}
+.stock-list{list-style:none;display:flex;flex-direction:column;}
+.stock-item{display:flex;align-items:center;justify-content:space-between;padding:0.4rem 0.4rem;border-bottom:1px solid var(--border);font-size:0.82rem;}
+.stock-item:last-child{border-bottom:none;}
+.stock-name{font-weight:400;color:var(--ink);}
+.stock-qty{font-size:0.68rem;color:var(--ink3);}
+.stock-right{text-align:right;}
+.stock-price{font-weight:500;color:var(--ink);}
+.stock-val{font-size:0.68rem;color:var(--ink3);}
+.up{color:#e03030;font-size:0.68rem;}
+.down{color:var(--blue);font-size:0.68rem;}
+.stock-total-bar{margin-top:0.8rem;padding:0.6rem 0.8rem;background:var(--ink);border-radius:10px;display:flex;justify-content:space-between;align-items:center;}
+.stock-total-label{font-size:0.75rem;color:#a89880;}
+.stock-total-value{font-size:1.05rem;font-weight:700;color:var(--accent2);}
+.stock-divider{height:0.5px;background:var(--border);margin:0.6rem 0;}
+
+/* ── 지출 ── */
+.card-expense{grid-column:1/2;}
+.exp-today{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.7rem;}
+.exp-label{font-size:0.78rem;color:var(--ink3);}
+.exp-amount{font-size:1.5rem;font-weight:700;}
+.exp-form{display:flex;gap:0.35rem;margin-bottom:0.7rem;flex-wrap:wrap;}
+.exp-form input,.exp-form select{padding:0.38rem 0.55rem;font-size:0.8rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--ink);font-family:inherit;flex:1;min-width:70px;}
+.exp-list{list-style:none;display:flex;flex-direction:column;gap:0.25rem;max-height:160px;overflow-y:auto;}
+.exp-item{display:flex;justify-content:space-between;align-items:center;font-size:0.8rem;padding:0.28rem 0;border-bottom:1px solid var(--border);}
+.exp-item:last-child{border-bottom:none;}
+.exp-cat{font-size:0.68rem;color:#fff;padding:0.08rem 0.38rem;border-radius:10px;margin-right:0.35rem;}
+.cat-식비{background:var(--accent)}.cat-교통{background:var(--blue)}.cat-쇼핑{background:var(--gold);color:var(--ink)}.cat-생활{background:var(--green)}.cat-기타{background:var(--ink3);}
+.exp-db-badge{font-size:0.68rem;color:var(--green);border:1px solid var(--green);padding:0.1rem 0.5rem;border-radius:10px;margin-left:auto;}
+
+/* ── 식단 ── */
+.card-diet{grid-column:2/3;}
+.meal-row{display:flex;gap:0.5rem;align-items:flex-start;margin-bottom:0.5rem;}
+.meal-label{font-size:0.72rem;color:var(--accent);font-weight:500;min-width:28px;margin-top:0.25rem;}
+.meal-content{font-size:0.83rem;color:var(--ink2);flex:1;line-height:1.5;}
+.meal-form{border-top:1px solid var(--border);padding-top:0.6rem;margin-top:0.4rem;display:flex;flex-direction:column;gap:0.35rem;}
+.meal-form-row{display:flex;gap:0.35rem;}
+.meal-form select,.meal-form input{padding:0.35rem 0.55rem;font-size:0.8rem;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--ink);font-family:inherit;}
+.meal-form select{flex:0 0 58px;}
+.meal-form input{flex:1;}
+
+/* ── 메모 ── */
+.card-memo{grid-column:1/2;}
+.memo-display{font-size:0.85rem;color:var(--ink2);line-height:1.7;white-space:pre-wrap;word-break:break-all;min-height:55px;}
+.memo-ta{width:100%;min-height:85px;padding:0.55rem;border:1px solid var(--border);border-radius:8px;font-size:0.83rem;color:var(--ink);font-family:inherit;font-weight:300;background:var(--bg);resize:vertical;line-height:1.6;display:none;}
+.memo-ta:focus{outline:none;border-color:var(--accent);}
+.memo-btns{display:flex;gap:0.35rem;margin-top:0.45rem;}
+.memo-date{font-size:0.7rem;color:var(--ink3);margin-top:0.35rem;}
+
+/* ── 뉴스 ── */
+.card-news{grid-column:2/3;}
+.news-tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:0.7rem;}
+.news-tab{padding:0.3rem 0.8rem;font-size:0.75rem;cursor:pointer;background:none;border:none;color:var(--ink3);font-family:inherit;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.15s;}
+.news-tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:500;}
+.news-panel{display:none;}
+.news-panel.active{display:block;}
+.news-list{list-style:none;display:flex;flex-direction:column;gap:0.35rem;}
+.news-item a{display:block;font-size:0.8rem;color:var(--ink2);text-decoration:none;padding:0.28rem 0;line-height:1.4;border-bottom:1px solid var(--border);}
+.news-item:last-child a{border-bottom:none;}
+.news-item a:hover{color:var(--accent);}
+.news-source{font-size:0.68rem;color:var(--ink3);display:block;margin-top:0.1rem;}
+
+/* ── 사이트 ── */
+.card-sites{grid-column:1/3;}
+.sites-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:0.5rem;}
+.site-item{display:flex;flex-direction:column;align-items:center;gap:0.35rem;padding:0.65rem 0.4rem;background:var(--card2);border-radius:10px;border:1px solid var(--border);text-decoration:none;color:var(--ink2);font-size:0.72rem;text-align:center;transition:all 0.15s;word-break:break-all;}
+.site-item:hover{background:var(--bg);border-color:var(--accent);transform:translateY(-1px);}
+
+/* ── 공통 버튼 ── */
+.btn-sm{padding:0.3rem 0.7rem;font-size:0.8rem;cursor:pointer;background:var(--accent);color:#fff;border:none;border-radius:6px;font-family:inherit;font-weight:500;white-space:nowrap;}
+.btn-sm:hover{background:#a8551f;}
+.btn-outline{padding:0.28rem 0.75rem;font-size:0.78rem;cursor:pointer;background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:6px;font-family:inherit;}
+.btn-del{background:none;border:none;color:var(--ink3);cursor:pointer;font-size:0.8rem;margin-left:auto;flex-shrink:0;}
+.btn-del:hover{color:var(--accent);}
+.empty-msg{font-size:0.8rem;color:var(--ink3);font-style:italic;padding:0.4rem 0;}
+
+/* ── MOBILE NAV ── */
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(--ink);border-top:1px solid rgba(255,255,255,0.1);height:var(--nav-h);align-items:stretch;}
+.mnav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:2px;background:none;border:none;color:#a89880;cursor:pointer;font-family:inherit;font-size:0.58rem;padding:0.3rem 0;text-decoration:none;}
+.mnav-item.active,.mnav-item:hover{color:var(--accent2);}
+.mnav-icon{font-size:1.3rem;line-height:1;}
+.mobile-view{display:none;}
+.mob-section{display:none;}
+.mob-section.active{display:block;}
+
+/* ── 모바일 공통 카드 ── */
+.m-card{background:var(--card);border-radius:12px;border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden;margin-bottom:0.75rem;}
+.m-card-header{display:flex;align-items:center;gap:0.4rem;padding:0.65rem 1rem;border-bottom:1px solid var(--border);background:var(--card2);}
+.m-card-title{font-size:0.7rem;font-weight:500;letter-spacing:0.08em;color:var(--ink3);text-transform:uppercase;}
+.m-card-body{padding:0.9rem 1rem;}
+
+/* 모바일 히어로 */
+.m-hero{background:var(--ink);border-radius:12px;margin-bottom:0.75rem;overflow:hidden;}
+.m-hero-top{padding:1rem 1.1rem;display:grid;grid-template-columns:1fr 1fr;}
+.m-big-time{font-family:'Playfair Display',serif;font-size:2.8rem;color:#f5f0e8;line-height:1;}
+.m-big-date{font-size:0.72rem;color:#a89880;margin-top:0.3rem;}
+.m-weather-block{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:0.15rem;}
+.m-w-emoji{font-size:2rem;}
+.m-w-temp{font-size:1.3rem;font-weight:500;color:#f5f0e8;}
+.m-w-desc{font-size:0.7rem;color:#a89880;text-align:right;}
+.m-hero-zones{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid rgba(255,255,255,0.08);}
+.m-zone{padding:0.6rem 1rem;border-right:1px solid rgba(255,255,255,0.08);}
+.m-zone:last-child{border-right:none;}
+.m-zone-region{font-size:0.6rem;color:#a89880;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.15rem;}
+.m-zone-time{font-size:1.1rem;color:#f5f0e8;font-weight:300;}
+.m-zone-name{font-size:0.6rem;color:#6b5e4a;}
+
+/* 모바일 입력 */
+.m-input{width:100%;padding:0.55rem 0.75rem;font-size:0.88rem;border:1px solid var(--border);border-radius:9px;background:var(--bg);color:var(--ink);font-family:inherit;}
+.m-select{padding:0.52rem 0.6rem;font-size:0.85rem;border:1px solid var(--border);border-radius:9px;background:var(--bg);color:var(--ink);font-family:inherit;}
+.m-btn{padding:0.6rem 1.1rem;font-size:0.88rem;cursor:pointer;background:var(--accent);color:#fff;border:none;border-radius:9px;font-family:inherit;font-weight:500;white-space:nowrap;}
+.m-btn:active{background:#a8551f;}
+.m-btn-outline{padding:0.55rem 1rem;font-size:0.88rem;cursor:pointer;background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:9px;font-family:inherit;}
+.m-row{display:flex;gap:0.5rem;margin-bottom:0.5rem;align-items:center;}
+
+/* 모바일 주식 카테고리 */
+.m-stock-cat{margin-bottom:0.8rem;}
+.m-stock-cat-hd{display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0.7rem;border-radius:8px;margin-bottom:0.4rem;}
+.m-stock-cat-hd.robinhood{background:#00c805;color:#004a00;}
+.m-stock-cat-hd.ira{background:#1a73e8;color:#fff;}
+.m-stock-cat-hd.kr-stock{background:#c4662a;color:#fff;}
+.m-stock-cat-hd.kr-etf{background:#6b5e4a;color:#fff;}
+.m-stock-cat-nm{font-size:0.78rem;font-weight:500;}
+.m-stock-cat-sum{font-size:0.82rem;font-weight:700;}
+.m-stock-list{list-style:none;}
+.m-stock-item{display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;border-bottom:1px solid var(--border);}
+.m-stock-item:last-child{border-bottom:none;}
+.m-stock-name{font-size:0.9rem;}
+.m-stock-qty{font-size:0.7rem;color:var(--ink3);}
+.m-stock-price{font-size:0.9rem;font-weight:500;text-align:right;}
+.m-stock-val{font-size:0.7rem;color:var(--ink3);text-align:right;}
+.m-total-bar{background:var(--ink);border-radius:10px;padding:0.75rem 1rem;display:flex;justify-content:space-between;align-items:center;margin-top:0.5rem;}
+
+/* 모바일 나머지 */
+.m-sched-list{list-style:none;display:flex;flex-direction:column;gap:0.4rem;margin-bottom:0.7rem;}
+.m-sched-item{display:flex;align-items:center;gap:0.6rem;background:var(--card2);border-radius:8px;padding:0.6rem 0.8rem;}
+.m-sched-time{font-size:0.8rem;color:var(--accent);font-weight:500;min-width:42px;}
+.m-sched-text{font-size:0.88rem;color:var(--ink2);flex:1;}
+.m-exp-total{font-size:2rem;font-weight:700;margin-bottom:0.9rem;}
+.m-exp-lbl{font-size:0.75rem;color:var(--ink3);display:block;margin-bottom:0.15rem;}
+.m-exp-list{list-style:none;}
+.m-exp-item{display:flex;justify-content:space-between;align-items:center;padding:0.55rem 0;border-bottom:1px solid var(--border);font-size:0.9rem;}
+.m-exp-item:last-child{border-bottom:none;}
+.m-meal-row{display:flex;gap:0.5rem;align-items:flex-start;padding:0.5rem 0;border-bottom:1px solid var(--border);}
+.m-meal-row:last-child{border-bottom:none;}
+.m-meal-label{font-size:0.78rem;color:var(--accent);font-weight:500;min-width:30px;margin-top:0.2rem;}
+.m-meal-content{font-size:0.88rem;color:var(--ink2);flex:1;line-height:1.5;}
+.m-memo-display{font-size:0.88rem;color:var(--ink2);line-height:1.7;white-space:pre-wrap;word-break:break-all;min-height:60px;}
+.m-memo-ta{width:100%;min-height:120px;padding:0.7rem;border:1px solid var(--border);border-radius:10px;font-size:0.88rem;color:var(--ink);font-family:inherit;font-weight:300;background:var(--bg);resize:vertical;line-height:1.7;display:none;}
+.m-memo-ta:focus{outline:none;border-color:var(--accent);}
+.m-news-tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:0.8rem;}
+.m-news-tab{padding:0.5rem 1rem;font-size:0.85rem;cursor:pointer;background:none;border:none;color:var(--ink3);font-family:inherit;border-bottom:2px solid transparent;margin-bottom:-1px;}
+.m-news-tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:500;}
+.m-news-panel{display:none;}
+.m-news-panel.active{display:block;}
+.m-news-list{list-style:none;}
+.m-news-item{border-bottom:1px solid var(--border);}
+.m-news-item:last-child{border-bottom:none;}
+.m-news-item a{display:block;padding:0.75rem 0;font-size:0.9rem;color:var(--ink2);text-decoration:none;line-height:1.4;}
+.m-news-source{font-size:0.72rem;color:var(--ink3);display:block;margin-top:0.15rem;}
+.m-yt-list{list-style:none;display:flex;flex-direction:column;gap:0.4rem;}
+.m-yt-item a{display:flex;align-items:center;gap:0.7rem;text-decoration:none;color:var(--ink2);padding:0.6rem 0.8rem;background:var(--card2);border-radius:9px;}
+.m-yt-ico{width:48px;height:32px;background:#ff0000;border-radius:5px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:0.9rem;flex-shrink:0;}
+.m-yt-name{font-size:0.92rem;color:var(--ink);}
+.m-sites-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;}
+.m-site-item{display:flex;flex-direction:column;align-items:center;gap:0.35rem;padding:0.7rem 0.3rem;background:var(--card2);border-radius:10px;border:1px solid var(--border);text-decoration:none;color:var(--ink2);font-size:0.7rem;text-align:center;word-break:break-all;}
+
+/* ── RESPONSIVE ── */
+@media(max-width:1100px){
+  .card-stock{grid-column:auto;grid-row:auto;}
+  .card-sites{grid-column:1/-1;}
+}
+@media(max-width:960px){
+  .main{grid-template-columns:1fr 1fr;}
+  .hero-inner{grid-template-columns:1fr 1fr 1fr;}
+  .time-zone:last-of-type{display:none;}
+  .hero-weather{display:none;}
+  .card-stock,.card-sites{grid-column:1/-1;}
+}
+@media(max-width:640px){
+  .header-date{display:none;}
+  .header{padding:0.75rem 1rem;}
+  .main{display:none;}
+  .mobile-view{display:block;padding:0.8rem 0.9rem;padding-bottom:calc(var(--nav-h) + 0.8rem);}
+  .mobile-nav{display:flex;}
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <span class="header-title">✦ 나의 하루</span>
+  <div class="header-right">
+    <span class="header-date" id="headerDate"></span>
+    <a href="admin.html" class="admin-link">⚙ 관리자</a>
+  </div>
+</header>
+
+<!-- ════════════════════════════
+     PC 레이아웃
+════════════════════════════ -->
+<main class="main">
+
+  <!-- ① 시간 3지역 + 날씨 -->
+  <div class="card-hero">
+    <div class="hero-inner">
+      <div class="time-zone tz-primary" id="pc-tz0">
+        <div class="tz-region" id="pc-tz0-region">내 위치</div>
+        <div class="tz-time" id="pc-tz0-time">--:--</div>
+        <div class="tz-date" id="pc-tz0-date"></div>
+        <div class="tz-name" id="pc-tz0-name"></div>
+      </div>
+      <div class="time-zone" id="pc-tz1">
+        <div class="tz-region" id="pc-tz1-region">지역 2</div>
+        <div class="tz-time" id="pc-tz1-time">--:--</div>
+        <div class="tz-date" id="pc-tz1-date"></div>
+        <div class="tz-name" id="pc-tz1-name"></div>
+      </div>
+      <div class="time-zone" id="pc-tz2">
+        <div class="tz-region" id="pc-tz2-region">지역 3</div>
+        <div class="tz-time" id="pc-tz2-time">--:--</div>
+        <div class="tz-date" id="pc-tz2-date"></div>
+        <div class="tz-name" id="pc-tz2-name"></div>
+      </div>
+      <div class="hero-weather">
+        <div class="w-emoji" id="pc-w-emoji">🌤</div>
+        <div class="w-temp" id="pc-w-temp">--°C</div>
+        <div class="w-desc" id="pc-w-desc">날씨 확인 중</div>
+        <div class="w-loc" id="pc-w-loc"></div>
+        <button class="w-btn" onclick="loadWeather()">새로고침</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② 일정 (Google Calendar) -->
+  <div class="card card-schedule">
+    <div class="card-header"><span class="card-icon">📅</span><span class="card-title">오늘의 일정</span></div>
+    <div class="card-body" id="pc-sched-body">
+      <div class="gcal-connect" id="pc-gcal-connect">
+        <div class="gcal-icon">📆</div>
+        <div class="gcal-desc">Google Calendar와 연동하면<br>일정이 자동으로 표시돼요</div>
+        <button class="gcal-btn" onclick="connectGCal()">Google 계정 연동</button>
+      </div>
+      <ul class="sched-list" id="pc-sched-list" style="display:none"></ul>
+      <button class="sched-refresh" id="pc-sched-refresh" onclick="loadGCalEvents()" style="display:none">🔄 일정 새로고침</button>
+    </div>
+  </div>
+
+  <!-- ③ 유튜브 -->
+  <div class="card card-yt">
+    <div class="card-header"><span class="card-icon">▶</span><span class="card-title">즐겨 듣는 유튜브</span></div>
+    <div class="card-body">
+      <div class="yt-account-bar" id="pc-yt-account-bar">
+        <span class="yt-account-label">계정</span>
+        <span class="yt-account-val" id="pc-yt-account-val">관리자에서 계정을 설정하세요</span>
+      </div>
+      <ul class="yt-list" id="pc-yt-list"><li class="empty-msg">관리자에서 채널을 추가하세요</li></ul>
+    </div>
+  </div>
+
+  <!-- ④ 주식 4카테고리 -->
+  <div class="card card-stock">
+    <div class="card-header"><span class="card-icon">📈</span><span class="card-title">보유 주식</span></div>
+    <div class="card-body" id="pc-stock-body">
+      <div class="empty-msg" id="pc-stock-empty">관리자에서 종목을 추가하세요</div>
+    </div>
+  </div>
+
+  <!-- ⑤ 지출 -->
+  <div class="card card-expense">
+    <div class="card-header">
+      <span class="card-icon">💳</span><span class="card-title">오늘의 지출</span>
+      <span class="exp-db-badge" style="margin-left:auto">DB 저장</span>
+    </div>
+    <div class="card-body">
+      <div class="exp-today"><span class="exp-label">오늘 합계</span><span class="exp-amount" id="pc-exp-total">₩0</span></div>
+      <div class="exp-form">
+        <input type="text" id="pc-eitem" placeholder="항목">
+        <input type="number" id="pc-eamt" placeholder="금액">
+        <select id="pc-ecat"><option>식비</option><option>교통</option><option>쇼핑</option><option>생활</option><option>기타</option></select>
+        <button class="btn-sm" onclick="addExp('pc')">추가</button>
+      </div>
+      <ul class="exp-list" id="pc-exp-list"></ul>
+    </div>
+  </div>
+
+  <!-- ⑥ 식단 -->
+  <div class="card card-diet">
+    <div class="card-header"><span class="card-icon">🥗</span><span class="card-title">오늘의 식단</span></div>
+    <div class="card-body">
+      <div id="pc-meal-display"></div>
+      <div class="meal-form">
+        <div class="meal-form-row">
+          <select id="pc-mtime"><option>아침</option><option>점심</option><option>저녁</option><option>간식</option></select>
+          <input type="text" id="pc-mtext" placeholder="예: 현미밥, 된장국">
+        </div>
+        <button class="btn-sm" onclick="addMeal('pc')">추가</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑦ 메모 -->
+  <div class="card card-memo">
+    <div class="card-header"><span class="card-icon">📝</span><span class="card-title">하루 마무리 메모</span></div>
+    <div class="card-body">
+      <div class="memo-display" id="pc-memo-disp"><span style="color:#a89880;font-style:italic;font-size:0.82rem">오늘 하루를 기록해보세요...</span></div>
+      <textarea class="memo-ta" id="pc-memo-ta"></textarea>
+      <div class="memo-btns">
+        <button class="btn-sm" id="pc-memo-edit" onclick="memoEdit('pc')">수정하기</button>
+        <button class="btn-outline" id="pc-memo-save" onclick="memoSave('pc')" style="display:none">저장</button>
+      </div>
+      <div class="memo-date" id="pc-memo-date"></div>
+    </div>
+  </div>
+
+  <!-- ⑧ 뉴스 -->
+  <div class="card card-news">
+    <div class="card-header"><span class="card-icon">📰</span><span class="card-title">오늘의 뉴스</span></div>
+    <div class="card-body">
+      <div class="news-tabs">
+        <button class="news-tab active" onclick="pcTab('kr',this)">🇰🇷 한국</button>
+        <button class="news-tab" onclick="pcTab('us',this)">🇺🇸 미국</button>
+      </div>
+      <div id="pc-tab-kr" class="news-panel active"><ul class="news-list" id="pc-kr-list"></ul></div>
+      <div id="pc-tab-us" class="news-panel"><ul class="news-list" id="pc-us-list"></ul></div>
+    </div>
+  </div>
+
+  <!-- ⑨ 즐겨찾기 -->
+  <div class="card card-sites">
+    <div class="card-header"><span class="card-icon">🌐</span><span class="card-title">단골 사이트</span></div>
+    <div class="card-body"><div class="sites-grid" id="pc-sites-grid"><span class="empty-msg">관리자에서 사이트를 추가하세요</span></div></div>
+  </div>
+
+</main>
+
+<!-- ════════════════════════════
+     모바일 레이아웃
+════════════════════════════ -->
+<div class="mobile-view">
+
+  <!-- 홈: 시간+날씨+일정+사이트 -->
+  <div class="mob-section active" id="mob-home">
+    <div class="m-hero">
+      <div class="m-hero-top">
+        <div>
+          <div class="m-big-time" id="m-clock">--:--</div>
+          <div class="m-big-date" id="m-date"></div>
+        </div>
+        <div class="m-weather-block">
+          <div class="m-w-emoji" id="m-w-emoji">🌤</div>
+          <div class="m-w-temp" id="m-w-temp">--°C</div>
+          <div class="m-w-desc" id="m-w-desc">확인 중</div>
+        </div>
+      </div>
+      <!-- 추가 2개 지역 -->
+      <div class="m-hero-zones" id="m-hero-zones"></div>
+    </div>
+
+    <div class="m-card">
+      <div class="m-card-header"><span class="card-icon">📅</span><span class="m-card-title">오늘 일정</span></div>
+      <div class="m-card-body" id="m-sched-body">
+        <div class="gcal-connect" id="m-gcal-connect">
+          <div class="gcal-icon" style="font-size:1.5rem">📆</div>
+          <div class="gcal-desc" style="font-size:0.82rem">Google Calendar 연동 필요</div>
+          <button class="gcal-btn" style="font-size:0.82rem;padding:0.4rem 1rem" onclick="connectGCal()">Google 연동</button>
+        </div>
+        <ul class="m-sched-list" id="m-sched-list" style="display:none"></ul>
+      </div>
+    </div>
+
+    <div class="m-card">
+      <div class="m-card-header"><span class="card-icon">🌐</span><span class="m-card-title">단골 사이트</span></div>
+      <div class="m-card-body"><div class="m-sites-grid" id="m-sites-grid"><span class="empty-msg">관리자에서 사이트를 추가하세요</span></div></div>
+    </div>
+  </div>
+
+  <!-- 가계부: 지출+주식 -->
+  <div class="mob-section" id="mob-money">
+    <div class="m-card">
+      <div class="m-card-header"><span class="card-icon">💳</span><span class="m-card-title">오늘의 지출</span></div>
+      <div class="m-card-body">
+        <span class="m-exp-lbl">오늘 합계</span>
+        <div class="m-exp-total" id="m-exp-total">₩0</div>
+        <div class="m-row"><input class="m-input" type="text" id="m-eitem" placeholder="항목명" style="flex:1;"><input class="m-input" type="number" id="m-eamt" placeholder="금액" style="flex:0 0 100px;"></div>
+        <div class="m-row"><select class="m-select" id="m-ecat"><option>식비</option><option>교통</option><option>쇼핑</option><option>생활</option><option>기타</option></select><button class="m-btn" onclick="addExp('m')" style="flex:1">+ 추가</button></div>
+        <ul class="m-exp-list" id="m-exp-list"></ul>
+      </div>
+    </div>
+    <div class="m-card">
+      <div class="m-card-header"><span class="card-icon">📈</span><span class="m-card-title">보유 주식</span></div>
+      <div class="m-card-body" id="m-stock-body"><div class="empty-msg">관리자에서 종목을 추가하세요</div></div>
+    </div>
+  </div>
+
+  <!-- 건강: 식단+메모 -->
+  <div class="mob-section" id="mob-health">
+    <div class="m-card">
+      <div class="m-card-header"><span class="card-icon">🥗</span><span class="m-card-title">오늘의 식단</span></div>
+      <div class="m-card-body">
+        <div id="m-meal-display" style="margin-bottom:0.8rem"></div>
+        <div class="m-row"><select class="m-select" id="m-mtime"><option>아침</option><option>점심</option><option>저녁</option><option>간식</option></select><input class="m-input" type="text" id="m-mtext" placeholder="예: 현미밥, 된장국" style="flex:1;"></div>
+        <button class="m-btn" onclick="addMeal('m')" style="width:100%">식단 추가</button>
+      </div>
+    </div>
+    <div class="m-card">
+      <div class="m-card-header"><span class="card-icon">📝</span><span class="m-card-title">하루 마무리 메모</span></div>
+      <div class="m-card-body">
+        <div class="m-memo-display" id="m-memo-disp"><span style="color:#a89880;font-style:italic">오늘 하루를 기록해보세요...</span></div>
+        <textarea class="m-memo-ta" id="m-memo-ta" placeholder="감사한 일, 배운 것, 내일의 다짐을 써보세요."></textarea>
+        <div style="display:flex;gap:0.5rem;margin-top:0.65rem">
+          <button class="m-btn" id="m-memo-edit" onclick="memoEdit('m')">수정하기</button>
+          <button class="m-btn-outline" id="m-memo-save" onclick="memoSave('m')" style="display:none">저장</button>
+        </div>
+        <div style="font-size:0.72rem;color:var(--ink3);margin-top:0.35rem" id="m-memo-date"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 미디어: 뉴스+유튜브 -->
+  <div class="mob-section" id="mob-media">
+    <div class="m-card">
+      <div class="m-card-header"><span class="card-icon">📰</span><span class="m-card-title">오늘의 뉴스</span></div>
+      <div class="m-card-body">
+        <div class="m-news-tabs">
+          <button class="m-news-tab active" onclick="mTab('kr',this)">🇰🇷 한국</button>
+          <button class="m-news-tab" onclick="mTab('us',this)">🇺🇸 미국</button>
+        </div>
+        <div id="m-tab-kr" class="m-news-panel active"><ul class="m-news-list" id="m-kr-list"></ul></div>
+        <div id="m-tab-us" class="m-news-panel"><ul class="m-news-list" id="m-us-list"></ul></div>
+      </div>
+    </div>
+    <div class="m-card">
+      <div class="m-card-header"><span class="card-icon">▶</span><span class="m-card-title">즐겨 듣는 유튜브</span></div>
+      <div class="m-card-body"><ul class="m-yt-list" id="m-yt-list"><li class="empty-msg">관리자에서 채널을 추가하세요</li></ul></div>
+    </div>
+  </div>
+
+</div>
+
+<nav class="mobile-nav">
+  <button class="mnav-item active" id="mnav-home" onclick="switchMob('home')"><span class="mnav-icon">🏠</span>홈</button>
+  <button class="mnav-item" id="mnav-money" onclick="switchMob('money')"><span class="mnav-icon">💰</span>가계부</button>
+  <button class="mnav-item" id="mnav-health" onclick="switchMob('health')"><span class="mnav-icon">🥗</span>건강</button>
+  <button class="mnav-item" id="mnav-media" onclick="switchMob('media')"><span class="mnav-icon">📰</span>미디어</button>
+  <a href="admin.html" class="mnav-item"><span class="mnav-icon">⚙️</span>관리</a>
+</nav>
+
+<script>
+/* ── 유틸 ── */
+const todayKey=()=>new Date().toISOString().slice(0,10);
+const sv=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const ld=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}};
+const gel=id=>document.getElementById(id);
+const DAYS=['일','월','화','수','목','금','토'];
+const MON=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+
+/* ── 시계 + 3지역 ── */
+const DEFAULT_ZONES=[
+  {region:'내 위치', tz:Intl.DateTimeFormat().resolvedOptions().timeZone, label:''},
+  {region:'뉴욕', tz:'America/New_York', label:'EST/EDT'},
+  {region:'런던', tz:'Europe/London', label:'GMT/BST'}
+];
+
+function getZones(){
+  const saved=ld('timezones',null);
+  return saved && saved.length===3 ? saved : DEFAULT_ZONES;
+}
+
+function formatTZ(tz){
+  try{
+    const n=new Date();
+    const opt={timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:false};
+    const dopt={timeZone:tz,month:'long',day:'numeric',weekday:'short'};
+    return {
+      time:new Intl.DateTimeFormat('ko-KR',opt).format(n),
+      date:new Intl.DateTimeFormat('ko-KR',dopt).format(n)
+    };
+  }catch{return{time:'--:--',date:''};}
+}
+
+function tickClock(){
+  const zones=getZones();
+  const n=new Date();
+
+  /* PC 주지역 */
+  const z0=formatTZ(zones[0].tz);
+  if(gel('pc-tz0-time'))gel('pc-tz0-time').textContent=z0.time;
+  if(gel('pc-tz0-date'))gel('pc-tz0-date').textContent=z0.date;
+  if(gel('pc-tz0-region'))gel('pc-tz0-region').textContent=zones[0].region;
+  if(gel('pc-tz0-name'))gel('pc-tz0-name').textContent=zones[0].label||'';
+
+  /* PC 지역2,3 */
+  [1,2].forEach(i=>{
+    const z=formatTZ(zones[i].tz);
+    if(gel(`pc-tz${i}-time`))gel(`pc-tz${i}-time`).textContent=z.time;
+    if(gel(`pc-tz${i}-date`))gel(`pc-tz${i}-date`).textContent=z.date;
+    if(gel(`pc-tz${i}-region`))gel(`pc-tz${i}-region`).textContent=zones[i].region;
+    if(gel(`pc-tz${i}-name`))gel(`pc-tz${i}-name`).textContent=zones[i].label||'';
+  });
+
+  /* 모바일 메인 시계 (지역0) */
+  if(gel('m-clock'))gel('m-clock').textContent=z0.time;
+  const ds=`${MON[n.getMonth()]} ${n.getDate()}일 (${DAYS[n.getDay()]})`;
+  if(gel('m-date'))gel('m-date').textContent=ds;
+  if(gel('headerDate'))gel('headerDate').textContent=`${n.getFullYear()}년 ${MON[n.getMonth()]} ${n.getDate()}일 (${DAYS[n.getDay()]})`;
+
+  /* 모바일 추가 2지역 */
+  const mz=gel('m-hero-zones');
+  if(mz){
+    mz.innerHTML=[1,2].map(i=>{
+      const z=formatTZ(zones[i].tz);
+      return `<div class="m-zone">
+        <div class="m-zone-region">${zones[i].region}</div>
+        <div class="m-zone-time">${z.time}</div>
+        <div class="m-zone-name">${zones[i].label||''}</div>
+      </div>`;
+    }).join('');
+  }
+}
+tickClock();setInterval(tickClock,10000);
+
+/* ── 날씨 ── */
+const WC={0:'☀️ 맑음',1:'🌤 거의 맑음',2:'⛅ 부분 흐림',3:'☁️ 흐림',45:'🌫 안개',48:'🌫 안개',51:'🌦 이슬비',53:'🌦 이슬비',55:'🌧 이슬비',61:'🌧 비',63:'🌧 비',65:'🌧 폭우',71:'🌨 눈',73:'🌨 눈',75:'❄️ 폭설',80:'🌦 소나기',81:'🌧 소나기',82:'⛈ 폭우',95:'⛈ 뇌우',99:'⛈ 뇌우'};
+function setW(emoji,temp,desc,loc){
+  ['pc-w-emoji','m-w-emoji'].forEach(id=>{const e=gel(id);if(e)e.textContent=emoji;});
+  ['pc-w-temp','m-w-temp'].forEach(id=>{const e=gel(id);if(e)e.textContent=temp+'°C';});
+  ['pc-w-desc','m-w-desc'].forEach(id=>{const e=gel(id);if(e)e.textContent=desc;});
+  const lc=gel('pc-w-loc');if(lc)lc.textContent=loc;
+}
+async function loadWeather(){
+  setW('🌤','--','불러오는 중...','');
+  try{
+    const p=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{timeout:6000}));
+    const {latitude:lat,longitude:lon}=p.coords;
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode&timezone=auto`);
+    const d=await r.json();
+    const info=WC[d.current.weathercode]||'🌡 알 수 없음';
+    const sp=info.indexOf(' ');
+    const geo=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+    const gd=await geo.json();
+    setW(info.slice(0,sp),Math.round(d.current.temperature_2m),info.slice(sp+1),gd.address.city||gd.address.town||gd.address.village||'내 위치');
+  }catch{setW('🌤','--','위치 권한을 허용해 주세요','');}
+}
+loadWeather();
+
+/* ── 모바일 탭 전환 ── */
+function switchMob(tab){
+  ['home','money','health','media'].forEach(t=>{
+    gel('mob-'+t)?.classList.remove('active');
+    gel('mnav-'+t)?.classList.remove('active');
+  });
+  gel('mob-'+tab)?.classList.add('active');
+  gel('mnav-'+tab)?.classList.add('active');
+}
+
+/* ── Google Calendar ── */
+function connectGCal(){
+  alert('⚙️ Google Calendar 연동은 Spring Boot 백엔드 구성 후 사용 가능합니다.\n\n관리자 페이지에서 Google OAuth 설정을 완료해 주세요.');
+}
+function loadGCalEvents(){
+  /* TODO: Spring Boot API 연동 후 구현 */
+  /* fetch('/api/calendar/today').then(...) */
+}
+/* 임시 샘플 일정 표시 */
+function renderSchedule(){
+  const gcalConnected=ld('gcal_connected',false);
+  ['pc','m'].forEach(pre=>{
+    const connectEl=gel(pre+'-gcal-connect');
+    const listEl=gel(pre+'-sched-list');
+    const refreshEl=gel(pre+'-sched-refresh');
+    if(gcalConnected){
+      if(connectEl)connectEl.style.display='none';
+      if(listEl)listEl.style.display='';
+      if(refreshEl)refreshEl.style.display='';
+      /* TODO: 실제 일정 데이터로 교체 */
+      const sampleEvents=[
+        {time:'09:00',text:'팀 미팅'},
+        {time:'12:30',text:'점심 약속'},
+        {time:'15:00',text:'병원 예약'}
+      ];
+      if(listEl)listEl.innerHTML=sampleEvents.map(e=>
+        `<li class="${pre==='pc'?'sched-item':'m-sched-item'}">
+          <span class="${pre==='pc'?'sched-time':'m-sched-time'}">${e.time}</span>
+          <span class="${pre==='pc'?'sched-text':'m-sched-text'}">${e.text}</span>
+        </li>`
+      ).join('');
+    }
+  });
+}
+renderSchedule();
+
+/* ── 뉴스 ── */
+const NEWS={
+  kr:[{t:'네이버 뉴스',u:'https://news.naver.com',s:'네이버'},{t:'다음 뉴스',u:'https://news.daum.net',s:'다음'},{t:'연합뉴스',u:'https://www.yna.co.kr',s:'연합뉴스'},{t:'MBC 뉴스',u:'https://imnews.imbc.com',s:'MBC'},{t:'조선일보',u:'https://www.chosun.com',s:'조선일보'},{t:'한겨레',u:'https://www.hani.co.kr',s:'한겨레'}],
+  us:[{t:'BBC News',u:'https://www.bbc.com/news',s:'BBC'},{t:'Reuters',u:'https://www.reuters.com',s:'Reuters'},{t:'CNN',u:'https://www.cnn.com',s:'CNN'},{t:'New York Times',u:'https://www.nytimes.com',s:'NYT'},{t:'AP News',u:'https://apnews.com',s:'AP'},{t:'Bloomberg',u:'https://www.bloomberg.com',s:'Bloomberg'}]
+};
+function renderNews(){
+  ['kr','us'].forEach(k=>{
+    const pH=NEWS[k].map(n=>`<li class="news-item"><a href="${n.u}" target="_blank">${n.t}<span class="news-source">${n.s}</span></a></li>`).join('');
+    const mH=NEWS[k].map(n=>`<li class="m-news-item"><a href="${n.u}" target="_blank">${n.t}<span class="m-news-source">${n.s}</span></a></li>`).join('');
+    const pe=gel('pc-'+k+'-list');if(pe)pe.innerHTML=pH;
+    const me=gel('m-'+k+'-list');if(me)me.innerHTML=mH;
+  });
+}
+function pcTab(k,btn){
+  ['kr','us'].forEach(t=>{gel('pc-tab-'+t)?.classList.remove('active');});
+  gel('pc-tab-'+k)?.classList.add('active');
+  btn.closest('.news-tabs')?.querySelectorAll('.news-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function mTab(k,btn){
+  ['kr','us'].forEach(t=>{gel('m-tab-'+t)?.classList.remove('active');});
+  gel('m-tab-'+k)?.classList.add('active');
+  btn.closest('.m-news-tabs')?.querySelectorAll('.m-news-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+renderNews();
+
+/* ── 유튜브 ── */
+function renderYT(){
+  const ch=ld('yt_channels',[]);
+  const account=ld('yt_account',{email:'',name:''});
+  /* 계정 표시 */
+  ['pc-yt-account-val'].forEach(id=>{
+    const e=gel(id);
+    if(e)e.textContent=account.email||'관리자에서 계정을 설정하세요';
+  });
+  const pe=gel('pc-yt-list');const me=gel('m-yt-list');
+  if(!ch.length){
+    if(pe)pe.innerHTML='<li class="empty-msg">관리자에서 채널을 추가하세요</li>';
+    if(me)me.innerHTML='<li class="empty-msg">관리자에서 채널을 추가하세요</li>';
+    return;
+  }
+  /* 유튜브 링크에 계정 파라미터 처리는 브라우저 로그인 상태 유지로 처리 */
+  if(pe)pe.innerHTML=ch.map(c=>`<li class="yt-item"><a href="${c.url}" target="_blank"><div class="yt-ico">▶</div><div><div class="yt-name">${c.name}</div><div class="yt-url">${c.url}</div></div></a></li>`).join('');
+  if(me)me.innerHTML=ch.map(c=>`<li class="m-yt-item"><a href="${c.url}" target="_blank"><div class="m-yt-ico">▶</div><div><div class="m-yt-name">${c.name}</div></div></a></li>`).join('');
+}
+renderYT();
+
+/* ── 주식 4카테고리 ── */
+const STOCK_CATS=[
+  {key:'robinhood', label:'🇺🇸 Robinhood', cls:'robinhood', sym:'$'},
+  {key:'ira',       label:'🏦 IRA',         cls:'ira',       sym:'$'},
+  {key:'kr-stock',  label:'🇰🇷 한국 주식',  cls:'kr-stock',  sym:'₩'},
+  {key:'kr-etf',    label:'📊 한국 ETF',    cls:'kr-etf',    sym:'₩'}
+];
+
+function renderStock(){
+  const stocks=ld('stocks',{robinhood:[],ira:[],['kr-stock']:[],['kr-etf']:[]});
+  const hasAny=STOCK_CATS.some(c=>(stocks[c.key]||[]).length>0);
+
+  /* PC */
+  const pcBody=gel('pc-stock-body');
+  /* 모바일 */
+  const mBody=gel('m-stock-body');
+
+  if(!hasAny){
+    if(pcBody)pcBody.innerHTML='<div class="empty-msg">관리자에서 종목을 추가하세요</div>';
+    if(mBody)mBody.innerHTML='<div class="empty-msg">관리자에서 종목을 추가하세요</div>';
+    return;
+  }
+
+  let grandTotal=0;
+  let pcHTML='',mHTML='';
+
+  STOCK_CATS.forEach(cat=>{
+    const list=stocks[cat.key]||[];
+    if(!list.length)return;
+    const catTotal=list.reduce((s,s2)=>s+(s2.price||0)*(s2.qty||0),0);
+    grandTotal+=catTotal;
+    const sym=cat.sym;
+
+    const itemsPC=list.map(s=>{
+      const val=(s.price||0)*(s.qty||0);
+      const cs=(s.change||0)>=0?'up':'down';
+      const sg=(s.change||0)>=0?'▲':'▼';
+      return `<li class="stock-item">
+        <div><div class="stock-name">${s.name}</div><div class="stock-qty">${s.qty||0}주</div></div>
+        <div class="stock-right">
+          <div class="stock-price">${sym}${(s.price||0).toLocaleString()}</div>
+          <div class="stock-val">${sym}${val.toLocaleString()}</div>
+          <div class="${cs}">${sg}${Math.abs(s.change||0).toFixed(2)}%</div>
+        </div>
+      </li>`;
+    }).join('');
+
+    const itemsM=list.map(s=>{
+      const val=(s.price||0)*(s.qty||0);
+      const cs=(s.change||0)>=0?'up':'down';
+      const sg=(s.change||0)>=0?'▲':'▼';
+      return `<li class="m-stock-item">
+        <div><div class="m-stock-name">${s.name}</div><div class="m-stock-qty">${s.qty||0}주 <span class="${cs}">${sg}${Math.abs(s.change||0).toFixed(2)}%</span></div></div>
+        <div><div class="m-stock-price">${sym}${(s.price||0).toLocaleString()}</div><div class="m-stock-val">${sym}${val.toLocaleString()}</div></div>
+      </li>`;
+    }).join('');
+
+    pcHTML+=`<div class="stock-cat">
+      <div class="stock-cat-header ${cat.cls}">
+        <span class="stock-cat-name">${cat.label}</span>
+        <span class="stock-cat-sum">${sym}${Math.round(catTotal).toLocaleString()}</span>
+      </div>
+      <ul class="stock-list">${itemsPC}</ul>
+    </div><div class="stock-divider"></div>`;
+
+    mHTML+=`<div class="m-stock-cat">
+      <div class="m-stock-cat-hd ${cat.cls}">
+        <span class="m-stock-cat-nm">${cat.label}</span>
+        <span class="m-stock-cat-sum">${sym}${Math.round(catTotal).toLocaleString()}</span>
+      </div>
+      <ul class="m-stock-list">${itemsM}</ul>
+    </div>`;
+  });
+
+  const totalBar=`<div class="stock-total-bar"><span class="stock-total-label">전체 합계</span><span class="stock-total-value">₩${Math.round(grandTotal).toLocaleString()}</span></div>`;
+  const mTotalBar=`<div class="m-total-bar"><span style="font-size:0.8rem;color:#a89880">전체 합계</span><span style="font-size:1rem;font-weight:700;color:var(--accent2)">₩${Math.round(grandTotal).toLocaleString()}</span></div>`;
+
+  if(pcBody)pcBody.innerHTML=pcHTML+totalBar;
+  if(mBody)mBody.innerHTML=mHTML+mTotalBar;
+}
+renderStock();
+
+/* ── 지출 ── */
+function renderExp(){
+  const list=ld('expense_'+todayKey(),[]);
+  const tot='₩'+list.reduce((s,e)=>s+(Number(e.amount)||0),0).toLocaleString();
+  ['pc-exp-total','m-exp-total'].forEach(id=>{const e=gel(id);if(e)e.textContent=tot;});
+  const pe=gel('pc-exp-list');const me=gel('m-exp-list');
+  if(!list.length){
+    if(pe)pe.innerHTML='<li class="empty-msg">지출 내역이 없습니다</li>';
+    if(me)me.innerHTML='<li style="font-size:0.85rem;color:var(--ink3);font-style:italic;padding:0.3rem 0">지출 내역이 없습니다</li>';
+    return;
+  }
+  const pH=list.map((e,i)=>`<li class="exp-item"><div><span class="exp-cat cat-${e.cat}">${e.cat}</span>${e.item}</div><div style="display:flex;align-items:center;gap:0.35rem"><span style="font-weight:500">₩${Number(e.amount).toLocaleString()}</span><button class="btn-del" onclick="delExp(${i})">✕</button></div></li>`).join('');
+  const mH=list.map((e,i)=>`<li class="m-exp-item"><div><span class="exp-cat cat-${e.cat}">${e.cat}</span>${e.item}</div><div style="display:flex;align-items:center;gap:0.4rem"><span style="font-weight:500">₩${Number(e.amount).toLocaleString()}</span><button class="btn-del" onclick="delExp(${i})">✕</button></div></li>`).join('');
+  if(pe)pe.innerHTML=pH;if(me)me.innerHTML=mH;
+}
+function addExp(pre){
+  const item=gel(pre+'-eitem').value.trim();
+  const amount=gel(pre+'-eamt').value;
+  const cat=gel(pre+'-ecat').value;
+  if(!item||!amount)return;
+  const list=ld('expense_'+todayKey(),[]);
+  list.push({item,amount:Number(amount),cat,savedAt:new Date().toISOString()});
+  sv('expense_'+todayKey(),list);
+  gel(pre+'-eitem').value='';gel(pre+'-eamt').value='';
+  renderExp();
+  /* TODO: Spring Boot 연동 후 → fetch('/api/expense', {method:'POST', body:JSON.stringify({item,amount,cat})}) */
+}
+function delExp(i){const l=ld('expense_'+todayKey(),[]);l.splice(i,1);sv('expense_'+todayKey(),l);renderExp();}
+renderExp();
+
+/* ── 식단 ── */
+const MORD=['아침','점심','저녁','간식'];
+function renderMeal(){
+  const meals=ld('meal_'+todayKey(),{});
+  [['pc-meal-display',false],['m-meal-display',true]].forEach(([id,isM])=>{
+    const el=gel(id);if(!el)return;
+    const has=MORD.some(m=>meals[m]&&meals[m].length);
+    if(!has){el.innerHTML='<div class="empty-msg">식단을 입력해보세요</div>';return;}
+    el.innerHTML=MORD.filter(m=>meals[m]&&meals[m].length).map(m=>
+      isM?`<div class="m-meal-row"><span class="m-meal-label">${m}</span><div class="m-meal-content">${meals[m].join(', ')}</div><button class="btn-del" onclick="delMeal('${m}')">✕</button></div>`
+         :`<div class="meal-row"><span class="meal-label">${m}</span><div class="meal-content">${meals[m].join(', ')}</div><button class="btn-del" onclick="delMeal('${m}')">✕</button></div>`
+    ).join('');
+  });
+}
+function addMeal(pre){
+  const t=gel(pre+'-mtime').value;const tx=gel(pre+'-mtext').value.trim();if(!tx)return;
+  const meals=ld('meal_'+todayKey(),{});if(!meals[t])meals[t]=[];meals[t].push(tx);
+  sv('meal_'+todayKey(),meals);gel(pre+'-mtext').value='';renderMeal();
+}
+function delMeal(t){const m=ld('meal_'+todayKey(),{});delete m[t];sv('meal_'+todayKey(),m);renderMeal();}
+renderMeal();
+
+/* ── 메모 ── */
+function renderMemo(){
+  const data=ld('memo_'+todayKey(),{text:'',savedAt:''});
+  ['pc','m'].forEach(pre=>{
+    const d=gel(pre+'-memo-disp');if(!d)return;
+    if(data.text){d.textContent=data.text;d.style.fontStyle='normal';const de=gel(pre+'-memo-date');if(de)de.textContent=data.savedAt?'저장: '+data.savedAt:'';}
+    else{d.innerHTML='<span style="color:#a89880;font-style:italic">오늘 하루를 기록해보세요...</span>';}
+  });
+}
+function memoEdit(pre){
+  const data=ld('memo_'+todayKey(),{text:''});
+  gel(pre+'-memo-ta').value=data.text;
+  gel(pre+'-memo-disp').style.display='none';gel(pre+'-memo-ta').style.display='block';
+  gel(pre+'-memo-edit').style.display='none';gel(pre+'-memo-save').style.display='';
+}
+function memoSave(pre){
+  const text=gel(pre+'-memo-ta').value;const n=new Date();
+  sv('memo_'+todayKey(),{text,savedAt:`${n.getHours()}시 ${n.getMinutes()}분`});
+  gel(pre+'-memo-disp').style.display='';gel(pre+'-memo-ta').style.display='none';
+  gel(pre+'-memo-edit').style.display='';gel(pre+'-memo-save').style.display='none';
+  renderMemo();
+}
+renderMemo();
+
+/* ── 즐겨찾기 ── */
+function renderSites(){
+  const sites=ld('fav_sites',[]);
+  const pe=gel('pc-sites-grid');const me=gel('m-sites-grid');
+  if(!sites.length){
+    if(pe)pe.innerHTML='<span class="empty-msg">관리자에서 사이트를 추가하세요</span>';
+    if(me)me.innerHTML='<span class="empty-msg">관리자에서 사이트를 추가하세요</span>';
+    return;
+  }
+  const mk=(cls)=>sites.map(s=>{
+    const dom=(()=>{try{return new URL(s.url).hostname;}catch{return '';}})();
+    const fav=dom?`<img src="https://www.google.com/s2/favicons?domain=${dom}&sz=64" width="22" height="22" style="border-radius:4px" onerror="this.style.display='none'">`:'';
+    return `<a class="${cls}" href="${s.url}" target="_blank">${fav}<span>${s.name}</span></a>`;
+  }).join('');
+  if(pe)pe.innerHTML=mk('site-item');
+  if(me)me.innerHTML=mk('m-site-item');
+}
+renderSites();
+
+window.addEventListener('storage',()=>{renderYT();renderStock();renderSites();tickClock();});
+</script>
+</body>
+</html>
