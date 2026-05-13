@@ -107,15 +107,51 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
 
 <main class="main">
 
-  <!-- ① 시간대 설정 -->
+  <!-- ① 주식 4카테고리 (최상단) -->
   <div class="section">
     <div class="sec-hd">
-      <span class="sec-title">🕐 세 지역 시간 설정</span>
-      <button class="btn-primary" onclick="saveTZ()">저장</button>
+      <span class="sec-title">📈 보유 주식 관리</span>
+      <span style="font-size:0.72rem;color:var(--ink3);background:var(--card2);padding:0.2rem 0.6rem;border-radius:10px;border:1px solid var(--border);">시세 자동화는 Spring Boot 후</span>
     </div>
     <div class="sec-body">
-      <p style="font-size:0.82rem;color:var(--ink3)">세 지역의 시간이 대시보드에 동시에 표시됩니다. 지역 이름과 시간대를 설정하세요.</p>
-      <div class="tz-grid" id="tz-grid"></div>
+      <!-- 카테고리 탭 -->
+      <div class="stock-tabs">
+        <button class="stock-tab active robinhood" onclick="switchStockTab('robinhood',this)">🇺🇸 US Stock</button>
+        <button class="stock-tab" onclick="switchStockTab('us',this)">🇺🇸 US IRP</button>
+        <button class="stock-tab" onclick="switchStockTab('kor-stock',this)">🇰🇷 KR Stock</button>
+        <button class="stock-tab" onclick="switchStockTab('kor-etf',this)">📊 KOR ETF</button>
+      </div>
+
+      <!-- 현재 선택된 카테고리 표시 -->
+      <div id="stock-cat-label" style="font-size:0.78rem;color:var(--ink3);margin-top:-0.4rem"></div>
+
+      <!-- 종목 추가 폼 -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>티커 심볼 *</label>
+          <input type="text" id="stk-ticker" placeholder="AAPL / 005930.KS">
+        </div>
+        <div class="form-group" style="flex:1.5">
+          <label>종목명</label>
+          <input type="text" id="stk-name" placeholder="예: 삼성전자 / NVDA">
+        </div>
+        <div class="form-group">
+          <label>수량</label>
+          <input type="number" id="stk-qty" placeholder="예: 10" min="0" step="any">
+        </div>
+        <div class="form-group">
+          <label>평균단가</label>
+          <input type="number" id="stk-avg" placeholder="예: 73500" min="0" step="any">
+        </div>
+        <button class="btn-primary" onclick="addStock()">+ 추가</button>
+      </div>
+      <div style="font-size:0.75rem;color:var(--ink3);margin-top:-0.4rem">💡 한국주식: <b>005930.KS</b> · 한국ETF: <b>069500.KS</b> · 현재가는 Yahoo Finance에서 자동 조회됩니다</div>
+
+      <!-- 카테고리별 목록 -->
+      <div class="item-list" id="stock-item-list"></div>
+
+      <!-- 카테고리별 합계 요약 -->
+      <div id="stock-summary" style="display:none;background:var(--ink);border-radius:10px;padding:0.8rem 1rem;display:grid;grid-template-columns:repeat(2,1fr);gap:0.6rem;margin-top:0.5rem;"></div>
     </div>
   </div>
 
@@ -198,55 +234,7 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
     </div>
   </div>
 
-  <!-- ④ 주식 4카테고리 -->
-  <div class="section">
-    <div class="sec-hd">
-      <span class="sec-title">📈 보유 주식 관리</span>
-      <span style="font-size:0.72rem;color:var(--ink3);background:var(--card2);padding:0.2rem 0.6rem;border-radius:10px;border:1px solid var(--border);">시세 자동화는 Spring Boot 후</span>
-    </div>
-    <div class="sec-body">
-      <!-- 카테고리 탭 -->
-      <div class="stock-tabs">
-        <button class="stock-tab active robinhood" onclick="switchStockTab('robinhood',this)">🇺🇸 Robinhood</button>
-        <button class="stock-tab" onclick="switchStockTab('us',this)">🇺🇸 US</button>
-        <button class="stock-tab" onclick="switchStockTab('kor-stock',this)">🇰🇷 KOR Stock</button>
-        <button class="stock-tab" onclick="switchStockTab('kor-etf',this)">📊 KOR ETF</button>
-      </div>
-
-      <!-- 현재 선택된 카테고리 표시 -->
-      <div id="stock-cat-label" style="font-size:0.78rem;color:var(--ink3);margin-top:-0.4rem"></div>
-
-      <!-- 종목 추가 폼 -->
-      <div class="form-row">
-        <div class="form-group">
-          <label>티커 심볼 *</label>
-          <input type="text" id="stk-ticker" placeholder="AAPL / 005930.KS">
-        </div>
-        <div class="form-group" style="flex:1.5">
-          <label>종목명</label>
-          <input type="text" id="stk-name" placeholder="예: 삼성전자 / NVDA">
-        </div>
-        <div class="form-group">
-          <label>수량</label>
-          <input type="number" id="stk-qty" placeholder="예: 10" min="0" step="any">
-        </div>
-        <div class="form-group">
-          <label>평균단가</label>
-          <input type="number" id="stk-avg" placeholder="예: 73500" min="0" step="any">
-        </div>
-        <button class="btn-primary" onclick="addStock()">+ 추가</button>
-      </div>
-      <div style="font-size:0.75rem;color:var(--ink3);margin-top:-0.4rem">💡 한국주식: <b>005930.KS</b> · 한국ETF: <b>069500.KS</b> · 현재가는 Yahoo Finance에서 자동 조회됩니다</div>
-
-      <!-- 카테고리별 목록 -->
-      <div class="item-list" id="stock-item-list"></div>
-
-      <!-- 카테고리별 합계 요약 -->
-      <div id="stock-summary" style="display:none;background:var(--ink);border-radius:10px;padding:0.8rem 1rem;display:grid;grid-template-columns:repeat(2,1fr);gap:0.6rem;margin-top:0.5rem;"></div>
-    </div>
-  </div>
-
-  <!-- ⑤ 즐겨찾기 사이트 -->
+  <!-- ④ 즐겨찾기 사이트 -->
   <div class="section">
     <div class="sec-hd">
       <span class="sec-title">🌐 단골 사이트</span>
@@ -277,7 +265,7 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
     </div>
   </div>
 
-  <!-- ⑥ 안내 -->
+  <!-- ⑤ 안내 -->
   <div class="section" style="background:var(--card2)">
     <div class="sec-body">
       <div class="info-box">
@@ -287,6 +275,18 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
         • 지출 → 가계부 앱 연동 (API 확장)<br>
         • 뉴스 RSS 자동 수집 (한국 · 미국)</p>
       </div>
+    </div>
+  </div>
+
+  <!-- ⑥ 세 지역 시간 설정 (최하단) -->
+  <div class="section">
+    <div class="sec-hd">
+      <span class="sec-title">🕐 세 지역 시간 설정</span>
+      <button class="btn-primary" onclick="saveTZ()">저장</button>
+    </div>
+    <div class="sec-body">
+      <p style="font-size:0.82rem;color:var(--ink3)">세 지역의 시간이 대시보드에 동시에 표시됩니다. 지역 이름과 시간대를 설정하세요.</p>
+      <div class="tz-grid" id="tz-grid"></div>
     </div>
   </div>
 
@@ -427,10 +427,10 @@ renderYTAccount();renderYTList();
 
 /* ── 주식 4카테고리 (Yahoo Finance 실시간) ── */
 const CATS=[
-  {key:'robinhood', label:'🇺🇸 Robinhood',sym:'$',cls:'robinhood'},
-  {key:'us',        label:'🇺🇸 US',        sym:'$',cls:'us'},
-  {key:'kor-stock', label:'🇰🇷 KOR Stock', sym:'₩',cls:'kor-stock'},
-  {key:'kor-etf',   label:'📊 KOR ETF',    sym:'₩',cls:'kor-etf'}
+  {key:'robinhood', label:'🇺🇸 US Stock', sym:'$',cls:'robinhood'},
+  {key:'us',        label:'🇺🇸 US IRP',   sym:'$',cls:'us'},
+  {key:'kor-stock', label:'🇰🇷 KR Stock', sym:'₩',cls:'kor-stock'},
+  {key:'kor-etf',   label:'📊 KOR ETF',   sym:'₩',cls:'kor-etf'}
 ];
 let curCat='robinhood';
 let _stocksCache=[];
