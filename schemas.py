@@ -61,9 +61,9 @@ class MemoOut(MemoCreate):
 
 class StockCategory(str, Enum):
     ROBINHOOD = "robinhood"
-    IRA = "ira"
-    KR_STOCK = "kr-stock"
-    KR_ETF = "kr-etf"
+    US = "us"
+    KOR_STOCK = "kor-stock"
+    KOR_ETF = "kor-etf"
 
 
 class StockCreate(BaseModel):
