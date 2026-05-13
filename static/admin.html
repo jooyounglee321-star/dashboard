@@ -1,398 +1,554 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>주식 관리</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>관리자 — 나의 하루</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f0e8;--card:#fffef9;--card2:#faf7f0;
+  --ink:#2c2416;--ink2:#6b5e4a;--ink3:#a89880;
+  --accent:#c4662a;--accent2:#e8a060;--green:#4a7c59;--blue:#3a6b8a;
+  --border:rgba(100,80,50,0.15);--shadow:0 2px 12px rgba(100,70,30,0.08);
+}
+body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif;font-weight:300;min-height:100vh;}
+.header{background:var(--ink);color:#f5f0e8;padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.header-title{font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--accent2);}
+.back-link{font-size:0.82rem;color:var(--accent2);text-decoration:none;border:1px solid rgba(232,160,96,0.4);padding:0.28rem 0.8rem;border-radius:20px;}
+.main{max-width:860px;margin:0 auto;padding:1.5rem 1.2rem 4rem;display:flex;flex-direction:column;gap:1.2rem;}
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
-      background: #f0f2f5;
-      color: #1a1a2e;
-      padding: 24px;
-    }
+/* 섹션 */
+.section{background:var(--card);border-radius:14px;border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden;}
+.sec-hd{display:flex;align-items:center;justify-content:space-between;padding:0.9rem 1.3rem;border-bottom:1px solid var(--border);background:var(--card2);}
+.sec-title{font-size:0.88rem;font-weight:500;display:flex;align-items:center;gap:0.5rem;}
+.sec-body{padding:1.1rem 1.3rem;display:flex;flex-direction:column;gap:0.9rem;}
 
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 24px;
-    }
-    header h1 { font-size: 1.5rem; font-weight: 700; }
-    .back-btn {
-      background: none;
-      border: 1.5px solid #4f6ef7;
-      color: #4f6ef7;
-      padding: 6px 14px;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      text-decoration: none;
-    }
-    .back-btn:hover { background: #4f6ef7; color: #fff; }
+/* 폼 */
+.form-row{display:flex;gap:0.5rem;flex-wrap:wrap;align-items:flex-end;}
+.form-group{display:flex;flex-direction:column;gap:0.25rem;flex:1;min-width:110px;}
+.form-group label{font-size:0.72rem;color:var(--ink3);letter-spacing:0.05em;}
+.form-group input,.form-group select{padding:0.48rem 0.75rem;font-size:0.85rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--ink);font-family:inherit;transition:border-color 0.15s;}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:var(--accent);}
+.btn-primary{padding:0.48rem 1.1rem;font-size:0.85rem;font-weight:500;cursor:pointer;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:inherit;white-space:nowrap;align-self:flex-end;transition:background 0.15s;}
+.btn-primary:hover{background:#a8551f;}
+.btn-danger{padding:0.28rem 0.65rem;font-size:0.78rem;cursor:pointer;background:transparent;color:#c0392b;border:1px solid #c0392b;border-radius:6px;font-family:inherit;transition:all 0.15s;}
+.btn-danger:hover{background:#c0392b;color:#fff;}
+.btn-save-all{padding:0.9rem 2rem;font-size:0.95rem;font-weight:700;cursor:pointer;background:var(--green);color:#fff;border:none;border-radius:12px;font-family:inherit;width:100%;letter-spacing:0.04em;transition:background 0.15s;}
+.btn-save-all:hover{background:#3a6349;}
 
-    .layout { display: grid; grid-template-columns: 320px 1fr; gap: 24px; align-items: start; }
+/* 아이템 목록 */
+.item-list{display:flex;flex-direction:column;gap:0.4rem;}
+.item-row{display:flex;align-items:center;gap:0.7rem;padding:0.6rem 0.8rem;background:var(--card2);border-radius:8px;border:1px solid var(--border);}
+.item-info{flex:1;min-width:0;}
+.item-name{font-size:0.85rem;color:var(--ink);font-weight:400;}
+.item-sub{font-size:0.72rem;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.empty-notice{font-size:0.82rem;color:var(--ink3);font-style:italic;text-align:center;padding:0.5rem;}
 
-    /* ── Form ── */
-    .form-card {
-      background: #fff;
-      border-radius: 14px;
-      box-shadow: 0 2px 12px rgba(0,0,0,.07);
-      padding: 22px;
-      position: sticky;
-      top: 24px;
-    }
-    .form-card h2 { font-size: 1rem; font-weight: 700; margin-bottom: 18px; }
+/* 시간대 카드 */
+.tz-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.8rem;}
+.tz-card{background:var(--card2);border-radius:10px;border:1px solid var(--border);padding:0.9rem 1rem;display:flex;flex-direction:column;gap:0.5rem;}
+.tz-card-label{font-size:0.7rem;font-weight:500;color:var(--ink3);letter-spacing:0.08em;text-transform:uppercase;}
+.tz-preview{font-size:1.4rem;font-weight:300;color:var(--ink);font-family:'Playfair Display',serif;}
+.tz-preview-sub{font-size:0.72rem;color:var(--ink2);}
+.tz-card select,.tz-card input{padding:0.4rem 0.6rem;font-size:0.82rem;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--ink);font-family:inherit;width:100%;}
 
-    .field { margin-bottom: 13px; }
-    .field label {
-      display: block;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: #666;
-      margin-bottom: 5px;
-    }
-    .field input, .field select {
-      width: 100%;
-      padding: 9px 11px;
-      border: 1.5px solid #e0e0e0;
-      border-radius: 8px;
-      font-size: 0.88rem;
-      outline: none;
-    }
-    .field input:focus, .field select:focus { border-color: #4f6ef7; }
+/* 주식 카테고리 탭 */
+.stock-tabs{display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.8rem;}
+.stock-tab{padding:0.38rem 0.9rem;font-size:0.8rem;cursor:pointer;background:var(--card2);border:1px solid var(--border);border-radius:20px;font-family:inherit;color:var(--ink2);transition:all 0.15s;}
+.stock-tab.active.robinhood{background:#00c805;border-color:#00c805;color:#004a00;}
+.stock-tab.active.us{background:#1a73e8;border-color:#1a73e8;color:#fff;}
+.stock-tab.active.kor-stock{background:#c4662a;border-color:#c4662a;color:#fff;}
+.stock-tab.active.kor-etf{background:#6b5e4a;border-color:#6b5e4a;color:#fff;}
 
-    .cat-quota {
-      font-size: 0.75rem;
-      color: #888;
-      margin-top: 4px;
-    }
-    .cat-quota.full { color: #dc2626; font-weight: 600; }
+/* 주식 아이템 */
+.stock-badge{font-size:0.68rem;padding:0.08rem 0.5rem;border-radius:10px;color:#fff;white-space:nowrap;}
+.badge-robinhood{background:#00c805;color:#004a00;}
+.badge-us{background:#1a73e8;}
+.badge-kor-stock{background:#c4662a;}
+.badge-kor-etf{background:#6b5e4a;}
 
-    .btn-row { display: flex; gap: 8px; margin-top: 4px; }
-    .btn {
-      flex: 1;
-      padding: 10px;
-      border: none;
-      border-radius: 8px;
-      font-size: 0.88rem;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .btn-primary { background: #4f6ef7; color: #fff; }
-    .btn-primary:hover { opacity: .88; }
-    .btn-secondary { background: #f0f2f5; color: #555; }
-    .btn-secondary:hover { background: #e2e5ec; }
+/* 유튜브 계정 */
+.account-box{background:var(--card2);border-radius:10px;border:1px solid var(--border);padding:0.9rem 1rem;display:flex;align-items:center;gap:0.8rem;}
+.account-avatar{width:40px;height:40px;border-radius:50%;background:#ff0000;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;flex-shrink:0;}
+.account-info{flex:1;}
+.account-email{font-size:0.88rem;color:var(--ink);font-weight:400;}
+.account-desc{font-size:0.72rem;color:var(--ink3);}
 
-    .hint {
-      font-size: 0.74rem;
-      color: #999;
-      margin-top: 14px;
-      line-height: 1.6;
-    }
+/* 빠른 추가 버튼 */
+.quick-btns{display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:-0.2rem;}
+.quick-btn{padding:0.28rem 0.7rem;font-size:0.75rem;cursor:pointer;background:transparent;color:var(--blue);border:1px solid var(--blue);border-radius:6px;font-family:inherit;transition:all 0.15s;}
+.quick-btn:hover{background:var(--blue);color:#fff;}
 
-    /* ── Stock List ── */
-    .list-card {
-      background: #fff;
-      border-radius: 14px;
-      box-shadow: 0 2px 12px rgba(0,0,0,.07);
-      overflow: hidden;
-    }
-    .list-header {
-      padding: 14px 20px;
-      border-bottom: 1px solid #f0f0f0;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .list-header h2 { font-size: 1rem; font-weight: 700; }
+/* 안내 박스 */
+.info-box{background:var(--card2);border-radius:10px;padding:0.8rem 1rem;border-left:3px solid var(--accent);}
+.info-box p{font-size:0.82rem;color:var(--ink2);line-height:1.7;}
+.info-box strong{color:var(--ink);font-weight:500;}
 
-    .filter-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
-    .tab {
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 0.78rem;
-      font-weight: 600;
-      cursor: pointer;
-      background: #f0f2f5;
-      color: #666;
-      border: 1.5px solid transparent;
-    }
-    .tab.active { background: #4f6ef7; color: #fff; }
+/* 토스트 */
+.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(100px);background:var(--ink);color:#fff;padding:0.65rem 1.4rem;border-radius:30px;font-size:0.88rem;transition:transform 0.3s;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.3);}
+.toast.show{transform:translateX(-50%) translateY(0);}
 
-    table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
-    thead th {
-      background: #fafafa;
-      padding: 9px 14px;
-      text-align: left;
-      font-weight: 600;
-      color: #888;
-      border-bottom: 1px solid #eee;
-      white-space: nowrap;
-    }
-    thead th.r { text-align: right; }
-    tbody td {
-      padding: 9px 14px;
-      border-bottom: 1px solid #f5f5f5;
-      vertical-align: middle;
-    }
-    tbody td.r { text-align: right; font-variant-numeric: tabular-nums; }
-    tbody tr:last-child td { border-bottom: none; }
-    tbody tr:hover { background: #fafbff; }
-
-    tfoot td {
-      padding: 9px 14px;
-      font-weight: 700;
-      background: #f8f9ff;
-      border-top: 2px solid #e8ecff;
-    }
-    tfoot td.r { text-align: right; color: #4f6ef7; }
-
-    .ticker { font-weight: 700; font-family: 'SF Mono', 'Fira Code', monospace; }
-
-    .badge { display:inline-block; font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:12px; }
-    .badge-robinhood { background:#fff0e6; color:#d4631a; }
-    .badge-us        { background:#e6f0ff; color:#2a5ad4; }
-    .badge-kor-stock { background:#e6fff0; color:#1a9450; }
-    .badge-kor-etf   { background:#f3e6ff; color:#7b2fd4; }
-
-    .btn-del {
-      padding: 4px 10px;
-      background: #fff1f0; color: #e03e3e;
-      border: 1px solid #ffd6d6;
-      border-radius: 6px;
-      font-size: 0.76rem; font-weight: 600;
-      cursor: pointer;
-    }
-    .btn-del:hover { background: #ffe0e0; }
-
-    .empty-row td { text-align: center; color: #bbb; padding: 28px; }
-
-    /* ── Toast ── */
-    .toast {
-      position: fixed;
-      bottom: 24px; right: 24px;
-      background: #1a1a2e;
-      color: #fff;
-      padding: 12px 20px;
-      border-radius: 10px;
-      font-size: 0.88rem;
-      opacity: 0;
-      transition: opacity .3s;
-      pointer-events: none;
-      z-index: 999;
-    }
-    .toast.show { opacity: 1; }
-    .toast.error { background: #dc2626; }
-  </style>
+/* 반응형 */
+@media(max-width:640px){
+  .tz-grid{grid-template-columns:1fr;}
+  .form-row{flex-direction:column;}
+  .btn-primary{width:100%;text-align:center;}
+}
+</style>
 </head>
 <body>
 
-<header>
-  <h1>⚙️ 주식 관리</h1>
-  <a class="back-btn" href="/">← 대시보드</a>
+<header class="header">
+  <span class="header-title">⚙ 관리자 설정</span>
+  <a href="index.html" class="back-link">← 대시보드로</a>
 </header>
 
-<div class="layout">
-  <!-- 입력 폼 -->
-  <div class="form-card">
-    <h2 id="form-title">➕ 종목 추가</h2>
+<main class="main">
 
-    <div class="field">
-      <label>카테고리</label>
-      <select id="f-cat" onchange="onCatChange()">
-        <option value="robinhood">Robinhood</option>
-        <option value="us">US</option>
-        <option value="kor-stock">KOR Stock</option>
-        <option value="kor-etf">KOR ETF</option>
-      </select>
-      <div class="cat-quota" id="cat-quota"></div>
+  <!-- ① 시간대 설정 -->
+  <div class="section">
+    <div class="sec-hd">
+      <span class="sec-title">🕐 세 지역 시간 설정</span>
+      <button class="btn-primary" onclick="saveTZ()">저장</button>
     </div>
-    <div class="field">
-      <label>티커 심볼 *</label>
-      <input id="f-ticker" type="text" placeholder="예) AAPL  /  005930.KS" />
-    </div>
-    <div class="field">
-      <label>종목명</label>
-      <input id="f-name" type="text" placeholder="예) Apple Inc." />
-    </div>
-    <div class="field">
-      <label>수량</label>
-      <input id="f-qty" type="number" step="any" min="0" placeholder="0.0" />
-    </div>
-    <div class="field">
-      <label>평균단가</label>
-      <input id="f-avg" type="number" step="any" min="0" placeholder="0.0" />
-    </div>
-
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="submit()">저장</button>
-      <button class="btn btn-secondary" onclick="reset()">초기화</button>
-    </div>
-
-    <div class="hint">
-      💡 한국 주식 티커: <b>005930.KS</b> (삼성전자)<br>
-      💡 한국 ETF 티커: <b>069500.KS</b> (KODEX 200)<br>
-      💡 카테고리당 최대 10개
+    <div class="sec-body">
+      <p style="font-size:0.82rem;color:var(--ink3)">세 지역의 시간이 대시보드에 동시에 표시됩니다. 지역 이름과 시간대를 설정하세요.</p>
+      <div class="tz-grid" id="tz-grid"></div>
     </div>
   </div>
 
-  <!-- 종목 목록 -->
-  <div class="list-card">
-    <div class="list-header">
-      <h2>종목 목록</h2>
-      <div class="filter-tabs">
-        <div class="tab active" data-cat="" onclick="filter(this)">전체</div>
-        <div class="tab" data-cat="robinhood" onclick="filter(this)">Robinhood</div>
-        <div class="tab" data-cat="us" onclick="filter(this)">US</div>
-        <div class="tab" data-cat="kor-stock" onclick="filter(this)">KOR Stock</div>
-        <div class="tab" data-cat="kor-etf" onclick="filter(this)">KOR ETF</div>
+  <!-- ② Google Calendar -->
+  <div class="section">
+    <div class="sec-hd">
+      <span class="sec-title">📅 Google Calendar 연동</span>
+      <span style="font-size:0.72rem;color:var(--ink3);background:var(--card2);padding:0.2rem 0.6rem;border-radius:10px;border:1px solid var(--border);">Spring Boot 필요</span>
+    </div>
+    <div class="sec-body">
+      <div class="info-box">
+        <p><strong>연동 방법 (나중에 Spring Boot 구성 후):</strong><br>
+        1. Google Cloud Console → OAuth 2.0 클라이언트 ID 발급<br>
+        2. Spring Boot에 <code>spring-security-oauth2-client</code> 추가<br>
+        3. 발급받은 Client ID · Secret을 아래에 입력</p>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="flex:2">
+          <label>Google Client ID</label>
+          <input type="text" id="gcal-client-id" placeholder="추후 입력 (Spring Boot 구성 후)">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="flex:2">
+          <label>Google Client Secret</label>
+          <input type="password" id="gcal-client-secret" placeholder="추후 입력">
+        </div>
+        <button class="btn-primary" onclick="saveGCal()">저장</button>
       </div>
     </div>
-
-    <table>
-      <thead>
-        <tr>
-          <th>카테고리</th>
-          <th>티커</th>
-          <th>종목명</th>
-          <th class="r">수량</th>
-          <th class="r">평균단가</th>
-          <th class="r">평가금액(단가)</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="tbody"></tbody>
-      <tfoot id="tfoot"></tfoot>
-    </table>
   </div>
-</div>
+
+  <!-- ③ 유튜브 계정 + 채널 -->
+  <div class="section">
+    <div class="sec-hd">
+      <span class="sec-title">▶ 유튜브 설정</span>
+    </div>
+    <div class="sec-body">
+      <!-- 계정 설정 -->
+      <div>
+        <p style="font-size:0.78rem;color:var(--ink3);margin-bottom:0.6rem">프리미엄 계정 정보를 저장하면 대시보드에서 해당 계정으로 연결됩니다.</p>
+        <div class="account-box" id="yt-account-preview">
+          <div class="account-avatar">▶</div>
+          <div class="account-info">
+            <div class="account-email" id="yt-account-display">계정이 설정되지 않았습니다</div>
+            <div class="account-desc">YouTube Premium 계정</div>
+          </div>
+        </div>
+        <div class="form-row" style="margin-top:0.6rem">
+          <div class="form-group">
+            <label>이름 (닉네임)</label>
+            <input type="text" id="yt-acc-name" placeholder="예: 홍길동">
+          </div>
+          <div class="form-group" style="flex:2">
+            <label>Google 이메일</label>
+            <input type="email" id="yt-acc-email" placeholder="예: example@gmail.com">
+          </div>
+          <button class="btn-primary" onclick="saveYTAccount()">계정 저장</button>
+        </div>
+      </div>
+
+      <div style="height:0.5px;background:var(--border)"></div>
+
+      <!-- 채널 추가 -->
+      <div>
+        <p style="font-size:0.78rem;color:var(--ink3);margin-bottom:0.6rem">즐겨 듣는 유튜브 채널을 추가하세요.</p>
+        <div class="form-row">
+          <div class="form-group">
+            <label>채널 이름</label>
+            <input type="text" id="yt-name" placeholder="예: 뉴스공장">
+          </div>
+          <div class="form-group" style="flex:2">
+            <label>유튜브 URL</label>
+            <input type="url" id="yt-url" placeholder="예: https://www.youtube.com/@newsfactory">
+          </div>
+          <button class="btn-primary" onclick="addYT()">+ 추가</button>
+        </div>
+        <div class="item-list" id="yt-item-list" style="margin-top:0.5rem"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ 주식 4카테고리 -->
+  <div class="section">
+    <div class="sec-hd">
+      <span class="sec-title">📈 보유 주식 관리</span>
+      <span style="font-size:0.72rem;color:var(--ink3);background:var(--card2);padding:0.2rem 0.6rem;border-radius:10px;border:1px solid var(--border);">시세 자동화는 Spring Boot 후</span>
+    </div>
+    <div class="sec-body">
+      <!-- 카테고리 탭 -->
+      <div class="stock-tabs">
+        <button class="stock-tab active robinhood" onclick="switchStockTab('robinhood',this)">🇺🇸 Robinhood</button>
+        <button class="stock-tab" onclick="switchStockTab('us',this)">🇺🇸 US</button>
+        <button class="stock-tab" onclick="switchStockTab('kor-stock',this)">🇰🇷 KOR Stock</button>
+        <button class="stock-tab" onclick="switchStockTab('kor-etf',this)">📊 KOR ETF</button>
+      </div>
+
+      <!-- 현재 선택된 카테고리 표시 -->
+      <div id="stock-cat-label" style="font-size:0.78rem;color:var(--ink3);margin-top:-0.4rem"></div>
+
+      <!-- 종목 추가 폼 -->
+      <div class="form-row">
+        <div class="form-group" style="flex:1.5">
+          <label>종목명</label>
+          <input type="text" id="stk-name" placeholder="예: 삼성전자 / NVDA">
+        </div>
+        <div class="form-group">
+          <label>현재가</label>
+          <input type="number" id="stk-price" placeholder="예: 73500" min="0">
+        </div>
+        <div class="form-group">
+          <label>수량 (주)</label>
+          <input type="number" id="stk-qty" placeholder="예: 10" min="0">
+        </div>
+        <div class="form-group">
+          <label>등락률 (%)</label>
+          <input type="number" id="stk-change" placeholder="예: 1.23" step="0.01">
+        </div>
+        <button class="btn-primary" onclick="addStock()">+ 추가</button>
+      </div>
+
+      <!-- 카테고리별 목록 -->
+      <div class="item-list" id="stock-item-list"></div>
+
+      <!-- 카테고리별 합계 요약 -->
+      <div id="stock-summary" style="display:none;background:var(--ink);border-radius:10px;padding:0.8rem 1rem;display:grid;grid-template-columns:repeat(2,1fr);gap:0.6rem;margin-top:0.5rem;"></div>
+    </div>
+  </div>
+
+  <!-- ⑤ 즐겨찾기 사이트 -->
+  <div class="section">
+    <div class="sec-hd">
+      <span class="sec-title">🌐 단골 사이트</span>
+    </div>
+    <div class="sec-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label>사이트 이름</label>
+          <input type="text" id="site-name" placeholder="예: 네이버">
+        </div>
+        <div class="form-group" style="flex:2">
+          <label>주소 (URL)</label>
+          <input type="url" id="site-url" placeholder="예: https://www.naver.com">
+        </div>
+        <button class="btn-primary" onclick="addSite()">+ 추가</button>
+      </div>
+      <div class="quick-btns">
+        <span style="font-size:0.72rem;color:var(--ink3);align-self:center">빠른 추가 →</span>
+        <button class="quick-btn" onclick="quickSite('네이버','https://www.naver.com')">네이버</button>
+        <button class="quick-btn" onclick="quickSite('다음','https://www.daum.net')">다음</button>
+        <button class="quick-btn" onclick="quickSite('유튜브','https://www.youtube.com')">유튜브</button>
+        <button class="quick-btn" onclick="quickSite('카카오','https://www.kakao.com')">카카오</button>
+        <button class="quick-btn" onclick="quickSite('네이버증권','https://finance.naver.com')">네이버증권</button>
+        <button class="quick-btn" onclick="quickSite('구글','https://www.google.com')">구글</button>
+        <button class="quick-btn" onclick="quickSite('쿠팡','https://www.coupang.com')">쿠팡</button>
+      </div>
+      <div class="item-list" id="site-item-list"></div>
+    </div>
+  </div>
+
+  <!-- ⑥ 안내 -->
+  <div class="section" style="background:var(--card2)">
+    <div class="sec-body">
+      <div class="info-box">
+        <p><strong>📌 나중에 Spring Boot 추가 시 확장되는 기능</strong><br>
+        • Google Calendar 실시간 연동<br>
+        • 주식 시세 자동 업데이트 (Yahoo Finance API + @Scheduled)<br>
+        • 지출 → 가계부 앱 연동 (API 확장)<br>
+        • 뉴스 RSS 자동 수집 (한국 · 미국)</p>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn-save-all" onclick="saveAll()">✅ 모두 저장하고 대시보드로 이동</button>
+
+</main>
 
 <div class="toast" id="toast"></div>
 
 <script>
-const LABEL = { "robinhood":"Robinhood", "us":"US", "kor-stock":"KOR Stock", "kor-etf":"KOR ETF" };
-const BADGE = { "robinhood":"badge-robinhood", "us":"badge-us", "kor-stock":"badge-kor-stock", "kor-etf":"badge-kor-etf" };
-const CAT_KEYS = ["robinhood","us","kor-stock","kor-etf"];
+const sv=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const ld=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}};
+const gel=id=>document.getElementById(id);
 
-let all = [], currentCat = "";
-
-const fmtN = v => v != null ? Number(v).toLocaleString("ko-KR", {minimumFractionDigits:2, maximumFractionDigits:4}) : "—";
-
-async function load() {
-  all = await fetch("/api/stocks").then(r=>r.json()).catch(()=>[]);
-  render();
-  updateQuota();
+function toast(msg){
+  const t=gel('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
 }
 
-function render() {
-  const stocks = currentCat ? all.filter(s => s.category === currentCat) : all;
-  const tbody = document.getElementById("tbody");
-  const tfoot = document.getElementById("tfoot");
+/* ── 시간대 설정 ── */
+const ALL_TZ=[
+  {label:'서울 (KST)',tz:'Asia/Seoul'},
+  {label:'도쿄 (JST)',tz:'Asia/Tokyo'},
+  {label:'뉴욕 (ET)',tz:'America/New_York'},
+  {label:'로스앤젤레스 (PT)',tz:'America/Los_Angeles'},
+  {label:'런던 (GMT)',tz:'Europe/London'},
+  {label:'파리 (CET)',tz:'Europe/Paris'},
+  {label:'시드니 (AEDT)',tz:'Australia/Sydney'},
+  {label:'두바이 (GST)',tz:'Asia/Dubai'},
+  {label:'싱가포르 (SGT)',tz:'Asia/Singapore'},
+  {label:'시카고 (CT)',tz:'America/Chicago'},
+  {label:'홍콩 (HKT)',tz:'Asia/Hong_Kong'},
+  {label:'베를린 (CET)',tz:'Europe/Berlin'},
+];
 
-  if (!stocks.length) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="7">종목이 없습니다</td></tr>`;
-    tfoot.innerHTML = "";
-    return;
-  }
+const DEFAULT_ZONES=[
+  {region:'서울',tz:'Asia/Seoul',label:'KST'},
+  {region:'뉴욕',tz:'America/New_York',label:'ET'},
+  {region:'런던',tz:'Europe/London',label:'GMT'}
+];
 
-  tbody.innerHTML = stocks.map(s => {
-    const val = (s.quantity||0) * Number(s.avg_price||0);
-    return `<tr>
-      <td><span class="badge ${BADGE[s.category]}">${LABEL[s.category]}</span></td>
-      <td><span class="ticker">${s.ticker}</span></td>
-      <td>${s.name||"—"}</td>
-      <td class="r">${fmtN(s.quantity)}</td>
-      <td class="r">${fmtN(s.avg_price)}</td>
-      <td class="r">${fmtN(val)}</td>
-      <td><button class="btn-del" onclick="del(${s.id})">삭제</button></td>
-    </tr>`;
-  }).join("");
+let tzData=ld('timezones',DEFAULT_ZONES);
 
-  const total = stocks.reduce((a,s)=>a+(s.quantity||0)*Number(s.avg_price||0), 0);
-  tfoot.innerHTML = `<tr>
-    <td colspan="5" class="r" style="font-weight:700">합계 (${stocks.length}개)</td>
-    <td class="r">${fmtN(total)}</td>
-    <td></td>
-  </tr>`;
+function formatPreview(tz){
+  try{
+    return new Intl.DateTimeFormat('ko-KR',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date());
+  }catch{return '--:--';}
 }
 
-function filter(el) {
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-  el.classList.add("active");
-  currentCat = el.dataset.cat;
-  render();
+function buildTZGrid(){
+  const grid=gel('tz-grid');
+  const labels=['지역 1 (기준)', '지역 2', '지역 3'];
+  grid.innerHTML=labels.map((lbl,i)=>{
+    const z=tzData[i]||DEFAULT_ZONES[i];
+    const opts=ALL_TZ.map(t=>`<option value="${t.tz}" ${t.tz===z.tz?'selected':''}>${t.label}</option>`).join('');
+    return `<div class="tz-card">
+      <div class="tz-card-label">${lbl}</div>
+      <div class="tz-preview" id="tz-preview-${i}">${formatPreview(z.tz)}</div>
+      <div class="tz-preview-sub" id="tz-sub-${i}">${z.region}</div>
+      <select id="tz-select-${i}" onchange="onTZChange(${i})">${opts}</select>
+      <input type="text" id="tz-region-${i}" placeholder="표시 이름 (예: 서울)" value="${z.region}">
+    </div>`;
+  }).join('');
+  /* 미리보기 갱신 타이머 */
+  setInterval(()=>{
+    labels.forEach((_,i)=>{
+      const sel=gel(`tz-select-${i}`);
+      if(sel){const p=gel(`tz-preview-${i}`);if(p)p.textContent=formatPreview(sel.value);}
+    });
+  },10000);
 }
 
-function updateQuota() {
-  const cat = document.getElementById("f-cat").value;
-  const cnt = all.filter(s => s.category === cat).length;
-  const el  = document.getElementById("cat-quota");
-  el.textContent = `현재 ${cnt}/10개 등록됨`;
-  el.className = cnt >= 10 ? "cat-quota full" : "cat-quota";
+function onTZChange(i){
+  const sel=gel(`tz-select-${i}`);
+  const p=gel(`tz-preview-${i}`);
+  if(p)p.textContent=formatPreview(sel.value);
 }
 
-function onCatChange() { updateQuota(); }
+function saveTZ(){
+  tzData=[0,1,2].map(i=>({
+    region:gel(`tz-region-${i}`).value.trim()||`지역${i+1}`,
+    tz:gel(`tz-select-${i}`).value,
+    label:''
+  }));
+  sv('timezones',tzData);
+  toast('✓ 시간대가 저장되었습니다');
+}
+buildTZGrid();
 
-async function submit() {
-  const ticker = document.getElementById("f-ticker").value.trim().toUpperCase();
-  if (!ticker) { toast("티커를 입력해 주세요.", true); return; }
-
-  const cat = document.getElementById("f-cat").value;
-  const cnt = all.filter(s => s.category === cat).length;
-  if (cnt >= 10) { toast("카테고리당 최대 10개까지 등록 가능합니다.", true); return; }
-
-  const body = {
-    category:  cat,
-    ticker,
-    name:      document.getElementById("f-name").value.trim() || null,
-    quantity:  parseFloat(document.getElementById("f-qty").value)  || null,
-    avg_price: parseFloat(document.getElementById("f-avg").value)  || null,
-  };
-
-  const res = await fetch("/api/stocks", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  if (res.ok) {
-    toast("추가됐습니다. ✓");
-    reset();
-    load();
-  } else {
-    const err = await res.json().catch(()=>({detail:"오류"}));
-    toast(err.detail || "오류가 발생했습니다.", true);
-  }
+/* ── Google Calendar ── */
+function saveGCal(){
+  const clientId=gel('gcal-client-id').value.trim();
+  const clientSecret=gel('gcal-client-secret').value.trim();
+  if(clientId)sv('gcal_client_id',clientId);
+  if(clientSecret)sv('gcal_client_secret',clientSecret);
+  toast('✓ Google Calendar 설정이 저장되었습니다 (Spring Boot 구성 후 활성화)');
 }
 
-async function del(id) {
-  if (!confirm("정말 삭제하시겠습니까?")) return;
-  const res = await fetch(`/api/stocks/${id}`, { method: "DELETE" });
-  if (res.ok) { toast("삭제됐습니다."); load(); }
-  else toast("삭제 실패.", true);
+/* ── 유튜브 계정 ── */
+let ytAccount=ld('yt_account',{email:'',name:''});
+let ytChannels=ld('yt_channels',[]);
+
+function renderYTAccount(){
+  const disp=gel('yt-account-display');
+  if(disp)disp.textContent=ytAccount.email||'계정이 설정되지 않았습니다';
+  const nm=gel('yt-acc-name');const em=gel('yt-acc-email');
+  if(nm)nm.value=ytAccount.name||'';
+  if(em)em.value=ytAccount.email||'';
+}
+function saveYTAccount(){
+  ytAccount={name:gel('yt-acc-name').value.trim(),email:gel('yt-acc-email').value.trim()};
+  sv('yt_account',ytAccount);
+  renderYTAccount();
+  toast('✓ YouTube 계정이 저장되었습니다');
 }
 
-function reset() {
-  document.getElementById("f-cat").value    = "robinhood";
-  document.getElementById("f-ticker").value = "";
-  document.getElementById("f-name").value   = "";
-  document.getElementById("f-qty").value    = "";
-  document.getElementById("f-avg").value    = "";
-  updateQuota();
+function renderYTList(){
+  const div=gel('yt-item-list');
+  if(!ytChannels.length){div.innerHTML='<div class="empty-notice">추가된 채널이 없습니다</div>';return;}
+  div.innerHTML=ytChannels.map((c,i)=>`
+    <div class="item-row">
+      <div style="width:32px;height:22px;background:#ff0000;border-radius:3px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:0.7rem;flex-shrink:0">▶</div>
+      <div class="item-info"><div class="item-name">${c.name}</div><div class="item-sub">${c.url}</div></div>
+      <button class="btn-danger" onclick="delYT(${i})">삭제</button>
+    </div>`).join('');
+}
+function addYT(){
+  const name=gel('yt-name').value.trim();
+  const url=gel('yt-url').value.trim();
+  if(!name||!url){toast('이름과 URL을 모두 입력해주세요');return;}
+  ytChannels.push({name,url});
+  sv('yt_channels',ytChannels);
+  gel('yt-name').value='';gel('yt-url').value='';
+  renderYTList();toast('✓ 채널이 추가되었습니다');
+}
+function delYT(i){ytChannels.splice(i,1);sv('yt_channels',ytChannels);renderYTList();toast('삭제되었습니다');}
+renderYTAccount();renderYTList();
+
+/* ── 주식 4카테고리 ── */
+const CATS=[
+  {key:'robinhood', label:'🇺🇸 Robinhood',sym:'$',cls:'robinhood'},
+  {key:'us',        label:'🇺🇸 US',        sym:'$',cls:'us'},
+  {key:'kor-stock', label:'🇰🇷 KOR Stock', sym:'₩',cls:'kor-stock'},
+  {key:'kor-etf',   label:'📊 KOR ETF',    sym:'₩',cls:'kor-etf'}
+];
+let stocks=ld('stocks',{robinhood:[],us:[],['kor-stock']:[],['kor-etf']:[]});
+let curCat='robinhood';
+
+function switchStockTab(cat,btn){
+  curCat=cat;
+  document.querySelectorAll('.stock-tab').forEach(b=>{b.classList.remove('active','robinhood','us','kor-stock','kor-etf');});
+  btn.classList.add('active',cat);
+  const catObj=CATS.find(c=>c.key===cat);
+  const lbl=gel('stock-cat-label');
+  if(lbl)lbl.textContent=`현재 카테고리: ${catObj?.label||cat} (통화: ${catObj?.sym||''})`;
+  renderStockList();
 }
 
-function toast(msg, isError=false) {
-  const el = document.getElementById("toast");
-  el.textContent = msg;
-  el.className   = "toast show" + (isError ? " error" : "");
-  clearTimeout(el._t);
-  el._t = setTimeout(() => el.className = "toast", 2800);
+function renderStockList(){
+  const list=stocks[curCat]||[];
+  const catObj=CATS.find(c=>c.key===curCat);
+  const sym=catObj?.sym||'₩';
+  const div=gel('stock-item-list');
+  if(!list.length){div.innerHTML='<div class="empty-notice">이 카테고리에 종목이 없습니다</div>';renderStockSummary();return;}
+  div.innerHTML=list.map((s,i)=>{
+    const val=(s.price||0)*(s.qty||0);
+    return `<div class="item-row">
+      <span class="stock-badge badge-${curCat}">${catObj?.label||curCat}</span>
+      <div class="item-info">
+        <div class="item-name">${s.name}</div>
+        <div class="item-sub">${s.qty}주 · ${sym}${(s.price||0).toLocaleString()} · 평가액 ${sym}${val.toLocaleString()} · ${s.change>=0?'▲':'▼'}${Math.abs(s.change||0).toFixed(2)}%</div>
+      </div>
+      <button class="btn-danger" onclick="editPrice('${curCat}',${i})">가격 수정</button>
+      <button class="btn-danger" onclick="delStock('${curCat}',${i})">삭제</button>
+    </div>`;
+  }).join('');
+  renderStockSummary();
 }
 
-load();
+function renderStockSummary(){
+  const summary=gel('stock-summary');
+  const hasAny=CATS.some(c=>(stocks[c.key]||[]).length>0);
+  if(!hasAny){summary.style.display='none';return;}
+  summary.style.display='grid';
+  summary.innerHTML=CATS.map(cat=>{
+    const list=stocks[cat.key]||[];
+    const total=list.reduce((s,s2)=>s+(s2.price||0)*(s2.qty||0),0);
+    return `<div>
+      <div style="font-size:0.7rem;color:#a89880">${cat.label}</div>
+      <div style="font-size:0.95rem;font-weight:500;color:var(--accent2)">${cat.sym}${Math.round(total).toLocaleString()}</div>
+    </div>`;
+  }).join('');
+}
+
+function addStock(){
+  const name=gel('stk-name').value.trim();
+  const price=parseFloat(gel('stk-price').value)||0;
+  const qty=parseInt(gel('stk-qty').value)||0;
+  const change=parseFloat(gel('stk-change').value)||0;
+  if(!name){toast('종목명을 입력해주세요');return;}
+  if(!stocks[curCat])stocks[curCat]=[];
+  stocks[curCat].push({name,price,qty,change});
+  sv('stocks',stocks);
+  gel('stk-name').value='';gel('stk-price').value='';gel('stk-qty').value='';gel('stk-change').value='';
+  renderStockList();toast('✓ 종목이 추가되었습니다');
+}
+
+function editPrice(cat,i){
+  const catObj=CATS.find(c=>c.key===cat);
+  const newPrice=prompt(`${stocks[cat][i].name} 현재가 (${catObj?.sym||''})`,stocks[cat][i].price);
+  if(newPrice===null)return;
+  const newChange=prompt('등락률 (%) 예: 1.23 또는 -0.5',stocks[cat][i].change);
+  stocks[cat][i].price=parseFloat(newPrice)||0;
+  if(newChange!==null)stocks[cat][i].change=parseFloat(newChange)||0;
+  sv('stocks',stocks);renderStockList();toast('✓ 가격이 수정되었습니다');
+}
+function delStock(cat,i){stocks[cat].splice(i,1);sv('stocks',stocks);renderStockList();toast('삭제되었습니다');}
+
+/* 초기 카테고리 표시 */
+switchStockTab('robinhood',document.querySelector('.stock-tab'));
+
+/* ── 즐겨찾기 사이트 ── */
+let sites=ld('fav_sites',[]);
+function renderSiteList(){
+  const div=gel('site-item-list');
+  if(!sites.length){div.innerHTML='<div class="empty-notice">추가된 사이트가 없습니다</div>';return;}
+  div.innerHTML=sites.map((s,i)=>{
+    const dom=(()=>{try{return new URL(s.url).hostname;}catch{return '';}})();
+    const fav=dom?`<img src="https://www.google.com/s2/favicons?domain=${dom}&sz=32" width="18" height="18" style="border-radius:3px" onerror="this.style.display='none'">`:'';
+    return `<div class="item-row">
+      <div style="width:24px;display:flex;align-items:center">${fav}</div>
+      <div class="item-info"><div class="item-name">${s.name}</div><div class="item-sub">${s.url}</div></div>
+      <button class="btn-danger" onclick="delSite(${i})">삭제</button>
+    </div>`;
+  }).join('');
+}
+function addSite(){
+  let name=gel('site-name').value.trim();
+  let url=gel('site-url').value.trim();
+  if(!url){toast('URL을 입력해주세요');return;}
+  if(!url.startsWith('http'))url='https://'+url;
+  if(!name)name=url;
+  sites.push({name,url});sv('fav_sites',sites);
+  gel('site-name').value='';gel('site-url').value='';
+  renderSiteList();toast('✓ 사이트가 추가되었습니다');
+}
+function quickSite(name,url){
+  if(sites.find(s=>s.url===url)){toast('이미 추가된 사이트입니다');return;}
+  sites.push({name,url});sv('fav_sites',sites);
+  renderSiteList();toast(`✓ ${name} 추가!`);
+}
+function delSite(i){sites.splice(i,1);sv('fav_sites',sites);renderSiteList();toast('삭제되었습니다');}
+renderSiteList();
+
+/* ── 전체 저장 ── */
+function saveAll(){
+  sv('yt_channels',ytChannels);
+  sv('yt_account',ytAccount);
+  sv('stocks',stocks);
+  sv('fav_sites',sites);
+  toast('✅ 저장 완료! 이동합니다...');
+  setTimeout(()=>{window.location.href='index.html';},1000);
+}
 </script>
 </body>
 </html>
