@@ -122,6 +122,31 @@ class YoutubeChannelOut(YoutubeChannelCreate):
     model_config = {"from_attributes": True}
 
 
+# ── StockPrice (Yahoo Finance 실시간) ─────────────────────────────────────────
+
+class StockPrice(BaseModel):
+    ticker: str
+    current_price: float
+    prev_close: float
+    change_amount: float
+    change_percent: float
+    currency: str
+
+
+class StockPriceHistoryOut(BaseModel):
+    id: int
+    stock_id: int
+    snapshot_date: date
+    current_price: float | None
+    prev_close: float | None
+    change_amount: float | None
+    change_percent: float | None
+    volume: int | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 # ── Timezone ──────────────────────────────────────────────────────────────────
 
 class TimezoneUpdate(BaseModel):

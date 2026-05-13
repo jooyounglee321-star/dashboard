@@ -3,53 +3,75 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard</title>
+  <title>보유주식 현황</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
       background: #f0f2f5;
       color: #1a1a2e;
+      min-height: 100vh;
       padding: 24px;
     }
 
+    /* ── Header ── */
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 28px;
+      margin-bottom: 24px;
     }
-
-    header h1 { font-size: 1.6rem; font-weight: 700; }
-    header a {
-      font-size: 0.85rem;
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    .btn-refresh {
+      background: none;
+      border: 1.5px solid #4f6ef7;
       color: #4f6ef7;
-      text-decoration: none;
-      border: 1px solid #4f6ef7;
-      padding: 5px 14px;
-      border-radius: 6px;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
     }
-    header a:hover { background: #4f6ef7; color: #fff; }
+    .btn-refresh:hover { background: #4f6ef7; color: #fff; }
+    .btn-admin {
+      background: #4f6ef7;
+      color: #fff;
+      border: none;
+      padding: 7px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .btn-admin:hover { opacity: .88; }
 
     /* ── Grand Total Banner ── */
-    .grand-total-banner {
+    .banner {
       background: linear-gradient(135deg, #4f6ef7 0%, #7b5ea7 100%);
       color: #fff;
-      border-radius: 14px;
-      padding: 20px 28px;
-      margin-bottom: 28px;
+      border-radius: 16px;
+      padding: 22px 28px;
+      margin-bottom: 24px;
       display: flex;
+      gap: 40px;
       align-items: center;
-      justify-content: space-between;
     }
-    .grand-total-banner .label { font-size: 1rem; opacity: .85; }
-    .grand-total-banner .value { font-size: 2rem; font-weight: 700; }
+    .banner-item .label { font-size: 0.8rem; opacity: .8; margin-bottom: 4px; }
+    .banner-item .value { font-size: 1.8rem; font-weight: 700; }
+    .banner-item .value.up   { color: #6effa0; }
+    .banner-item .value.down { color: #ff8080; }
+    .banner-item .value.flat { color: #ccc; }
 
     /* ── Category Grid ── */
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
       gap: 20px;
     }
 
@@ -61,168 +83,281 @@
     }
 
     .card-header {
-      padding: 16px 20px;
+      padding: 14px 20px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       border-bottom: 1px solid #f0f0f0;
     }
-    .card-header .cat-name { font-weight: 700; font-size: 1rem; }
-    .card-header .cat-total {
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: #4f6ef7;
+    .card-header .cat-left { display: flex; align-items: center; gap: 8px; }
+    .cat-name { font-weight: 700; font-size: 1rem; }
+    .cat-count {
+      font-size: 0.72rem; font-weight: 600;
+      background: #f0f2f5; color: #666;
+      padding: 2px 8px; border-radius: 20px;
     }
+    .cat-total { font-size: 0.95rem; font-weight: 700; color: #4f6ef7; }
+    .cat-change { font-size: 0.82rem; font-weight: 600; margin-left: 8px; }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.875rem;
-    }
+    /* ── Table ── */
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
     thead th {
       background: #fafafa;
-      padding: 10px 14px;
+      padding: 8px 12px;
       text-align: left;
       font-weight: 600;
-      color: #666;
+      color: #888;
       border-bottom: 1px solid #eee;
+      white-space: nowrap;
     }
-    thead th.num { text-align: right; }
+    thead th.r { text-align: right; }
     tbody td {
-      padding: 10px 14px;
+      padding: 9px 12px;
       border-bottom: 1px solid #f5f5f5;
+      vertical-align: middle;
     }
-    tbody td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    tbody td.r { text-align: right; font-variant-numeric: tabular-nums; }
     tbody tr:last-child td { border-bottom: none; }
     tbody tr:hover { background: #fafbff; }
 
     tfoot td {
-      padding: 10px 14px;
+      padding: 9px 12px;
       font-weight: 700;
       background: #f8f9ff;
       border-top: 2px solid #e8ecff;
     }
-    tfoot td.num { text-align: right; color: #4f6ef7; }
+    tfoot td.r { text-align: right; color: #4f6ef7; }
 
-    .empty {
-      padding: 20px;
+    /* ── Price States ── */
+    .up   { color: #16a34a; }
+    .down { color: #dc2626; }
+    .flat { color: #94a3b8; }
+
+    .ticker { font-weight: 700; font-family: 'SF Mono', 'Fira Code', monospace; }
+    .name   { color: #555; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ── Loading Spinner ── */
+    .spin {
+      display: inline-block;
+      width: 12px; height: 12px;
+      border: 2px solid #ccc;
+      border-top-color: #4f6ef7;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-row td {
       text-align: center;
-      color: #aaa;
+      color: #bbb;
+      padding: 20px;
       font-size: 0.85rem;
     }
 
-    .badge {
-      display: inline-block;
-      font-size: 0.72rem;
-      padding: 2px 8px;
-      border-radius: 20px;
-      font-weight: 600;
-      margin-left: 6px;
+    /* ── Updated time ── */
+    .updated-at {
+      text-align: right;
+      font-size: 0.75rem;
+      color: #aaa;
+      margin-top: 16px;
     }
-    .badge-robinhood { background: #fff0e6; color: #d4631a; }
-    .badge-us        { background: #e6f0ff; color: #2a5ad4; }
-    .badge-kor-stock { background: #e6fff0; color: #1a9450; }
-    .badge-kor-etf   { background: #f3e6ff; color: #7b2fd4; }
+
+    .badge-robinhood { background:#fff0e6; color:#d4631a; padding:2px 8px; border-radius:12px; font-size:.7rem; font-weight:700; }
+    .badge-us        { background:#e6f0ff; color:#2a5ad4; padding:2px 8px; border-radius:12px; font-size:.7rem; font-weight:700; }
+    .badge-kor-stock { background:#e6fff0; color:#1a9450; padding:2px 8px; border-radius:12px; font-size:.7rem; font-weight:700; }
+    .badge-kor-etf   { background:#f3e6ff; color:#7b2fd4; padding:2px 8px; border-radius:12px; font-size:.7rem; font-weight:700; }
   </style>
 </head>
 <body>
 
 <header>
   <h1>📊 보유주식 현황</h1>
-  <a href="/admin.html">⚙️ 관리</a>
+  <div class="header-right">
+    <button class="btn-refresh" onclick="loadAll()">↻ 새로고침</button>
+    <a class="btn-admin" href="/admin.html">⚙ 관리</a>
+  </div>
 </header>
 
-<div class="grand-total-banner">
-  <div>
-    <div class="label">전체 평가금액 합계</div>
-    <div class="value" id="grand-total">—</div>
+<!-- Grand Total Banner -->
+<div class="banner">
+  <div class="banner-item">
+    <div class="label">전체 평가금액</div>
+    <div class="value" id="b-total">—</div>
   </div>
-  <div id="grand-count" style="opacity:.75;font-size:.9rem;"></div>
+  <div class="banner-item">
+    <div class="label">당일 손익</div>
+    <div class="value" id="b-change">—</div>
+  </div>
+  <div class="banner-item">
+    <div class="label">등락률</div>
+    <div class="value" id="b-pct">—</div>
+  </div>
+  <div class="banner-item">
+    <div class="label">총 종목 수</div>
+    <div class="value" id="b-count" style="font-size:1.3rem;">—</div>
+  </div>
 </div>
 
-<div class="grid" id="categories-grid">
-  <!-- 카테고리 카드가 여기에 렌더링됩니다 -->
-</div>
+<div class="grid" id="grid"></div>
+<div class="updated-at" id="updated-at"></div>
 
 <script>
-  const CATEGORIES = [
-    { key: "robinhood", label: "Robinhood",  badge: "badge-robinhood" },
-    { key: "us",        label: "US",         badge: "badge-us" },
-    { key: "kor-stock", label: "KOR Stock",  badge: "badge-kor-stock" },
-    { key: "kor-etf",   label: "KOR ETF",    badge: "badge-kor-etf" },
-  ];
+const CATS = [
+  { key: "robinhood", label: "Robinhood", badge: "badge-robinhood" },
+  { key: "us",        label: "US",        badge: "badge-us" },
+  { key: "kor-stock", label: "KOR Stock", badge: "badge-kor-stock" },
+  { key: "kor-etf",   label: "KOR ETF",   badge: "badge-kor-etf" },
+];
 
-  const fmt = (n) => Number(n).toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// 통화별 포맷
+function fmtPrice(val, currency) {
+  if (val == null) return "—";
+  if (currency === "KRW") {
+    return "₩" + Math.round(val).toLocaleString("ko-KR");
+  }
+  return "$" + Number(val).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+}
+function fmtUSD(val) {
+  if (val == null) return "—";
+  return "$" + Number(val).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmtKRW(val) {
+  return "₩" + Math.round(val).toLocaleString("ko-KR");
+}
+function fmtPct(val) {
+  if (val == null) return "—";
+  const sign = val > 0 ? "+" : "";
+  return sign + Number(val).toFixed(2) + "%";
+}
+function cls(val) {
+  if (val == null || val === 0) return "flat";
+  return val > 0 ? "up" : "down";
+}
+function arrow(val) {
+  if (!val || val === 0) return "";
+  return val > 0 ? "▲ " : "▼ ";
+}
 
-  async function load() {
-    const [stocksRes, summaryRes] = await Promise.all([
-      fetch('/api/stocks'),
-      fetch('/api/stocks/summary'),
-    ]);
-    const stocks  = await stocksRes.json();
-    const summary = await summaryRes.json();
-
-    // 전체 합계 배너
-    document.getElementById('grand-total').textContent = fmt(summary.grand_total);
-    const totalCount = Object.values(summary.categories).reduce((a, c) => a + c.count, 0);
-    document.getElementById('grand-count').textContent = `총 ${totalCount}개 종목`;
-
-    // 카테고리 카드 렌더링
-    const grid = document.getElementById('categories-grid');
-    grid.innerHTML = '';
-
-    for (const cat of CATEGORIES) {
-      const info      = summary.categories[cat.key] || { label: cat.label, count: 0, total: 0 };
-      const catStocks = stocks.filter(s => s.category === cat.key);
-      catStocks.sort((a, b) => a.ticker.localeCompare(b.ticker));
-
-      const rows = catStocks.length
-        ? catStocks.map(s => {
-            const total = (s.quantity || 0) * (s.avg_price || 0);
-            return `<tr>
-              <td><strong>${s.ticker}</strong></td>
-              <td>${s.name || '—'}</td>
-              <td class="num">${s.quantity != null ? fmt(s.quantity) : '—'}</td>
-              <td class="num">${s.avg_price != null ? fmt(s.avg_price) : '—'}</td>
-              <td class="num">${fmt(total)}</td>
-            </tr>`;
-          }).join('')
-        : `<tr><td colspan="5" class="empty">종목이 없습니다</td></tr>`;
-
-      grid.insertAdjacentHTML('beforeend', `
-        <div class="card">
-          <div class="card-header">
-            <span class="cat-name">
-              ${cat.label}
-              <span class="badge ${cat.badge}">${info.count}개</span>
-            </span>
-            <span class="cat-total">${fmt(info.total)}</span>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>티커</th>
-                <th>종목명</th>
-                <th class="num">수량</th>
-                <th class="num">평균단가</th>
-                <th class="num">평가금액</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-            ${catStocks.length ? `
-            <tfoot>
-              <tr>
-                <td colspan="4">소계</td>
-                <td class="num">${fmt(info.total)}</td>
-              </tr>
-            </tfoot>` : ''}
-          </table>
+async function loadAll() {
+  const grid = document.getElementById("grid");
+  grid.innerHTML = CATS.map(c => `
+    <div class="card" id="card-${c.key}">
+      <div class="card-header">
+        <div class="cat-left">
+          <span class="cat-name">${c.label}</span>
+          <span class="cat-count" id="cnt-${c.key}">0/10</span>
         </div>
-      `);
+        <span><span class="cat-total" id="tot-${c.key}">—</span>
+              <span class="cat-change" id="chg-${c.key}"></span></span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>티커</th><th>종목명</th><th class="r">수량</th>
+            <th class="r">현재가</th><th class="r">전날종가</th>
+            <th class="r">등락금액</th><th class="r">등락률</th><th class="r">평가금액</th>
+          </tr>
+        </thead>
+        <tbody id="tb-${c.key}"><tr><td colspan="8" class="empty-row" style="text-align:center;padding:20px;color:#bbb;"><span class="spin"></span> 로딩 중…</td></tr></tbody>
+        <tfoot id="tf-${c.key}"></tfoot>
+      </table>
+    </div>`).join("");
+
+  // 1) 종목 목록 로드
+  const stocks = await fetch("/api/stocks").then(r => r.json()).catch(() => []);
+
+  // 2) 유니크 티커 → 가격 병렬 조회
+  const tickers = [...new Set(stocks.map(s => s.ticker))];
+  const priceMap = {};
+  await Promise.allSettled(
+    tickers.map(async t => {
+      try {
+        const p = await fetch(`/api/stocks/price/${encodeURIComponent(t)}`).then(r => r.json());
+        priceMap[t] = p;
+      } catch { /* 가격 없음 */ }
+    })
+  );
+
+  // 3) 카테고리별 렌더링
+  let grandTotal = 0, grandChange = 0, grandPrevTotal = 0, grandCount = 0;
+
+  for (const cat of CATS) {
+    const catStocks = stocks.filter(s => s.category === cat.key);
+    grandCount += catStocks.length;
+
+    document.getElementById(`cnt-${cat.key}`).textContent = `${catStocks.length}/10`;
+
+    let catTotal = 0, catChange = 0, catPrevTotal = 0;
+
+    const rows = catStocks.length ? catStocks.map(s => {
+      const p   = priceMap[s.ticker];
+      const qty = s.quantity || 0;
+      const cur = p?.current_price;
+      const pre = p?.prev_close;
+      const chA = p?.change_amount;
+      const chP = p?.change_percent;
+      const cur2 = cur ?? Number(s.avg_price ?? 0);
+      const pre2 = pre ?? Number(s.avg_price ?? 0);
+      const val  = qty * cur2;
+      const valPrev = qty * pre2;
+      const rowChange = cur != null ? (chA * qty) : 0;
+
+      catTotal    += val;
+      catPrevTotal += valPrev;
+      catChange   += rowChange;
+
+      const currency = p?.currency || "USD";
+      const fmtV = v => fmtPrice(v, currency);
+      const chAmtStr = cur != null ? `<span class="${cls(chA)}">${arrow(chA)}${fmtV(Math.abs(chA))}</span>` : "—";
+      const chPctStr = cur != null ? `<span class="${cls(chP)}">${fmtPct(chP)}</span>` : "—";
+      const curStr   = cur != null ? fmtV(cur) : `<span class="flat">${fmtV(s.avg_price)} <small>(단가)</small></span>`;
+      const preStr   = pre != null ? fmtV(pre) : "—";
+
+      return `<tr>
+        <td><span class="ticker">${s.ticker}</span></td>
+        <td><span class="name" title="${s.name||''}">${s.name || "—"}</span></td>
+        <td class="r">${qty.toLocaleString()}</td>
+        <td class="r">${curStr}</td>
+        <td class="r">${preStr}</td>
+        <td class="r">${chAmtStr}</td>
+        <td class="r">${chPctStr}</td>
+        <td class="r"><strong>${fmtUSD(val)}</strong></td>
+      </tr>`;
+    }).join("") : `<tr class="empty-row"><td colspan="8">종목이 없습니다</td></tr>`;
+
+    document.getElementById(`tb-${cat.key}`).innerHTML = rows;
+
+    if (catStocks.length) {
+      const catPct = catPrevTotal ? ((catTotal - catPrevTotal) / catPrevTotal * 100) : 0;
+      document.getElementById(`tot-${cat.key}`).textContent = fmtUSD(catTotal);
+      document.getElementById(`chg-${cat.key}`).innerHTML =
+        `<span class="${cls(catChange)}">${catChange >= 0 ? "+" : ""}${fmtUSD(catChange)} (${fmtPct(catPct)})</span>`;
+      document.getElementById(`tf-${cat.key}`).innerHTML =
+        `<tr><td colspan="7" class="r" style="font-weight:700;">소계 (${catStocks.length}개)</td><td class="r">${fmtUSD(catTotal)}</td></tr>`;
+    } else {
+      document.getElementById(`tf-${cat.key}`).innerHTML = "";
     }
+
+    grandTotal    += catTotal;
+    grandChange   += catChange;
+    grandPrevTotal += catPrevTotal;
   }
 
-  load();
+  // 4) 배너 업데이트
+  const grandPct = grandPrevTotal ? ((grandTotal - grandPrevTotal) / grandPrevTotal * 100) : 0;
+  document.getElementById("b-total").textContent  = fmtUSD(grandTotal);
+  document.getElementById("b-change").className   = "value " + cls(grandChange);
+  document.getElementById("b-change").textContent = (grandChange >= 0 ? "+" : "") + fmtUSD(grandChange);
+  document.getElementById("b-pct").className      = "value " + cls(grandPct);
+  document.getElementById("b-pct").textContent    = fmtPct(grandPct);
+  document.getElementById("b-count").textContent  = grandCount + "개";
+
+  document.getElementById("updated-at").textContent =
+    "⏱ 마지막 업데이트: " + new Date().toLocaleTimeString("ko-KR");
+}
+
+loadAll();
 </script>
 </body>
 </html>
