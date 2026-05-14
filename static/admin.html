@@ -129,7 +129,7 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
       <div class="form-row">
         <div class="form-group">
           <label>티커 심볼 *</label>
-          <input type="text" id="stk-ticker" placeholder="AAPL / 005930.KS">
+          <input type="text" id="stk-ticker" placeholder="AAPL / 005930 / 069500">
         </div>
         <div class="form-group" style="flex:1.5">
           <label>종목명</label>
@@ -145,7 +145,11 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
         </div>
         <button class="btn-primary" onclick="addStock()">+ 추가</button>
       </div>
-      <div style="font-size:0.75rem;color:var(--ink3);margin-top:-0.4rem">💡 한국주식: <b>005930.KS</b> · 한국ETF: <b>069500.KS</b> · 현재가는 Yahoo Finance에서 자동 조회됩니다</div>
+      <div style="font-size:0.75rem;color:var(--ink3);margin-top:-0.4rem;line-height:1.6">
+        💡 <b>KOR Stock</b>: 숫자만 입력 (<b>005930</b>) — 코스피(.KS) 우선 조회 후 코스닥(.KQ) 자동 재시도 &nbsp;|&nbsp;
+        <b>KOR ETF</b>: 숫자만 입력 (<b>069500</b>) — .KS 자동 추가 &nbsp;|&nbsp;
+        <b>미국주식</b>: <b>AAPL</b> 그대로 입력 &nbsp;|&nbsp; 현재가는 Yahoo Finance에서 자동 조회됩니다
+      </div>
 
       <!-- 카테고리별 목록 -->
       <div class="item-list" id="stock-item-list"></div>

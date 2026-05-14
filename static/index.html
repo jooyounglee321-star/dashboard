@@ -752,11 +752,12 @@ async function renderStock(){
     if(pcBody)pcBody.innerHTML=msg; if(mBody)mBody.innerHTML=msg; return;
   }
 
-  /* 유니크 티커 → Yahoo Finance 가격 병렬 조회 */
-  const tickers=[...new Set(allStocks.map(s=>s.ticker))];
+  /* 유니크 티커 → Yahoo Finance 가격 병렬 조회 (한국주식은 category 전달 → .KS/.KQ 자동처리) */
+  const tickerCatMap={};
+  allStocks.forEach(s=>{ if(!tickerCatMap[s.ticker]) tickerCatMap[s.ticker]=s.category; });
   const priceMap={};
-  await Promise.allSettled(tickers.map(async t=>{
-    try{ priceMap[t]=await fetch(`/api/stocks/price/${encodeURIComponent(t)}`).then(r=>r.json()); }catch{}
+  await Promise.allSettled(Object.entries(tickerCatMap).map(async ([t,cat])=>{
+    try{ priceMap[t]=await fetch(`/api/stocks/price/${encodeURIComponent(t)}?category=${cat}`).then(r=>r.json()); }catch{}
   }));
 
   let grandUSD=0, grandKRW=0;
