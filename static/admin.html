@@ -546,25 +546,57 @@ function renderGroups(){
 
 /* ── 주식 검색 자동완성 ── */
 let _searchTimer=null;
+let _krStocks=null; // 한국 주식 로컬 데이터
 
+/* 한국 주식 JSON 로드 (1회만) */
+async function _loadKrStocks(){
+  if(_krStocks!==null)return _krStocks;
+  try{
+    const r=await fetch('./kr_stocks.json');
+    _krStocks=r.ok?await r.json():[];
+  }catch(e){console.warn('[KrStocks] 로드 실패',e);_krStocks=[];}
+  return _krStocks;
+}
+_loadKrStocks(); // 페이지 로드 시 미리 캐시
+
+/* 입력 타입 판별 */
+function _isKorean(s){return /[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(s);}
+function _isNumericOnly(s){return /^\d+$/.test(s.replace(/\.(KS|KQ)$/i,''));}
+
+/* 로컬 한국 주식 검색 */
+function _krSearch(q,max=8){
+  if(!_krStocks||!_krStocks.length)return[];
+  const ql=q.toLowerCase();
+  const res=[];
+  for(const s of _krStocks){
+    const match=_isKorean(q)
+      ?s.name.includes(q)
+      :s.ticker.toLowerCase().startsWith(ql)||s.ticker.replace(/\.(KS|KQ)$/i,'').toLowerCase().startsWith(ql);
+    if(match)res.push({ticker:s.ticker,name:s.name,exchange:s.market,type:'EQUITY'});
+    if(res.length>=max)break;
+  }
+  return res;
+}
+
+/* Yahoo Finance 검색 (영문·미국주식용, debounce) */
 function _debounceSearch(fn,ms){
   return function(...args){clearTimeout(_searchTimer);_searchTimer=setTimeout(()=>fn(...args),ms);};
 }
-
-const _doSearch=_debounceSearch(async function(q,onResults){
+const _doYfSearch=_debounceSearch(async function(q,onResults){
   if(!q)return;
   try{
     const r=await fetch('/api/stocks/search?q='+encodeURIComponent(q));
     if(r.ok){const d=await r.json();onResults(d.results||[]);}
-  }catch(e){console.warn('[StockSearch]',e);}
+  }catch(e){console.warn('[YfSearch]',e);}
 },350);
 
+/* 드롭다운 UI */
 function _positionDd(el){
   const dd=gel('stock-dd');
   const rect=el.getBoundingClientRect();
   dd.style.top=(rect.bottom+window.scrollY+2)+'px';
   dd.style.left=(rect.left+window.scrollX)+'px';
-  dd.style.minWidth=Math.max(rect.width,220)+'px';
+  dd.style.minWidth=Math.max(rect.width,240)+'px';
 }
 
 function _showDd(results,onSelect){
@@ -595,41 +627,71 @@ function _hideDd(){
   delete dd._onSelect;
 }
 
+/* 티커 입력 핸들러 */
 function onTickerInput(gid,el){
   const q=el.value.trim();
   if(!q){_hideDd();return;}
   _positionDd(el);
-  _doSearch(q,function(results){
-    if(!results.length){_hideDd();return;}
-    // 정확히 일치하는 티커가 있으면 종목명 자동완성
-    const up=q.toUpperCase();
-    const exact=results.find(r=>r.ticker.toUpperCase()===up||r.ticker.toUpperCase()===up+'.KS'||r.ticker.toUpperCase()===up+'.KQ');
-    if(exact){
-      const nameEl=gel('name-'+gid);
-      if(nameEl&&!nameEl.value)nameEl.value=exact.name;
-    }
-    _showDd(results,function(item){
-      el.value=item.ticker;
-      const nameEl=gel('name-'+gid);
-      if(nameEl)nameEl.value=item.name;
+  const useKr=_isKorean(q)||_isNumericOnly(q);
+  if(useKr){
+    // 한국 주식: 로컬 JSON 검색
+    _loadKrStocks().then(()=>{
+      const results=_krSearch(q);
+      if(!results.length){_hideDd();return;}
+      _showDd(results,function(item){
+        el.value=item.ticker;
+        const nameEl=gel('name-'+gid);
+        if(nameEl)nameEl.value=item.name;
+      });
+      _positionDd(el);
     });
-    _positionDd(el);
-  });
+  }else{
+    // 미국 주식: Yahoo Finance 검색
+    const up=q.toUpperCase();
+    _doYfSearch(up,function(results){
+      if(!results.length){_hideDd();return;}
+      const exact=results.find(r=>r.ticker.toUpperCase()===up);
+      if(exact){const nameEl=gel('name-'+gid);if(nameEl&&!nameEl.value)nameEl.value=exact.name;}
+      _showDd(results,function(item){
+        el.value=item.ticker;
+        const nameEl=gel('name-'+gid);
+        if(nameEl)nameEl.value=item.name;
+      });
+      _positionDd(el);
+    });
+  }
 }
 
+/* 종목명 입력 핸들러 */
 function onNameInput(gid,el){
   const q=el.value.trim();
-  if(q.length<2){_hideDd();return;}
+  if(!q){_hideDd();return;}
   _positionDd(el);
-  _doSearch(q,function(results){
-    if(!results.length){_hideDd();return;}
-    _showDd(results,function(item){
-      el.value=item.name;
-      const tickerEl=gel('ticker-'+gid);
-      if(tickerEl)tickerEl.value=item.ticker;
+  if(_isKorean(q)){
+    // 한글 → 로컬 검색
+    _loadKrStocks().then(()=>{
+      const results=_krSearch(q);
+      if(!results.length){_hideDd();return;}
+      _showDd(results,function(item){
+        el.value=item.name;
+        const tickerEl=gel('ticker-'+gid);
+        if(tickerEl)tickerEl.value=item.ticker;
+      });
+      _positionDd(el);
     });
-    _positionDd(el);
-  });
+  }else{
+    // 영문 → Yahoo Finance 검색
+    if(q.length<2){_hideDd();return;}
+    _doYfSearch(q,function(results){
+      if(!results.length){_hideDd();return;}
+      _showDd(results,function(item){
+        el.value=item.name;
+        const tickerEl=gel('ticker-'+gid);
+        if(tickerEl)tickerEl.value=item.ticker;
+      });
+      _positionDd(el);
+    });
+  }
 }
 
 function onStockInputBlur(){setTimeout(_hideDd,180);}
