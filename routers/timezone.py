@@ -1,32 +1,63 @@
+import json
+
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from database import get_db
 from models import TimezoneConfig
-from schemas import TimezoneOut, TimezoneUpdate
 
 router = APIRouter(prefix="/timezone", tags=["timezone"])
 
+DEFAULT_ZONES = [
+    {"region": "서울", "tz": "Asia/Seoul",       "label": "KST"},
+    {"region": "뉴욕", "tz": "America/New_York", "label": "ET"},
+    {"region": "런던", "tz": "Europe/London",    "label": "GMT"},
+]
 
-@router.get("", response_model=TimezoneOut)
+
+class TimezoneZone(BaseModel):
+    region: str
+    tz: str
+    label: str = ""
+
+
+class TimezoneZonesBody(BaseModel):
+    zones: list[TimezoneZone]
+
+
+def _load_zones(row: TimezoneConfig | None) -> list[dict]:
+    if not row or row.timezone == "UTC":
+        return DEFAULT_ZONES
+    try:
+        data = json.loads(row.timezone)
+        if isinstance(data, list) and len(data) == 3:
+            return data
+    except Exception:
+        pass
+    return DEFAULT_ZONES
+
+
+# ── GET /api/timezone ───────────────────────────────────────────────────────
+@router.get("")
 def get_timezone(db: Session = Depends(get_db)):
+    """3개 시간대 배열 반환."""
     row = db.query(TimezoneConfig).first()
-    if not row:
-        row = TimezoneConfig(timezone="UTC")
-        db.add(row)
-        db.commit()
-        db.refresh(row)
-    return row
+    return {"zones": _load_zones(row)}
 
 
-@router.put("", response_model=TimezoneOut)
-def update_timezone(body: TimezoneUpdate, db: Session = Depends(get_db)):
+# ── PUT /api/timezone ───────────────────────────────────────────────────────
+@router.put("")
+def update_timezone(body: TimezoneZonesBody, db: Session = Depends(get_db)):
+    """3개 시간대 배열을 JSON 문자열로 저장."""
+    zones_json = json.dumps(
+        [z.model_dump() for z in body.zones], ensure_ascii=False
+    )
     row = db.query(TimezoneConfig).first()
     if row:
-        row.timezone = body.timezone
+        row.timezone = zones_json
     else:
-        row = TimezoneConfig(timezone=body.timezone)
+        row = TimezoneConfig(timezone=zones_json)
         db.add(row)
     db.commit()
-    db.refresh(row)
-    return row
+    return {"zones": body.zones}

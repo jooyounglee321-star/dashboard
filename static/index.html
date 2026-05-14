@@ -543,6 +543,18 @@ const gel=id=>document.getElementById(id);
 const DAYS=['일','월','화','수','목','금','토'];
 const MON=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
 
+/* ── DB 전환용 전역 캐시 ── */
+let _zones=null;          // 3개 시간대 (API에서 로드)
+let _dietCache=[];        // 오늘 식단 목록 (ID 참조용)
+let _memoData=null;       // 오늘 메모 {id, content, updated_at}
+
+async function loadZones(){
+  try{
+    const r=await fetch('/api/timezone');
+    if(r.ok){const d=await r.json();if(d.zones&&d.zones.length===3)_zones=d.zones;}
+  }catch{}
+}
+
 /* ── 시계 + 3지역 ── */
 const DEFAULT_ZONES=[
   {region:'내 위치', tz:Intl.DateTimeFormat().resolvedOptions().timeZone, label:''},
@@ -551,8 +563,7 @@ const DEFAULT_ZONES=[
 ];
 
 function getZones(){
-  const saved=ld('timezones',null);
-  return saved && saved.length===3 ? saved : DEFAULT_ZONES;
+  return _zones || DEFAULT_ZONES;
 }
 
 function formatTZ(tz){
@@ -606,7 +617,7 @@ function tickClock(){
     }).join('');
   }
 }
-tickClock();setInterval(tickClock,10000);
+/* tickClock + setInterval → 페이지 하단 async init 블록에서 호출 */
 
 /* ── 날씨 ── */
 const WC={0:'☀️ 맑음',1:'🌤 거의 맑음',2:'⛅ 부분 흐림',3:'☁️ 흐림',45:'🌫 안개',48:'🌫 안개',51:'🌦 이슬비',53:'🌦 이슬비',55:'🌧 이슬비',61:'🌧 비',63:'🌧 비',65:'🌧 폭우',71:'🌨 눈',73:'🌨 눈',75:'❄️ 폭설',80:'🌦 소나기',81:'🌧 소나기',82:'⛈ 폭우',95:'⛈ 뇌우',99:'⛈ 뇌우'};
@@ -706,10 +717,9 @@ function mTab(k,btn){
 renderNews();
 
 /* ── 유튜브 ── */
-function renderYT(){
-  const ch=ld('yt_channels',[]);
+async function renderYT(){
+  const ch=await fetch('/api/youtube-channels').then(r=>r.ok?r.json():[]).catch(()=>[]);
   const account=ld('yt_account',{email:'',name:''});
-  /* 계정 표시 */
   ['pc-yt-account-val'].forEach(id=>{
     const e=gel(id);
     if(e)e.textContent=account.email||'관리자에서 계정을 설정하세요';
@@ -720,11 +730,9 @@ function renderYT(){
     if(me)me.innerHTML='<li class="empty-msg">관리자에서 채널을 추가하세요</li>';
     return;
   }
-  /* 유튜브 링크에 계정 파라미터 처리는 브라우저 로그인 상태 유지로 처리 */
-  if(pe)pe.innerHTML=ch.map(c=>`<li class="yt-item"><a href="${c.url}" target="_blank"><div class="yt-ico">▶</div><div><div class="yt-name">${c.name}</div><div class="yt-url">${c.url}</div></div></a></li>`).join('');
-  if(me)me.innerHTML=ch.map(c=>`<li class="m-yt-item"><a href="${c.url}" target="_blank"><div class="m-yt-ico">▶</div><div><div class="m-yt-name">${c.name}</div></div></a></li>`).join('');
+  if(pe)pe.innerHTML=ch.map(c=>`<li class="yt-item"><a href="${c.channel_url||''}" target="_blank"><div class="yt-ico">▶</div><div><div class="yt-name">${c.channel_name}</div><div class="yt-url">${c.channel_url||''}</div></div></a></li>`).join('');
+  if(me)me.innerHTML=ch.map(c=>`<li class="m-yt-item"><a href="${c.channel_url||''}" target="_blank"><div class="m-yt-ico">▶</div><div><div class="m-yt-name">${c.channel_name}</div></div></a></li>`).join('');
 }
-renderYT();
 
 /* ── 주식 4카테고리 (Yahoo Finance 실시간) ── */
 const STOCK_CATS=[
@@ -885,11 +893,11 @@ async function renderStock(){
   if(pcBody)pcBody.innerHTML=pcHTML+totalBar;
   if(mBody)mBody.innerHTML=mHTML+mTotalBar;
 }
-renderStock();
+/* renderStock() → 하단 async init 블록에서 호출 */
 
 /* ── 지출 ── */
-function renderExp(){
-  const list=ld('expense_'+todayKey(),[]);
+async function renderExp(){
+  const list=await fetch('/api/expenses?date='+todayKey()).then(r=>r.ok?r.json():[]).catch(()=>[]);
   const tot='₩'+list.reduce((s,e)=>s+(Number(e.amount)||0),0).toLocaleString();
   ['pc-exp-total','m-exp-total'].forEach(id=>{const e=gel(id);if(e)e.textContent=tot;});
   const pe=gel('pc-exp-list');const me=gel('m-exp-list');
@@ -898,29 +906,33 @@ function renderExp(){
     if(me)me.innerHTML='<li style="font-size:0.85rem;color:var(--ink3);font-style:italic;padding:0.3rem 0">지출 내역이 없습니다</li>';
     return;
   }
-  const pH=list.map((e,i)=>`<li class="exp-item"><div><span class="exp-cat cat-${e.cat}">${e.cat}</span>${e.item}</div><div style="display:flex;align-items:center;gap:0.35rem"><span style="font-weight:500">₩${Number(e.amount).toLocaleString()}</span><button class="btn-del" onclick="delExp(${i})">✕</button></div></li>`).join('');
-  const mH=list.map((e,i)=>`<li class="m-exp-item"><div><span class="exp-cat cat-${e.cat}">${e.cat}</span>${e.item}</div><div style="display:flex;align-items:center;gap:0.4rem"><span style="font-weight:500">₩${Number(e.amount).toLocaleString()}</span><button class="btn-del" onclick="delExp(${i})">✕</button></div></li>`).join('');
+  const pH=list.map(e=>`<li class="exp-item"><div><span class="exp-cat cat-${e.category||''}">${e.category||''}</span>${e.description||''}</div><div style="display:flex;align-items:center;gap:0.35rem"><span style="font-weight:500">₩${Number(e.amount).toLocaleString()}</span><button class="btn-del" onclick="delExp(${e.id})">✕</button></div></li>`).join('');
+  const mH=list.map(e=>`<li class="m-exp-item"><div><span class="exp-cat cat-${e.category||''}">${e.category||''}</span>${e.description||''}</div><div style="display:flex;align-items:center;gap:0.4rem"><span style="font-weight:500">₩${Number(e.amount).toLocaleString()}</span><button class="btn-del" onclick="delExp(${e.id})">✕</button></div></li>`).join('');
   if(pe)pe.innerHTML=pH;if(me)me.innerHTML=mH;
 }
-function addExp(pre){
+async function addExp(pre){
   const item=gel(pre+'-eitem').value.trim();
   const amount=gel(pre+'-eamt').value;
   const cat=gel(pre+'-ecat').value;
   if(!item||!amount)return;
-  const list=ld('expense_'+todayKey(),[]);
-  list.push({item,amount:Number(amount),cat,savedAt:new Date().toISOString()});
-  sv('expense_'+todayKey(),list);
+  await fetch('/api/expenses',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({date:todayKey(),amount:Number(amount),category:cat,description:item})});
   gel(pre+'-eitem').value='';gel(pre+'-eamt').value='';
-  renderExp();
-  /* TODO: Spring Boot 연동 후 → fetch('/api/expense', {method:'POST', body:JSON.stringify({item,amount,cat})}) */
+  await renderExp();
 }
-function delExp(i){const l=ld('expense_'+todayKey(),[]);l.splice(i,1);sv('expense_'+todayKey(),l);renderExp();}
-renderExp();
+async function delExp(id){
+  await fetch('/api/expenses/'+id,{method:'DELETE'});
+  await renderExp();
+}
 
 /* ── 식단 ── */
 const MORD=['아침','점심','저녁','간식'];
-function renderMeal(){
-  const meals=ld('meal_'+todayKey(),{});
+async function renderMeal(){
+  const list=await fetch('/api/diets?date='+todayKey()).then(r=>r.ok?r.json():[]).catch(()=>[]);
+  _dietCache=list;
+  /* meal_type별로 그룹핑 */
+  const meals={};
+  list.forEach(d=>{if(!meals[d.meal_type])meals[d.meal_type]=[];meals[d.meal_type].push(d.content||'');});
   [['pc-meal-display',false],['m-meal-display',true]].forEach(([id,isM])=>{
     const el=gel(id);if(!el)return;
     const has=MORD.some(m=>meals[m]&&meals[m].length);
@@ -931,41 +943,57 @@ function renderMeal(){
     ).join('');
   });
 }
-function addMeal(pre){
+async function addMeal(pre){
   const t=gel(pre+'-mtime').value;const tx=gel(pre+'-mtext').value.trim();if(!tx)return;
-  const meals=ld('meal_'+todayKey(),{});if(!meals[t])meals[t]=[];meals[t].push(tx);
-  sv('meal_'+todayKey(),meals);gel(pre+'-mtext').value='';renderMeal();
+  await fetch('/api/diets',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({date:todayKey(),meal_type:t,content:tx})});
+  gel(pre+'-mtext').value='';
+  await renderMeal();
 }
-function delMeal(t){const m=ld('meal_'+todayKey(),{});delete m[t];sv('meal_'+todayKey(),m);renderMeal();}
-renderMeal();
+async function delMeal(t){
+  const toDelete=_dietCache.filter(d=>d.meal_type===t);
+  await Promise.all(toDelete.map(d=>fetch('/api/diets/'+d.id,{method:'DELETE'})));
+  await renderMeal();
+}
 
 /* ── 메모 ── */
-function renderMemo(){
-  const data=ld('memo_'+todayKey(),{text:'',savedAt:''});
+async function renderMemo(){
+  const list=await fetch('/api/memos?date='+todayKey()).then(r=>r.ok?r.json():[]).catch(()=>[]);
+  _memoData=list.length?list[0]:null;
   ['pc','m'].forEach(pre=>{
     const d=gel(pre+'-memo-disp');if(!d)return;
-    if(data.text){d.textContent=data.text;d.style.fontStyle='normal';const de=gel(pre+'-memo-date');if(de)de.textContent=data.savedAt?'저장: '+data.savedAt:'';}
-    else{d.innerHTML='<span style="color:#a89880;font-style:italic">오늘 하루를 기록해보세요...</span>';}
+    if(_memoData?.content){
+      d.textContent=_memoData.content;d.style.fontStyle='normal';
+      const de=gel(pre+'-memo-date');
+      if(de&&_memoData.updated_at){const u=new Date(_memoData.updated_at);de.textContent=`저장: ${u.getHours()}시 ${u.getMinutes()}분`;}
+    }else{d.innerHTML='<span style="color:#a89880;font-style:italic">오늘 하루를 기록해보세요...</span>';}
   });
 }
-function memoEdit(pre){
-  const data=ld('memo_'+todayKey(),{text:''});
-  gel(pre+'-memo-ta').value=data.text;
+async function memoEdit(pre){
+  const list=await fetch('/api/memos?date='+todayKey()).then(r=>r.ok?r.json():[]).catch(()=>[]);
+  _memoData=list.length?list[0]:null;
+  gel(pre+'-memo-ta').value=_memoData?.content||'';
   gel(pre+'-memo-disp').style.display='none';gel(pre+'-memo-ta').style.display='block';
   gel(pre+'-memo-edit').style.display='none';gel(pre+'-memo-save').style.display='';
 }
-function memoSave(pre){
-  const text=gel(pre+'-memo-ta').value;const n=new Date();
-  sv('memo_'+todayKey(),{text,savedAt:`${n.getHours()}시 ${n.getMinutes()}분`});
+async function memoSave(pre){
+  const text=gel(pre+'-memo-ta').value;
+  if(_memoData){
+    await fetch('/api/memos/'+_memoData.id,{method:'PUT',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({content:text})});
+  }else{
+    const res=await fetch('/api/memos',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({date:todayKey(),content:text})});
+    _memoData=await res.json();
+  }
   gel(pre+'-memo-disp').style.display='';gel(pre+'-memo-ta').style.display='none';
   gel(pre+'-memo-edit').style.display='';gel(pre+'-memo-save').style.display='none';
-  renderMemo();
+  await renderMemo();
 }
-renderMemo();
 
 /* ── 즐겨찾기 ── */
-function renderSites(){
-  const sites=ld('fav_sites',[]);
+async function renderSites(){
+  const sites=await fetch('/api/bookmarks').then(r=>r.ok?r.json():[]).catch(()=>[]);
   const pe=gel('pc-sites-grid');const me=gel('m-sites-grid');
   if(!sites.length){
     if(pe)pe.innerHTML='<span class="empty-msg">관리자에서 사이트를 추가하세요</span>';
@@ -975,14 +1003,20 @@ function renderSites(){
   const mk=(cls)=>sites.map(s=>{
     const dom=(()=>{try{return new URL(s.url).hostname;}catch{return '';}})();
     const fav=dom?`<img src="https://www.google.com/s2/favicons?domain=${dom}&sz=64" width="22" height="22" style="border-radius:4px" onerror="this.style.display='none'">`:'';
-    return `<a class="${cls}" href="${s.url}" target="_blank">${fav}<span>${s.name}</span></a>`;
+    return `<a class="${cls}" href="${s.url}" target="_blank">${fav}<span>${s.title}</span></a>`;
   }).join('');
   if(pe)pe.innerHTML=mk('site-item');
   if(me)me.innerHTML=mk('m-site-item');
 }
-renderSites();
 
-window.addEventListener('storage',()=>{renderYT();renderStock();renderSites();tickClock();});
+/* ── 초기화 (API 로드) ── */
+(async()=>{
+  await loadZones();
+  tickClock();
+  setInterval(tickClock,10000);
+  renderStock();
+  await Promise.all([renderYT(),renderExp(),renderMeal(),renderMemo(),renderSites()]);
+})();
 </script>
 </body>
 </html>

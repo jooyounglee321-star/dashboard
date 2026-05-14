@@ -332,7 +332,15 @@ const DEFAULT_ZONES=[
   {region:'런던',tz:'Europe/London',label:'GMT'}
 ];
 
-let tzData=ld('timezones',DEFAULT_ZONES);
+let tzData=[...DEFAULT_ZONES];
+
+async function loadTZData(){
+  try{
+    const r=await fetch('/api/timezone');
+    if(r.ok){const d=await r.json();if(d.zones&&d.zones.length===3)tzData=d.zones;}
+  }catch{}
+  buildTZGrid();
+}
 
 function formatPreview(tz){
   try{
@@ -369,16 +377,18 @@ function onTZChange(i){
   if(p)p.textContent=formatPreview(sel.value);
 }
 
-function saveTZ(){
+async function saveTZ(){
   tzData=[0,1,2].map(i=>({
     region:gel(`tz-region-${i}`).value.trim()||`지역${i+1}`,
     tz:gel(`tz-select-${i}`).value,
     label:''
   }));
-  sv('timezones',tzData);
-  toast('✓ 시간대가 저장되었습니다');
+  try{
+    await fetch('/api/timezone',{method:'PUT',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({zones:tzData})});
+    toast('✓ 시간대가 저장되었습니다');
+  }catch{toast('저장 실패 - 서버 연결을 확인해주세요');}
 }
-buildTZGrid();
 
 /* ── Google Calendar ── */
 function saveGCal(){
@@ -389,9 +399,8 @@ function saveGCal(){
   toast('✓ Google Calendar 설정이 저장되었습니다 (Spring Boot 구성 후 활성화)');
 }
 
-/* ── 유튜브 계정 ── */
+/* ── 유튜브 계정 (localStorage 유지) ── */
 let ytAccount=ld('yt_account',{email:'',name:''});
-let ytChannels=ld('yt_channels',[]);
 
 function renderYTAccount(){
   const disp=gel('yt-account-display');
@@ -407,27 +416,37 @@ function saveYTAccount(){
   toast('✓ YouTube 계정이 저장되었습니다');
 }
 
+/* ── 유튜브 채널 (DB API) ── */
+let _ytChannels=[];
+
+async function loadYTChannels(){
+  _ytChannels=await fetch('/api/youtube-channels').then(r=>r.ok?r.json():[]).catch(()=>[]);
+  renderYTList();
+}
 function renderYTList(){
   const div=gel('yt-item-list');
-  if(!ytChannels.length){div.innerHTML='<div class="empty-notice">추가된 채널이 없습니다</div>';return;}
-  div.innerHTML=ytChannels.map((c,i)=>`
+  if(!_ytChannels.length){div.innerHTML='<div class="empty-notice">추가된 채널이 없습니다</div>';return;}
+  div.innerHTML=_ytChannels.map(c=>`
     <div class="item-row">
       <div style="width:32px;height:22px;background:#ff0000;border-radius:3px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:0.7rem;flex-shrink:0">▶</div>
-      <div class="item-info"><div class="item-name">${c.name}</div><div class="item-sub">${c.url}</div></div>
-      <button class="btn-danger" onclick="delYT(${i})">삭제</button>
+      <div class="item-info"><div class="item-name">${c.channel_name}</div><div class="item-sub">${c.channel_url||''}</div></div>
+      <button class="btn-danger" onclick="delYT(${c.id})">삭제</button>
     </div>`).join('');
 }
-function addYT(){
+async function addYT(){
   const name=gel('yt-name').value.trim();
   const url=gel('yt-url').value.trim();
   if(!name||!url){toast('이름과 URL을 모두 입력해주세요');return;}
-  ytChannels.push({name,url});
-  sv('yt_channels',ytChannels);
+  await fetch('/api/youtube-channels',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({channel_name:name,channel_url:url})});
   gel('yt-name').value='';gel('yt-url').value='';
-  renderYTList();toast('✓ 채널이 추가되었습니다');
+  await loadYTChannels();toast('✓ 채널이 추가되었습니다');
 }
-function delYT(i){ytChannels.splice(i,1);sv('yt_channels',ytChannels);renderYTList();toast('삭제되었습니다');}
-renderYTAccount();renderYTList();
+async function delYT(id){
+  await fetch('/api/youtube-channels/'+id,{method:'DELETE'});
+  await loadYTChannels();toast('삭제되었습니다');
+}
+renderYTAccount();
 
 /* ── 주식 4카테고리 (Yahoo Finance 실시간) ── */
 const CATS=[
@@ -533,48 +552,61 @@ async function delStock(id){
 loadStocks();
 switchStockTab('robinhood',document.querySelector('.stock-tab'));
 
-/* ── 즐겨찾기 사이트 ── */
-let sites=ld('fav_sites',[]);
+/* ── 즐겨찾기 사이트 (DB API) ── */
+let _sites=[];
+
+async function loadSites(){
+  _sites=await fetch('/api/bookmarks').then(r=>r.ok?r.json():[]).catch(()=>[]);
+  renderSiteList();
+}
 function renderSiteList(){
   const div=gel('site-item-list');
-  if(!sites.length){div.innerHTML='<div class="empty-notice">추가된 사이트가 없습니다</div>';return;}
-  div.innerHTML=sites.map((s,i)=>{
+  if(!_sites.length){div.innerHTML='<div class="empty-notice">추가된 사이트가 없습니다</div>';return;}
+  div.innerHTML=_sites.map(s=>{
     const dom=(()=>{try{return new URL(s.url).hostname;}catch{return '';}})();
     const fav=dom?`<img src="https://www.google.com/s2/favicons?domain=${dom}&sz=32" width="18" height="18" style="border-radius:3px" onerror="this.style.display='none'">`:'';
     return `<div class="item-row">
       <div style="width:24px;display:flex;align-items:center">${fav}</div>
-      <div class="item-info"><div class="item-name">${s.name}</div><div class="item-sub">${s.url}</div></div>
-      <button class="btn-danger" onclick="delSite(${i})">삭제</button>
+      <div class="item-info"><div class="item-name">${s.title}</div><div class="item-sub">${s.url}</div></div>
+      <button class="btn-danger" onclick="delSite(${s.id})">삭제</button>
     </div>`;
   }).join('');
 }
-function addSite(){
+async function addSite(){
   let name=gel('site-name').value.trim();
   let url=gel('site-url').value.trim();
   if(!url){toast('URL을 입력해주세요');return;}
   if(!url.startsWith('http'))url='https://'+url;
   if(!name)name=url;
-  sites.push({name,url});sv('fav_sites',sites);
+  await fetch('/api/bookmarks',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({title:name,url:url})});
   gel('site-name').value='';gel('site-url').value='';
-  renderSiteList();toast('✓ 사이트가 추가되었습니다');
+  await loadSites();toast('✓ 사이트가 추가되었습니다');
 }
-function quickSite(name,url){
-  if(sites.find(s=>s.url===url)){toast('이미 추가된 사이트입니다');return;}
-  sites.push({name,url});sv('fav_sites',sites);
-  renderSiteList();toast(`✓ ${name} 추가!`);
+async function quickSite(name,url){
+  if(_sites.find(s=>s.url===url)){toast('이미 추가된 사이트입니다');return;}
+  await fetch('/api/bookmarks',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({title:name,url:url})});
+  await loadSites();toast(`✓ ${name} 추가!`);
 }
-function delSite(i){sites.splice(i,1);sv('fav_sites',sites);renderSiteList();toast('삭제되었습니다');}
-renderSiteList();
+async function delSite(id){
+  await fetch('/api/bookmarks/'+id,{method:'DELETE'});
+  await loadSites();toast('삭제되었습니다');
+}
 
 /* ── 전체 저장 ── */
-function saveAll(){
-  sv('yt_channels',ytChannels);
+async function saveAll(){
+  await saveTZ();
   sv('yt_account',ytAccount);
-  sv('stocks',stocks);
-  sv('fav_sites',sites);
   toast('✅ 저장 완료! 이동합니다...');
   setTimeout(()=>{window.location.href='index.html';},1000);
 }
+
+/* ── 초기화 ── */
+(async()=>{
+  await loadTZData();
+  await Promise.all([loadYTChannels(),loadSites()]);
+})();
 </script>
 </body>
 </html>

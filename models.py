@@ -103,5 +103,5 @@ class TimezoneConfig(Base):
     __tablename__ = "timezone_config"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    timezone: Mapped[str] = mapped_column(String(100), nullable=False, default="UTC")
+    timezone: Mapped[str] = mapped_column(Text, nullable=False, default="UTC")  # JSON 배열로 3개 시간대 저장
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
