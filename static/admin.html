@@ -90,6 +90,15 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
 .toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(100px);background:var(--ink);color:#fff;padding:0.65rem 1.4rem;border-radius:30px;font-size:0.88rem;transition:transform 0.3s;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.3);}
 .toast.show{transform:translateX(-50%) translateY(0);}
 
+/* 주식 검색 드롭다운 */
+#stock-dd{position:absolute;z-index:9000;background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.15);display:none;max-height:220px;overflow-y:auto;}
+.stock-dd-item{display:flex;align-items:center;padding:0.42rem 0.75rem;cursor:pointer;font-size:0.82rem;border-bottom:1px solid var(--border);gap:0.2rem;}
+.stock-dd-item:last-child{border-bottom:none;}
+.stock-dd-item:hover,.stock-dd-item:focus{background:var(--card2);}
+.stock-dd-item strong{flex-shrink:0;min-width:60px;color:var(--ink);}
+.stock-dd-item .dd-name{flex:1;color:var(--ink2);font-size:0.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.stock-dd-item .dd-ex{flex-shrink:0;font-size:0.68rem;color:var(--ink3);padding-left:0.35rem;}
+
 /* 반응형 */
 @media(max-width:640px){
   .tz-grid{grid-template-columns:1fr;}
@@ -267,6 +276,7 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
 </main>
 
 <div class="toast" id="toast"></div>
+<div id="stock-dd"></div>
 
 <script>
 const sv=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
@@ -506,8 +516,8 @@ function renderGroups(){
     const addForm=g.stocks.length<10
       ?`<div style="padding:0.5rem 0.8rem 0.75rem;border-top:1px solid var(--border)">
           <div style="display:flex;gap:0.35rem;flex-wrap:wrap;align-items:center">
-            <input type="text" id="ticker-${g.id}" placeholder="티커" style="${inpStyle}width:80px;flex:0 0 80px">
-            <input type="text" id="name-${g.id}" placeholder="종목명" style="${inpStyle}flex:1;min-width:80px">
+            <input type="text" id="ticker-${g.id}" placeholder="티커" style="${inpStyle}width:80px;flex:0 0 80px" oninput="onTickerInput('${g.id}',this)" onblur="onStockInputBlur()">
+            <input type="text" id="name-${g.id}" placeholder="종목명" style="${inpStyle}flex:1;min-width:80px" oninput="onNameInput('${g.id}',this)" onblur="onStockInputBlur()"  autocomplete="off">
             <input type="number" id="qty-${g.id}" placeholder="수량" style="${inpStyle}width:72px;flex:0 0 72px" min="0" step="any">
             <input type="number" id="avg-${g.id}" placeholder="매입단가" style="${inpStyle}width:100px;flex:0 0 100px" min="0" step="any">
             <button class="btn-primary" onclick="addStock('${g.id}')" style="padding:0.35rem 0.8rem;font-size:0.82rem">+ 추가</button>
@@ -533,6 +543,96 @@ function renderGroups(){
     </div>`;
   }).join('');
 }
+
+/* ── 주식 검색 자동완성 ── */
+let _searchTimer=null;
+
+function _debounceSearch(fn,ms){
+  return function(...args){clearTimeout(_searchTimer);_searchTimer=setTimeout(()=>fn(...args),ms);};
+}
+
+const _doSearch=_debounceSearch(async function(q,onResults){
+  if(!q)return;
+  try{
+    const r=await fetch('/api/stocks/search?q='+encodeURIComponent(q));
+    if(r.ok){const d=await r.json();onResults(d.results||[]);}
+  }catch(e){console.warn('[StockSearch]',e);}
+},350);
+
+function _positionDd(el){
+  const dd=gel('stock-dd');
+  const rect=el.getBoundingClientRect();
+  dd.style.top=(rect.bottom+window.scrollY+2)+'px';
+  dd.style.left=(rect.left+window.scrollX)+'px';
+  dd.style.minWidth=Math.max(rect.width,220)+'px';
+}
+
+function _showDd(results,onSelect){
+  const dd=gel('stock-dd');
+  if(!results||!results.length){_hideDd();return;}
+  dd.innerHTML=results.map((r,i)=>`
+    <div class="stock-dd-item" onmousedown="event.preventDefault()" onclick="_ddPick(${i})">
+      <strong>${r.ticker}</strong>
+      <span class="dd-name">${r.name}</span>
+      <span class="dd-ex">${r.exchange}</span>
+    </div>`).join('');
+  dd._results=results;
+  dd._onSelect=onSelect;
+  dd.style.display='block';
+}
+
+function _ddPick(idx){
+  const dd=gel('stock-dd');
+  if(dd._onSelect&&dd._results)dd._onSelect(dd._results[idx]);
+  _hideDd();
+}
+
+function _hideDd(){
+  const dd=gel('stock-dd');
+  dd.style.display='none';
+  dd.innerHTML='';
+  delete dd._results;
+  delete dd._onSelect;
+}
+
+function onTickerInput(gid,el){
+  const q=el.value.trim();
+  if(!q){_hideDd();return;}
+  _positionDd(el);
+  _doSearch(q,function(results){
+    if(!results.length){_hideDd();return;}
+    // 정확히 일치하는 티커가 있으면 종목명 자동완성
+    const up=q.toUpperCase();
+    const exact=results.find(r=>r.ticker.toUpperCase()===up||r.ticker.toUpperCase()===up+'.KS'||r.ticker.toUpperCase()===up+'.KQ');
+    if(exact){
+      const nameEl=gel('name-'+gid);
+      if(nameEl&&!nameEl.value)nameEl.value=exact.name;
+    }
+    _showDd(results,function(item){
+      el.value=item.ticker;
+      const nameEl=gel('name-'+gid);
+      if(nameEl)nameEl.value=item.name;
+    });
+    _positionDd(el);
+  });
+}
+
+function onNameInput(gid,el){
+  const q=el.value.trim();
+  if(q.length<2){_hideDd();return;}
+  _positionDd(el);
+  _doSearch(q,function(results){
+    if(!results.length){_hideDd();return;}
+    _showDd(results,function(item){
+      el.value=item.name;
+      const tickerEl=gel('ticker-'+gid);
+      if(tickerEl)tickerEl.value=item.ticker;
+    });
+    _positionDd(el);
+  });
+}
+
+function onStockInputBlur(){setTimeout(_hideDd,180);}
 
 /* 초기화 */
 initTotalMode();

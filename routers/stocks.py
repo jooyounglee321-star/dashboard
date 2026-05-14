@@ -3,8 +3,9 @@ import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+import requests
 import yfinance as yf
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
@@ -212,3 +213,41 @@ def delete_stock(stock_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Stock not found")
     db.delete(row)
     db.commit()
+
+
+# ── GET /api/stocks/search?q=... ─────────────────────────────────────────────
+_SEARCH_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Accept": "application/json",
+}
+
+
+@router.get("/search")
+def search_stocks(q: str = Query(..., min_length=1)):
+    """Yahoo Finance 종목 검색 (티커 또는 회사명으로 조회).
+    Returns: [{ticker, name, exchange, type}]
+    """
+    try:
+        url = "https://query1.finance.yahoo.com/v1/finance/search"
+        params = {"q": q, "quotesCount": 8, "newsCount": 0, "enableFuzzyQuery": False}
+        resp = requests.get(url, params=params, headers=_SEARCH_HEADERS, timeout=5)
+        resp.raise_for_status()
+        data = resp.json()
+        quotes = data.get("quotes", [])
+        results = []
+        for item in quotes:
+            ticker = item.get("symbol", "")
+            name = item.get("longname") or item.get("shortname") or ""
+            exchange = item.get("exchange", "")
+            q_type = item.get("quoteType", "")
+            if ticker and name:
+                results.append({
+                    "ticker": ticker,
+                    "name": name,
+                    "exchange": exchange,
+                    "type": q_type,
+                })
+        return {"results": results}
+    except Exception as e:
+        logger.warning("[STOCK SEARCH] 검색 실패: q=%s, err=%s", q, e)
+        raise HTTPException(status_code=503, detail=f"검색 서비스 오류: {e}")
