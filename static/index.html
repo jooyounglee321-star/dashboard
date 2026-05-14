@@ -753,8 +753,9 @@ async function renderStock(){
 
   const groups=ld(STOCK_LS_KEY,[]);
   const totalMode=ld(TOTAL_MODE_KEY,'KRW');
+  console.log('[Stock] localStorage groups:', JSON.stringify(groups));
 
-  if(!groups.length||!groups.some(g=>g.stocks.length)){
+  if(!groups.length||!groups.some(g=>g.stocks&&g.stocks.length)){
     const msg='<div class="empty-msg">관리자에서 종목을 추가하세요</div>';
     if(pcBody)pcBody.innerHTML=msg;if(mBody)mBody.innerHTML=msg;return;
   }
@@ -763,21 +764,34 @@ async function renderStock(){
   const tickerCatMap={};
   groups.forEach(g=>{
     const cat=g.currency==='KRW'?'kor-stock':'us';
-    g.stocks.forEach(s=>{if(!tickerCatMap[s.ticker])tickerCatMap[s.ticker]=cat;});
+    (g.stocks||[]).forEach(s=>{if(s.ticker&&!tickerCatMap[s.ticker])tickerCatMap[s.ticker]=cat;});
   });
+  console.log('[Stock] tickerCatMap:', tickerCatMap);
 
+  /* 가격 + 환율 조회 (타임아웃 7초) */
   const priceMap={};
-  const [fxRes]=await Promise.allSettled([
-    fetch('/api/stocks/exchange-rate').then(r=>r.ok?r.json():null).catch(()=>null),
-    ...Object.entries(tickerCatMap).map(async([t,cat])=>{
-      try{
-        const r=await fetch(`/api/stocks/price/${encodeURIComponent(t)}?category=${cat}`);
-        if(r.ok)priceMap[t]=await r.json();
-      }catch{}
-    })
-  ]);
-  const fxData=fxRes.status==='fulfilled'?fxRes.value:null;
-  const fxRate=fxData?.usd_krw??null;
+  let fxRate=null;
+  try{
+    const ctrl=new AbortController();
+    const abortTimer=setTimeout(()=>ctrl.abort(),7000);
+    const sig={signal:ctrl.signal};
+    const [fxRes]=await Promise.allSettled([
+      fetch('/api/stocks/exchange-rate',sig).then(r=>r.ok?r.json():null).catch(()=>null),
+      ...Object.entries(tickerCatMap).map(async([t,cat])=>{
+        try{
+          const r=await fetch(`/api/stocks/price/${encodeURIComponent(t)}?category=${cat}`,sig);
+          if(r.ok)priceMap[t]=await r.json();
+          else console.warn('[Stock] 가격조회 실패:',t,r.status);
+        }catch(e){console.warn('[Stock] 가격조회 오류:',t,e.message);}
+      })
+    ]);
+    clearTimeout(abortTimer);
+    const fxData=fxRes.status==='fulfilled'?fxRes.value:null;
+    fxRate=fxData?.usd_krw??null;
+    console.log('[Stock] priceMap:', priceMap, '| fxRate:', fxRate);
+  }catch(e){
+    console.warn('[Stock] 시세 타임아웃, 매입단가로 표시:', e.message);
+  }
   const fmtKRW=v=>Math.round(v).toLocaleString('ko-KR');
   const fmtUSD=v=>v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   const fxText=fxRate?`$1 = ₩${fmtKRW(fxRate)}`:'';
@@ -1022,7 +1036,12 @@ async function renderSites(){
   await loadZones();
   tickClock();
   setInterval(tickClock,10000);
-  renderStock();
+  renderStock().catch(e=>{
+    console.error('[Stock] renderStock 오류:', e);
+    const msg='<div class="empty-msg">⚠ 주식 로딩 오류 (콘솔 확인)</div>';
+    const b1=gel('pc-stock-body');const b2=gel('m-stock-body');
+    if(b1)b1.innerHTML=msg;if(b2)b2.innerHTML=msg;
+  });
   await Promise.all([renderYT(),renderExp(),renderMeal(),renderMemo(),renderSites()]);
 })();
 </script>
