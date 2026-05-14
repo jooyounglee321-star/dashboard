@@ -99,6 +99,17 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
 .stock-dd-item .dd-name{flex:1;color:var(--ink2);font-size:0.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .stock-dd-item .dd-ex{flex-shrink:0;font-size:0.68rem;color:var(--ink3);padding-left:0.35rem;}
 
+/* 매입 내역 패널 */
+.purchase-panel{border-top:1px dashed var(--border);background:var(--bg);}
+.purchase-panel table td{border-bottom:1px solid var(--border);}
+.purchase-panel table tr:last-child td{border-bottom:none;}
+.btn-sm{padding:0.16rem 0.48rem;font-size:0.72rem;cursor:pointer;border:1px solid var(--border);border-radius:5px;background:var(--card);color:var(--ink2);font-family:inherit;transition:all 0.12s;}
+.btn-sm:hover{background:var(--card2);color:var(--ink);}
+.btn-sm-danger{padding:0.16rem 0.48rem;font-size:0.72rem;cursor:pointer;border:1px solid #c0392b;border-radius:5px;background:transparent;color:#c0392b;font-family:inherit;transition:all 0.12s;}
+.btn-sm-danger:hover{background:#c0392b;color:#fff;}
+.btn-sm-save{padding:0.16rem 0.48rem;font-size:0.72rem;cursor:pointer;border:1px solid var(--green);border-radius:5px;background:transparent;color:var(--green);font-family:inherit;transition:all 0.12s;}
+.btn-sm-save:hover{background:var(--green);color:#fff;}
+
 /* 반응형 */
 @media(max-width:640px){
   .tz-grid{grid-template-columns:1fr;}
@@ -436,10 +447,39 @@ const GRP_COLORS=[
   {bg:'#f5c0e0',tx:'#500a30'},{bg:'#d0f0c0',tx:'#1a4a0a'},
   {bg:'#f0d0c0',tx:'#5a2a0a'},{bg:'#c0c8f5',tx:'#1a1a6a'},
 ];
+const _expandedStocks=new Set(); // 펼쳐진 종목 ID 추적
+let _editPurchaseKey=null;       // 수정 중인 매입내역 'sid-pid'
 
 function genId(){return Math.random().toString(36).slice(2,10);}
-function loadGroups(){return ld(STOCK_LS_KEY,[]);}
+
+/* 구버전(quantity/avgPrice) → purchases[] 자동 마이그레이션 */
+function loadGroups(){
+  let groups=ld(STOCK_LS_KEY,[]);
+  let dirty=false;
+  groups.forEach(g=>{
+    (g.stocks||[]).forEach(s=>{
+      if(!Array.isArray(s.purchases)){
+        s.purchases=[];
+        if((s.quantity||0)>0||(s.avgPrice||0)>0)
+          s.purchases.push({id:genId(),date:null,qty:s.quantity||0,price:s.avgPrice||0});
+        delete s.quantity;delete s.avgPrice;dirty=true;
+      }
+    });
+  });
+  if(dirty)sv(STOCK_LS_KEY,groups);
+  return groups;
+}
 function saveGroups(g){sv(STOCK_LS_KEY,g);}
+
+/* 총수량 + 가중평균단가 계산 */
+function stockSummary(s){
+  const pp=s.purchases||[];
+  const totalQty=pp.reduce((a,p)=>a+(p.qty||0),0);
+  const valid=pp.filter(p=>(p.price||0)>0&&(p.qty||0)>0);
+  const ws=valid.reduce((a,p)=>a+p.price*p.qty,0);
+  const vq=valid.reduce((a,p)=>a+p.qty,0);
+  return{totalQty,avgPrice:vq>0?ws/vq:0};
+}
 
 function initTotalMode(){
   const sel=gel('total-mode-sel');
@@ -456,39 +496,167 @@ function addGroup(){
   groups.push({id:genId(),name:'새 그룹',currency:'KRW',stocks:[]});
   saveGroups(groups);renderGroups();
 }
-
 function delGroup(gid){
   if(!confirm('그룹과 모든 종목을 삭제하시겠습니까?'))return;
   saveGroups(loadGroups().filter(g=>g.id!==gid));
   renderGroups();toast('삭제되었습니다');
 }
-
 function updateGroup(gid,field,value){
-  const groups=loadGroups();
-  const g=groups.find(g=>g.id===gid);
+  const groups=loadGroups();const g=groups.find(g=>g.id===gid);
   if(g){g[field]=value;saveGroups(groups);}
 }
 
+/* 종목 추가 (ticker+name만; 매입내역은 클릭 후 패널에서 등록) */
 function addStock(gid){
   const ticker=(gel('ticker-'+gid)?.value||'').trim().toUpperCase();
   const name=(gel('name-'+gid)?.value||'').trim();
-  const qty=parseFloat(gel('qty-'+gid)?.value)||0;
-  const avg=parseFloat(gel('avg-'+gid)?.value)||0;
   if(!ticker){toast('티커 심볼을 입력해주세요');return;}
-  const groups=loadGroups();
-  const g=groups.find(g=>g.id===gid);
+  const groups=loadGroups();const g=groups.find(g=>g.id===gid);
   if(!g)return;
   if(g.stocks.length>=10){toast('그룹당 최대 10개까지 가능합니다');return;}
-  g.stocks.push({id:genId(),ticker,name,quantity:qty,avgPrice:avg});
-  saveGroups(groups);renderGroups();
-  toast(`✓ ${ticker} 추가`);
+  const newId=genId();
+  g.stocks.push({id:newId,ticker,name,purchases:[]});
+  saveGroups(groups);
+  _expandedStocks.add(newId);
+  renderGroups();
+  toast(`✓ ${ticker} 추가 — 아래 패널에서 매입 내역을 등록하세요`);
+}
+function delStock(gid,sid){
+  if(!confirm('종목을 삭제하시겠습니까?'))return;
+  const groups=loadGroups();const g=groups.find(g=>g.id===gid);
+  if(g){g.stocks=g.stocks.filter(s=>s.id!==sid);saveGroups(groups);}
+  _expandedStocks.delete(sid);renderGroups();
+}
+function updateStock(gid,sid,field,value){
+  const groups=loadGroups();const g=groups.find(g=>g.id===gid);
+  if(g){const s=g.stocks.find(s=>s.id===sid);if(s){s[field]=value;saveGroups(groups);}}
 }
 
-function delStock(gid,sid){
-  const groups=loadGroups();
-  const g=groups.find(g=>g.id===gid);
-  if(g){g.stocks=g.stocks.filter(s=>s.id!==sid);saveGroups(groups);}
-  renderGroups();
+/* 종목 클릭 → 매입내역 패널 토글 */
+function toggleStockDetail(sid){
+  if(_expandedStocks.has(sid))_expandedStocks.delete(sid);
+  else _expandedStocks.add(sid);
+  _editPurchaseKey=null;renderGroups();
+}
+
+/* 매입내역 추가 */
+async function addPurchase(gid,sid){
+  const qty=parseFloat(gel('pu-qty-'+sid)?.value)||0;
+  if(!qty){toast('수량을 입력해주세요');return;}
+  const date=(gel('pu-date-'+sid)?.value||'').trim();
+  let price=parseFloat(gel('pu-price-'+sid)?.value)||0;
+  if(date&&!price){
+    const grps=loadGroups();const g=grps.find(g=>g.id===gid);
+    const s=g?.stocks.find(s=>s.id===sid);
+    if(s){
+      const cat=g.currency==='KRW'?'kor-stock':'us';
+      toast('⏳ 해당일 시세 조회 중…');
+      try{
+        const r=await fetch(`/api/stocks/history/${encodeURIComponent(s.ticker)}?date=${date}&category=${cat}`);
+        if(r.ok){const d=await r.json();price=d.close;toast(`✓ ${d.date} 종가: ${g.currency==='KRW'?'₩':'$'}${d.close}`);}
+        else toast('⚠ 해당일 시세 조회 실패 — 매입가 비워둠');
+      }catch(e){toast('⚠ 시세 조회 오류: '+e.message);}
+    }
+  }
+  const groups=loadGroups();const g=groups.find(g=>g.id===gid);
+  const s=g?.stocks.find(s=>s.id===sid);
+  if(!s)return;
+  s.purchases.push({id:genId(),date:date||null,qty,price:price||0});
+  saveGroups(groups);_expandedStocks.add(sid);renderGroups();
+  toast('✓ 매입 내역 추가');
+}
+
+/* 매입내역 삭제 */
+function delPurchase(gid,sid,pid){
+  if(!confirm('이 매입 내역을 삭제하시겠습니까?'))return;
+  const groups=loadGroups();const g=groups.find(g=>g.id===gid);
+  const s=g?.stocks.find(s=>s.id===sid);
+  if(s){s.purchases=s.purchases.filter(p=>p.id!==pid);saveGroups(groups);}
+  _expandedStocks.add(sid);renderGroups();
+}
+
+/* 매입내역 수정 */
+function startEditPurchase(sid,pid){_editPurchaseKey=sid+'-'+pid;renderGroups();}
+function cancelEditPurchase(sid){_editPurchaseKey=null;_expandedStocks.add(sid);renderGroups();}
+async function saveEditPurchase(gid,sid,pid){
+  const qty=parseFloat(gel('ep-qty-'+pid)?.value)||0;
+  if(!qty){toast('수량을 입력해주세요');return;}
+  const date=(gel('ep-date-'+pid)?.value||'').trim();
+  let price=parseFloat(gel('ep-price-'+pid)?.value)||0;
+  if(date&&!price){
+    const grps=loadGroups();const g=grps.find(g=>g.id===gid);
+    const s=g?.stocks.find(s=>s.id===sid);
+    if(s){
+      const cat=g.currency==='KRW'?'kor-stock':'us';
+      try{const r=await fetch(`/api/stocks/history/${encodeURIComponent(s.ticker)}?date=${date}&category=${cat}`);
+        if(r.ok){const d=await r.json();price=d.close;}}catch(e){}
+    }
+  }
+  const groups=loadGroups();const g=groups.find(g=>g.id===gid);
+  const s=g?.stocks.find(s=>s.id===sid);
+  const p=s?.purchases.find(p=>p.id===pid);
+  if(p){p.date=date||null;p.qty=qty;p.price=price||0;saveGroups(groups);}
+  _editPurchaseKey=null;_expandedStocks.add(sid);renderGroups();toast('✓ 수정 완료');
+}
+
+/* 매입내역 패널 HTML 생성 */
+function renderStockDetail(g,s){
+  const sym=g.currency==='USD'?'$':'₩';
+  const fmtA=v=>g.currency==='USD'?Number(v).toFixed(2):Math.round(v).toLocaleString('ko-KR');
+  const inpS='padding:0.28rem 0.42rem;font-size:0.8rem;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--ink);font-family:inherit;';
+  const purchaseRows=s.purchases.length
+    ?s.purchases.map(p=>{
+        const isEdit=_editPurchaseKey===s.id+'-'+p.id;
+        if(isEdit)return `<tr>
+          <td style="padding:0.2rem 0.28rem"><input type="date" id="ep-date-${p.id}" value="${p.date||''}" style="${inpS}"></td>
+          <td style="padding:0.2rem 0.28rem"><input type="number" id="ep-qty-${p.id}" value="${p.qty}" min="0" step="any" style="${inpS}width:68px"></td>
+          <td style="padding:0.2rem 0.28rem"><input type="number" id="ep-price-${p.id}" value="${p.price||''}" min="0" step="any" placeholder="매입가" style="${inpS}width:100px"></td>
+          <td style="padding:0.2rem 0.28rem;white-space:nowrap;text-align:right">
+            <button class="btn-sm-save" onclick="saveEditPurchase('${g.id}','${s.id}','${p.id}')">저장</button>
+            <button class="btn-sm" onclick="cancelEditPurchase('${s.id}')">취소</button>
+          </td></tr>`;
+        return `<tr>
+          <td style="padding:0.22rem 0.28rem;font-size:0.78rem;color:var(--ink2)">${p.date||'—'}</td>
+          <td style="padding:0.22rem 0.28rem;text-align:right;font-size:0.8rem">${(p.qty||0).toLocaleString()}</td>
+          <td style="padding:0.22rem 0.28rem;text-align:right;font-size:0.8rem">${p.price?sym+fmtA(p.price):'—'}</td>
+          <td style="padding:0.22rem 0.28rem;text-align:right;white-space:nowrap">
+            <button class="btn-sm" onclick="startEditPurchase('${s.id}','${p.id}')">수정</button>
+            <button class="btn-sm-danger" onclick="delPurchase('${g.id}','${s.id}','${p.id}')">삭제</button>
+          </td></tr>`;
+      }).join('')
+    :`<tr><td colspan="4" style="padding:0.5rem;text-align:center;color:var(--ink3);font-size:0.78rem">매입 내역 없음 — 아래에서 추가하세요</td></tr>`;
+  return `<div class="purchase-panel">
+    <div style="padding:0.4rem 0.9rem;background:rgba(255,255,255,0.45);border-top:1px solid var(--border);display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap">
+      <span style="font-size:0.68rem;color:var(--ink3)">티커</span>
+      <input type="text" value="${s.ticker}" onchange="updateStock('${g.id}','${s.id}','ticker',this.value.toUpperCase())"
+        style="${inpS}width:88px;text-transform:uppercase;font-weight:500">
+      <span style="font-size:0.68rem;color:var(--ink3)">종목명</span>
+      <input type="text" value="${s.name||''}" onchange="updateStock('${g.id}','${s.id}','name',this.value)"
+        style="${inpS}flex:1;min-width:100px">
+    </div>
+    <div style="padding:0.4rem 0.9rem">
+      <div style="font-size:0.72rem;font-weight:500;color:var(--ink2);margin-bottom:0.25rem">📋 매입 내역</div>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="font-size:0.68rem;color:var(--ink3);border-bottom:1px solid var(--border)">
+          <th style="text-align:left;padding:0.15rem 0.28rem;font-weight:400">날짜</th>
+          <th style="text-align:right;padding:0.15rem 0.28rem;font-weight:400">수량</th>
+          <th style="text-align:right;padding:0.15rem 0.28rem;font-weight:400">매입가</th>
+          <th></th>
+        </tr></thead>
+        <tbody>${purchaseRows}</tbody>
+      </table>
+    </div>
+    <div style="padding:0.35rem 0.9rem 0.65rem;border-top:1px solid var(--border)">
+      <div style="font-size:0.72rem;font-weight:500;color:var(--ink2);margin-bottom:0.25rem">+ 매입 내역 추가</div>
+      <div style="display:flex;gap:0.3rem;flex-wrap:wrap;align-items:center">
+        <input type="date" id="pu-date-${s.id}" style="${inpS}">
+        <input type="number" id="pu-qty-${s.id}" placeholder="수량 *" min="0" step="any" style="${inpS}width:80px">
+        <input type="number" id="pu-price-${s.id}" placeholder="매입가 (선택)" min="0" step="any" style="${inpS}width:115px">
+        <button class="btn-primary" onclick="addPurchase('${g.id}','${s.id}')" style="padding:0.3rem 0.75rem;font-size:0.8rem">+ 추가</button>
+      </div>
+      <div style="font-size:0.68rem;color:var(--ink3);margin-top:0.22rem">💡 날짜 O + 매입가 X → Yahoo Finance 해당일 종가 자동조회</div>
+    </div>
+  </div>`;
 }
 
 function renderGroups(){
@@ -496,33 +664,37 @@ function renderGroups(){
   const list=gel('stock-group-list');
   const addBtn=gel('add-group-btn');
   if(addBtn)addBtn.style.display=groups.length>=10?'none':'';
-  if(!groups.length){
-    list.innerHTML='<div class="empty-notice">그룹을 추가해보세요</div>';return;
-  }
+  if(!groups.length){list.innerHTML='<div class="empty-notice">그룹을 추가해보세요</div>';return;}
   const inpStyle='padding:0.32rem 0.45rem;font-size:0.82rem;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--ink);font-family:inherit;';
   list.innerHTML=groups.map((g,gi)=>{
     const col=GRP_COLORS[gi%GRP_COLORS.length];
     const sym=g.currency==='USD'?'$':'₩';
     const fmtA=v=>g.currency==='USD'?Number(v).toFixed(2):Math.round(v).toLocaleString('ko-KR');
     const stockRows=g.stocks.length
-      ?g.stocks.map(s=>`<div class="item-row" style="padding:0.42rem 0.7rem">
-          <div class="item-info">
-            <div class="item-name"><strong>${s.ticker}</strong>${s.name?` · ${s.name}`:''}</div>
-            <div class="item-sub">${s.quantity}주 · 매입단가 ${sym}${fmtA(s.avgPrice)} · <span style="color:var(--blue);font-size:0.7rem">현재가 Yahoo Finance 자동조회</span></div>
-          </div>
-          <button class="btn-danger" onclick="delStock('${g.id}','${s.id}')">삭제</button>
-        </div>`).join('')
+      ?g.stocks.map(s=>{
+          const{totalQty,avgPrice}=stockSummary(s);
+          const isOpen=_expandedStocks.has(s.id);
+          const detail=isOpen?renderStockDetail(g,s):'';
+          const pc=s.purchases.length;
+          return `<div>
+            <div class="item-row" style="padding:0.42rem 0.7rem;cursor:pointer" onclick="toggleStockDetail('${s.id}')">
+              <div class="item-info" style="pointer-events:none">
+                <div class="item-name"><strong>${s.ticker}</strong>${s.name?` · ${s.name}`:''} <span style="font-size:0.68rem;color:var(--ink3)">${isOpen?'▲':'▼'}</span></div>
+                <div class="item-sub">${totalQty>0?totalQty.toLocaleString()+'주':'수량 미등록'}${avgPrice>0?` · 평균 ${sym}${fmtA(avgPrice)}`:''} · 매입 ${pc}건</div>
+              </div>
+              <button class="btn-danger" onclick="event.stopPropagation();delStock('${g.id}','${s.id}')">삭제</button>
+            </div>${detail}
+          </div>`;
+        }).join('')
       :'<div class="empty-notice" style="font-size:0.78rem;padding:0.4rem 0.8rem">종목이 없습니다. 아래에서 추가하세요.</div>';
     const addForm=g.stocks.length<10
       ?`<div style="padding:0.5rem 0.8rem 0.75rem;border-top:1px solid var(--border)">
           <div style="display:flex;gap:0.35rem;flex-wrap:wrap;align-items:center">
             <input type="text" id="ticker-${g.id}" placeholder="티커" style="${inpStyle}width:80px;flex:0 0 80px" oninput="onTickerInput('${g.id}',this)" onblur="onStockInputBlur()">
-            <input type="text" id="name-${g.id}" placeholder="종목명" style="${inpStyle}flex:1;min-width:80px" oninput="onNameInput('${g.id}',this)" onblur="onStockInputBlur()"  autocomplete="off">
-            <input type="number" id="qty-${g.id}" placeholder="수량" style="${inpStyle}width:72px;flex:0 0 72px" min="0" step="any">
-            <input type="number" id="avg-${g.id}" placeholder="매입단가" style="${inpStyle}width:100px;flex:0 0 100px" min="0" step="any">
-            <button class="btn-primary" onclick="addStock('${g.id}')" style="padding:0.35rem 0.8rem;font-size:0.82rem">+ 추가</button>
+            <input type="text" id="name-${g.id}" placeholder="종목명" style="${inpStyle}flex:1;min-width:80px" oninput="onNameInput('${g.id}',this)" onblur="onStockInputBlur()" autocomplete="off">
+            <button class="btn-primary" onclick="addStock('${g.id}')" style="padding:0.35rem 0.8rem;font-size:0.82rem">+ 종목 추가</button>
           </div>
-          <div style="font-size:0.7rem;color:var(--ink3);margin-top:0.3rem">💡 KOR 종목: 숫자만 입력 (예: 005930) — .KS/.KQ 자동 처리 &nbsp;|&nbsp; 미국주식: AAPL 그대로</div>
+          <div style="font-size:0.7rem;color:var(--ink3);margin-top:0.3rem">💡 종목 추가 후 클릭 → 매입 내역 등록 · KOR 숫자 입력(005930) → .KS/.KQ 자동처리</div>
         </div>`
       :'<div style="font-size:0.75rem;color:var(--ink3);text-align:center;padding:0.4rem">최대 10개 종목 도달</div>';
     return `<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden">

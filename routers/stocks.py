@@ -1,4 +1,5 @@
 import asyncio
+import datetime as dt
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -251,3 +252,48 @@ def search_stocks(q: str = Query(..., min_length=1)):
     except Exception as e:
         logger.warning("[STOCK SEARCH] 검색 실패: q=%s, err=%s", q, e)
         raise HTTPException(status_code=503, detail=f"검색 서비스 오류: {e}")
+
+
+# ── GET /api/stocks/history/{ticker}?date=YYYY-MM-DD ─────────────────────────
+@router.get("/history/{ticker}")
+async def get_stock_history(
+    ticker: str,
+    date: str = Query(..., description="YYYY-MM-DD 형식"),
+    category: str | None = None,
+):
+    """특정 날짜의 종가 조회 (매입 내역 자동완성용).
+    주말·공휴일이면 이후 첫 거래일 종가를 반환합니다."""
+    try:
+        date_obj = dt.date.fromisoformat(date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="날짜 형식이 올바르지 않습니다 (YYYY-MM-DD).")
+
+    end_date = (date_obj + dt.timedelta(days=7)).isoformat()
+
+    def _fetch_hist():
+        yf_ticker = _resolve_yf_ticker(ticker, category)
+        t = yf.Ticker(yf_ticker)
+        hist = t.history(start=date, end=end_date)
+        # kor-stock .KS 실패 시 .KQ 재시도
+        if hist.empty and category == "kor-stock" and yf_ticker.endswith(".KS"):
+            t2 = yf.Ticker(ticker + ".KQ")
+            hist = t2.history(start=date, end=end_date)
+        return hist
+
+    try:
+        loop = asyncio.get_event_loop()
+        hist = await loop.run_in_executor(_executor, _fetch_hist)
+        if hist.empty:
+            raise HTTPException(
+                status_code=404,
+                detail=f"'{ticker}' {date} 이후 거래 데이터를 찾을 수 없습니다.",
+            )
+        close = round(float(hist["Close"].iloc[0]), 4)
+        actual_date = hist.index[0].strftime("%Y-%m-%d")
+        logger.info("[STOCK HISTORY] %s %s → %.4f (실제: %s)", ticker, date, close, actual_date)
+        return {"ticker": ticker, "requested_date": date, "date": actual_date, "close": close}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning("[STOCK HISTORY] 조회 실패: ticker=%s, date=%s, err=%s", ticker, date, e)
+        raise HTTPException(status_code=503, detail=str(e))
