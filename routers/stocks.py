@@ -145,6 +145,22 @@ async def get_stock_price(ticker: str, category: str | None = None):
         raise HTTPException(status_code=404, detail=str(e))
 
 
+# ── GET /api/stocks/exchange-rate ───────────────────────────────────────────
+@router.get("/exchange-rate")
+async def get_exchange_rate():
+    """USD/KRW 환율 (Yahoo Finance KRW=X, 60초 캐시). 1 USD = X KRW."""
+    try:
+        loop   = asyncio.get_event_loop()
+        result = await loop.run_in_executor(_executor, _fetch_price, "KRW=X", None)
+        return {
+            "ticker":         "KRW=X",
+            "usd_krw":        result["current_price"],
+            "change_percent": result["change_percent"],
+        }
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
+
 # ── GET /api/stocks ─────────────────────────────────────────────────────────
 @router.get("", response_model=list[StockOut])
 def get_stocks(category: StockCategory | None = None, db: Session = Depends(get_db)):

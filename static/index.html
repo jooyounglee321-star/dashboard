@@ -81,10 +81,10 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
 .card-stock{grid-column:3/4;grid-row:2/5;}
 .stock-cat{margin-bottom:0.8rem;}
 .stock-cat-header{display:flex;justify-content:space-between;align-items:center;padding:0.35rem 0.6rem;border-radius:6px;margin-bottom:0.35rem;}
-.stock-cat-header.robinhood{background:#00c805;color:#004a00;}
-.stock-cat-header.us{background:#1a73e8;color:#fff;}
-.stock-cat-header.kor-stock{background:#c4662a;color:#fff;}
-.stock-cat-header.kor-etf{background:#6b5e4a;color:#fff;}
+.stock-cat-header.robinhood{background:#c8deff;color:#1a3d7c;}
+.stock-cat-header.us{background:#c0edd8;color:#0d4a2a;}
+.stock-cat-header.kor-stock{background:#ffd5c0;color:#7a2a00;}
+.stock-cat-header.kor-etf{background:#ddd0f5;color:#3a1870;}
 .stock-cat-name{font-size:0.72rem;font-weight:500;letter-spacing:0.05em;}
 .stock-cat-sum{font-size:0.78rem;font-weight:700;}
 .stock-list{list-style:none;display:flex;flex-direction:column;}
@@ -204,10 +204,10 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
 /* 모바일 주식 카테고리 */
 .m-stock-cat{margin-bottom:0.8rem;}
 .m-stock-cat-hd{display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0.7rem;border-radius:8px;margin-bottom:0.4rem;}
-.m-stock-cat-hd.robinhood{background:#00c805;color:#004a00;}
-.m-stock-cat-hd.us{background:#1a73e8;color:#fff;}
-.m-stock-cat-hd.kor-stock{background:#c4662a;color:#fff;}
-.m-stock-cat-hd.kor-etf{background:#6b5e4a;color:#fff;}
+.m-stock-cat-hd.robinhood{background:#c8deff;color:#1a3d7c;}
+.m-stock-cat-hd.us{background:#c0edd8;color:#0d4a2a;}
+.m-stock-cat-hd.kor-stock{background:#ffd5c0;color:#7a2a00;}
+.m-stock-cat-hd.kor-etf{background:#ddd0f5;color:#3a1870;}
 .m-stock-cat-nm{font-size:0.78rem;font-weight:500;}
 .m-stock-cat-sum{font-size:0.82rem;font-weight:700;}
 .m-stock-list{list-style:none;}
@@ -348,7 +348,7 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
 
   <!-- ④ 주식 4카테고리 -->
   <div class="card card-stock">
-    <div class="card-header"><span class="card-icon">📈</span><span class="card-title">보유 주식</span></div>
+    <div class="card-header"><span class="card-icon">📈</span><span class="card-title">보유 주식</span><span id="pc-fx-rate" style="margin-left:auto;font-size:0.68rem;color:var(--ink3);font-weight:400"></span></div>
     <div class="card-body" id="pc-stock-body">
       <div class="empty-msg" id="pc-stock-empty">관리자에서 종목을 추가하세요</div>
     </div>
@@ -476,7 +476,7 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
       </div>
     </div>
     <div class="m-card">
-      <div class="m-card-header"><span class="card-icon">📈</span><span class="m-card-title">보유 주식</span></div>
+      <div class="m-card-header"><span class="card-icon">📈</span><span class="m-card-title">보유 주식</span><span id="m-fx-rate" style="margin-left:auto;font-size:0.65rem;color:var(--ink3)"></span></div>
       <div class="m-card-body" id="m-stock-body"><div class="empty-msg">관리자에서 종목을 추가하세요</div></div>
     </div>
   </div>
@@ -752,18 +752,29 @@ async function renderStock(){
     if(pcBody)pcBody.innerHTML=msg; if(mBody)mBody.innerHTML=msg; return;
   }
 
-  /* 유니크 티커 → Yahoo Finance 가격 병렬 조회 (한국주식은 category 전달 → .KS/.KQ 자동처리) */
+  /* 환율 + 종목 가격 병렬 조회 */
   const tickerCatMap={};
   allStocks.forEach(s=>{ if(!tickerCatMap[s.ticker]) tickerCatMap[s.ticker]=s.category; });
   const priceMap={};
-  await Promise.allSettled(Object.entries(tickerCatMap).map(async ([t,cat])=>{
-    try{
-      const r=await fetch(`/api/stocks/price/${encodeURIComponent(t)}?category=${cat}`);
-      if(r.ok){ priceMap[t]=await r.json(); }
-      else{ console.warn(`[Stock] 가격조회 실패: ${t} (${cat})`, await r.json().catch(()=>({}))); }
-    }catch(e){ console.error(`[Stock] fetch 오류: ${t}`,e); }
-  }));
-  console.log('[Stock] Yahoo Finance priceMap:', priceMap);
+  const [fxRes] = await Promise.allSettled([
+    fetch('/api/stocks/exchange-rate').then(r=>r.ok?r.json():null).catch(()=>null),
+    ...Object.entries(tickerCatMap).map(async ([t,cat])=>{
+      try{
+        const r=await fetch(`/api/stocks/price/${encodeURIComponent(t)}?category=${cat}`);
+        if(r.ok){ priceMap[t]=await r.json(); }
+        else{ console.warn(`[Stock] 가격조회 실패: ${t} (${cat})`, await r.json().catch(()=>({}))); }
+      }catch(e){ console.error(`[Stock] fetch 오류: ${t}`,e); }
+    })
+  ]);
+  const fxData = fxRes.status==='fulfilled' ? fxRes.value : null;
+  const fxRate = fxData?.usd_krw ?? null;   /* 1 USD = X KRW */
+  const fmtKRW = v=>Math.round(v).toLocaleString('ko-KR');
+  const fmtUSD = v=>v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  /* 환율 헤더 업데이트 */
+  const fxText = fxRate ? `$1 = ₩${fmtKRW(fxRate)}` : '';
+  const pcFx=gel('pc-fx-rate'); if(pcFx)pcFx.textContent=fxText;
+  const mFx=gel('m-fx-rate');   if(mFx)mFx.textContent=fxText;
+  console.log('[Stock] Yahoo Finance priceMap:', priceMap, '| fxRate:', fxRate);
 
   let grandUSD=0, grandKRW=0;
   let pcHTML='', mHTML='';
@@ -775,9 +786,7 @@ async function renderStock(){
     const isKRW=(sym==='₩');
     let catTotal=0;
 
-    const fmt=(v)=>isKRW
-      ? Math.round(v).toLocaleString('ko-KR')
-      : v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+    const fmt=(v)=>isKRW ? fmtKRW(v) : fmtUSD(v);
 
     const itemsPC=list.map(s=>{
       const p=priceMap[s.ticker];
@@ -856,9 +865,22 @@ async function renderStock(){
     if(pcBody)pcBody.innerHTML=msg; if(mBody)mBody.innerHTML=msg; return;
   }
 
-  const totalStr=`$${grandUSD.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}${grandKRW?` + ₩${Math.round(grandKRW).toLocaleString('ko-KR')}`:''}`;
-  const totalBar=`<div class="stock-total-bar"><span class="stock-total-label">전체 합계</span><span class="stock-total-value" style="font-size:0.9rem">${totalStr}</span></div>`;
-  const mTotalBar=`<div class="m-total-bar"><span style="font-size:0.8rem;color:#a89880">전체 합계</span><span style="font-size:0.95rem;font-weight:700;color:var(--accent2)">${totalStr}</span></div>`;
+  const grandTotal = grandKRW + (fxRate ? grandUSD * fxRate : 0);
+  const fxNote = fxRate ? ` (환율 ₩${fmtKRW(fxRate)}/$)` : '';
+  const rowStyle='display:flex;justify-content:space-between;align-items:center';
+  const divStyle='height:0.5px;background:rgba(255,255,255,0.18);margin:0.2rem 0';
+  const totalBar=`<div class="stock-total-bar" style="flex-direction:column;gap:0.28rem;align-items:stretch">
+    <div style="${rowStyle}"><span class="stock-total-label">🇺🇸 US 소계</span><span class="stock-total-value" style="font-size:0.82rem">$${fmtUSD(grandUSD)}</span></div>
+    <div style="${rowStyle}"><span class="stock-total-label">🇰🇷 KOR 소계</span><span class="stock-total-value" style="font-size:0.82rem">₩${fmtKRW(grandKRW)}</span></div>
+    <div style="${divStyle}"></div>
+    <div style="${rowStyle}"><span class="stock-total-label">전체 합계${fxNote}</span><span class="stock-total-value">₩${fmtKRW(grandTotal)}</span></div>
+  </div>`;
+  const mTotalBar=`<div class="m-total-bar" style="flex-direction:column;gap:0.25rem;align-items:stretch">
+    <div style="${rowStyle}"><span style="font-size:0.72rem;color:#a89880">🇺🇸 US 소계</span><span style="font-size:0.82rem;font-weight:600;color:var(--accent2)">$${fmtUSD(grandUSD)}</span></div>
+    <div style="${rowStyle}"><span style="font-size:0.72rem;color:#a89880">🇰🇷 KOR 소계</span><span style="font-size:0.82rem;font-weight:600;color:var(--accent2)">₩${fmtKRW(grandKRW)}</span></div>
+    <div style="${divStyle}"></div>
+    <div style="${rowStyle}"><span style="font-size:0.72rem;color:#a89880">전체 합계${fxNote}</span><span style="font-size:0.92rem;font-weight:700;color:var(--accent2)">₩${fmtKRW(grandTotal)}</span></div>
+  </div>`;
 
   if(pcBody)pcBody.innerHTML=pcHTML+totalBar;
   if(mBody)mBody.innerHTML=mHTML+mTotalBar;
