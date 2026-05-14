@@ -107,55 +107,23 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
 
 <main class="main">
 
-  <!-- ① 주식 4카테고리 (최상단) -->
+  <!-- ① 주식 그룹 관리 -->
   <div class="section">
     <div class="sec-hd">
       <span class="sec-title">📈 보유 주식 관리</span>
-      <span style="font-size:0.72rem;color:var(--ink3);background:var(--card2);padding:0.2rem 0.6rem;border-radius:10px;border:1px solid var(--border);">시세 자동화는 Spring Boot 후</span>
+      <div style="display:flex;align-items:center;gap:0.5rem;">
+        <label style="font-size:0.72rem;color:var(--ink3);">합계 표시</label>
+        <select id="total-mode-sel" onchange="saveTotalMode()" style="font-size:0.78rem;padding:0.22rem 0.5rem;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--ink);font-family:inherit;">
+          <option value="KRW">₩ 원화만</option>
+          <option value="USD">$ 달러만</option>
+          <option value="BOTH">$ + ₩ 둘 다</option>
+        </select>
+      </div>
     </div>
     <div class="sec-body">
-      <!-- 카테고리 탭 -->
-      <div class="stock-tabs">
-        <button class="stock-tab active robinhood" onclick="switchStockTab('robinhood',this)">🇺🇸 US Stock</button>
-        <button class="stock-tab" onclick="switchStockTab('us',this)">🇺🇸 US IRP</button>
-        <button class="stock-tab" onclick="switchStockTab('kor-stock',this)">🇰🇷 KR Stock</button>
-        <button class="stock-tab" onclick="switchStockTab('kor-etf',this)">📊 KOR ETF</button>
-      </div>
-
-      <!-- 현재 선택된 카테고리 표시 -->
-      <div id="stock-cat-label" style="font-size:0.78rem;color:var(--ink3);margin-top:-0.4rem"></div>
-
-      <!-- 종목 추가 폼 -->
-      <div class="form-row">
-        <div class="form-group">
-          <label>티커 심볼 *</label>
-          <input type="text" id="stk-ticker" placeholder="AAPL / 005930 / 069500">
-        </div>
-        <div class="form-group" style="flex:1.5">
-          <label>종목명</label>
-          <input type="text" id="stk-name" placeholder="예: 삼성전자 / NVDA">
-        </div>
-        <div class="form-group">
-          <label>수량</label>
-          <input type="number" id="stk-qty" placeholder="예: 10" min="0" step="any">
-        </div>
-        <div class="form-group">
-          <label>평균단가</label>
-          <input type="number" id="stk-avg" placeholder="예: 73500" min="0" step="any">
-        </div>
-        <button class="btn-primary" onclick="addStock()">+ 추가</button>
-      </div>
-      <div style="font-size:0.75rem;color:var(--ink3);margin-top:-0.4rem;line-height:1.6">
-        💡 <b>KOR Stock</b>: 숫자만 입력 (<b>005930</b>) — 코스피(.KS) 우선 조회 후 코스닥(.KQ) 자동 재시도 &nbsp;|&nbsp;
-        <b>KOR ETF</b>: 숫자만 입력 (<b>069500</b>) — .KS 자동 추가 &nbsp;|&nbsp;
-        <b>미국주식</b>: <b>AAPL</b> 그대로 입력 &nbsp;|&nbsp; 현재가는 Yahoo Finance에서 자동 조회됩니다
-      </div>
-
-      <!-- 카테고리별 목록 -->
-      <div class="item-list" id="stock-item-list"></div>
-
-      <!-- 카테고리별 합계 요약 -->
-      <div id="stock-summary" style="display:none;background:var(--ink);border-radius:10px;padding:0.8rem 1rem;display:grid;grid-template-columns:repeat(2,1fr);gap:0.6rem;margin-top:0.5rem;"></div>
+      <p style="font-size:0.78rem;color:var(--ink3);">그룹 최대 10개 · 그룹당 종목 최대 10개 · 통화(USD/KRW)별 그룹 구성 · Yahoo Finance 실시간 시세</p>
+      <div id="stock-group-list" style="display:flex;flex-direction:column;gap:1rem;"></div>
+      <button class="btn-primary" id="add-group-btn" onclick="addGroup()" style="align-self:flex-start;margin-top:0.2rem">+ 그룹 추가</button>
     </div>
   </div>
 
@@ -448,109 +416,127 @@ async function delYT(id){
 }
 renderYTAccount();
 
-/* ── 주식 4카테고리 (Yahoo Finance 실시간) ── */
-const CATS=[
-  {key:'robinhood', label:'🇺🇸 US Stock', sym:'$',cls:'robinhood'},
-  {key:'us',        label:'🇺🇸 US IRP',   sym:'$',cls:'us'},
-  {key:'kor-stock', label:'🇰🇷 KR Stock', sym:'₩',cls:'kor-stock'},
-  {key:'kor-etf',   label:'📊 KOR ETF',   sym:'₩',cls:'kor-etf'}
+/* ── 주식 그룹 (localStorage) ── */
+const STOCK_LS_KEY='stock_groups_v2';
+const TOTAL_MODE_KEY='stock_total_mode';
+const GRP_COLORS=[
+  {bg:'#c8deff',tx:'#1a3d7c'},{bg:'#c0edd8',tx:'#0d4a2a'},
+  {bg:'#ffd5c0',tx:'#7a2a00'},{bg:'#ddd0f5',tx:'#3a1870'},
+  {bg:'#ffefc0',tx:'#6a4a00'},{bg:'#c0e8f5',tx:'#0a3a50'},
+  {bg:'#f5c0e0',tx:'#500a30'},{bg:'#d0f0c0',tx:'#1a4a0a'},
+  {bg:'#f0d0c0',tx:'#5a2a0a'},{bg:'#c0c8f5',tx:'#1a1a6a'},
 ];
-let curCat='robinhood';
-let _stocksCache=[];
 
-function switchStockTab(cat,btn){
-  curCat=cat;
-  document.querySelectorAll('.stock-tab').forEach(b=>{b.classList.remove('active','robinhood','us','kor-stock','kor-etf');});
-  btn.classList.add('active',cat);
-  const catObj=CATS.find(c=>c.key===cat);
-  const cnt=_stocksCache.filter(s=>s.category===cat).length;
-  const lbl=gel('stock-cat-label');
-  if(lbl)lbl.textContent=`현재 카테고리: ${catObj?.label||cat} (통화: ${catObj?.sym||''}) · ${cnt}/10개`;
-  renderStockList();
+function genId(){return Math.random().toString(36).slice(2,10);}
+function loadGroups(){return ld(STOCK_LS_KEY,[]);}
+function saveGroups(g){sv(STOCK_LS_KEY,g);}
+
+function initTotalMode(){
+  const sel=gel('total-mode-sel');
+  if(sel)sel.value=ld(TOTAL_MODE_KEY,'KRW');
+}
+function saveTotalMode(){
+  sv(TOTAL_MODE_KEY,gel('total-mode-sel').value);
+  toast('✓ 합계 표시 방식이 저장되었습니다');
 }
 
-async function loadStocks(){
-  try{ _stocksCache=await fetch('/api/stocks').then(r=>r.json()); }
-  catch{ _stocksCache=[]; }
-  renderStockList();
-  renderStockSummary();
-  const catObj=CATS.find(c=>c.key===curCat);
-  const cnt=_stocksCache.filter(s=>s.category===curCat).length;
-  const lbl=gel('stock-cat-label');
-  if(lbl)lbl.textContent=`현재 카테고리: ${catObj?.label||curCat} (통화: ${catObj?.sym||''}) · ${cnt}/10개`;
+function addGroup(){
+  const groups=loadGroups();
+  if(groups.length>=10){toast('그룹은 최대 10개까지 가능합니다');return;}
+  groups.push({id:genId(),name:'새 그룹',currency:'KRW',stocks:[]});
+  saveGroups(groups);renderGroups();
 }
 
-function renderStockList(){
-  const list=_stocksCache.filter(s=>s.category===curCat);
-  const catObj=CATS.find(c=>c.key===curCat);
-  const sym=catObj?.sym||'₩';
-  const div=gel('stock-item-list');
-  if(!list.length){div.innerHTML='<div class="empty-notice">이 카테고리에 종목이 없습니다</div>';renderStockSummary();return;}
-  div.innerHTML=list.map(s=>{
-    const val=Number(s.avg_price||0)*(s.quantity||0);
-    const fmt=v=>sym==='₩'?Math.round(v).toLocaleString('ko-KR'):Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-    return `<div class="item-row">
-      <span class="stock-badge badge-${curCat}">${catObj?.label||curCat}</span>
-      <div class="item-info">
-        <div class="item-name"><strong>${s.ticker}</strong>${s.name?` · ${s.name}`:''}</div>
-        <div class="item-sub">${s.quantity||0}주 · 평균단가 ${sym}${fmt(s.avg_price||0)} · 평가액 ${sym}${fmt(val)} · <span style="color:var(--blue);font-size:0.7rem">현재가: Yahoo Finance 자동조회</span></div>
-      </div>
-      <button class="btn-danger" onclick="delStock(${s.id})">삭제</button>
-    </div>`;
-  }).join('');
-  renderStockSummary();
+function delGroup(gid){
+  if(!confirm('그룹과 모든 종목을 삭제하시겠습니까?'))return;
+  saveGroups(loadGroups().filter(g=>g.id!==gid));
+  renderGroups();toast('삭제되었습니다');
 }
 
-function renderStockSummary(){
-  const summary=gel('stock-summary');
-  if(!_stocksCache.length){summary.style.display='none';return;}
-  summary.style.display='grid';
-  summary.innerHTML=CATS.map(cat=>{
-    const list=_stocksCache.filter(s=>s.category===cat.key);
-    const total=list.reduce((a,s)=>a+Number(s.avg_price||0)*(s.quantity||0),0);
-    const fmt=v=>cat.sym==='₩'?Math.round(v).toLocaleString('ko-KR'):v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-    return `<div>
-      <div style="font-size:0.7rem;color:#a89880">${cat.label} (${list.length}개)</div>
-      <div style="font-size:0.95rem;font-weight:500;color:var(--accent2)">${cat.sym}${fmt(total)}</div>
-    </div>`;
-  }).join('');
+function updateGroup(gid,field,value){
+  const groups=loadGroups();
+  const g=groups.find(g=>g.id===gid);
+  if(g){g[field]=value;saveGroups(groups);}
 }
 
-async function addStock(){
-  const ticker=(gel('stk-ticker').value||'').trim().toUpperCase();
-  const name=(gel('stk-name').value||'').trim();
-  const qty=parseFloat(gel('stk-qty').value)||null;
-  const avg=parseFloat(gel('stk-avg').value)||null;
+function addStock(gid){
+  const ticker=(gel('ticker-'+gid)?.value||'').trim().toUpperCase();
+  const name=(gel('name-'+gid)?.value||'').trim();
+  const qty=parseFloat(gel('qty-'+gid)?.value)||0;
+  const avg=parseFloat(gel('avg-'+gid)?.value)||0;
   if(!ticker){toast('티커 심볼을 입력해주세요');return;}
-  const catCount=_stocksCache.filter(s=>s.category===curCat).length;
-  if(catCount>=10){toast('카테고리당 최대 10개까지 추가 가능합니다');return;}
-  try{
-    const res=await fetch('/api/stocks',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({category:curCat,ticker,name:name||null,quantity:qty,avg_price:avg})
-    });
-    if(res.ok){
-      gel('stk-ticker').value='';gel('stk-name').value='';gel('stk-qty').value='';gel('stk-avg').value='';
-      await loadStocks();toast('✓ 종목이 추가되었습니다');
-    }else{
-      const err=await res.json().catch(()=>({detail:'오류'}));
-      toast(err.detail||'추가 실패');
-    }
-  }catch{toast('서버에 연결할 수 없습니다');}
+  const groups=loadGroups();
+  const g=groups.find(g=>g.id===gid);
+  if(!g)return;
+  if(g.stocks.length>=10){toast('그룹당 최대 10개까지 가능합니다');return;}
+  g.stocks.push({id:genId(),ticker,name,quantity:qty,avgPrice:avg});
+  saveGroups(groups);renderGroups();
+  toast(`✓ ${ticker} 추가`);
 }
 
-async function delStock(id){
-  if(!confirm('삭제하시겠습니까?'))return;
-  try{
-    const res=await fetch(`/api/stocks/${id}`,{method:'DELETE'});
-    if(res.ok){await loadStocks();toast('삭제되었습니다');}
-    else toast('삭제 실패');
-  }catch{toast('서버에 연결할 수 없습니다');}
+function delStock(gid,sid){
+  const groups=loadGroups();
+  const g=groups.find(g=>g.id===gid);
+  if(g){g.stocks=g.stocks.filter(s=>s.id!==sid);saveGroups(groups);}
+  renderGroups();
 }
 
-/* 초기 로드 */
-loadStocks();
-switchStockTab('robinhood',document.querySelector('.stock-tab'));
+function renderGroups(){
+  const groups=loadGroups();
+  const list=gel('stock-group-list');
+  const addBtn=gel('add-group-btn');
+  if(addBtn)addBtn.style.display=groups.length>=10?'none':'';
+  if(!groups.length){
+    list.innerHTML='<div class="empty-notice">그룹을 추가해보세요</div>';return;
+  }
+  const inpStyle='padding:0.32rem 0.45rem;font-size:0.82rem;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--ink);font-family:inherit;';
+  list.innerHTML=groups.map((g,gi)=>{
+    const col=GRP_COLORS[gi%GRP_COLORS.length];
+    const sym=g.currency==='USD'?'$':'₩';
+    const fmtA=v=>g.currency==='USD'?Number(v).toFixed(2):Math.round(v).toLocaleString('ko-KR');
+    const stockRows=g.stocks.length
+      ?g.stocks.map(s=>`<div class="item-row" style="padding:0.42rem 0.7rem">
+          <div class="item-info">
+            <div class="item-name"><strong>${s.ticker}</strong>${s.name?` · ${s.name}`:''}</div>
+            <div class="item-sub">${s.quantity}주 · 매입단가 ${sym}${fmtA(s.avgPrice)} · <span style="color:var(--blue);font-size:0.7rem">현재가 Yahoo Finance 자동조회</span></div>
+          </div>
+          <button class="btn-danger" onclick="delStock('${g.id}','${s.id}')">삭제</button>
+        </div>`).join('')
+      :'<div class="empty-notice" style="font-size:0.78rem;padding:0.4rem 0.8rem">종목이 없습니다. 아래에서 추가하세요.</div>';
+    const addForm=g.stocks.length<10
+      ?`<div style="padding:0.5rem 0.8rem 0.75rem;border-top:1px solid var(--border)">
+          <div style="display:flex;gap:0.35rem;flex-wrap:wrap;align-items:center">
+            <input type="text" id="ticker-${g.id}" placeholder="티커" style="${inpStyle}width:80px;flex:0 0 80px">
+            <input type="text" id="name-${g.id}" placeholder="종목명" style="${inpStyle}flex:1;min-width:80px">
+            <input type="number" id="qty-${g.id}" placeholder="수량" style="${inpStyle}width:72px;flex:0 0 72px" min="0" step="any">
+            <input type="number" id="avg-${g.id}" placeholder="매입단가" style="${inpStyle}width:100px;flex:0 0 100px" min="0" step="any">
+            <button class="btn-primary" onclick="addStock('${g.id}')" style="padding:0.35rem 0.8rem;font-size:0.82rem">+ 추가</button>
+          </div>
+          <div style="font-size:0.7rem;color:var(--ink3);margin-top:0.3rem">💡 KOR 종목: 숫자만 입력 (예: 005930) — .KS/.KQ 자동 처리 &nbsp;|&nbsp; 미국주식: AAPL 그대로</div>
+        </div>`
+      :'<div style="font-size:0.75rem;color:var(--ink3);text-align:center;padding:0.4rem">최대 10개 종목 도달</div>';
+    return `<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:0.6rem;padding:0.6rem 0.9rem;background:${col.bg};">
+        <input type="text" value="${g.name}" placeholder="그룹 이름"
+          onchange="updateGroup('${g.id}','name',this.value)"
+          style="${inpStyle}flex:1;font-weight:500;background:rgba(255,255,255,0.6);color:${col.tx}">
+        <select onchange="updateGroup('${g.id}','currency',this.value)"
+          style="${inpStyle}background:rgba(255,255,255,0.6);color:${col.tx};font-weight:500">
+          <option value="KRW" ${g.currency==='KRW'?'selected':''}>₩ KRW</option>
+          <option value="USD" ${g.currency==='USD'?'selected':''}>$ USD</option>
+        </select>
+        <span style="font-size:0.72rem;color:${col.tx};opacity:0.7">${g.stocks.length}/10</span>
+        <button class="btn-danger" onclick="delGroup('${g.id}')">그룹 삭제</button>
+      </div>
+      <div style="background:var(--card2)">${stockRows}</div>
+      ${addForm}
+    </div>`;
+  }).join('');
+}
+
+/* 초기화 */
+initTotalMode();
+renderGroups();
 
 /* ── 즐겨찾기 사이트 (DB API) ── */
 let _sites=[];
