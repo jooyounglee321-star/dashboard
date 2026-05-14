@@ -1,10 +1,13 @@
 import asyncio
+import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
 
 import yfinance as yf
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from database import get_db
 from models import Stock
@@ -66,19 +69,23 @@ def _fetch_price(ticker: str, category: str | None = None) -> dict:
 
     cached, ts = _price_cache.get(cache_key, (None, 0))
     if cached and (time.time() - ts) < _CACHE_TTL:
+        logger.info("[STOCK CACHE] %s (cached)", cache_key)
         return cached
 
+    logger.info("[STOCK FETCH] ticker=%s → yf=%s (category=%s)", ticker, yf_ticker, category)
     current, prev, fi = _query_yf(yf_ticker)
 
     # kor-stock .KS 실패 시 .KQ (코스닥) 재시도
     if current is None and category == "kor-stock" and yf_ticker.endswith(".KS"):
         yf_ticker_kq = ticker + ".KQ"
+        logger.info("[STOCK RETRY] .KS 실패 → .KQ 재시도: %s", yf_ticker_kq)
         current2, prev2, fi2 = _query_yf(yf_ticker_kq)
         if current2 is not None:
             current, prev, fi = current2, prev2, fi2
             cache_key = yf_ticker_kq
 
     if current is None:
+        logger.warning("[STOCK FAIL] '%s' 시세 조회 실패 (yf=%s)", ticker, yf_ticker)
         raise ValueError(f"'{ticker}' 시세를 가져올 수 없습니다. 티커를 확인해 주세요.")
 
     prev = prev or current
@@ -93,6 +100,10 @@ def _fetch_price(ticker: str, category: str | None = None) -> dict:
         "change_percent": round(float(change_percent),  4),
         "currency":       getattr(fi, "currency", None) or "USD",
     }
+    logger.info(
+        "[STOCK OK] %s → %s %.4f (%+.2f%%)",
+        yf_ticker, result["currency"], result["current_price"], result["change_percent"]
+    )
     _price_cache[cache_key] = (result, time.time())
     return result
 
