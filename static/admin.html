@@ -787,64 +787,124 @@ function delSell(gid,sid,sellId){
   _expandedStocks.add(sid);renderGroups();
 }
 
-/* ── 매입/매도 내역 패널 HTML ── */
+/* ── 인라인 입력폼 (▼ 클릭 시 표시) ── */
 function renderStockDetail(g,s){
   const sym=g.currency==='USD'?'$':'₩';
-  const fmtA=v=>g.currency==='USD'?Number(v).toFixed(2):Math.round(v).toLocaleString('ko-KR');
-  const inpS='padding:0.28rem 0.42rem;font-size:0.8rem;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--ink);font-family:inherit;';
+  const{holdQty}=stockSummary(s);
+  const inpS='padding:0.35rem 0.5rem;font-size:0.83rem;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--ink);font-family:inherit;box-sizing:border-box;width:100%';
+  return `<div style="border-top:1px solid var(--border);background:rgba(255,255,255,0.35);padding:0.7rem 0.9rem;display:flex;flex-direction:column;gap:0.7rem">
 
-  // 매입+매도 합쳐서 날짜순 정렬
-  const allRows=[
-    ...(s.purchases||[]).map(p=>({...p,type:'buy'})),
-    ...(s.sells||[]).map(p=>({...p,type:'sell'}))
-  ].sort((a,b)=>{
-    if(!a.date&&!b.date)return 0;
-    if(!a.date)return 1;
-    if(!b.date)return -1;
-    return a.date.localeCompare(b.date);
-  });
-
-  const rows=allRows.length
-    ?allRows.map(r=>{
-        const isBuy=r.type==='buy';
-        const badge=isBuy
-          ?`<span style="font-size:0.68rem;padding:0.1rem 0.35rem;border-radius:4px;background:#dbeafe;color:#1d4ed8;font-weight:500">매입</span>`
-          :`<span style="font-size:0.68rem;padding:0.1rem 0.35rem;border-radius:4px;background:#fee2e2;color:#b91c1c;font-weight:500">매도</span>`;
-        const delFn=isBuy?`delPurchase('${g.id}','${s.id}','${r.id}')`:`delSell('${g.id}','${s.id}','${r.id}')`;
-        return `<tr>
-          <td style="padding:0.22rem 0.35rem;font-size:0.78rem;color:var(--ink2)">${r.date||'—'}</td>
-          <td style="padding:0.22rem 0.35rem">${badge}</td>
-          <td style="padding:0.22rem 0.35rem;text-align:right;font-size:0.8rem">${(r.qty||0).toLocaleString()}</td>
-          <td style="padding:0.22rem 0.35rem;text-align:right;font-size:0.8rem">${r.price?sym+fmtA(r.price):'—'}</td>
-          <td style="padding:0.22rem 0.35rem;text-align:right">
-            <button class="btn-sm-danger" onclick="${delFn}">삭제</button>
-          </td></tr>`;
-      }).join('')
-    :`<tr><td colspan="5" style="padding:0.6rem;text-align:center;color:var(--ink3);font-size:0.78rem">내역 없음 — 위 버튼으로 등록하세요</td></tr>`;
-
-  return `<div class="purchase-panel">
-    <div style="padding:0.4rem 0.9rem;background:rgba(255,255,255,0.45);border-top:1px solid var(--border);display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap">
-      <span style="font-size:0.68rem;color:var(--ink3)">티커</span>
-      <input type="text" value="${s.ticker}" onchange="updateStock('${g.id}','${s.id}','ticker',this.value.toUpperCase())"
-        style="${inpS}width:88px;text-transform:uppercase;font-weight:500">
-      <span style="font-size:0.68rem;color:var(--ink3)">종목명</span>
-      <input type="text" value="${s.name||''}" onchange="updateStock('${g.id}','${s.id}','name',this.value)"
-        style="${inpS}flex:1;min-width:100px">
+    <!-- 추가매입 폼 -->
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:0.6rem 0.75rem">
+      <div style="font-size:0.75rem;font-weight:600;color:#1d4ed8;margin-bottom:0.5rem">📈 추가매입</div>
+      <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:flex-end">
+        <div style="flex:1;min-width:100px">
+          <div style="font-size:0.7rem;color:#475569;margin-bottom:0.18rem">매입일 <span style="opacity:0.6">(선택)</span></div>
+          <input type="date" id="buy-date-${s.id}" style="${inpS}">
+        </div>
+        <div style="flex:1;min-width:70px">
+          <div style="font-size:0.7rem;color:#475569;margin-bottom:0.18rem">수량 <span style="color:#e55">*</span></div>
+          <input type="number" id="buy-qty-${s.id}" min="0.0001" step="any" placeholder="수량" style="${inpS}">
+        </div>
+        <div style="flex:1;min-width:90px">
+          <div style="font-size:0.7rem;color:#475569;margin-bottom:0.18rem">매입가 <span style="opacity:0.6">(선택·비우면 종가)</span></div>
+          <input type="number" id="buy-price-${s.id}" min="0" step="any" placeholder="${sym} 단가" style="${inpS}">
+        </div>
+        <button onclick="submitBuyInline('${g.id}','${s.id}')"
+          style="padding:0.36rem 0.9rem;font-size:0.82rem;border:none;border-radius:7px;background:#2563eb;color:#fff;cursor:pointer;font-weight:500;white-space:nowrap;flex-shrink:0">
+          매입 추가
+        </button>
+      </div>
     </div>
-    <div style="padding:0.4rem 0.9rem 0.65rem">
-      <div style="font-size:0.72rem;font-weight:500;color:var(--ink2);margin-bottom:0.3rem">📋 매입/매도 내역</div>
-      <table style="width:100%;border-collapse:collapse">
-        <thead><tr style="font-size:0.68rem;color:var(--ink3);border-bottom:1px solid var(--border)">
-          <th style="text-align:left;padding:0.15rem 0.35rem;font-weight:400">날짜</th>
-          <th style="text-align:left;padding:0.15rem 0.35rem;font-weight:400">구분</th>
-          <th style="text-align:right;padding:0.15rem 0.35rem;font-weight:400">수량</th>
-          <th style="text-align:right;padding:0.15rem 0.35rem;font-weight:400">단가</th>
-          <th></th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
+
+    <!-- 추가매도 폼 -->
+    <div style="background:#fff1f2;border:1px solid #fecaca;border-radius:8px;padding:0.6rem 0.75rem">
+      <div style="font-size:0.75rem;font-weight:600;color:#b91c1c;margin-bottom:0.5rem">📉 추가매도 <span style="font-weight:400;font-size:0.7rem;color:#64748b">(현재 보유 ${holdQty.toLocaleString()}주)</span></div>
+      <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:flex-end">
+        <div style="flex:1;min-width:100px">
+          <div style="font-size:0.7rem;color:#475569;margin-bottom:0.18rem">매도일 <span style="opacity:0.6">(선택)</span></div>
+          <input type="date" id="sell-date-${s.id}" style="${inpS}">
+        </div>
+        <div style="flex:1;min-width:70px">
+          <div style="font-size:0.7rem;color:#475569;margin-bottom:0.18rem">수량 <span style="color:#e55">*</span> <span style="opacity:0.6">(최대 ${holdQty})</span></div>
+          <input type="number" id="sell-qty-${s.id}" min="0.0001" max="${holdQty}" step="any" placeholder="수량" style="${inpS}">
+        </div>
+        <div style="flex:1;min-width:90px">
+          <div style="font-size:0.7rem;color:#475569;margin-bottom:0.18rem">매도가 <span style="opacity:0.6">(선택·비우면 종가)</span></div>
+          <input type="number" id="sell-price-${s.id}" min="0" step="any" placeholder="${sym} 단가" style="${inpS}">
+        </div>
+        <button onclick="submitSellInline('${g.id}','${s.id}',${holdQty})"
+          style="padding:0.36rem 0.9rem;font-size:0.82rem;border:none;border-radius:7px;background:#dc2626;color:#fff;cursor:pointer;font-weight:500;white-space:nowrap;flex-shrink:0">
+          매도 추가
+        </button>
+      </div>
     </div>
+
   </div>`;
+}
+
+/* ── 인라인 매입 등록 ── */
+async function submitBuyInline(gid,sid){
+  const qty=parseFloat(document.getElementById('buy-qty-'+sid)?.value)||0;
+  if(!qty){toast('수량을 입력해주세요');return;}
+  const date=(document.getElementById('buy-date-'+sid)?.value||'').trim();
+  let price=parseFloat(document.getElementById('buy-price-'+sid)?.value)||0;
+  if(date&&!price){
+    const grps=loadGroups();
+    const g=grps.find(g=>g.id===gid);
+    const s=g?.stocks.find(s=>s.id===sid);
+    if(s){
+      const cat=g.currency==='KRW'?'kor-stock':'us';
+      toast('⏳ 해당일 시세 조회 중…');
+      try{
+        const close=await _fetchHistPrice(s.ticker,date,cat);
+        if(close!=null){price=close;toast(`✓ ${date} 종가 자동입력: ${g.currency==='KRW'?'₩':'$'}${close}`);}
+        else toast('⚠ 해당일 시세 조회 실패 — 매입가 비워둠');
+      }catch(e){toast('⚠ 시세 조회 오류');}
+    }
+  }
+  const groups=loadGroups();
+  const g=groups.find(g=>g.id===gid);
+  const s=g?.stocks.find(s=>s.id===sid);
+  if(!s)return;
+  s.purchases.push({id:genId(),date:date||null,qty,price:price||0});
+  saveGroups(groups);
+  _expandedStocks.add(sid);
+  renderGroups();
+  toast('✓ 매입 내역 등록');
+}
+
+/* ── 인라인 매도 등록 ── */
+async function submitSellInline(gid,sid,holdQty){
+  const qty=parseFloat(document.getElementById('sell-qty-'+sid)?.value)||0;
+  if(!qty){toast('수량을 입력해주세요');return;}
+  if(qty>holdQty){toast(`보유수량(${holdQty.toLocaleString()})을 초과할 수 없습니다`);return;}
+  const date=(document.getElementById('sell-date-'+sid)?.value||'').trim();
+  let price=parseFloat(document.getElementById('sell-price-'+sid)?.value)||0;
+  if(date&&!price){
+    const grps=loadGroups();
+    const g=grps.find(g=>g.id===gid);
+    const s=g?.stocks.find(s=>s.id===sid);
+    if(s){
+      const cat=g.currency==='KRW'?'kor-stock':'us';
+      toast('⏳ 해당일 시세 조회 중…');
+      try{
+        const close=await _fetchHistPrice(s.ticker,date,cat);
+        if(close!=null){price=close;toast(`✓ ${date} 종가 자동입력: ${g.currency==='KRW'?'₩':'$'}${close}`);}
+        else toast('⚠ 해당일 시세 조회 실패 — 매도가 비워둠');
+      }catch(e){toast('⚠ 시세 조회 오류');}
+    }
+  }
+  const groups=loadGroups();
+  const g=groups.find(g=>g.id===gid);
+  const s=g?.stocks.find(s=>s.id===sid);
+  if(!s)return;
+  if(!Array.isArray(s.sells))s.sells=[];
+  s.sells.push({id:genId(),date:date||null,qty,price:price||0});
+  saveGroups(groups);
+  _expandedStocks.add(sid);
+  renderGroups();
+  toast('✓ 매도 내역 등록');
 }
 
 function renderGroups(){
@@ -871,8 +931,6 @@ function renderGroups(){
                 <div class="item-sub">${holdQty>0?'보유 '+holdQty.toLocaleString()+'주':'수량 미등록'}${avgBuyPrice>0?` · 평균 ${sym}${fmtA(avgBuyPrice)}`:''}${totalSellQty>0?` · 매도 ${totalSellQty.toLocaleString()}주`:''}</div>
               </div>
               <div style="display:flex;gap:0.28rem;flex-shrink:0">
-                <button class="btn-sm" style="background:#dbeafe;color:#1d4ed8;border-color:#93c5fd" onclick="openBuyModal('${g.id}','${s.id}')">+ 매입</button>
-                <button class="btn-sm" style="background:#fee2e2;color:#b91c1c;border-color:#fca5a5" onclick="openSellModal('${g.id}','${s.id}')">- 매도</button>
                 <button class="btn-sm-danger" onclick="delStock('${g.id}','${s.id}')">삭제</button>
               </div>
             </div>${detail}

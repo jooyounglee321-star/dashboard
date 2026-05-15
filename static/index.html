@@ -917,13 +917,14 @@ async function renderStock(){
         :`<span style="font-size:0.5rem;background:#a89880;color:#fff;padding:0.04rem 0.3rem;border-radius:6px;margin-left:0.2rem">평균가</span>`;
       return `<li class="m-stock-item">
         <div>
-          <div class="m-stock-name">${s.name||s.ticker}</div>
-          <div class="m-stock-qty">${holdQty.toLocaleString()}주 <span class="${cs}">${sg}${Math.abs(chP).toFixed(2)}%</span>${evalPct!=null?` <span class="${eps}">(${evalPct>=0?'+':''}${evalPct.toFixed(1)}%)</span>`:''}</div>
-          ${totalSellQty>0?`<div class="m-stock-qty" style="font-size:0.65rem"><span class="${rps}">실현 ${realizedPL>=0?'+':''}${sym}${fmt(Math.abs(realizedPL))}</span></div>`:''}
+          <div class="m-stock-name">${s.name||s.ticker} <span style="font-size:0.6rem;color:var(--ink3)">${s.ticker}</span></div>
+          <div class="m-stock-qty">${holdQty.toLocaleString()}주${avgCost>0?` · 평균 ${sym}${fmt(avgCost)}`:''}</div>
+          ${evalPL!=null?`<div class="m-stock-qty" style="font-size:0.65rem"><span class="${eps}">평가손익 ${evalPL>=0?'+':''}${sym}${fmt(Math.abs(evalPL))} (${evalPct>=0?'+':''}${evalPct.toFixed(1)}%)</span></div>`:''}
+          ${totalSellQty>0?`<div class="m-stock-qty" style="font-size:0.65rem"><span class="${rps}">실현손익 ${realizedPL>=0?'+':''}${sym}${fmt(Math.abs(realizedPL))}</span></div>`:''}
         </div>
         <div>
           <div class="m-stock-price">${sym}${fmt(cur)}${ld2}</div>
-          <div class="m-stock-val">${sym}${fmt(val)}</div>
+          <div class="m-stock-val"><span class="${cs}">${sg}${Math.abs(chP).toFixed(2)}%</span></div>
         </div>
       </li>`;
     }).join('');
