@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>회원관리 — 어드민</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f0e8;--card:#fffef9;--card2:#faf7f0;
+  --ink:#2c2416;--ink2:#6b5e4a;--ink3:#a89880;
+  --accent:#c4662a;--accent2:#e8a060;
+  --border:rgba(100,80,50,0.15);--shadow:0 2px 12px rgba(100,70,30,0.08);
+  --green:#4a7c59;--red:#c0392b;
+}
+body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif;font-weight:300;min-height:100vh;}
+
+/* ── Header ── */
+.header{background:var(--ink);color:#f5f0e8;padding:0.9rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.header-title{font-family:'Playfair Display',serif;font-size:1.25rem;color:var(--accent2);}
+.header-nav{display:flex;gap:0.6rem;}
+.nav-link{font-size:0.78rem;color:var(--accent2);text-decoration:none;border:1px solid rgba(232,160,96,0.4);padding:0.28rem 0.7rem;border-radius:20px;}
+.nav-link:hover{border-color:var(--accent2);}
+.nav-link.active{background:rgba(232,160,96,0.15);}
+
+/* ── 본문 ── */
+.main{max-width:1000px;margin:0 auto;padding:1.5rem 1.2rem;}
+
+/* ── 상단 요약 ── */
+.summary-bar{display:flex;gap:0.8rem;margin-bottom:1.3rem;flex-wrap:wrap;}
+.summary-chip{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.7rem 1.1rem;min-width:120px;}
+.summary-label{font-size:0.68rem;color:var(--ink3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.25rem;}
+.summary-value{font-size:1.3rem;font-weight:700;color:var(--ink);}
+
+/* ── 카드 ── */
+.card{background:var(--card);border-radius:14px;border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden;}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.2rem;border-bottom:1px solid var(--border);background:var(--card2);}
+.card-title{font-size:0.72rem;font-weight:500;letter-spacing:0.1em;color:var(--ink3);text-transform:uppercase;}
+
+/* ── 검색/필터 바 ── */
+.filter-bar{display:flex;gap:0.5rem;align-items:center;}
+.filter-bar input{padding:0.32rem 0.7rem;font-size:0.8rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--ink);font-family:inherit;width:200px;}
+.filter-bar input:focus{outline:none;border-color:var(--accent);}
+.filter-bar select{padding:0.32rem 0.6rem;font-size:0.8rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--ink);font-family:inherit;}
+.btn-refresh{padding:0.32rem 0.8rem;font-size:0.78rem;cursor:pointer;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:500;}
+.btn-refresh:hover{background:#a8551f;}
+
+/* ── 테이블 ── */
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:0.85rem;}
+thead tr{background:var(--card2);}
+th{padding:0.65rem 1rem;text-align:left;font-size:0.7rem;font-weight:500;letter-spacing:0.06em;color:var(--ink3);text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:0.65rem 1rem;border-bottom:1px solid var(--border);color:var(--ink2);vertical-align:middle;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover td{background:var(--card2);}
+
+/* ── 역할 뱃지 ── */
+.role-badge{display:inline-block;font-size:0.68rem;font-weight:500;padding:0.1rem 0.55rem;border-radius:20px;white-space:nowrap;}
+.role-Admin{background:#ffd5c0;color:#7a2a00;}
+.role-Member{background:#c0edd8;color:#0d4a2a;}
+
+/* ── 빈 상태 / 로딩 ── */
+.empty-row td{text-align:center;padding:2rem;color:var(--ink3);font-size:0.85rem;font-style:italic;}
+.loading{text-align:center;padding:2.5rem;color:var(--ink3);font-size:0.85rem;}
+
+/* ── 페이지네이션 ── */
+.pagination{display:flex;align-items:center;justify-content:flex-end;gap:0.4rem;padding:0.8rem 1.1rem;border-top:1px solid var(--border);background:var(--card2);}
+.page-info{font-size:0.78rem;color:var(--ink3);margin-right:0.4rem;}
+.page-btn{padding:0.28rem 0.65rem;font-size:0.78rem;cursor:pointer;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--ink2);font-family:inherit;}
+.page-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
+.page-btn:disabled{opacity:0.4;cursor:not-allowed;}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-title">어드민 — 회원관리</div>
+  <nav class="header-nav">
+    <a href="/admin" class="nav-link">대시보드 설정</a>
+    <a href="/admin_users" class="nav-link active">회원관리</a>
+    <a href="/" class="nav-link">홈으로</a>
+  </nav>
+</header>
+
+<div class="main">
+
+  <!-- 요약 칩 -->
+  <div class="summary-bar">
+    <div class="summary-chip">
+      <div class="summary-label">전체 회원</div>
+      <div class="summary-value" id="total-count">—</div>
+    </div>
+    <div class="summary-chip">
+      <div class="summary-label">관리자</div>
+      <div class="summary-value" id="admin-count">—</div>
+    </div>
+    <div class="summary-chip">
+      <div class="summary-label">일반 회원</div>
+      <div class="summary-value" id="member-count">—</div>
+    </div>
+  </div>
+
+  <!-- 회원 테이블 카드 -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">가입 회원 목록</span>
+      <div class="filter-bar">
+        <input type="text" id="search-input" placeholder="이메일 검색…">
+        <select id="role-filter">
+          <option value="">전체 역할</option>
+          <option value="Admin">Admin</option>
+          <option value="Member">Member</option>
+        </select>
+        <button class="btn-refresh" onclick="loadUsers()">새로고침</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>이메일</th>
+            <th>역할</th>
+            <th>가입일</th>
+          </tr>
+        </thead>
+        <tbody id="user-tbody">
+          <tr><td colspan="4" class="loading">불러오는 중…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination">
+      <span class="page-info" id="page-info"></span>
+      <button class="page-btn" id="btn-prev" onclick="changePage(-1)" disabled>← 이전</button>
+      <button class="page-btn" id="btn-next" onclick="changePage(1)" disabled>다음 →</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const PAGE_SIZE = 20;
+let allUsers  = [];
+let filtered  = [];
+let currentPage = 1;
+
+async function loadUsers() {
+  const tbody = document.getElementById('user-tbody');
+  tbody.innerHTML = '<tr><td colspan="4" class="loading">불러오는 중…</td></tr>';
+
+  try {
+    const res  = await fetch('/api/auth/users');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    allUsers = await res.json();
+  } catch (e) {
+    // API 미구현 시 빈 목록으로 처리
+    allUsers = [];
+  }
+
+  applyFilter();
+}
+
+function applyFilter() {
+  const keyword = document.getElementById('search-input').value.trim().toLowerCase();
+  const role    = document.getElementById('role-filter').value;
+
+  filtered = allUsers.filter(u => {
+    const matchEmail = !keyword || u.email.toLowerCase().includes(keyword);
+    const matchRole  = !role    || u.role === role;
+    return matchEmail && matchRole;
+  });
+
+  currentPage = 1;
+  renderTable();
+  renderSummary();
+}
+
+function renderTable() {
+  const tbody = document.getElementById('user-tbody');
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const page  = filtered.slice(start, start + PAGE_SIZE);
+
+  if (page.length === 0) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="4">가입된 회원이 없습니다.</td></tr>';
+    document.getElementById('page-info').textContent = '';
+    document.getElementById('btn-prev').disabled = true;
+    document.getElementById('btn-next').disabled = true;
+    return;
+  }
+
+  tbody.innerHTML = page.map(u => `
+    <tr>
+      <td>${u.id}</td>
+      <td>${escHtml(u.email)}</td>
+      <td><span class="role-badge role-${escHtml(u.role)}">${escHtml(u.role)}</span></td>
+      <td>${formatDate(u.created_at)}</td>
+    </tr>
+  `).join('');
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  document.getElementById('page-info').textContent =
+    `${start + 1}–${Math.min(start + PAGE_SIZE, filtered.length)} / ${filtered.length}명`;
+  document.getElementById('btn-prev').disabled = currentPage <= 1;
+  document.getElementById('btn-next').disabled = currentPage >= totalPages;
+}
+
+function renderSummary() {
+  document.getElementById('total-count').textContent  = allUsers.length;
+  document.getElementById('admin-count').textContent  = allUsers.filter(u => u.role === 'Admin').length;
+  document.getElementById('member-count').textContent = allUsers.filter(u => u.role === 'Member').length;
+}
+
+function changePage(dir) {
+  currentPage += dir;
+  renderTable();
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function escHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+// 검색/필터 실시간 반응
+document.getElementById('search-input').addEventListener('input', applyFilter);
+document.getElementById('role-filter').addEventListener('change', applyFilter);
+
+loadUsers();
+</script>
+</body>
+</html>

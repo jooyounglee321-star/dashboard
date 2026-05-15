@@ -104,4 +104,14 @@ def admin_page():
     return FileResponse("static/admin.html")
 
 
+@app.get("/register", include_in_schema=False)
+def register_page():
+    return FileResponse("static/register.html")
+
+
+@app.get("/admin_users", include_in_schema=False)
+def admin_users_page():
+    return FileResponse("static/admin_users.html")
+
+
 app.mount("/", StaticFiles(directory="static", html=True), name="static")

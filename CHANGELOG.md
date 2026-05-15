@@ -4,14 +4,35 @@
 
 ---
 
+## [2026-05-15] — SaaS 회원가입 기초 구현
+
+### 추가
+- **models.py** — `User` 테이블 추가 (id, email, hashed_password, role 기본값 'Member', created_at)
+- **static/register.html** — 이메일·비밀번호 회원가입 화면 (클라이언트 유효성 검사 포함)
+- **static/admin_users.html** — 회원 목록 관리 화면 (이메일 검색, 역할 필터, 페이지네이션)
+- **main.py** — `/register`, `/admin_users` 라우트 추가
+- DB 시작 시 `Base.metadata.create_all` 로 User 테이블 자동 생성 확인 (기존 lifespan 활용)
+
+---
+
 ## [2026-05-15]
 
+### 추가 — 프로젝트 문서 전면 작성
+- **README.md** 신규 작성 — 프로젝트 소개, 기술 스택, 로컬 실행 방법, Railway 배포 방법, 환경변수 목록
+- **ERD.md** 신규 작성 — 전체 DB 테이블 구조, 컬럼 타입·설명, 테이블 관계
+- **API.md** 신규 작성 — 전체 API 엔드포인트 목록, Method·URL·Input·Output·예시
+- **ARCHITECTURE.md** 신규 작성 — 전체 시스템 구조도, 프론트/백/DB 관계, 핵심 설계 결정, 향후 기능 로드맵
+- **DECISIONS.md** 전면 업데이트 — 프로젝트 시작(2026-05-09)부터 현재까지 모든 결정 사항 기록
+
 ### 수정 — `index.html` JS 문법 오류 + 파싱 안정화 (CSS 화면 출력 버그)
-- **근본 원인 1**: 주식 통계 바차트(`Chart.js`) 초기화 코드에서 `options:{}` 객체의 닫는 중괄호(`}`) 누락 → JS SyntaxError로 전체 스크립트 실행 불가 → CSS/HTML 파싱 혼란
-- **근본 원인 2**: `<script>` 블록 내 JS 템플릿 리터럴 안에 HTML 주석(`<!-- -->`) 포함 → 일부 브라우저 HTML 파서가 script 데이터 이스케이프 상태에서 오동작 가능
-- **수정 1**: `_renderStatsContent()` 바차트 options 객체 `}` 추가 (JS 문법 오류 해결)
-- **수정 2**: `<script>` 내 모든 HTML 주석(`<!-- -->`) 제거 (파서 안정화)
-- **수정 3**: `<meta http-equiv="Cache-Control" content="no-cache">` 추가 (브라우저 캐시로 인한 구버전 서빙 방지)
+- **근본 원인 1**: `<style>` 블록 내 stray `</style>` 태그 → CSS 블록 조기 종료 → 이후 모든 CSS가 body 텍스트로 렌더링
+- **근본 원인 2**: 주식 통계 바차트(`Chart.js`) 초기화 코드에서 `options:{}` 객체의 닫는 중괄호(`}`) 누락 → JS SyntaxError로 전체 스크립트 실행 불가
+- **근본 원인 3**: `<script>` 블록 내 JS 템플릿 리터럴 안에 HTML 주석(`<!-- -->`) 포함 → 일부 브라우저 HTML 파서가 script data escaped 상태에서 오동작 가능
+- **수정 1**: stray `</style>` 태그 제거 (CSS 블록 조기 종료 해결)
+- **수정 2**: `_renderStatsContent()` 바차트 options 객체 `}` 추가 (JS 문법 오류 해결)
+- **수정 3**: `<script>` 내 모든 HTML 주석(`<!-- -->`) 제거, 조건부 렌더링 → 삼항+문자열 연결로 대체
+- **수정 4**: `<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">` 등 no-cache 메타 태그 3개 추가 (브라우저 캐시로 인한 구버전 서빙 방지)
+- **수정 5**: `.claude/launch.json` runtimeExecutable 경로 수정 (`uvicorn` → 풀 Python 경로 + `-m uvicorn`)
 - **검증**: Node.js `--check`로 JS 문법 오류 없음 확인, HTML 구조 및 script 블록 내 주석 없음 확인
 
 ---
@@ -145,3 +166,18 @@
 - `.claude/launch.json` 개발 서버 설정 저장
 - `~/.claude/settings.json` 전역 Bash 자동 허용 설정
 - `CLAUDE.md` 프로젝트 지침 파일 생성
+- **DB 테이블 초기 생성**
+  - `expenses` — 지출 내역
+  - `diets` — 식단 기록
+  - `memos` — 메모
+  - `stocks` — 보유 종목 (카테고리별, 최대 10개)
+  - `stock_price_history` — 일별 시세 스냅샷
+  - `bookmarks` — 북마크
+  - `youtube_channels` — 유튜브 채널
+  - `timezone_config` — 시간대 설정
+- **API 라우터 초기 구성**
+  - GET/POST/DELETE 기본 CRUD (expenses, diets, memos, bookmarks, youtube-channels)
+  - GET/POST/PUT/DELETE stocks + 실시간 시세, 환율, 검색
+  - GET/PUT timezone
+- SQLite(로컬) ↔ PostgreSQL(Railway) 자동 전환 구현 (`database.py`)
+- `.env.example` 환경변수 예시 파일 생성
