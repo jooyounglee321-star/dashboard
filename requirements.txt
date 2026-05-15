@@ -5,3 +5,4 @@ psycopg2-binary
 yfinance
 python-dotenv
 apscheduler
+passlib[bcrypt]

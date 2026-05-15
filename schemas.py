@@ -191,6 +191,25 @@ class PortfolioSnapshotOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# ── Auth ─────────────────────────────────────────────────────────────────────
+
+class UserRegister(BaseModel):
+    """회원가입 요청 바디."""
+    email: str
+    password: str
+
+
+class UserOut(BaseModel):
+    """회원 응답 (비밀번호 제외)."""
+    id: int
+    email: str
+    role: str
+    provider: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 # ── Timezone ──────────────────────────────────────────────────────────────────
 
 class TimezoneUpdate(BaseModel):

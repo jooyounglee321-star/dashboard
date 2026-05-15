@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from database import Base, DATABASE_URL, engine, SessionLocal
 from models import DailyPortfolioSnapshot
+from routers import auth as auth_router
 from routers import bookmarks, diets, expenses, memos, stocks, timezone, youtube
 from routers import portfolio as portfolio_router
 
@@ -76,6 +77,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth_router.router, prefix="/api")
 app.include_router(expenses.router, prefix="/api")
 app.include_router(diets.router, prefix="/api")
 app.include_router(memos.router, prefix="/api")

@@ -4,6 +4,18 @@
 
 ---
 
+## [2026-05-15] — 회원가입 백엔드 API 및 프론트엔드 연동
+
+### 추가
+- **routers/auth.py** 신규 생성
+  - `POST /api/auth/register` — 이메일·비밀번호 회원가입, bcrypt 해싱, 중복 이메일 409 처리
+  - `GET  /api/auth/users`    — 관리자용 회원 목록 조회
+- **schemas.py** `UserRegister`, `UserOut` Pydantic 스키마 추가
+- **main.py** `auth_router` 등록 (`app.include_router`)
+- **requirements.txt** `passlib[bcrypt]` 추가
+
+---
+
 ## [2026-05-15] — 회원가입 UX 개선 (비밀번호 토글)
 
 ### 변경
