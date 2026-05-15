@@ -5,7 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>나의 하루 대시보드</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <style>
+/* ── 주식 통계 오버레이 ── */
+#stock-stats-overlay{display:none;position:fixed;inset:0;z-index:500;background:var(--bg);overflow-y:auto;}
+#stock-stats-overlay.open{display:block;}
+.stats-header{position:sticky;top:0;z-index:10;background:var(--ink);color:#f5f0e8;padding:0.8rem 1.2rem;display:flex;align-items:center;gap:0.8rem;}
+.stats-back{background:none;border:1px solid rgba(232,160,96,0.5);color:var(--accent2);padding:0.28rem 0.75rem;border-radius:20px;font-size:0.78rem;cursor:pointer;font-family:inherit;}
+.stats-title{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--accent2);}
+.stats-body{max-width:900px;margin:0 auto;padding:1.2rem;}
+.stats-section{background:var(--card);border-radius:14px;border:1px solid var(--border);box-shadow:var(--shadow);padding:1.1rem 1.2rem;margin-bottom:1rem;}
+.stats-section-title{font-size:0.72rem;font-weight:500;letter-spacing:0.1em;color:var(--ink3);text-transform:uppercase;margin-bottom:0.9rem;}
+.stats-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0.7rem;}
+.stats-summary-card{background:var(--card2);border-radius:10px;border:1px solid var(--border);padding:0.75rem 1rem;}
+.stats-summary-label{font-size:0.68rem;color:var(--ink3);margin-bottom:0.3rem;}
+.stats-summary-value{font-size:1.05rem;font-weight:600;color:var(--ink);}
+.stats-chart-wrap{position:relative;width:100%;}
+.stats-chart-wrap.pie-wrap{max-width:340px;margin:0 auto;}
+.stock-card-clickable{cursor:pointer;}
+.stock-card-clickable .card-header:hover{background:var(--bg);}
+</style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#f5f0e8;--card:#fffef9;--card2:#faf7f0;
@@ -276,6 +295,17 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
 </head>
 <body>
 
+<!-- ── 주식 통계 전체화면 오버레이 ── -->
+<div id="stock-stats-overlay">
+  <div class="stats-header">
+    <button class="stats-back" onclick="closeStockStats()">← 뒤로</button>
+    <span class="stats-title">📊 주식 통계</span>
+  </div>
+  <div class="stats-body" id="stats-body">
+    <div style="text-align:center;padding:3rem;color:var(--ink3)">데이터 불러오는 중…</div>
+  </div>
+</div>
+
 <!-- 서버 오프라인 배너 (기본 숨김) -->
 <div id="server-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;
   background:#c0392b;color:#fff;text-align:center;padding:10px 16px;font-size:14px;
@@ -356,8 +386,8 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
   </div>
 
   <!-- ④ 주식 4카테고리 -->
-  <div class="card card-stock">
-    <div class="card-header"><span class="card-icon">📈</span><span class="card-title">보유 주식</span><span id="pc-fx-rate" style="margin-left:auto;font-size:0.68rem;color:var(--ink3);font-weight:400"></span></div>
+  <div class="card card-stock stock-card-clickable">
+    <div class="card-header" onclick="openStockStats()" title="클릭하면 통계 화면으로 이동"><span class="card-icon">📈</span><span class="card-title">보유 주식</span><span style="font-size:0.65rem;color:var(--ink3);margin-left:0.3rem">↗ 통계</span><span id="pc-fx-rate" style="margin-left:auto;font-size:0.68rem;color:var(--ink3);font-weight:400"></span></div>
     <div class="card-body" id="pc-stock-body">
       <div class="empty-msg" id="pc-stock-empty">관리자에서 종목을 추가하세요</div>
     </div>
@@ -485,7 +515,7 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
       </div>
     </div>
     <div class="m-card">
-      <div class="m-card-header"><span class="card-icon">📈</span><span class="m-card-title">보유 주식</span><span id="m-fx-rate" style="margin-left:auto;font-size:0.65rem;color:var(--ink3)"></span></div>
+      <div class="m-card-header stock-card-clickable" onclick="openStockStats()" style="cursor:pointer"><span class="card-icon">📈</span><span class="m-card-title">보유 주식</span><span style="font-size:0.6rem;color:var(--ink3);margin-left:0.25rem">↗</span><span id="m-fx-rate" style="margin-left:auto;font-size:0.65rem;color:var(--ink3)"></span></div>
       <div class="m-card-body" id="m-stock-body"><div class="empty-msg">관리자에서 종목을 추가하세요</div></div>
     </div>
   </div>
@@ -753,6 +783,9 @@ const GRP_COLORS=[
   {bg:'#f0d0c0',tx:'#5a2a0a'},{bg:'#c0c8f5',tx:'#1a1a6a'},
 ];
 
+/* 통계 화면에서 재사용할 마지막 렌더 데이터 */
+let _lastStockData=null; // {groups, priceMap, fxRate, grandUSD, grandKRW}
+
 async function renderStock(){
   const pcBody=gel('pc-stock-body');
   const mBody=gel('m-stock-body');
@@ -814,6 +847,9 @@ async function renderStock(){
   }catch(e){
     console.warn('[Stock] 시세 타임아웃, 매입단가로 표시:', e.message);
   }
+  /* 통계 화면에서 재사용할 데이터 저장 */
+  _lastStockData={groups:activeGroups,priceMap,fxRate,grandUSD:0,grandKRW:0};
+
   const fmtKRW=v=>Math.round(v).toLocaleString('ko-KR');
   const fmtUSD=v=>v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   const fxText=fxRate?`$1 = ₩${fmtKRW(fxRate)}`:'';
@@ -984,6 +1020,9 @@ async function renderStock(){
   if(pcBody)pcBody.innerHTML=pcHTML+totalBar;
   if(mBody)mBody.innerHTML=mHTML+mTotalBar;
 
+  /* 통계용 grandUSD/grandKRW 갱신 */
+  if(_lastStockData){_lastStockData.grandUSD=grandUSD;_lastStockData.grandKRW=grandKRW;}
+
   /* 스냅샷 데이터 반환 (타이머에서 사용) */
   return{
     snapshotGroups,
@@ -993,6 +1032,219 @@ async function renderStock(){
   };
 }
 /* renderStock() → 하단 async init 블록에서 호출 */
+
+/* ── 주식 통계 화면 ── */
+let _statsCharts=[];
+
+function openStockStats(){
+  const overlay=gel('stock-stats-overlay');
+  overlay.classList.add('open');
+  document.body.style.overflow='hidden';
+  _renderStatsContent();
+}
+function closeStockStats(){
+  const overlay=gel('stock-stats-overlay');
+  overlay.classList.remove('open');
+  document.body.style.overflow='';
+  /* 차트 인스턴스 파괴 */
+  _statsCharts.forEach(c=>c.destroy());
+  _statsCharts=[];
+}
+
+async function _renderStatsContent(){
+  const body=gel('stats-body');
+  body.innerHTML='<div style="text-align:center;padding:3rem;color:var(--ink3)">데이터 불러오는 중…</div>';
+
+  /* 데이터 로드 (이미 렌더된 경우 재사용) */
+  let data=_lastStockData;
+  if(!data){
+    try{
+      const res=await fetch('/api/portfolio/groups',{signal:AbortSignal.timeout(8000)});
+      const json=await res.json();
+      const groups=(json.data||[]).map(g=>({...g,stocks:(g.stocks||[]).filter(s=>!s.is_deleted)}));
+      // 가격 조회
+      const priceMap={};
+      let fxRate=null;
+      const tickers=[...new Set(groups.flatMap(g=>g.stocks.map(s=>s.ticker)))];
+      const catMap={};
+      groups.forEach(g=>g.stocks.forEach(s=>{catMap[s.ticker]=g.currency==='KRW'?'kor-stock':'us';}));
+      const [fxRes,...priceResults]=await Promise.allSettled([
+        fetch('/api/stocks/exchange-rate').then(r=>r.ok?r.json():null).catch(()=>null),
+        ...tickers.map(t=>fetch(`/api/stocks/price/${encodeURIComponent(t)}?category=${catMap[t]}`).then(r=>r.ok?r.json():null).catch(()=>null))
+      ]);
+      fxRate=fxRes.status==='fulfilled'?fxRes.value?.usd_krw??null:null;
+      tickers.forEach((t,i)=>{if(priceResults[i]?.value)priceMap[t]=priceResults[i].value;});
+      let grandUSD=0,grandKRW=0;
+      groups.forEach(g=>{
+        const tot=g.stocks.reduce((a,s)=>{
+          const p=priceMap[s.ticker];const cur=p?.current_price??0;
+          const pp=s.purchases||[];const sl=s.sells||[];
+          const bq=pp.reduce((a,p)=>a+(p.qty||0),0);const sq=sl.reduce((a,p)=>a+(p.qty||0),0);
+          return a+cur*Math.max(0,bq-sq);
+        },0);
+        if(g.currency==='KRW')grandKRW+=tot;else grandUSD+=tot;
+      });
+      data={groups,priceMap,fxRate,grandUSD,grandKRW};
+    }catch(e){
+      body.innerHTML='<div style="text-align:center;padding:3rem;color:#dc2626">데이터 로드 실패 — 서버를 확인해주세요</div>';return;
+    }
+  }
+
+  const{groups,priceMap,fxRate}=data;
+  const fmtKRW=v=>Math.round(v).toLocaleString('ko-KR');
+  const fmtUSD=v=>Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  /* 그룹별 평가금액 계산 */
+  const grpTotals=groups.map(g=>{
+    const isKRW=g.currency==='KRW';
+    const tot=g.stocks.reduce((a,s)=>{
+      const pp=s.purchases||[];const sl=s.sells||[];
+      const bq=pp.reduce((x,p)=>x+(p.qty||0),0);
+      const sq=sl.reduce((x,p)=>x+(p.qty||0),0);
+      const hq=Math.max(0,bq-sq);
+      const p=priceMap[s.ticker];
+      const vp=p?.current_price;
+      const vq=pp.filter(p=>(p.price||0)>0&&(p.qty||0)>0);
+      const ws=vq.reduce((x,p)=>x+p.price*p.qty,0);
+      const vqt=vq.reduce((x,p)=>x+p.qty,0);
+      const avg=vqt>0?ws/vqt:0;
+      return a+(vp??avg)*hq;
+    },0);
+    return{name:g.name,currency:g.currency,total:tot,isKRW};
+  });
+
+  /* 전체 합계 */
+  let grandUSD=0,grandKRW=0;
+  grpTotals.forEach(g=>{if(g.isKRW)grandKRW+=g.total;else grandUSD+=g.total;});
+  const totalKRW=grandKRW+(fxRate?grandUSD*fxRate:0);
+
+  /* 종목별 evalPL */
+  const stockEvals=[];
+  groups.forEach(g=>{
+    const isKRW=g.currency==='KRW';
+    const sym=isKRW?'₩':'$';
+    g.stocks.forEach(s=>{
+      const pp=s.purchases||[];const sl=s.sells||[];
+      const bq=pp.reduce((a,p)=>a+(p.qty||0),0);
+      const sq=sl.reduce((a,p)=>a+(p.qty||0),0);
+      const hq=Math.max(0,bq-sq);
+      const vp=pp.filter(p=>(p.price||0)>0&&(p.qty||0)>0);
+      const ws=vp.reduce((a,p)=>a+p.price*p.qty,0);
+      const vqt=vp.reduce((a,p)=>a+p.qty,0);
+      const avg=vqt>0?ws/vqt:0;
+      const cur=priceMap[s.ticker]?.current_price??avg;
+      const evalPL=avg>0?(cur-avg)*hq:null;
+      if(evalPL!=null)stockEvals.push({label:s.ticker,name:s.name||s.ticker,evalPL,sym,isKRW});
+    });
+  });
+
+  /* 그룹별 누적 투자금액 추이 (날짜별) */
+  const lineDatasets=[];
+  const CHART_COLORS=['#2563eb','#16a34a','#d97706','#9333ea','#dc2626','#0891b2','#65a30d','#c026d3'];
+  groups.forEach((g,gi)=>{
+    const purchases=[];
+    g.stocks.forEach(s=>{(s.purchases||[]).filter(p=>p.date).forEach(p=>purchases.push({date:p.date,amt:(p.qty||0)*(p.price||0)}));});
+    if(!purchases.length)return;
+    purchases.sort((a,b)=>a.date.localeCompare(b.date));
+    let cum=0;
+    const pts=purchases.map(p=>{cum+=p.amt;return{x:p.date,y:cum};});
+    lineDatasets.push({label:g.name,data:pts,borderColor:CHART_COLORS[gi%CHART_COLORS.length],backgroundColor:'transparent',tension:0.3,pointRadius:3});
+  });
+
+  /* HTML 조립 */
+  body.innerHTML=`
+    <!-- 요약 -->
+    <div class="stats-section">
+      <div class="stats-section-title">전체 합계 요약</div>
+      <div class="stats-summary-grid">
+        <div class="stats-summary-card">
+          <div class="stats-summary-label">$ USD 그룹</div>
+          <div class="stats-summary-value">$${fmtUSD(grandUSD)}</div>
+        </div>
+        <div class="stats-summary-card">
+          <div class="stats-summary-label">₩ KRW 그룹</div>
+          <div class="stats-summary-value">₩${fmtKRW(grandKRW)}</div>
+        </div>
+        <div class="stats-summary-card">
+          <div class="stats-summary-label">원화환산 전체${fxRate?` ($1=₩${fmtKRW(fxRate)})`:'(환율 미조회)'}</div>
+          <div class="stats-summary-value">₩${fmtKRW(totalKRW)}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 파이차트 -->
+    <div class="stats-section">
+      <div class="stats-section-title">그룹별 자산 비중</div>
+      <div class="stats-chart-wrap pie-wrap"><canvas id="chart-pie"></canvas></div>
+    </div>
+
+    <!-- 라인차트 -->
+    ${lineDatasets.length?`<div class="stats-section">
+      <div class="stats-section-title">그룹별 누적 투자금액 추이</div>
+      <div class="stats-chart-wrap"><canvas id="chart-line"></canvas></div>
+    </div>`:''}
+
+    <!-- 바차트 -->
+    ${stockEvals.length?`<div class="stats-section">
+      <div class="stats-section-title">종목별 평가손익</div>
+      <div class="stats-chart-wrap"><canvas id="chart-bar"></canvas></div>
+    </div>`:''}
+  `;
+
+  /* 파이차트 */
+  const pieTotal=grpTotals.reduce((a,g)=>a+g.total,0)||1;
+  const pieC=document.getElementById('chart-pie');
+  if(pieC){
+    const inst=new Chart(pieC,{
+      type:'doughnut',
+      data:{
+        labels:grpTotals.map(g=>`${g.name} (${(g.total/pieTotal*100).toFixed(1)}%)`),
+        datasets:[{data:grpTotals.map(g=>parseFloat(g.total.toFixed(2))),
+          backgroundColor:CHART_COLORS.slice(0,grpTotals.length),
+          borderWidth:2,borderColor:'#fffef9'}]
+      },
+      options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:12},padding:12}}}}
+    });
+    _statsCharts.push(inst);
+  }
+
+  /* 라인차트 */
+  const lineC=document.getElementById('chart-line');
+  if(lineC&&lineDatasets.length){
+    const inst=new Chart(lineC,{
+      type:'line',
+      data:{datasets:lineDatasets},
+      options:{responsive:true,scales:{
+        x:{type:'category',title:{display:true,text:'매입일'}},
+        y:{title:{display:true,text:'누적 투자금액'},ticks:{callback:v=>v>=1000000?`${(v/1000000).toFixed(1)}M`:v>=1000?`${(v/1000).toFixed(0)}K`:v}}
+      },plugins:{legend:{position:'bottom'}}}
+    });
+    _statsCharts.push(inst);
+  }
+
+  /* 바차트 */
+  const barC=document.getElementById('chart-bar');
+  if(barC&&stockEvals.length){
+    const sorted=[...stockEvals].sort((a,b)=>b.evalPL-a.evalPL);
+    const inst=new Chart(barC,{
+      type:'bar',
+      data:{
+        labels:sorted.map(s=>s.label),
+        datasets:[{
+          label:'평가손익',
+          data:sorted.map(s=>parseFloat(s.evalPL.toFixed(2))),
+          backgroundColor:sorted.map(s=>s.evalPL>=0?'rgba(74,124,89,0.75)':'rgba(220,38,38,0.75)'),
+          borderColor:sorted.map(s=>s.evalPL>=0?'#4a7c59':'#dc2626'),
+          borderWidth:1
+        }]
+      },
+      options:{responsive:true,scales:{
+        y:{title:{display:true,text:'손익'},ticks:{callback:v=>v>=0?`+${v}`:v}}
+      },plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const s=sorted[ctx.dataIndex];return `${s.evalPL>=0?'+':''}${s.sym}${s.isKRW?fmtKRW(Math.abs(s.evalPL)):fmtUSD(Math.abs(s.evalPL))}`;}}}}
+    });
+    _statsCharts.push(inst);
+  }
+}
 
 /* ── 데일리 스냅샷 ── */
 let _lastSnapshotDate=null; // 당일 중복 저장 방지
