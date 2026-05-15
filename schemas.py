@@ -147,6 +147,50 @@ class StockPriceHistoryOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# ── DailyPortfolioSnapshot ───────────────────────────────────────────────────
+
+class SnapshotStockItem(BaseModel):
+    ticker: str
+    name: str | None = None
+    current_price: float | None = None
+    hold_qty: float = 0
+    eval_amount: float = 0
+    avg_buy_price: float | None = None
+    eval_pl: float | None = None
+    realized_pl: float = 0
+
+
+class SnapshotGroup(BaseModel):
+    name: str
+    currency: str
+    total: float = 0
+    stocks: list[SnapshotStockItem] = []
+
+
+class PortfolioSnapshotCreate(BaseModel):
+    snapshot_date: date
+    usd_krw: float | None = None
+    total_usd: float = 0
+    total_krw: float = 0
+    total_krw_equiv: float | None = None
+    groups: list[SnapshotGroup] = []
+
+
+class PortfolioSnapshotOut(BaseModel):
+    id: int
+    snapshot_date: date
+    usd_krw: float | None
+    total_usd: float | None
+    total_krw: float | None
+    total_krw_equiv: float | None
+    data: str | None          # raw JSON
+    saved_by: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 # ── Timezone ──────────────────────────────────────────────────────────────────
 
 class TimezoneUpdate(BaseModel):

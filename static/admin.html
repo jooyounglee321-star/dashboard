@@ -99,7 +99,11 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
 .stock-dd-item .dd-name{flex:1;color:var(--ink2);font-size:0.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .stock-dd-item .dd-ex{flex-shrink:0;font-size:0.68rem;color:var(--ink3);padding-left:0.35rem;}
 
-/* 매입 내역 패널 */
+/* 매입/매도 모달 */
+#stock-modal{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10000;display:none;align-items:center;justify-content:center;padding:1rem;}
+#stock-modal-body{background:var(--card);border-radius:14px;padding:1.4rem 1.5rem;width:min(420px,100%);max-height:85vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.25);}
+
+/* 매입/매도 내역 패널 */
 .purchase-panel{border-top:1px dashed var(--border);background:var(--bg);}
 .purchase-panel table td{border-bottom:1px solid var(--border);}
 .purchase-panel table tr:last-child td{border-bottom:none;}
@@ -288,6 +292,7 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
 
 <div class="toast" id="toast"></div>
 <div id="stock-dd"></div>
+<div id="stock-modal"><div id="stock-modal-body"></div></div>
 
 <script>
 const sv=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
@@ -447,14 +452,13 @@ const GRP_COLORS=[
   {bg:'#f5c0e0',tx:'#500a30'},{bg:'#d0f0c0',tx:'#1a4a0a'},
   {bg:'#f0d0c0',tx:'#5a2a0a'},{bg:'#c0c8f5',tx:'#1a1a6a'},
 ];
-const _expandedStocks=new Set(); // 펼쳐진 종목 ID 추적
-let _editPurchaseKey=null;       // 수정 중인 매입내역 'sid-pid'
+const _expandedStocks=new Set();
+let _modalCtx=null; // {gid, sid, mode:'buy'|'sell'}
 
 function genId(){return Math.random().toString(36).slice(2,10);}
 
-/* 구버전(quantity/avgPrice) → purchases[] 자동 마이그레이션 */
-function loadGroups(){
-  let groups=ld(STOCK_LS_KEY,[]);
+/* 마이그레이션 헬퍼 — purchases[]/sells[] 보장 */
+function _migrateGroups(groups){
   let dirty=false;
   groups.forEach(g=>{
     (g.stocks||[]).forEach(s=>{
@@ -464,21 +468,77 @@ function loadGroups(){
           s.purchases.push({id:genId(),date:null,qty:s.quantity||0,price:s.avgPrice||0});
         delete s.quantity;delete s.avgPrice;dirty=true;
       }
+      if(!Array.isArray(s.sells)){s.sells=[];dirty=true;}
     });
   });
-  if(dirty)sv(STOCK_LS_KEY,groups);
-  return groups;
+  return {groups,dirty};
 }
-function saveGroups(g){sv(STOCK_LS_KEY,g);}
 
-/* 총수량 + 가중평균단가 계산 */
+/* 구버전(quantity/avgPrice) → purchases[] + sells[] 자동 마이그레이션 */
+function loadGroups(){
+  let groups=ld(STOCK_LS_KEY,[]);
+  const {groups:g,dirty}=_migrateGroups(groups);
+  if(dirty)sv(STOCK_LS_KEY,g);
+  return g;
+}
+
+/* 페이지 로드 시 DB에서 그룹 데이터 가져와 localStorage에 동기화.
+   DB 데이터가 있으면 DB가 우선(source of truth).
+   localStorage에만 있으면 즉시 DB에 push. */
+async function initGroupsFromDB(){
+  try{
+    const res=await fetch('/api/portfolio/groups');
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const json=await res.json();
+    const dbGroups=json.data||[];
+    const lsGroups=ld(STOCK_LS_KEY,[]);
+
+    if(dbGroups.length>0){
+      // DB에 데이터 있음 → DB 우선 사용, localStorage 덮어쓰기
+      const {groups:migrated,dirty}=_migrateGroups(dbGroups);
+      sv(STOCK_LS_KEY,migrated);
+      if(dirty){
+        // 마이그레이션된 데이터 다시 DB에 저장
+        fetch('/api/portfolio/groups',{method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({data:migrated})}).catch(()=>{});
+      }
+      console.log('[initGroupsFromDB] DB 로드 완료 (그룹 수:',dbGroups.length,')');
+    } else if(lsGroups.length>0){
+      // DB 비어있음, localStorage에 데이터 있음 → DB에 push
+      fetch('/api/portfolio/groups',{method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({data:lsGroups})}).catch(()=>{});
+      console.log('[initGroupsFromDB] localStorage → DB 초기 동기화 (그룹 수:',lsGroups.length,')');
+    }
+  }catch(e){
+    console.warn('[initGroupsFromDB] DB 로드 실패, localStorage 사용:', e);
+  }
+  renderGroups();
+}
+function saveGroups(g){
+  sv(STOCK_LS_KEY,g);
+  // DB에도 비동기 저장 (실패해도 localStorage가 우선)
+  fetch('/api/portfolio/groups',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({data:g})
+  }).catch(e=>console.warn('[saveGroups] DB 저장 실패(무시):', e));
+}
+
+/* 보유수량·평균단가·실현손익 계산 */
 function stockSummary(s){
   const pp=s.purchases||[];
-  const totalQty=pp.reduce((a,p)=>a+(p.qty||0),0);
+  const sl=s.sells||[];
+  const totalBuyQty=pp.reduce((a,p)=>a+(p.qty||0),0);
+  const totalSellQty=sl.reduce((a,p)=>a+(p.qty||0),0);
+  const holdQty=Math.max(0,totalBuyQty-totalSellQty);
   const valid=pp.filter(p=>(p.price||0)>0&&(p.qty||0)>0);
   const ws=valid.reduce((a,p)=>a+p.price*p.qty,0);
   const vq=valid.reduce((a,p)=>a+p.qty,0);
-  return{totalQty,avgPrice:vq>0?ws/vq:0};
+  const avgBuyPrice=vq>0?ws/vq:0;
+  const realizedPL=sl.reduce((a,p)=>a+((p.price||0)-avgBuyPrice)*(p.qty||0),0);
+  return{holdQty,totalBuyQty,totalSellQty,avgBuyPrice,realizedPL};
 }
 
 function initTotalMode(){
@@ -506,7 +566,6 @@ function updateGroup(gid,field,value){
   if(g){g[field]=value;saveGroups(groups);}
 }
 
-/* 종목 추가 (ticker+name만; 매입내역은 클릭 후 패널에서 등록) */
 function addStock(gid){
   const ticker=(gel('ticker-'+gid)?.value||'').trim().toUpperCase();
   const name=(gel('name-'+gid)?.value||'').trim();
@@ -515,58 +574,216 @@ function addStock(gid){
   if(!g)return;
   if(g.stocks.length>=10){toast('그룹당 최대 10개까지 가능합니다');return;}
   const newId=genId();
-  g.stocks.push({id:newId,ticker,name,purchases:[]});
+  g.stocks.push({id:newId,ticker,name,purchases:[],sells:[]});
   saveGroups(groups);
-  _expandedStocks.add(newId);
   renderGroups();
-  toast(`✓ ${ticker} 추가 — 아래 패널에서 매입 내역을 등록하세요`);
+  toast(`✓ ${ticker} 추가`);
 }
 function delStock(gid,sid){
-  if(!confirm('종목을 삭제하시겠습니까?'))return;
-  const groups=loadGroups();const g=groups.find(g=>g.id===gid);
-  if(g){g.stocks=g.stocks.filter(s=>s.id!==sid);saveGroups(groups);}
-  _expandedStocks.delete(sid);renderGroups();
+  /* 브라우저 confirm 대신 커스텀 경고 모달 */
+  const mo=gel('stock-modal');
+  const mb=gel('stock-modal-body');
+  mb.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.9rem">
+      <div style="font-size:0.95rem;font-weight:600;color:var(--ink)">⚠️ 종목 삭제</div>
+      <button onclick="closeStockModal()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--ink3);line-height:1">✕</button>
+    </div>
+    <div style="font-size:0.87rem;color:var(--ink);line-height:1.7;margin-bottom:1.1rem;padding:0.65rem 0.8rem;background:var(--card2);border-radius:8px;border-left:3px solid #dc2626">
+      이 종목의 모든 거래내역이 삭제됩니다.<br>정말 삭제하시겠습니까?
+    </div>
+    <div style="display:flex;gap:0.5rem;justify-content:flex-end">
+      <button onclick="closeStockModal()" style="padding:0.42rem 1rem;font-size:0.85rem;border:1px solid var(--border);border-radius:7px;background:var(--card2);color:var(--ink);cursor:pointer">취소</button>
+      <button onclick="_confirmDelStock('${gid}','${sid}')" style="padding:0.42rem 1.1rem;font-size:0.85rem;border:none;border-radius:7px;background:#dc2626;color:#fff;cursor:pointer;font-weight:500">삭제</button>
+    </div>`;
+  mo.style.display='flex';
+}
+function _confirmDelStock(gid,sid){
+  closeStockModal();
+  const groups=loadGroups();
+  const g=groups.find(g=>g.id===gid);
+  const s=g?.stocks.find(s=>s.id===sid);
+  if(s){s.is_deleted=true;saveGroups(groups);}
+  _expandedStocks.delete(sid);
+  renderGroups();
+  toast('종목이 숨겨졌습니다');
 }
 function updateStock(gid,sid,field,value){
   const groups=loadGroups();const g=groups.find(g=>g.id===gid);
   if(g){const s=g.stocks.find(s=>s.id===sid);if(s){s[field]=value;saveGroups(groups);}}
 }
 
-/* 종목 클릭 → 매입내역 패널 토글 */
+/* 종목 클릭 → 매입/매도 내역 패널 토글 */
 function toggleStockDetail(sid){
   if(_expandedStocks.has(sid))_expandedStocks.delete(sid);
   else _expandedStocks.add(sid);
-  _editPurchaseKey=null;renderGroups();
+  renderGroups();
 }
 
-/* 매입내역 추가 */
-async function addPurchase(gid,sid){
-  const qty=parseFloat(gel('pu-qty-'+sid)?.value)||0;
+/* ── Yahoo Finance 과거 시세 조회 ── */
+async function _fetchHistPrice(ticker,date,category){
+  const r=await fetch(`/api/stocks/history/${encodeURIComponent(ticker)}?date=${date}&category=${category}`);
+  if(!r.ok)return null;
+  const d=await r.json();
+  return d.close;
+}
+
+/* ── 매입 모달 ── */
+function openBuyModal(gid,sid){
+  _modalCtx={gid,sid,mode:'buy'};
+  const groups=loadGroups();
+  const g=groups.find(g=>g.id===gid);
+  const s=g?.stocks.find(s=>s.id===sid);
+  if(!s)return;
+  const sym=g.currency==='USD'?'$':'₩';
+  const mo=gel('stock-modal');
+  const mb=gel('stock-modal-body');
+  mb.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <div style="font-size:1rem;font-weight:600;color:var(--ink)">📈 추가매입 — <span style="color:#2563eb">${s.ticker}</span></div>
+      <button onclick="closeStockModal()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--ink3);line-height:1">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.7rem">
+      <label style="font-size:0.82rem;color:var(--ink2)">매입일 <span style="color:var(--ink3);font-size:0.75rem">(선택)</span>
+        <input type="date" id="mo-date" style="display:block;width:100%;margin-top:0.2rem;padding:0.42rem 0.55rem;font-size:0.88rem;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--ink);font-family:inherit;box-sizing:border-box">
+      </label>
+      <label style="font-size:0.82rem;color:var(--ink2)">수량 <span style="color:#e55">*</span>
+        <input type="number" id="mo-qty" min="0.0001" step="any" placeholder="매입 수량"
+          style="display:block;width:100%;margin-top:0.2rem;padding:0.42rem 0.55rem;font-size:0.88rem;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--ink);font-family:inherit;box-sizing:border-box">
+      </label>
+      <label style="font-size:0.82rem;color:var(--ink2)">매입가 <span style="color:var(--ink3);font-size:0.75rem">(선택 · 날짜 입력 시 자동조회)</span>
+        <input type="number" id="mo-price" min="0" step="any" placeholder="${sym} 매입 단가"
+          style="display:block;width:100%;margin-top:0.2rem;padding:0.42rem 0.55rem;font-size:0.88rem;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--ink);font-family:inherit;box-sizing:border-box">
+      </label>
+      <div style="font-size:0.72rem;color:var(--ink3)">💡 날짜 O + 매입가 X → Yahoo Finance 해당일 종가 자동조회</div>
+    </div>
+    <div style="display:flex;gap:0.5rem;margin-top:1.1rem;justify-content:flex-end">
+      <button onclick="closeStockModal()" style="padding:0.45rem 1rem;font-size:0.85rem;border:1px solid var(--border);border-radius:7px;background:var(--card2);color:var(--ink);cursor:pointer">취소</button>
+      <button onclick="submitBuy('${gid}','${sid}')" style="padding:0.45rem 1.2rem;font-size:0.85rem;border:none;border-radius:7px;background:#2563eb;color:#fff;cursor:pointer;font-weight:500">+ 매입 등록</button>
+    </div>`;
+  mo.style.display='flex';
+  setTimeout(()=>gel('mo-qty')?.focus(),50);
+}
+
+/* ── 매도 모달 ── */
+function openSellModal(gid,sid){
+  _modalCtx={gid,sid,mode:'sell'};
+  const groups=loadGroups();
+  const g=groups.find(g=>g.id===gid);
+  const s=g?.stocks.find(s=>s.id===sid);
+  if(!s)return;
+  const{holdQty}=stockSummary(s);
+  const sym=g.currency==='USD'?'$':'₩';
+  const mo=gel('stock-modal');
+  const mb=gel('stock-modal-body');
+  mb.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <div style="font-size:1rem;font-weight:600;color:var(--ink)">📉 추가매도 — <span style="color:#dc2626">${s.ticker}</span></div>
+      <button onclick="closeStockModal()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--ink3);line-height:1">✕</button>
+    </div>
+    <div style="font-size:0.78rem;color:var(--ink2);margin-bottom:0.7rem;padding:0.4rem 0.6rem;background:var(--card2);border-radius:6px">
+      현재 보유수량: <strong>${holdQty.toLocaleString()}</strong>주
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.7rem">
+      <label style="font-size:0.82rem;color:var(--ink2)">매도일 <span style="color:var(--ink3);font-size:0.75rem">(선택)</span>
+        <input type="date" id="mo-date" style="display:block;width:100%;margin-top:0.2rem;padding:0.42rem 0.55rem;font-size:0.88rem;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--ink);font-family:inherit;box-sizing:border-box">
+      </label>
+      <label style="font-size:0.82rem;color:var(--ink2)">수량 <span style="color:#e55">*</span> <span style="color:var(--ink3);font-size:0.75rem">(최대 ${holdQty.toLocaleString()})</span>
+        <input type="number" id="mo-qty" min="0.0001" max="${holdQty}" step="any" placeholder="매도 수량"
+          style="display:block;width:100%;margin-top:0.2rem;padding:0.42rem 0.55rem;font-size:0.88rem;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--ink);font-family:inherit;box-sizing:border-box">
+      </label>
+      <label style="font-size:0.82rem;color:var(--ink2)">매도가 <span style="color:var(--ink3);font-size:0.75rem">(선택 · 날짜 입력 시 자동조회)</span>
+        <input type="number" id="mo-price" min="0" step="any" placeholder="${sym} 매도 단가"
+          style="display:block;width:100%;margin-top:0.2rem;padding:0.42rem 0.55rem;font-size:0.88rem;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--ink);font-family:inherit;box-sizing:border-box">
+      </label>
+      <div style="font-size:0.72rem;color:var(--ink3)">💡 날짜 O + 매도가 X → Yahoo Finance 해당일 종가 자동조회</div>
+    </div>
+    <div style="display:flex;gap:0.5rem;margin-top:1.1rem;justify-content:flex-end">
+      <button onclick="closeStockModal()" style="padding:0.45rem 1rem;font-size:0.85rem;border:1px solid var(--border);border-radius:7px;background:var(--card2);color:var(--ink);cursor:pointer">취소</button>
+      <button onclick="submitSell('${gid}','${sid}','${holdQty}')" style="padding:0.45rem 1.2rem;font-size:0.85rem;border:none;border-radius:7px;background:#dc2626;color:#fff;cursor:pointer;font-weight:500">- 매도 등록</button>
+    </div>`;
+  mo.style.display='flex';
+  setTimeout(()=>gel('mo-qty')?.focus(),50);
+}
+
+function closeStockModal(){
+  const mo=gel('stock-modal');
+  if(mo)mo.style.display='none';
+  _modalCtx=null;
+}
+
+/* 모달 바깥 클릭 시 닫기 */
+gel('stock-modal').addEventListener('click',function(e){
+  if(e.target===this)closeStockModal();
+});
+
+/* ── 매입 등록 ── */
+async function submitBuy(gid,sid){
+  const qty=parseFloat(gel('mo-qty')?.value)||0;
   if(!qty){toast('수량을 입력해주세요');return;}
-  const date=(gel('pu-date-'+sid)?.value||'').trim();
-  let price=parseFloat(gel('pu-price-'+sid)?.value)||0;
+  const date=(gel('mo-date')?.value||'').trim();
+  let price=parseFloat(gel('mo-price')?.value)||0;
   if(date&&!price){
-    const grps=loadGroups();const g=grps.find(g=>g.id===gid);
+    const grps=loadGroups();
+    const g=grps.find(g=>g.id===gid);
     const s=g?.stocks.find(s=>s.id===sid);
     if(s){
       const cat=g.currency==='KRW'?'kor-stock':'us';
       toast('⏳ 해당일 시세 조회 중…');
       try{
-        const r=await fetch(`/api/stocks/history/${encodeURIComponent(s.ticker)}?date=${date}&category=${cat}`);
-        if(r.ok){const d=await r.json();price=d.close;toast(`✓ ${d.date} 종가: ${g.currency==='KRW'?'₩':'$'}${d.close}`);}
+        const close=await _fetchHistPrice(s.ticker,date,cat);
+        if(close!=null){price=close;toast(`✓ ${date} 종가: ${g.currency==='KRW'?'₩':'$'}${close}`);}
         else toast('⚠ 해당일 시세 조회 실패 — 매입가 비워둠');
-      }catch(e){toast('⚠ 시세 조회 오류: '+e.message);}
+      }catch(e){toast('⚠ 시세 조회 오류');}
     }
   }
-  const groups=loadGroups();const g=groups.find(g=>g.id===gid);
+  closeStockModal();
+  const groups=loadGroups();
+  const g=groups.find(g=>g.id===gid);
   const s=g?.stocks.find(s=>s.id===sid);
   if(!s)return;
   s.purchases.push({id:genId(),date:date||null,qty,price:price||0});
-  saveGroups(groups);_expandedStocks.add(sid);renderGroups();
-  toast('✓ 매입 내역 추가');
+  saveGroups(groups);
+  _expandedStocks.add(sid);
+  renderGroups();
+  toast('✓ 매입 내역 등록');
 }
 
-/* 매입내역 삭제 */
+/* ── 매도 등록 ── */
+async function submitSell(gid,sid,holdQtyStr){
+  const holdQty=parseFloat(holdQtyStr)||0;
+  const qty=parseFloat(gel('mo-qty')?.value)||0;
+  if(!qty){toast('수량을 입력해주세요');return;}
+  if(qty>holdQty){toast(`보유수량(${holdQty.toLocaleString()})을 초과할 수 없습니다`);return;}
+  const date=(gel('mo-date')?.value||'').trim();
+  let price=parseFloat(gel('mo-price')?.value)||0;
+  if(date&&!price){
+    const grps=loadGroups();
+    const g=grps.find(g=>g.id===gid);
+    const s=g?.stocks.find(s=>s.id===sid);
+    if(s){
+      const cat=g.currency==='KRW'?'kor-stock':'us';
+      toast('⏳ 해당일 시세 조회 중…');
+      try{
+        const close=await _fetchHistPrice(s.ticker,date,cat);
+        if(close!=null){price=close;toast(`✓ ${date} 종가: ${g.currency==='KRW'?'₩':'$'}${close}`);}
+        else toast('⚠ 해당일 시세 조회 실패 — 매도가 비워둠');
+      }catch(e){toast('⚠ 시세 조회 오류');}
+    }
+  }
+  closeStockModal();
+  const groups=loadGroups();
+  const g=groups.find(g=>g.id===gid);
+  const s=g?.stocks.find(s=>s.id===sid);
+  if(!s)return;
+  if(!Array.isArray(s.sells))s.sells=[];
+  s.sells.push({id:genId(),date:date||null,qty,price:price||0});
+  saveGroups(groups);
+  _expandedStocks.add(sid);
+  renderGroups();
+  toast('✓ 매도 내역 등록');
+}
+
+/* ── 매입/매도 내역 삭제 ── */
 function delPurchase(gid,sid,pid){
   if(!confirm('이 매입 내역을 삭제하시겠습니까?'))return;
   const groups=loadGroups();const g=groups.find(g=>g.id===gid);
@@ -574,57 +791,49 @@ function delPurchase(gid,sid,pid){
   if(s){s.purchases=s.purchases.filter(p=>p.id!==pid);saveGroups(groups);}
   _expandedStocks.add(sid);renderGroups();
 }
-
-/* 매입내역 수정 */
-function startEditPurchase(sid,pid){_editPurchaseKey=sid+'-'+pid;renderGroups();}
-function cancelEditPurchase(sid){_editPurchaseKey=null;_expandedStocks.add(sid);renderGroups();}
-async function saveEditPurchase(gid,sid,pid){
-  const qty=parseFloat(gel('ep-qty-'+pid)?.value)||0;
-  if(!qty){toast('수량을 입력해주세요');return;}
-  const date=(gel('ep-date-'+pid)?.value||'').trim();
-  let price=parseFloat(gel('ep-price-'+pid)?.value)||0;
-  if(date&&!price){
-    const grps=loadGroups();const g=grps.find(g=>g.id===gid);
-    const s=g?.stocks.find(s=>s.id===sid);
-    if(s){
-      const cat=g.currency==='KRW'?'kor-stock':'us';
-      try{const r=await fetch(`/api/stocks/history/${encodeURIComponent(s.ticker)}?date=${date}&category=${cat}`);
-        if(r.ok){const d=await r.json();price=d.close;}}catch(e){}
-    }
-  }
+function delSell(gid,sid,sellId){
+  if(!confirm('이 매도 내역을 삭제하시겠습니까?'))return;
   const groups=loadGroups();const g=groups.find(g=>g.id===gid);
   const s=g?.stocks.find(s=>s.id===sid);
-  const p=s?.purchases.find(p=>p.id===pid);
-  if(p){p.date=date||null;p.qty=qty;p.price=price||0;saveGroups(groups);}
-  _editPurchaseKey=null;_expandedStocks.add(sid);renderGroups();toast('✓ 수정 완료');
+  if(s){s.sells=(s.sells||[]).filter(p=>p.id!==sellId);saveGroups(groups);}
+  _expandedStocks.add(sid);renderGroups();
 }
 
-/* 매입내역 패널 HTML 생성 */
+/* ── 매입/매도 내역 패널 HTML ── */
 function renderStockDetail(g,s){
   const sym=g.currency==='USD'?'$':'₩';
   const fmtA=v=>g.currency==='USD'?Number(v).toFixed(2):Math.round(v).toLocaleString('ko-KR');
   const inpS='padding:0.28rem 0.42rem;font-size:0.8rem;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--ink);font-family:inherit;';
-  const purchaseRows=s.purchases.length
-    ?s.purchases.map(p=>{
-        const isEdit=_editPurchaseKey===s.id+'-'+p.id;
-        if(isEdit)return `<tr>
-          <td style="padding:0.2rem 0.28rem"><input type="date" id="ep-date-${p.id}" value="${p.date||''}" style="${inpS}"></td>
-          <td style="padding:0.2rem 0.28rem"><input type="number" id="ep-qty-${p.id}" value="${p.qty}" min="0" step="any" style="${inpS}width:68px"></td>
-          <td style="padding:0.2rem 0.28rem"><input type="number" id="ep-price-${p.id}" value="${p.price||''}" min="0" step="any" placeholder="매입가" style="${inpS}width:100px"></td>
-          <td style="padding:0.2rem 0.28rem;white-space:nowrap;text-align:right">
-            <button class="btn-sm-save" onclick="saveEditPurchase('${g.id}','${s.id}','${p.id}')">저장</button>
-            <button class="btn-sm" onclick="cancelEditPurchase('${s.id}')">취소</button>
-          </td></tr>`;
+
+  // 매입+매도 합쳐서 날짜순 정렬
+  const allRows=[
+    ...(s.purchases||[]).map(p=>({...p,type:'buy'})),
+    ...(s.sells||[]).map(p=>({...p,type:'sell'}))
+  ].sort((a,b)=>{
+    if(!a.date&&!b.date)return 0;
+    if(!a.date)return 1;
+    if(!b.date)return -1;
+    return a.date.localeCompare(b.date);
+  });
+
+  const rows=allRows.length
+    ?allRows.map(r=>{
+        const isBuy=r.type==='buy';
+        const badge=isBuy
+          ?`<span style="font-size:0.68rem;padding:0.1rem 0.35rem;border-radius:4px;background:#dbeafe;color:#1d4ed8;font-weight:500">매입</span>`
+          :`<span style="font-size:0.68rem;padding:0.1rem 0.35rem;border-radius:4px;background:#fee2e2;color:#b91c1c;font-weight:500">매도</span>`;
+        const delFn=isBuy?`delPurchase('${g.id}','${s.id}','${r.id}')`:`delSell('${g.id}','${s.id}','${r.id}')`;
         return `<tr>
-          <td style="padding:0.22rem 0.28rem;font-size:0.78rem;color:var(--ink2)">${p.date||'—'}</td>
-          <td style="padding:0.22rem 0.28rem;text-align:right;font-size:0.8rem">${(p.qty||0).toLocaleString()}</td>
-          <td style="padding:0.22rem 0.28rem;text-align:right;font-size:0.8rem">${p.price?sym+fmtA(p.price):'—'}</td>
-          <td style="padding:0.22rem 0.28rem;text-align:right;white-space:nowrap">
-            <button class="btn-sm" onclick="startEditPurchase('${s.id}','${p.id}')">수정</button>
-            <button class="btn-sm-danger" onclick="delPurchase('${g.id}','${s.id}','${p.id}')">삭제</button>
+          <td style="padding:0.22rem 0.35rem;font-size:0.78rem;color:var(--ink2)">${r.date||'—'}</td>
+          <td style="padding:0.22rem 0.35rem">${badge}</td>
+          <td style="padding:0.22rem 0.35rem;text-align:right;font-size:0.8rem">${(r.qty||0).toLocaleString()}</td>
+          <td style="padding:0.22rem 0.35rem;text-align:right;font-size:0.8rem">${r.price?sym+fmtA(r.price):'—'}</td>
+          <td style="padding:0.22rem 0.35rem;text-align:right">
+            <button class="btn-sm-danger" onclick="${delFn}">삭제</button>
           </td></tr>`;
       }).join('')
-    :`<tr><td colspan="4" style="padding:0.5rem;text-align:center;color:var(--ink3);font-size:0.78rem">매입 내역 없음 — 아래에서 추가하세요</td></tr>`;
+    :`<tr><td colspan="5" style="padding:0.6rem;text-align:center;color:var(--ink3);font-size:0.78rem">내역 없음 — 위 버튼으로 등록하세요</td></tr>`;
+
   return `<div class="purchase-panel">
     <div style="padding:0.4rem 0.9rem;background:rgba(255,255,255,0.45);border-top:1px solid var(--border);display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap">
       <span style="font-size:0.68rem;color:var(--ink3)">티커</span>
@@ -634,27 +843,18 @@ function renderStockDetail(g,s){
       <input type="text" value="${s.name||''}" onchange="updateStock('${g.id}','${s.id}','name',this.value)"
         style="${inpS}flex:1;min-width:100px">
     </div>
-    <div style="padding:0.4rem 0.9rem">
-      <div style="font-size:0.72rem;font-weight:500;color:var(--ink2);margin-bottom:0.25rem">📋 매입 내역</div>
+    <div style="padding:0.4rem 0.9rem 0.65rem">
+      <div style="font-size:0.72rem;font-weight:500;color:var(--ink2);margin-bottom:0.3rem">📋 매입/매도 내역</div>
       <table style="width:100%;border-collapse:collapse">
         <thead><tr style="font-size:0.68rem;color:var(--ink3);border-bottom:1px solid var(--border)">
-          <th style="text-align:left;padding:0.15rem 0.28rem;font-weight:400">날짜</th>
-          <th style="text-align:right;padding:0.15rem 0.28rem;font-weight:400">수량</th>
-          <th style="text-align:right;padding:0.15rem 0.28rem;font-weight:400">매입가</th>
+          <th style="text-align:left;padding:0.15rem 0.35rem;font-weight:400">날짜</th>
+          <th style="text-align:left;padding:0.15rem 0.35rem;font-weight:400">구분</th>
+          <th style="text-align:right;padding:0.15rem 0.35rem;font-weight:400">수량</th>
+          <th style="text-align:right;padding:0.15rem 0.35rem;font-weight:400">단가</th>
           <th></th>
         </tr></thead>
-        <tbody>${purchaseRows}</tbody>
+        <tbody>${rows}</tbody>
       </table>
-    </div>
-    <div style="padding:0.35rem 0.9rem 0.65rem;border-top:1px solid var(--border)">
-      <div style="font-size:0.72rem;font-weight:500;color:var(--ink2);margin-bottom:0.25rem">+ 매입 내역 추가</div>
-      <div style="display:flex;gap:0.3rem;flex-wrap:wrap;align-items:center">
-        <input type="date" id="pu-date-${s.id}" style="${inpS}">
-        <input type="number" id="pu-qty-${s.id}" placeholder="수량 *" min="0" step="any" style="${inpS}width:80px">
-        <input type="number" id="pu-price-${s.id}" placeholder="매입가 (선택)" min="0" step="any" style="${inpS}width:115px">
-        <button class="btn-primary" onclick="addPurchase('${g.id}','${s.id}')" style="padding:0.3rem 0.75rem;font-size:0.8rem">+ 추가</button>
-      </div>
-      <div style="font-size:0.68rem;color:var(--ink3);margin-top:0.22rem">💡 날짜 O + 매입가 X → Yahoo Finance 해당일 종가 자동조회</div>
     </div>
   </div>`;
 }
@@ -670,31 +870,35 @@ function renderGroups(){
     const col=GRP_COLORS[gi%GRP_COLORS.length];
     const sym=g.currency==='USD'?'$':'₩';
     const fmtA=v=>g.currency==='USD'?Number(v).toFixed(2):Math.round(v).toLocaleString('ko-KR');
-    const stockRows=g.stocks.length
-      ?g.stocks.map(s=>{
-          const{totalQty,avgPrice}=stockSummary(s);
+    const activeStocks=g.stocks.filter(s=>!s.is_deleted);
+    const stockRows=activeStocks.length
+      ?activeStocks.map(s=>{
+          const{holdQty,totalBuyQty,totalSellQty,avgBuyPrice}=stockSummary(s);
           const isOpen=_expandedStocks.has(s.id);
           const detail=isOpen?renderStockDetail(g,s):'';
-          const pc=s.purchases.length;
           return `<div>
-            <div class="item-row" style="padding:0.42rem 0.7rem;cursor:pointer" onclick="toggleStockDetail('${s.id}')">
-              <div class="item-info" style="pointer-events:none">
+            <div class="item-row" style="padding:0.38rem 0.7rem;gap:0.4rem">
+              <div class="item-info" style="cursor:pointer;flex:1;min-width:0" onclick="toggleStockDetail('${s.id}')">
                 <div class="item-name"><strong>${s.ticker}</strong>${s.name?` · ${s.name}`:''} <span style="font-size:0.68rem;color:var(--ink3)">${isOpen?'▲':'▼'}</span></div>
-                <div class="item-sub">${totalQty>0?totalQty.toLocaleString()+'주':'수량 미등록'}${avgPrice>0?` · 평균 ${sym}${fmtA(avgPrice)}`:''} · 매입 ${pc}건</div>
+                <div class="item-sub">${holdQty>0?'보유 '+holdQty.toLocaleString()+'주':'수량 미등록'}${avgBuyPrice>0?` · 평균 ${sym}${fmtA(avgBuyPrice)}`:''}${totalSellQty>0?` · 매도 ${totalSellQty.toLocaleString()}주`:''}</div>
               </div>
-              <button class="btn-danger" onclick="event.stopPropagation();delStock('${g.id}','${s.id}')">삭제</button>
+              <div style="display:flex;gap:0.28rem;flex-shrink:0">
+                <button class="btn-sm" style="background:#dbeafe;color:#1d4ed8;border-color:#93c5fd" onclick="openBuyModal('${g.id}','${s.id}')">+ 매입</button>
+                <button class="btn-sm" style="background:#fee2e2;color:#b91c1c;border-color:#fca5a5" onclick="openSellModal('${g.id}','${s.id}')">- 매도</button>
+                <button class="btn-sm-danger" onclick="delStock('${g.id}','${s.id}')">삭제</button>
+              </div>
             </div>${detail}
           </div>`;
         }).join('')
       :'<div class="empty-notice" style="font-size:0.78rem;padding:0.4rem 0.8rem">종목이 없습니다. 아래에서 추가하세요.</div>';
-    const addForm=g.stocks.length<10
+    const addForm=activeStocks.length<10
       ?`<div style="padding:0.5rem 0.8rem 0.75rem;border-top:1px solid var(--border)">
           <div style="display:flex;gap:0.35rem;flex-wrap:wrap;align-items:center">
             <input type="text" id="ticker-${g.id}" placeholder="티커" style="${inpStyle}width:80px;flex:0 0 80px" oninput="onTickerInput('${g.id}',this)" onblur="onStockInputBlur()">
             <input type="text" id="name-${g.id}" placeholder="종목명" style="${inpStyle}flex:1;min-width:80px" oninput="onNameInput('${g.id}',this)" onblur="onStockInputBlur()" autocomplete="off">
             <button class="btn-primary" onclick="addStock('${g.id}')" style="padding:0.35rem 0.8rem;font-size:0.82rem">+ 종목 추가</button>
           </div>
-          <div style="font-size:0.7rem;color:var(--ink3);margin-top:0.3rem">💡 종목 추가 후 클릭 → 매입 내역 등록 · KOR 숫자 입력(005930) → .KS/.KQ 자동처리</div>
+          <div style="font-size:0.7rem;color:var(--ink3);margin-top:0.3rem">💡 KOR 숫자 입력(005930) → .KS/.KQ 자동처리</div>
         </div>`
       :'<div style="font-size:0.75rem;color:var(--ink3);text-align:center;padding:0.4rem">최대 10개 종목 도달</div>';
     return `<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden">
@@ -868,9 +1072,9 @@ function onNameInput(gid,el){
 
 function onStockInputBlur(){setTimeout(_hideDd,180);}
 
-/* 초기화 */
+/* 초기화 — DB에서 그룹 로드 후 렌더링 */
 initTotalMode();
-renderGroups();
+initGroupsFromDB(); // DB 우선 로드 → 완료 후 renderGroups() 호출
 
 /* ── 즐겨찾기 사이트 (DB API) ── */
 let _sites=[];

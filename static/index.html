@@ -755,16 +755,19 @@ async function renderStock(){
   const totalMode=ld(TOTAL_MODE_KEY,'KRW');
   console.log('[Stock] localStorage groups:', JSON.stringify(groups));
 
-  if(!groups.length||!groups.some(g=>g.stocks&&g.stocks.length)){
+  /* is_deleted 종목 필터링 */
+  const activeGroups=groups.map(g=>({...g,stocks:(g.stocks||[]).filter(s=>!s.is_deleted)}));
+
+  if(!activeGroups.length||!activeGroups.some(g=>g.stocks.length)){
     const msg='<div class="empty-msg">관리자에서 종목을 추가하세요</div>';
     if(pcBody)pcBody.innerHTML=msg;if(mBody)mBody.innerHTML=msg;return;
   }
 
   /* 티커→카테고리 매핑 (KRW=kor-stock, USD=us) */
   const tickerCatMap={};
-  groups.forEach(g=>{
+  activeGroups.forEach(g=>{
     const cat=g.currency==='KRW'?'kor-stock':'us';
-    (g.stocks||[]).forEach(s=>{if(s.ticker&&!tickerCatMap[s.ticker])tickerCatMap[s.ticker]=cat;});
+    g.stocks.forEach(s=>{if(s.ticker&&!tickerCatMap[s.ticker])tickerCatMap[s.ticker]=cat;});
   });
   console.log('[Stock] tickerCatMap:', tickerCatMap);
 
@@ -803,51 +806,66 @@ async function renderStock(){
   const rowS='display:flex;justify-content:space-between;align-items:center';
   const divS='height:0.5px;background:rgba(255,255,255,0.18);margin:0.2rem 0';
 
-  groups.filter(g=>g.stocks.length).forEach((g,gi)=>{
+  const snapshotGroups=[];  /* 스냅샷용 데이터 수집 */
+  activeGroups.filter(g=>g.stocks.length).forEach((g,gi)=>{
     const col=GRP_COLORS[gi%GRP_COLORS.length];
     const isKRW=g.currency==='KRW';
     const sym=isKRW?'₩':'$';
     const fmt=v=>isKRW?fmtKRW(v):fmtUSD(v);
     let grpTotal=0;
+    const snapshotStocks=[];
 
     const pcItems=g.stocks.map(s=>{
-      /* purchases[] 기반 총수량·평균매입가 계산 */
+      /* purchases[] + sells[] 기반 보유수량·평균매입가·손익 계산 */
       const pp=s.purchases||[];
-      const totalQty=pp.reduce((a,p)=>a+(p.qty||0),0);
+      const sl=s.sells||[];
+      const totalBuyQty=pp.reduce((a,p)=>a+(p.qty||0),0);
+      const totalSellQty=sl.reduce((a,p)=>a+(p.qty||0),0);
+      const holdQty=Math.max(0,totalBuyQty-totalSellQty);
       const validPP=pp.filter(p=>(p.price||0)>0&&(p.qty||0)>0);
       const ws=validPP.reduce((a,p)=>a+p.price*p.qty,0);
       const vq=validPP.reduce((a,p)=>a+p.qty,0);
       const avgCost=vq>0?ws/vq:0;
+      const realizedPL=sl.reduce((a,p)=>a+((p.price||0)-avgCost)*(p.qty||0),0);
 
       const p=priceMap[s.ticker];
       const isLive=p?.current_price!=null;
       const cur=isLive?p.current_price:(avgCost||0);
-      const pre=p?.prev_close??(avgCost||0);
       const chP=p?.change_percent??0;
-      const chA=p?.change_amount??0;
-      const qty=totalQty;
-      const val=cur*qty;
+      const val=cur*holdQty;
       grpTotal+=val;
-      /* 수익률: 현재가 vs 평균매입가 */
-      const profitP=avgCost>0?((cur-avgCost)/avgCost*100):null;
-      const profitA=avgCost>0?(cur-avgCost)*qty:null;
+      /* 평가손익 */
+      const evalPL=avgCost>0?(cur-avgCost)*holdQty:null;
+      const evalPct=avgCost>0?((cur-avgCost)/avgCost*100):null;
       const cs=chP>=0?'up':'down';const sg=chP>=0?'▲':'▼';
-      const pcs=profitP!=null?(profitP>=0?'up':'down'):'';
+      const eps=evalPL!=null?(evalPL>=0?'up':'down'):'';
+      const rps=realizedPL>=0?'up':'down';
       const lb=isLive
         ?`<span style="font-size:0.52rem;background:#4a7c59;color:#fff;padding:0.05rem 0.38rem;border-radius:8px;vertical-align:middle;margin-left:0.25rem">LIVE</span>`
         :`<span style="font-size:0.52rem;background:#a89880;color:#fff;padding:0.05rem 0.38rem;border-radius:8px;vertical-align:middle;margin-left:0.25rem">평균가</span>`;
-      const profitRow=profitP!=null
-        ?`<div class="${pcs}" style="font-size:0.62rem">수익률 ${profitP>=0?'+':''}${profitP.toFixed(2)}% (${sym}${fmt(Math.abs(profitA))})</div>`
+      const evalRow=evalPL!=null
+        ?`<div class="${eps}" style="font-size:0.62rem">평가손익 ${evalPL>=0?'+':''}${sym}${fmt(Math.abs(evalPL))} (${evalPct>=0?'+':''}${evalPct.toFixed(2)}%)</div>`
         :'';
+      const realRow=totalSellQty>0
+        ?`<div class="${rps}" style="font-size:0.62rem">실현손익 ${realizedPL>=0?'+':''}${sym}${fmt(Math.abs(realizedPL))}</div>`
+        :'';
+      /* 스냅샷용 종목 데이터 수집 */
+      snapshotStocks.push({
+        ticker:s.ticker,name:s.name||null,
+        current_price:isLive?cur:null,
+        hold_qty:holdQty,eval_amount:val,
+        avg_buy_price:avgCost||null,
+        eval_pl:evalPL??null,realized_pl:realizedPL,
+      });
       return `<li class="stock-item">
         <div>
           <div class="stock-name">${s.name||s.ticker} <span style="font-size:0.65rem;color:var(--ink3)">${s.ticker}</span></div>
-          <div class="stock-qty">${qty.toLocaleString()}주${avgCost>0?` · 평균 ${sym}${fmt(avgCost)}`:''}</div>
+          <div class="stock-qty">${holdQty.toLocaleString()}주${avgCost>0?` · 평균 ${sym}${fmt(avgCost)}`:''}</div>
         </div>
         <div class="stock-right">
           <div class="stock-price">${sym}${fmt(cur)}${lb}</div>
           <div class="stock-val">${sym}${fmt(val)}</div>
-          ${profitRow}
+          ${evalRow}${realRow}
           <div class="${cs}" style="font-size:0.62rem">전일比 ${sg}${Math.abs(chP).toFixed(2)}%</div>
         </div>
       </li>`;
@@ -855,28 +873,34 @@ async function renderStock(){
 
     const mItems=g.stocks.map(s=>{
       const pp=s.purchases||[];
-      const totalQty=pp.reduce((a,p)=>a+(p.qty||0),0);
+      const sl=s.sells||[];
+      const totalBuyQty=pp.reduce((a,p)=>a+(p.qty||0),0);
+      const totalSellQty=sl.reduce((a,p)=>a+(p.qty||0),0);
+      const holdQty=Math.max(0,totalBuyQty-totalSellQty);
       const validPP=pp.filter(p=>(p.price||0)>0&&(p.qty||0)>0);
       const ws=validPP.reduce((a,p)=>a+p.price*p.qty,0);
       const vq=validPP.reduce((a,p)=>a+p.qty,0);
       const avgCost=vq>0?ws/vq:0;
+      const realizedPL=sl.reduce((a,p)=>a+((p.price||0)-avgCost)*(p.qty||0),0);
 
       const p=priceMap[s.ticker];
       const isLive=p?.current_price!=null;
       const cur=isLive?p.current_price:(avgCost||0);
       const chP=p?.change_percent??0;
-      const qty=totalQty;
-      const val=cur*qty;
-      const profitP=avgCost>0?((cur-avgCost)/avgCost*100):null;
+      const val=cur*holdQty;
+      const evalPL=avgCost>0?(cur-avgCost)*holdQty:null;
+      const evalPct=avgCost>0?((cur-avgCost)/avgCost*100):null;
       const cs=chP>=0?'up':'down';const sg=chP>=0?'▲':'▼';
-      const pcs=profitP!=null?(profitP>=0?'up':'down'):'';
+      const eps=evalPL!=null?(evalPL>=0?'up':'down'):'';
+      const rps=realizedPL>=0?'up':'down';
       const ld2=isLive
         ?`<span style="font-size:0.5rem;background:#4a7c59;color:#fff;padding:0.04rem 0.3rem;border-radius:6px;margin-left:0.2rem">LIVE</span>`
         :`<span style="font-size:0.5rem;background:#a89880;color:#fff;padding:0.04rem 0.3rem;border-radius:6px;margin-left:0.2rem">평균가</span>`;
       return `<li class="m-stock-item">
         <div>
           <div class="m-stock-name">${s.name||s.ticker}</div>
-          <div class="m-stock-qty">${qty.toLocaleString()}주 <span class="${cs}">${sg}${Math.abs(chP).toFixed(2)}%</span>${profitP!=null?` <span class="${pcs}">(수익 ${profitP>=0?'+':''}${profitP.toFixed(1)}%)</span>`:''}</div>
+          <div class="m-stock-qty">${holdQty.toLocaleString()}주 <span class="${cs}">${sg}${Math.abs(chP).toFixed(2)}%</span>${evalPct!=null?` <span class="${eps}">(${evalPct>=0?'+':''}${evalPct.toFixed(1)}%)</span>`:''}</div>
+          ${totalSellQty>0?`<div class="m-stock-qty" style="font-size:0.65rem"><span class="${rps}">실현 ${realizedPL>=0?'+':''}${sym}${fmt(Math.abs(realizedPL))}</span></div>`:''}
         </div>
         <div>
           <div class="m-stock-price">${sym}${fmt(cur)}${ld2}</div>
@@ -886,6 +910,7 @@ async function renderStock(){
     }).join('');
 
     if(isKRW)grandKRW+=grpTotal;else grandUSD+=grpTotal;
+    snapshotGroups.push({name:g.name,currency:g.currency,total:grpTotal,stocks:snapshotStocks});
 
     pcHTML+=`<div class="stock-cat">
       <div class="stock-cat-header" style="background:${col.bg};color:${col.tx}">
@@ -938,8 +963,63 @@ async function renderStock(){
 
   if(pcBody)pcBody.innerHTML=pcHTML+totalBar;
   if(mBody)mBody.innerHTML=mHTML+mTotalBar;
+
+  /* 스냅샷 데이터 반환 (타이머에서 사용) */
+  return{
+    snapshotGroups,
+    grandUSD,grandKRW,
+    fxRate,
+    totalKrwEquiv:grandKRW+(fxRate?grandUSD*fxRate:0),
+  };
 }
 /* renderStock() → 하단 async init 블록에서 호출 */
+
+/* ── 데일리 스냅샷 ── */
+let _lastSnapshotDate=null; // 당일 중복 저장 방지
+
+async function savePortfolioSnapshot(stockData){
+  try{
+    const today=new Date().toISOString().slice(0,10);
+    if(_lastSnapshotDate===today){
+      console.log('[SNAPSHOT] 오늘 이미 저장함 →',today);return;
+    }
+    const payload={
+      snapshot_date:today,
+      usd_krw:stockData.fxRate??null,
+      total_usd:stockData.grandUSD,
+      total_krw:stockData.grandKRW,
+      total_krw_equiv:stockData.totalKrwEquiv,
+      groups:stockData.snapshotGroups,
+    };
+    const r=await fetch('/api/portfolio/snapshot',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload),
+    });
+    if(r.ok){
+      _lastSnapshotDate=today;
+      console.log('[SNAPSHOT] 저장 완료 →',today);
+    }else{
+      console.warn('[SNAPSHOT] 저장 실패:',r.status,await r.text());
+    }
+  }catch(e){
+    console.warn('[SNAPSHOT] 오류:',e.message);
+  }
+}
+
+/* 매일 23:59:59 — 1분마다 체크하여 해당 시간이면 스냅샷 저장 */
+function _startSnapshotTimer(){
+  setInterval(async()=>{
+    const now=new Date();
+    if(now.getHours()===23&&now.getMinutes()===59){
+      console.log('[SNAPSHOT] 23:59 감지 → 스냅샷 저장 시도');
+      try{
+        const data=await renderStock();
+        if(data)await savePortfolioSnapshot(data);
+      }catch(e){console.warn('[SNAPSHOT] renderStock 오류:',e.message);}
+    }
+  },60000); // 1분마다 체크
+}
 
 /* ── 지출 ── */
 async function renderExp(){
@@ -1066,6 +1146,7 @@ async function renderSites(){
     const b1=gel('pc-stock-body');const b2=gel('m-stock-body');
     if(b1)b1.innerHTML=msg;if(b2)b2.innerHTML=msg;
   });
+  _startSnapshotTimer();
   await Promise.all([renderYT(),renderExp(),renderMeal(),renderMemo(),renderSites()]);
 })();
 </script>

@@ -1,7 +1,11 @@
 import os
 
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+
+# .env 파일 로드 (로컬 개발용 — Railway에서는 환경변수가 자동 주입됨)
+load_dotenv()
 
 # Railway DATABASE_URL 환경변수 우선 사용, 없으면 로컬 SQLite 폴백
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./dashboard.db")
