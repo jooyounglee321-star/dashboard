@@ -787,16 +787,86 @@ function delSell(gid,sid,sellId){
   _expandedStocks.add(sid);renderGroups();
 }
 
-/* ── 인라인 입력폼 (▼ 클릭 시 표시) ── */
+/* ── 수정 중인 내역 상태 ── */
+let _editingRecord=null; // {gid, sid, type:'buy'|'sell', rid}
+
+/* ── 인라인 입력폼 + 히스토리 (▼ 클릭 시 표시) ── */
 function renderStockDetail(g,s){
   const sym=g.currency==='USD'?'$':'₩';
+  const fmtA=v=>g.currency==='USD'?Number(v).toFixed(2):Math.round(v).toLocaleString('ko-KR');
   const{holdQty}=stockSummary(s);
   const inpS='padding:0.35rem 0.5rem;font-size:0.83rem;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--ink);font-family:inherit;box-sizing:border-box;width:100%';
+
+  /* ── 히스토리 목록 ── */
+  const allRows=[
+    ...(s.purchases||[]).map(r=>({...r,type:'buy'})),
+    ...(s.sells||[]).map(r=>({...r,type:'sell'}))
+  ].sort((a,b)=>{
+    if(!a.date&&!b.date)return 0;
+    if(!a.date)return 1;if(!b.date)return -1;
+    return a.date.localeCompare(b.date);
+  });
+
+  const histRows=allRows.length?allRows.map(r=>{
+    const isBuy=r.type==='buy';
+    const isEditing=_editingRecord&&_editingRecord.gid===g.id&&_editingRecord.sid===s.id&&_editingRecord.rid===r.id;
+    const bg=isBuy?'#eff6ff':'#fff1f2';
+    const borderC=isBuy?'#bfdbfe':'#fecaca';
+    const badgeStyle=isBuy
+      ?'font-size:0.65rem;padding:0.08rem 0.38rem;border-radius:4px;background:#dbeafe;color:#1d4ed8;font-weight:600'
+      :'font-size:0.65rem;padding:0.08rem 0.38rem;border-radius:4px;background:#fee2e2;color:#b91c1c;font-weight:600';
+
+    if(isEditing){
+      /* 수정 모드 */
+      return `<div style="background:${bg};border:1px solid ${borderC};border-radius:7px;padding:0.45rem 0.6rem;display:flex;flex-direction:column;gap:0.35rem">
+        <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.1rem">
+          <span style="${badgeStyle}">${isBuy?'매입':'매도'}</span>
+          <span style="font-size:0.7rem;color:#475569;font-weight:500">수정 중</span>
+        </div>
+        <div style="display:flex;gap:0.35rem;flex-wrap:wrap;align-items:flex-end">
+          <div style="flex:1;min-width:95px">
+            <div style="font-size:0.67rem;color:#64748b;margin-bottom:0.12rem">날짜</div>
+            <input type="date" id="edit-date-${r.id}" value="${r.date||''}" style="${inpS}font-size:0.8rem">
+          </div>
+          <div style="flex:1;min-width:65px">
+            <div style="font-size:0.67rem;color:#64748b;margin-bottom:0.12rem">수량</div>
+            <input type="number" id="edit-qty-${r.id}" value="${r.qty||''}" min="0.0001" step="any" style="${inpS}font-size:0.8rem">
+          </div>
+          <div style="flex:1;min-width:85px">
+            <div style="font-size:0.67rem;color:#64748b;margin-bottom:0.12rem">단가</div>
+            <input type="number" id="edit-price-${r.id}" value="${r.price||''}" min="0" step="any" placeholder="${sym}" style="${inpS}font-size:0.8rem">
+          </div>
+          <div style="display:flex;gap:0.25rem;flex-shrink:0">
+            <button onclick="saveEditRecord('${g.id}','${s.id}','${r.type}','${r.id}')"
+              style="padding:0.3rem 0.65rem;font-size:0.78rem;border:none;border-radius:6px;background:#2563eb;color:#fff;cursor:pointer;font-weight:500">저장</button>
+            <button onclick="cancelEditRecord()"
+              style="padding:0.3rem 0.55rem;font-size:0.78rem;border:1px solid var(--border);border-radius:6px;background:var(--card2);color:var(--ink);cursor:pointer">취소</button>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    /* 일반 표시 모드 */
+    return `<div style="background:${bg};border:1px solid ${borderC};border-radius:7px;padding:0.38rem 0.6rem;display:flex;align-items:center;gap:0.5rem">
+      <span style="${badgeStyle}">${isBuy?'매입':'매도'}</span>
+      <span style="font-size:0.78rem;color:var(--ink2);min-width:72px">${r.date||'날짜 없음'}</span>
+      <span style="font-size:0.8rem;font-weight:500;color:var(--ink)">${(r.qty||0).toLocaleString()}주</span>
+      <span style="font-size:0.78rem;color:var(--ink2);flex:1">${r.price?sym+fmtA(r.price):'단가 없음'}</span>
+      <div style="display:flex;gap:0.22rem;flex-shrink:0">
+        <button onclick="startEditRecord('${g.id}','${s.id}','${r.type}','${r.id}')"
+          style="padding:0.22rem 0.5rem;font-size:0.72rem;border:1px solid ${isBuy?'#93c5fd':'#fca5a5'};border-radius:5px;background:transparent;color:${isBuy?'#1d4ed8':'#b91c1c'};cursor:pointer">수정</button>
+        <button onclick="deleteRecord('${g.id}','${s.id}','${r.type}','${r.id}')"
+          style="padding:0.22rem 0.5rem;font-size:0.72rem;border:1px solid #fca5a5;border-radius:5px;background:transparent;color:#b91c1c;cursor:pointer">삭제</button>
+      </div>
+    </div>`;
+  }).join('')
+  :`<div style="font-size:0.75rem;color:var(--ink3);text-align:center;padding:0.5rem">아직 내역이 없습니다</div>`;
+
   return `<div style="border-top:1px solid var(--border);background:rgba(255,255,255,0.35);padding:0.7rem 0.9rem;display:flex;flex-direction:column;gap:0.7rem">
 
-    <!-- 추가매입 폼 -->
+    <!-- 매입 폼 -->
     <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:0.6rem 0.75rem">
-      <div style="font-size:0.75rem;font-weight:600;color:#1d4ed8;margin-bottom:0.5rem">📈 추가매입</div>
+      <div style="font-size:0.75rem;font-weight:600;color:#1d4ed8;margin-bottom:0.5rem">📈 매입</div>
       <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:flex-end">
         <div style="flex:1;min-width:100px">
           <div style="font-size:0.7rem;color:#475569;margin-bottom:0.18rem">매입일 <span style="opacity:0.6">(선택)</span></div>
@@ -812,14 +882,14 @@ function renderStockDetail(g,s){
         </div>
         <button onclick="submitBuyInline('${g.id}','${s.id}')"
           style="padding:0.36rem 0.9rem;font-size:0.82rem;border:none;border-radius:7px;background:#2563eb;color:#fff;cursor:pointer;font-weight:500;white-space:nowrap;flex-shrink:0">
-          매입 추가
+          매입
         </button>
       </div>
     </div>
 
-    <!-- 추가매도 폼 -->
+    <!-- 매도 폼 -->
     <div style="background:#fff1f2;border:1px solid #fecaca;border-radius:8px;padding:0.6rem 0.75rem">
-      <div style="font-size:0.75rem;font-weight:600;color:#b91c1c;margin-bottom:0.5rem">📉 추가매도 <span style="font-weight:400;font-size:0.7rem;color:#64748b">(현재 보유 ${holdQty.toLocaleString()}주)</span></div>
+      <div style="font-size:0.75rem;font-weight:600;color:#b91c1c;margin-bottom:0.5rem">📉 매도 <span style="font-weight:400;font-size:0.7rem;color:#64748b">(현재 보유 ${holdQty.toLocaleString()}주)</span></div>
       <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:flex-end">
         <div style="flex:1;min-width:100px">
           <div style="font-size:0.7rem;color:#475569;margin-bottom:0.18rem">매도일 <span style="opacity:0.6">(선택)</span></div>
@@ -835,12 +905,68 @@ function renderStockDetail(g,s){
         </div>
         <button onclick="submitSellInline('${g.id}','${s.id}',${holdQty})"
           style="padding:0.36rem 0.9rem;font-size:0.82rem;border:none;border-radius:7px;background:#dc2626;color:#fff;cursor:pointer;font-weight:500;white-space:nowrap;flex-shrink:0">
-          매도 추가
+          매도
         </button>
       </div>
     </div>
 
+    <!-- 매입/매도 히스토리 -->
+    <div>
+      <div style="font-size:0.72rem;font-weight:500;color:var(--ink2);margin-bottom:0.4rem">📋 거래 내역</div>
+      <div style="display:flex;flex-direction:column;gap:0.28rem">${histRows}</div>
+    </div>
+
   </div>`;
+}
+
+/* ── 내역 수정 ── */
+function startEditRecord(gid,sid,type,rid){
+  _editingRecord={gid,sid,type,rid};
+  _expandedStocks.add(sid);
+  renderGroups();
+}
+function cancelEditRecord(){
+  const sid=_editingRecord?.sid;
+  _editingRecord=null;
+  if(sid)_expandedStocks.add(sid);
+  renderGroups();
+}
+function saveEditRecord(gid,sid,type,rid){
+  const dateEl=document.getElementById('edit-date-'+rid);
+  const qtyEl=document.getElementById('edit-qty-'+rid);
+  const priceEl=document.getElementById('edit-price-'+rid);
+  const qty=parseFloat(qtyEl?.value)||0;
+  if(!qty){toast('수량을 입력해주세요');return;}
+  const date=(dateEl?.value||'').trim()||null;
+  const price=parseFloat(priceEl?.value)||0;
+  const groups=loadGroups();
+  const g=groups.find(g=>g.id===gid);
+  const s=g?.stocks.find(s=>s.id===sid);
+  if(!s)return;
+  const arr=type==='buy'?s.purchases:s.sells;
+  const rec=arr?.find(r=>r.id===rid);
+  if(!rec)return;
+  rec.date=date;rec.qty=qty;rec.price=price;
+  _editingRecord=null;
+  saveGroups(groups);
+  _expandedStocks.add(sid);
+  renderGroups();
+  toast('✓ 내역 수정 완료');
+}
+
+/* ── 내역 삭제 ── */
+function deleteRecord(gid,sid,type,rid){
+  if(!confirm('이 내역을 삭제하시겠습니까?'))return;
+  const groups=loadGroups();
+  const g=groups.find(g=>g.id===gid);
+  const s=g?.stocks.find(s=>s.id===sid);
+  if(!s)return;
+  if(type==='buy'){s.purchases=(s.purchases||[]).filter(r=>r.id!==rid);}
+  else{s.sells=(s.sells||[]).filter(r=>r.id!==rid);}
+  saveGroups(groups);
+  _expandedStocks.add(sid);
+  renderGroups();
+  toast('✓ 내역 삭제 완료');
 }
 
 /* ── 인라인 매입 등록 ── */
