@@ -86,6 +86,19 @@ app.include_router(timezone.router, prefix="/api")
 app.include_router(portfolio_router.router, prefix="/api")
 
 
+@app.get("/api/health")
+def health_check():
+    """서버 + DB 상태 확인."""
+    try:
+        db = SessionLocal()
+        db.execute(__import__("sqlalchemy").text("SELECT 1"))
+        db.close()
+        db_status = "ok"
+    except Exception as e:
+        db_status = f"error: {e}"
+    return {"status": "ok", "db": db_status}
+
+
 @app.get("/admin", include_in_schema=False)
 def admin_page():
     return FileResponse("static/admin.html")

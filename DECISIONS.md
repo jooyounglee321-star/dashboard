@@ -205,3 +205,11 @@
 **이유:** 프런트엔드 admin.html은 localStorage만 수정하므로, DB와의 상태 불일치 위험 존재. 페이지 로드 시 동기화하여 DB를 source of truth로 명확히 설정하면서도 오프라인 환경에서 localStorage 작동 보장. 마이그레이션된 데이터가 발생하면 DB에도 반영하여 일관성 확보
 **대안:** 일방향 동기화 (DB → localStorage만, 초기 로드 시 데이터 손실 위험), 동기 확인 (API 응답 대기로 로드 지연), 수동 동기화 (사용자 실수로 중복 저장 가능)
 **파일:** `static/admin.html` (`_migrateGroups` 추출, `loadGroups` 리팩토링, `initGroupsFromDB` 새 함수)
+
+---
+
+## 2026-05-15 — renderStock() 포트폴리오 로드: DB-우선 패턴 + localStorage 폴백
+**결정:** `renderStock()` 함수에서 포트폴리오 그룹을 로드할 때 ① `/api/portfolio/groups` API로 DB에서 먼저 시도(5초 타임아웃) → ② 성공하면 결과를 localStorage에 동기화 → ③ 실패 또는 타임아웃 시 localStorage로 폴백
+**이유:** 대시보드(index.html)는 읽기 전용(admin.html에서만 쓰기)이므로, DB를 최신 source of truth로 우선하되 네트워크 오류나 서버 다운 시에도 작동성 보장. DB 데이터가 있으면 localStorage를 자동 최신화하여 폴백 시 최신 정보 제공. 타임아웃 5초로 UX 응답성(로딩 지연) 확보
+**대안:** localStorage만 사용 (다중 기기 미지원, 스냅샷 그룹 정보 재구성 불가), DB만 사용 (네트워크 오류 시 완전 중단), 빠른 폴백만 (DB 최신성 미반영)
+**파일:** `static/index.html` (renderStock 함수의 그룹 로드 로직 변경)

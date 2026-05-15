@@ -276,6 +276,15 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
 </head>
 <body>
 
+<!-- 서버 오프라인 배너 (기본 숨김) -->
+<div id="server-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;
+  background:#c0392b;color:#fff;text-align:center;padding:10px 16px;font-size:14px;
+  font-weight:600;letter-spacing:0.01em;box-shadow:0 2px 8px rgba(0,0,0,0.3);">
+  ⚠️ 서버가 꺼져 있습니다. &nbsp;
+  <a href="https://railway.app" target="_blank"
+     style="color:#ffe;text-decoration:underline;font-weight:700;">Railway에서 서버를 켜주세요</a>
+</div>
+
 <header class="header">
   <span class="header-title">✦ 나의 하루</span>
   <div class="header-right">
@@ -751,9 +760,31 @@ async function renderStock(){
   if(pcBody)pcBody.innerHTML='<div class="empty-msg">⏳ 시세 불러오는 중…</div>';
   if(mBody)mBody.innerHTML='<div class="empty-msg">⏳ 시세 불러오는 중…</div>';
 
-  const groups=ld(STOCK_LS_KEY,[]);
+  /* DB 우선 로드 → 실패 시 localStorage 폴백 */
+  let groups=[];
+  try{
+    const dbRes=await fetch('/api/portfolio/groups',{signal:AbortSignal.timeout(5000)});
+    if(dbRes.ok){
+      const dbJson=await dbRes.json();
+      groups=dbJson.data||[];
+      if(groups.length>0){
+        /* DB 데이터를 localStorage에 동기화 */
+        localStorage.setItem(STOCK_LS_KEY,JSON.stringify(groups));
+        console.log('[Stock] DB에서 로드 (그룹 수:',groups.length,')');
+      }else{
+        /* DB 비어있으면 localStorage 폴백 */
+        groups=ld(STOCK_LS_KEY,[]);
+        console.log('[Stock] DB 비어있음 → localStorage 폴백 (그룹 수:',groups.length,')');
+      }
+    }else{
+      groups=ld(STOCK_LS_KEY,[]);
+      console.warn('[Stock] DB 응답 오류 →localStorage 폴백');
+    }
+  }catch(e){
+    groups=ld(STOCK_LS_KEY,[]);
+    console.warn('[Stock] DB 로드 실패 → localStorage 폴백:',e.message);
+  }
   const totalMode=ld(TOTAL_MODE_KEY,'KRW');
-  console.log('[Stock] localStorage groups:', JSON.stringify(groups));
 
   /* is_deleted 종목 필터링 */
   const activeGroups=groups.map(g=>({...g,stocks:(g.stocks||[]).filter(s=>!s.is_deleted)}));
@@ -1148,6 +1179,21 @@ async function renderSites(){
   });
   _startSnapshotTimer();
   await Promise.all([renderYT(),renderExp(),renderMeal(),renderMemo(),renderSites()]);
+
+  // 서버 상태 체크 (페이지 로드 즉시 + 30초마다)
+  async function checkServerHealth(){
+    const banner=document.getElementById('server-banner');
+    if(!banner)return;
+    try{
+      const r=await fetch('/api/health',{signal:AbortSignal.timeout(5000)});
+      if(r.ok){banner.style.display='none';}
+      else{banner.style.display='block';}
+    }catch(e){
+      banner.style.display='block';
+    }
+  }
+  checkServerHealth();
+  setInterval(checkServerHealth,30000);
 })();
 </script>
 </body>
