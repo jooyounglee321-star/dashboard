@@ -186,6 +186,19 @@ body{
 }
 .field input::placeholder{color:var(--ink3);}
 
+/* ── 비밀번호 눈 토글 ── */
+.pw-wrap{position:relative;display:flex;align-items:center;}
+.pw-wrap input{padding-right:2.6rem;}  /* 버튼 자리 확보 */
+.btn-eye{
+  position:absolute;right:0.75rem;
+  background:none;border:none;cursor:pointer;
+  font-size:1.1rem;line-height:1;
+  color:var(--ink3);padding:0.2rem;
+  transition:color 0.15s;
+  user-select:none;
+}
+.btn-eye:hover{color:var(--ink2);}
+
 /* ── 제출 버튼 ── */
 .btn-submit{
   width:100%;
@@ -292,11 +305,17 @@ body{
       </div>
       <div class="field">
         <label for="password">비밀번호</label>
-        <input type="password" id="password" placeholder="8자 이상 입력" autocomplete="new-password" required minlength="8">
+        <div class="pw-wrap">
+          <input type="password" id="password" placeholder="8자 이상 입력" autocomplete="new-password" required minlength="8">
+          <button type="button" class="btn-eye" aria-label="비밀번호 보이기" onclick="togglePw('password', this)">👁️</button>
+        </div>
       </div>
       <div class="field">
         <label for="password2">비밀번호 확인</label>
-        <input type="password" id="password2" placeholder="비밀번호 재입력" autocomplete="new-password" required>
+        <div class="pw-wrap">
+          <input type="password" id="password2" placeholder="비밀번호 재입력" autocomplete="new-password" required>
+          <button type="button" class="btn-eye" aria-label="비밀번호 보이기" onclick="togglePw('password2', this)">👁️</button>
+        </div>
       </div>
       <button type="submit" class="btn-submit" id="submit-btn">이메일로 가입하기</button>
     </form>
@@ -357,6 +376,14 @@ form.addEventListener('submit', async (e) => {
 
 function showMsg(type, text) { msg.className = 'msg ' + type; msg.textContent = text; }
 function clearMsg()          { msg.className = 'msg'; msg.textContent = ''; }
+
+function togglePw(inputId, btn) {
+  const input  = document.getElementById(inputId);
+  const isHidden = input.type === 'password';
+  input.type   = isHidden ? 'text' : 'password';
+  btn.textContent  = isHidden ? '🙈' : '👁️';
+  btn.setAttribute('aria-label', isHidden ? '비밀번호 숨기기' : '비밀번호 보이기');
+}
 </script>
 </body>
 </html>
