@@ -4,6 +4,18 @@
 
 ---
 
+## [2026-05-15]
+
+### 수정 — `index.html` JS 문법 오류 + 파싱 안정화 (CSS 화면 출력 버그)
+- **근본 원인 1**: 주식 통계 바차트(`Chart.js`) 초기화 코드에서 `options:{}` 객체의 닫는 중괄호(`}`) 누락 → JS SyntaxError로 전체 스크립트 실행 불가 → CSS/HTML 파싱 혼란
+- **근본 원인 2**: `<script>` 블록 내 JS 템플릿 리터럴 안에 HTML 주석(`<!-- -->`) 포함 → 일부 브라우저 HTML 파서가 script 데이터 이스케이프 상태에서 오동작 가능
+- **수정 1**: `_renderStatsContent()` 바차트 options 객체 `}` 추가 (JS 문법 오류 해결)
+- **수정 2**: `<script>` 내 모든 HTML 주석(`<!-- -->`) 제거 (파서 안정화)
+- **수정 3**: `<meta http-equiv="Cache-Control" content="no-cache">` 추가 (브라우저 캐시로 인한 구버전 서빙 방지)
+- **검증**: Node.js `--check`로 JS 문법 오류 없음 확인, HTML 구조 및 script 블록 내 주석 없음 확인
+
+---
+
 ## [2026-05-14] (2차)
 
 ### 수정 — 포트폴리오 데이터 DB 연동 (`admin.html` + `routers/portfolio.py` + `models.py`)

@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>나의 하루 대시보드</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
@@ -24,7 +27,6 @@
 .stats-chart-wrap.pie-wrap{max-width:340px;margin:0 auto;}
 .stock-card-clickable{cursor:pointer;}
 .stock-card-clickable .card-header:hover{background:var(--bg);}
-</style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#f5f0e8;--card:#fffef9;--card2:#faf7f0;
@@ -1153,7 +1155,6 @@ async function _renderStatsContent(){
 
   /* HTML 조립 */
   body.innerHTML=`
-    <!-- 요약 -->
     <div class="stats-section">
       <div class="stats-section-title">전체 합계 요약</div>
       <div class="stats-summary-grid">
@@ -1166,29 +1167,17 @@ async function _renderStatsContent(){
           <div class="stats-summary-value">₩${fmtKRW(grandKRW)}</div>
         </div>
         <div class="stats-summary-card">
-          <div class="stats-summary-label">원화환산 전체${fxRate?` ($1=₩${fmtKRW(fxRate)})`:'(환율 미조회)'}</div>
+          <div class="stats-summary-label">원화환산 전체${fxRate?' ($1=₩'+fmtKRW(fxRate)+')':'(환율 미조회)'}</div>
           <div class="stats-summary-value">₩${fmtKRW(totalKRW)}</div>
         </div>
       </div>
     </div>
-
-    <!-- 파이차트 -->
     <div class="stats-section">
       <div class="stats-section-title">그룹별 자산 비중</div>
       <div class="stats-chart-wrap pie-wrap"><canvas id="chart-pie"></canvas></div>
     </div>
-
-    <!-- 라인차트 -->
-    ${lineDatasets.length?`<div class="stats-section">
-      <div class="stats-section-title">그룹별 누적 투자금액 추이</div>
-      <div class="stats-chart-wrap"><canvas id="chart-line"></canvas></div>
-    </div>`:''}
-
-    <!-- 바차트 -->
-    ${stockEvals.length?`<div class="stats-section">
-      <div class="stats-section-title">종목별 평가손익</div>
-      <div class="stats-chart-wrap"><canvas id="chart-bar"></canvas></div>
-    </div>`:''}
+    ${lineDatasets.length?'<div class="stats-section"><div class="stats-section-title">그룹별 누적 투자금액 추이</div><div class="stats-chart-wrap"><canvas id="chart-line"></canvas></div></div>':''}
+    ${stockEvals.length?'<div class="stats-section"><div class="stats-section-title">종목별 평가손익</div><div class="stats-chart-wrap"><canvas id="chart-bar"></canvas></div></div>':''}
   `;
 
   /* 파이차트 */
@@ -1241,6 +1230,7 @@ async function _renderStatsContent(){
       options:{responsive:true,scales:{
         y:{title:{display:true,text:'손익'},ticks:{callback:v=>v>=0?`+${v}`:v}}
       },plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const s=sorted[ctx.dataIndex];return `${s.evalPL>=0?'+':''}${s.sym}${s.isKRW?fmtKRW(Math.abs(s.evalPL)):fmtUSD(Math.abs(s.evalPL))}`;}}}}
+      }
     });
     _statsCharts.push(inst);
   }
