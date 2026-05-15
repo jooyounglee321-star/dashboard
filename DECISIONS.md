@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-05-22 — 다중 인증 제공자 지원 (`User` 모델 확장)
+
+**결정:** `User` 모델에 `provider`(인증 경로: 'local'|'google'|'facebook' 등)와 `provider_id`(외부 서비스 고유 ID) 컬럼 추가. `hashed_password`를 nullable로 변경하여 소셜 로그인 시 비밀번호 미사용.
+
+**이유:** (1) 초기 이메일/비밀번호 방식에서 OAuth 기반 소셜 로그인으로 확장하기 위해 스키마 준비, (2) 단일 `User` 테이블에서 로컬/소셜 가입자 모두 관리 가능, (3) `provider` 필드의 기본값 "local"로 기존 사용자 호환성 유지.
+
+**대안:** (1) OAuth 제공자별 별도 테이블(`GoogleUsers`, `FacebookUsers`) — 코드 중복, 조인 복잡도, (2) 별도 `UserProvider` 중간 테이블 — 정규화되나 join 쿼리 증가, (3) NoSQL 구조 — 현재 PostgreSQL/SQLite 스택과 불일치.
+
+**파일:** `models.py` (`User` 클래스)
+
+---
+
 ## 2026-05-21 — SaaS 사용자 인증 테이블 도입 (`User` 모델)
 
 **결정:** `models.py`에 `User` ORM 모델 추가. 이메일(unique, indexed), 해시 비밀번호, 역할(기본값 "Member"), 생성일시 필드 포함.

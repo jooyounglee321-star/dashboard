@@ -4,6 +4,15 @@
 
 ---
 
+## [2026-05-15] — SaaS 회원가입 기초 구현 (2차)
+
+### 변경
+- **models.py** `User` 테이블에 `provider`(기본값 'local'), `provider_id` 컬럼 추가, `hashed_password` nullable 처리 (소셜 가입 대응)
+- **static/register.html** '구글로 시작하기' / '페이스북으로 시작하기' 소셜 버튼 UI 추가 (디자인 전용, API 미연결)
+- **static/admin_users.html** 회원 목록에 '가입경로(provider)' 컬럼·뱃지 추가, 가입경로 필터 추가
+
+---
+
 ## [2026-05-15] — SaaS 회원가입 기초 구현
 
 ### 추가

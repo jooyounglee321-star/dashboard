@@ -8,13 +8,20 @@ from database import Base
 
 
 class User(Base):
-    """SaaS 회원 테이블."""
+    """SaaS 회원 테이블.
+
+    - provider: 'local' | 'google' | 'facebook' 등 가입 경로
+    - provider_id: 소셜 로그인 시 외부 서비스의 고유 ID (local 가입은 NULL)
+    - hashed_password: local 가입 시에만 사용 (소셜 가입은 NULL)
+    """
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     email: Mapped[str] = mapped_column(String(320), nullable=False, unique=True, index=True)
-    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    hashed_password: Mapped[str | None] = mapped_column(String(255), nullable=True)
     role: Mapped[str] = mapped_column(String(50), nullable=False, default="Member")
+    provider: Mapped[str] = mapped_column(String(30), nullable=False, default="local")
+    provider_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
