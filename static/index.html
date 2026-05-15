@@ -743,8 +743,7 @@ async function renderYT(){
   if(me)me.innerHTML=ch.map(c=>`<li class="m-yt-item"><a href="${c.channel_url||''}" target="_blank"><div class="m-yt-ico">▶</div><div><div class="m-yt-name">${c.channel_name}</div></div></a></li>`).join('');
 }
 
-/* ── 주식 그룹 (localStorage + Yahoo Finance 실시간) ── */
-const STOCK_LS_KEY='stock_groups_v2';
+/* ── 주식 그룹 (DB API 전용) ── */
 const TOTAL_MODE_KEY='stock_total_mode';
 const GRP_COLORS=[
   {bg:'#c8deff',tx:'#1a3d7c'},{bg:'#c0edd8',tx:'#0d4a2a'},
@@ -760,29 +759,18 @@ async function renderStock(){
   if(pcBody)pcBody.innerHTML='<div class="empty-msg">⏳ 시세 불러오는 중…</div>';
   if(mBody)mBody.innerHTML='<div class="empty-msg">⏳ 시세 불러오는 중…</div>';
 
-  /* DB 우선 로드 → 실패 시 localStorage 폴백 */
+  /* DB에서만 로드 */
   let groups=[];
   try{
-    const dbRes=await fetch('/api/portfolio/groups',{signal:AbortSignal.timeout(5000)});
-    if(dbRes.ok){
-      const dbJson=await dbRes.json();
-      groups=dbJson.data||[];
-      if(groups.length>0){
-        /* DB 데이터를 localStorage에 동기화 */
-        localStorage.setItem(STOCK_LS_KEY,JSON.stringify(groups));
-        console.log('[Stock] DB에서 로드 (그룹 수:',groups.length,')');
-      }else{
-        /* DB 비어있으면 localStorage 폴백 */
-        groups=ld(STOCK_LS_KEY,[]);
-        console.log('[Stock] DB 비어있음 → localStorage 폴백 (그룹 수:',groups.length,')');
-      }
-    }else{
-      groups=ld(STOCK_LS_KEY,[]);
-      console.warn('[Stock] DB 응답 오류 →localStorage 폴백');
-    }
+    const dbRes=await fetch('/api/portfolio/groups',{signal:AbortSignal.timeout(8000)});
+    if(!dbRes.ok) throw new Error('HTTP '+dbRes.status);
+    const dbJson=await dbRes.json();
+    groups=dbJson.data||[];
+    console.log('[Stock] DB 로드 완료 (그룹 수:',groups.length,')');
   }catch(e){
-    groups=ld(STOCK_LS_KEY,[]);
-    console.warn('[Stock] DB 로드 실패 → localStorage 폴백:',e.message);
+    console.warn('[Stock] DB 로드 실패:',e.message);
+    const msg='<div class="empty-msg">⚠ 데이터 로드 실패 — 서버를 확인해주세요</div>';
+    if(pcBody)pcBody.innerHTML=msg;if(mBody)mBody.innerHTML=msg;return;
   }
   const totalMode=ld(TOTAL_MODE_KEY,'KRW');
 

@@ -442,8 +442,7 @@ async function delYT(id){
 }
 renderYTAccount();
 
-/* ── 주식 그룹 (localStorage) ── */
-const STOCK_LS_KEY='stock_groups_v2';
+/* ── 주식 그룹 (DB API 전용 — localStorage 미사용) ── */
 const TOTAL_MODE_KEY='stock_total_mode';
 const GRP_COLORS=[
   {bg:'#c8deff',tx:'#1a3d7c'},{bg:'#c0edd8',tx:'#0d4a2a'},
@@ -454,6 +453,9 @@ const GRP_COLORS=[
 ];
 const _expandedStocks=new Set();
 let _modalCtx=null; // {gid, sid, mode:'buy'|'sell'}
+
+/* 인메모리 그룹 캐시 — DB에서 로드 후 이 변수를 항상 최신 상태로 유지 */
+let _groups=[];
 
 function genId(){return Math.random().toString(36).slice(2,10);}
 
@@ -474,56 +476,42 @@ function _migrateGroups(groups){
   return {groups,dirty};
 }
 
-/* 구버전(quantity/avgPrice) → purchases[] + sells[] 자동 마이그레이션 */
+/* 인메모리 캐시에서 동기로 반환 */
 function loadGroups(){
-  let groups=ld(STOCK_LS_KEY,[]);
-  const {groups:g,dirty}=_migrateGroups(groups);
-  if(dirty)sv(STOCK_LS_KEY,g);
-  return g;
+  return _groups;
 }
 
-/* 페이지 로드 시 DB에서 그룹 데이터 가져와 localStorage에 동기화.
-   DB 데이터가 있으면 DB가 우선(source of truth).
-   localStorage에만 있으면 즉시 DB에 push. */
-async function initGroupsFromDB(){
-  try{
-    const res=await fetch('/api/portfolio/groups');
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const json=await res.json();
-    const dbGroups=json.data||[];
-    const lsGroups=ld(STOCK_LS_KEY,[]);
-
-    if(dbGroups.length>0){
-      // DB에 데이터 있음 → DB 우선 사용, localStorage 덮어쓰기
-      const {groups:migrated,dirty}=_migrateGroups(dbGroups);
-      sv(STOCK_LS_KEY,migrated);
-      if(dirty){
-        // 마이그레이션된 데이터 다시 DB에 저장
-        fetch('/api/portfolio/groups',{method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({data:migrated})}).catch(()=>{});
-      }
-      console.log('[initGroupsFromDB] DB 로드 완료 (그룹 수:',dbGroups.length,')');
-    } else if(lsGroups.length>0){
-      // DB 비어있음, localStorage에 데이터 있음 → DB에 push
-      fetch('/api/portfolio/groups',{method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({data:lsGroups})}).catch(()=>{});
-      console.log('[initGroupsFromDB] localStorage → DB 초기 동기화 (그룹 수:',lsGroups.length,')');
-    }
-  }catch(e){
-    console.warn('[initGroupsFromDB] DB 로드 실패, localStorage 사용:', e);
-  }
-  renderGroups();
-}
+/* DB에 저장 + 인메모리 캐시 갱신 */
 function saveGroups(g){
-  sv(STOCK_LS_KEY,g);
-  // DB에도 비동기 저장 (실패해도 localStorage가 우선)
+  _groups=g;
   fetch('/api/portfolio/groups',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({data:g})
-  }).catch(e=>console.warn('[saveGroups] DB 저장 실패(무시):', e));
+  }).catch(e=>console.warn('[saveGroups] DB 저장 실패:', e));
+}
+
+/* 페이지 로드 시 DB에서 그룹 데이터 초기 로드 */
+async function initGroupsFromDB(){
+  try{
+    const res=await fetch('/api/portfolio/groups',{signal:AbortSignal.timeout(8000)});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const json=await res.json();
+    const dbGroups=json.data||[];
+    const {groups:migrated,dirty}=_migrateGroups(dbGroups);
+    _groups=migrated;
+    if(dirty){
+      // 마이그레이션 결과를 DB에 저장
+      fetch('/api/portfolio/groups',{method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({data:migrated})}).catch(()=>{});
+    }
+    console.log('[initGroupsFromDB] DB 로드 완료 (그룹 수:',_groups.length,')');
+  }catch(e){
+    console.warn('[initGroupsFromDB] DB 로드 실패 — 빈 상태로 시작:', e);
+    _groups=[];
+  }
+  renderGroups();
 }
 
 /* 보유수량·평균단가·실현손익 계산 */
