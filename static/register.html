@@ -334,6 +334,10 @@ body{
 </div>
 
 <script>
+// 🔓 페이지 로드 즉시 플래그 선점 — register 페이지에 있는 동안 guard 완전 비활성화
+// (버튼을 누르기 전, 폼을 채우는 중에도 guard가 절대 발동하지 않음)
+sessionStorage.setItem('auth_pending', '1');
+
 const form = document.getElementById('register-form');
 const msg  = document.getElementById('msg');
 const btn  = document.getElementById('submit-btn');

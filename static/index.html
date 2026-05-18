@@ -14,7 +14,6 @@
   if (!hasToken && !pending) {
     // 토큰도 없고 인증 진행 중도 아님 → 즉시 추방
     window.location.replace('/register');
-    throw new Error('auth_redirect');
   }
 
   // 토큰 있거나 인증 진행 중 → body 표시
