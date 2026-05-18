@@ -2,6 +2,23 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<!-- 🔒 Navigation Guard: 렌더링 전 최우선 실행 — 토큰 없으면 즉시 추방 -->
+<style>body{visibility:hidden}</style>
+<script>
+(function(){
+  var token = localStorage.getItem('token');
+  if (!token || token.trim() === '') {
+    // 토큰 없음 → 대시보드 내용 1픽셀도 보여주지 않고 즉시 이동
+    document.write('');          // 렌더링 파이프라인 차단
+    window.location.replace('/register');
+    throw new Error('auth_redirect'); // 이후 JS 실행 완전 중단
+  }
+  // 토큰 있음 → body 다시 보이게
+  document.addEventListener('DOMContentLoaded', function(){
+    document.body.style.visibility = 'visible';
+  });
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
