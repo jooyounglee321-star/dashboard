@@ -6,14 +6,18 @@
 <style>body{visibility:hidden}</style>
 <script>
 (function(){
-  var token = localStorage.getItem('token');
-  if (!token || token.trim() === '') {
-    // 토큰 없음 → 대시보드 내용 1픽셀도 보여주지 않고 즉시 이동
-    document.write('');          // 렌더링 파이프라인 차단
+  var token   = localStorage.getItem('token');
+  var pending = sessionStorage.getItem('auth_pending'); // 로그인/가입 API 진행 중 플래그
+
+  var hasToken = token && token.trim() !== '' && token !== 'undefined' && token !== 'null';
+
+  if (!hasToken && !pending) {
+    // 토큰도 없고 인증 진행 중도 아님 → 즉시 추방
     window.location.replace('/register');
-    throw new Error('auth_redirect'); // 이후 JS 실행 완전 중단
+    throw new Error('auth_redirect');
   }
-  // 토큰 있음 → body 다시 보이게
+
+  // 토큰 있거나 인증 진행 중 → body 표시
   document.addEventListener('DOMContentLoaded', function(){
     document.body.style.visibility = 'visible';
   });

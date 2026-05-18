@@ -353,6 +353,9 @@ form.addEventListener('submit', async (e) => {
   btn.disabled = true;
   btn.textContent = '처리 중…';
 
+  // 🔑 인증 진행 중 플래그 설정 → index.html guard 우회 허용
+  sessionStorage.setItem('auth_pending', '1');
+
   try {
     const res  = await fetch('/api/auth/register', {
       method : 'POST',
@@ -361,12 +364,20 @@ form.addEventListener('submit', async (e) => {
     });
     const data = await res.json();
     if (res.ok) {
+      // 토큰 저장 (서버가 반환할 경우), 없으면 임시 마커 저장
+      const token = data.token || data.access_token || '__registered__';
+      localStorage.setItem('token', token);
+      if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
+      // 플래그는 리다이렉트 직전에 제거
+      sessionStorage.removeItem('auth_pending');
       showMsg('success', '가입이 완료되었습니다! 잠시 후 이동합니다.');
       setTimeout(() => { window.location.href = '/'; }, 1800);
     } else {
+      sessionStorage.removeItem('auth_pending'); // 실패 시도 플래그 해제
       showMsg('error', data.detail || '가입에 실패했습니다.');
     }
   } catch {
+    sessionStorage.removeItem('auth_pending');
     showMsg('error', '서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.');
   } finally {
     btn.disabled = false;
