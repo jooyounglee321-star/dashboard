@@ -122,7 +122,22 @@ app.include_router(admin_router.router, prefix="/api")
 
 @app.get("/api/health")
 def health_check():
-    """서버 + DB 상태 확인."""
+    """서버 + DB 상태 확인 (Railway 디버깅 포함)."""
+    import os
+    from database import DATABASE_URL, _found_var, _mask_url
+
+    # 어떤 환경변수가 잡혔는지 응답에 포함 (비밀번호 마스킹)
+    db_var  = _found_var or "none"
+    db_url  = _mask_url(DATABASE_URL)
+    db_type = "sqlite" if DATABASE_URL.startswith("sqlite") else "postgresql"
+
+    # Railway 환경변수 탐색 결과 (설정 여부만 확인, 값은 노출 안 함)
+    env_found = {
+        v: ("set" if os.environ.get(v) else "not_set")
+        for v in ["DATABASE_URL", "DATABASE_PRIVATE_URL", "POSTGRES_URL",
+                  "POSTGRESQL_URL", "DATABASE_PUBLIC_URL"]
+    }
+
     try:
         db = SessionLocal()
         db.execute(__import__("sqlalchemy").text("SELECT 1"))
@@ -130,7 +145,15 @@ def health_check():
         db_status = "ok"
     except Exception as e:
         db_status = f"error: {e}"
-    return {"status": "ok", "db": db_status}
+
+    return {
+        "status": "ok",
+        "db": db_status,
+        "db_type": db_type,
+        "db_var_used": db_var,
+        "db_url_masked": db_url,
+        "env_vars": env_found,
+    }
 
 
 @app.get("/admin", include_in_schema=False)
