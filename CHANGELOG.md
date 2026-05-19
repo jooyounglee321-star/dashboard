@@ -4,6 +4,22 @@
 
 ---
 
+## [2026-05-19] — Railway PostgreSQL DATABASE_URL 환경변수 연결 수정
+
+### 수정
+- **database.py** Railway 환경변수 탐색 로직 강화
+  - 단일 `DATABASE_URL` 의존 → 5개 변수명 우선순위 순서 폴백 체인으로 변경
+  - 탐색 순서: `DATABASE_URL` → `DATABASE_PRIVATE_URL` → `POSTGRES_URL` → `POSTGRESQL_URL` → `DATABASE_PUBLIC_URL` → SQLite 폴백
+  - 서버 시작 시 어느 변수가 실제로 잡혔는지 로그 출력 (비밀번호 마스킹)
+  - SQLite 폴백 시 경고 로그 출력
+- **main.py** `/api/health` 응답에 디버깅 정보 추가
+  - `db_var_used`: 실제로 사용된 환경변수명
+  - `db_url_masked`: 마스킹된 연결 URL
+  - `env_vars`: 5개 후보 변수의 설정 여부(set/not_set)
+  - Railway 크래시 발생 시 헬스체크 URL로 즉시 원인 파악 가능
+
+---
+
 ## [2026-05-19] — JWT 로그인 시스템 구현
 
 ### 추가
