@@ -199,6 +199,12 @@ class UserRegister(BaseModel):
     password: str
 
 
+class UserLogin(BaseModel):
+    """로그인 요청 바디."""
+    email: str
+    password: str
+
+
 class UserOut(BaseModel):
     """회원 응답 (비밀번호 제외)."""
     id: int
@@ -208,6 +214,13 @@ class UserOut(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class AuthOut(BaseModel):
+    """로그인/가입 성공 응답 — JWT 토큰 + 회원 정보."""
+    access_token: str
+    token_type: str = "bearer"
+    user: UserOut
 
 
 class UserAdminOut(BaseModel):

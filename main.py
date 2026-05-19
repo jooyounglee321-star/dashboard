@@ -143,6 +143,11 @@ def register_page():
     return FileResponse("static/register.html")
 
 
+@app.get("/login", include_in_schema=False)
+def login_page():
+    return FileResponse("static/login.html")
+
+
 @app.get("/admin_users", include_in_schema=False)
 def admin_users_page():
     return FileResponse("static/admin_users.html")

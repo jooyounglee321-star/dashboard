@@ -6,3 +6,4 @@ yfinance
 python-dotenv
 apscheduler
 passlib[bcrypt]
+python-jose[cryptography]
