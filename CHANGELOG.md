@@ -4,6 +4,28 @@
 
 ---
 
+## [2026-05-19] — 슈퍼어드민 회원관리 페이지 구현
+
+### 추가
+- **static/superadmin.html** 신규 생성 — `/superadmin` URL, 관리자 전용 회원관리 페이지
+  - 상단 요약 카드 5개 (전체 회원, 오늘 가입자, 유료 회원, 이번달 신규, 이번달 결제)
+  - 회원 목록 테이블 (11개 컬럼: 번호·이름·이메일·가입일·플랜·플랜 만료일·상태·마지막 접속·로그인 횟수·누적 결제·기기)
+  - 이름/이메일 검색(디바운스), 플랜/상태별 필터, 6가지 정렬 옵션
+  - 회원 클릭 → 상세 모달: 플랜 변경, 계정 상태 변경(활성/비활성/정지), 임시 비밀번호 발급, 관리자 메모 저장
+- **routers/admin.py** 신규 생성 — 어드민 전용 API 라우터
+  - `GET  /api/admin/users`            — 검색·필터·정렬 파라미터 지원 회원 목록
+  - `GET  /api/admin/stats`            — 요약 통계 (전체/오늘/프리미엄/이번달 신규·결제)
+  - `GET  /api/admin/users/{id}`       — 회원 상세
+  - `PUT  /api/admin/users/{id}/plan`  — 플랜 변경
+  - `PUT  /api/admin/users/{id}/status`— 계정 상태 변경
+  - `PUT  /api/admin/users/{id}/memo`  — 관리자 메모 저장
+  - `POST /api/admin/users/{id}/reset-password` — 임시 비밀번호 발급
+- **models.py** `User` 테이블에 9개 컬럼 추가: `name`, `plan`, `plan_expires_at`, `status`, `last_login_at`, `login_count`, `total_payment`, `primary_device`, `admin_memo`
+- **schemas.py** `UserAdminOut`, `PlanUpdate`, `StatusUpdate`, `AdminMemoUpdate` 스키마 추가
+- **main.py** `admin_router` 등록, `/superadmin` 라우트 추가, `_migrate_user_columns()` 마이그레이션 함수 추가 (기존 DB에 컬럼 안전 추가)
+
+---
+
 ## [2026-05-15] — 회원가입 백엔드 API 및 프론트엔드 연동
 
 ### 추가
