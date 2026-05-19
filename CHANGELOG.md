@@ -4,6 +4,30 @@
 
 ---
 
+## [2026-05-19] — JWT 로그인 시스템 구현
+
+### 추가
+- **static/login.html** 신규 생성 — `/login` URL, 이메일·비밀번호 로그인 페이지
+  - register.html과 동일한 디자인 언어 (Playfair + Noto Sans KR, 베이지 카드 레이아웃)
+  - 구글/페이스북 소셜 로그인 버튼 UI (기능 준비 중 표시)
+  - 비밀번호 눈 토글, 폼 검증, 성공 후 `/` 자동 리다이렉트
+  - 페이지 로드 즉시 `sessionStorage.auth_pending = '1'` 설정 (Navigation Guard 우회)
+- **routers/auth.py** `POST /api/auth/login` 엔드포인트 추가
+  - bcrypt 비밀번호 검증 → JWT(30일 유효) 발급 → `AuthOut` 반환
+  - 로그인 시 `last_login_at`, `login_count` 자동 업데이트
+- **routers/auth.py** `POST /api/auth/register` 응답을 `UserOut` → `AuthOut`으로 변경
+  - 가입 직후 토큰 자동 발급 → 별도 로그인 단계 없이 바로 대시보드 진입
+
+### 변경
+- **schemas.py** `UserLogin`(email+password), `AuthOut`(access_token+token_type+user) 스키마 추가
+- **requirements.txt** `python-jose[cryptography]` 추가 (JWT 서명/검증)
+- **main.py** `/login` 라우트 추가 → `static/login.html` 서빙
+- **static/register.html** 로그인 링크 `/` → `/login` 변경, 토큰 저장 로직을 `AuthOut.access_token` 직접 사용으로 수정
+- **static/index.html** Navigation Guard 미인증 리다이렉트 대상 `/register` → `/login` 변경
+- **.gitignore** `dashboard_.txt` 추가 (토큰 유출 방지)
+
+---
+
 ## [2026-05-19] — 슈퍼어드민 회원관리 페이지 구현
 
 ### 추가
