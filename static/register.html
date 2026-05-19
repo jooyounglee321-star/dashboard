@@ -361,6 +361,7 @@ form.addEventListener('submit', async (e) => {
   sessionStorage.setItem('auth_pending', '1');
 
   try {
+    // 백엔드 엔드포인트: POST /api/auth/register (routers/auth.py)
     const res  = await fetch('/api/auth/register', {
       method : 'POST',
       headers: { 'Content-Type': 'application/json' },

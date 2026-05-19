@@ -1,0 +1,20 @@
+[REDACTED_TOKEN]
+
+cd C:\Users\Jason\Desktop\dashboard
+git push https://[REDACTED_TOKEN]@github.com/jooyounglee321-star/dashboard.git main
+
+
+
+
+git config --global user.email "jooyoung321@gmail.com"
+git config --global user.name "jjoo"
+
+
+# 1. 혹시 모를 임시 찌꺼기 방에 숨기기
+git stash
+
+# 2. 깃허브 최신 기록과 내 컴퓨터 레일 정렬하기
+git pull origin main --rebase
+
+# 3. 제이슨님의 마감 승인 수동 push 날리기!
+git push origin main
