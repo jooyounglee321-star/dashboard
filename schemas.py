@@ -210,6 +210,40 @@ class UserOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class UserAdminOut(BaseModel):
+    """슈퍼어드민 회원 상세 응답."""
+    id: int
+    email: str
+    name: str | None = None
+    role: str
+    provider: str
+    provider_id: str | None = None
+    plan: str = "free"
+    plan_expires_at: date | None = None
+    status: str = "active"
+    created_at: datetime
+    last_login_at: datetime | None = None
+    login_count: int = 0
+    total_payment: float = 0.0
+    primary_device: str | None = None
+    admin_memo: str | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class PlanUpdate(BaseModel):
+    plan: str
+    plan_expires_at: date | None = None
+
+
+class StatusUpdate(BaseModel):
+    status: str
+
+
+class AdminMemoUpdate(BaseModel):
+    admin_memo: str | None = None
+
+
 # ── Timezone ──────────────────────────────────────────────────────────────────
 
 class TimezoneUpdate(BaseModel):

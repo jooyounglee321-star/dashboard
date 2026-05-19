@@ -8,12 +8,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import inspect, text
 
 from database import Base, DATABASE_URL, engine, SessionLocal
 from models import DailyPortfolioSnapshot
 from routers import auth as auth_router
 from routers import bookmarks, diets, expenses, memos, stocks, timezone, youtube
 from routers import portfolio as portfolio_router
+from routers import admin as admin_router
 
 logger = logging.getLogger(__name__)
 
@@ -45,11 +47,40 @@ async def _daily_snapshot_job():
         db.close()
 
 
+def _migrate_user_columns():
+    """users 테이블에 없는 신규 컬럼을 안전하게 추가."""
+    new_cols = [
+        ("name",            "VARCHAR(100)"),
+        ("plan",            "VARCHAR(20) DEFAULT 'free'"),
+        ("plan_expires_at", "DATE"),
+        ("status",          "VARCHAR(20) DEFAULT 'active'"),
+        ("last_login_at",   "TIMESTAMP"),
+        ("login_count",     "INTEGER DEFAULT 0"),
+        ("total_payment",   "NUMERIC(12,2) DEFAULT 0"),
+        ("primary_device",  "VARCHAR(20)"),
+        ("admin_memo",      "TEXT"),
+    ]
+    with engine.connect() as conn:
+        try:
+            existing = {c["name"] for c in inspect(conn).get_columns("users")}
+        except Exception:
+            return
+        for col_name, col_def in new_cols:
+            if col_name not in existing:
+                try:
+                    conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_def}"))
+                    conn.commit()
+                    logger.info("[MIGRATE] users.%s 컬럼 추가", col_name)
+                except Exception as e:
+                    logger.warning("[MIGRATE] %s 컬럼 추가 실패: %s", col_name, e)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     db_type = "PostgreSQL" if not DATABASE_URL.startswith("sqlite") else "SQLite"
     logger.info("[DB] %s 연결: %s", db_type, DATABASE_URL.split("@")[-1] if "@" in DATABASE_URL else DATABASE_URL)
     Base.metadata.create_all(bind=engine)
+    _migrate_user_columns()
     logger.info("[DB] 테이블 생성/확인 완료")
 
     # APScheduler: 매일 23:59:00 KST
@@ -86,6 +117,7 @@ app.include_router(bookmarks.router, prefix="/api")
 app.include_router(youtube.router, prefix="/api")
 app.include_router(timezone.router, prefix="/api")
 app.include_router(portfolio_router.router, prefix="/api")
+app.include_router(admin_router.router, prefix="/api")
 
 
 @app.get("/api/health")
@@ -114,6 +146,11 @@ def register_page():
 @app.get("/admin_users", include_in_schema=False)
 def admin_users_page():
     return FileResponse("static/admin_users.html")
+
+
+@app.get("/superadmin", include_in_schema=False)
+def superadmin_page():
+    return FileResponse("static/superadmin.html")
 
 
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
