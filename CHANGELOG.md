@@ -4,6 +4,22 @@
 
 ---
 
+## [2026-05-19] — Railway DB 테이블 자동 생성 보장
+
+### 수정
+- **main.py** `models.py`의 모든 모델 클래스를 명시적으로 import
+  - 기존: `from models import DailyPortfolioSnapshot` (단 1개)
+  - 변경: User, Expense, Diet, Memo, Stock, StockPriceHistory, Bookmark, YoutubeChannel, TimezoneConfig, PortfolioGroups, DailyPortfolioSnapshot 전체 명시 import
+  - `Base.metadata.create_all()`은 메모리에 올라온 모델만 처리하므로, 누락 시 해당 테이블이 DB에 생성되지 않음
+- **main.py** `lifespan` 내 `create_all` 실행 로직 강화
+  - 생성 전 예정 테이블 목록 로그 출력
+  - `create_all` 실패 시 에러 로그 + 재크래시 (DB 없이 서버 구동 방지)
+- **main.py** `/api/health` 응답에 테이블 비교 정보 추가
+  - `tables_expected`: 코드(모델)에 정의된 테이블 목록
+  - `tables_actual`: DB에 실제 존재하는 테이블 목록
+
+---
+
 ## [2026-05-19] — Railway PostgreSQL DATABASE_URL 환경변수 연결 수정
 
 ### 수정

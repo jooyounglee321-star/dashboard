@@ -11,7 +11,24 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import inspect, text
 
 from database import Base, DATABASE_URL, engine, SessionLocal
-from models import DailyPortfolioSnapshot
+
+# ── 모든 모델을 명시적으로 import ─────────────────────────────────────────────
+# Base.metadata.create_all()이 테이블을 생성하려면 모델 클래스가 메모리에
+# 올라와 있어야 한다. 하나라도 누락되면 해당 테이블이 DB에 만들어지지 않음.
+from models import (  # noqa: F401  (import side-effect 목적)
+    User,
+    Expense,
+    Diet,
+    Memo,
+    Stock,
+    StockPriceHistory,
+    Bookmark,
+    YoutubeChannel,
+    TimezoneConfig,
+    PortfolioGroups,
+    DailyPortfolioSnapshot,
+)
+
 from routers import auth as auth_router
 from routers import bookmarks, diets, expenses, memos, stocks, timezone, youtube
 from routers import portfolio as portfolio_router
@@ -79,7 +96,18 @@ def _migrate_user_columns():
 async def lifespan(app: FastAPI):
     db_type = "PostgreSQL" if not DATABASE_URL.startswith("sqlite") else "SQLite"
     logger.info("[DB] %s 연결: %s", db_type, DATABASE_URL.split("@")[-1] if "@" in DATABASE_URL else DATABASE_URL)
-    Base.metadata.create_all(bind=engine)
+
+    # ── 테이블 자동 생성 ──────────────────────────────────────────────────────
+    # Base.metadata는 위에서 import한 모든 모델 클래스를 알고 있음
+    expected = set(Base.metadata.tables.keys())
+    logger.info("[DB] 생성 예정 테이블 %d개: %s", len(expected), sorted(expected))
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("[DB] create_all 완료 — 테이블 %d개 확인", len(expected))
+    except Exception as e:
+        logger.error("[DB] create_all 실패: %s", e)
+        raise  # DB 없이 서버 기동은 의미 없으므로 재크래시 허용
+
     _migrate_user_columns()
     logger.info("[DB] 테이블 생성/확인 완료")
 
@@ -139,12 +167,19 @@ def health_check():
     }
 
     try:
+        from sqlalchemy import inspect as sa_inspect, text as sa_text
         db = SessionLocal()
-        db.execute(__import__("sqlalchemy").text("SELECT 1"))
+        db.execute(sa_text("SELECT 1"))
+        # 실제 DB에 존재하는 테이블 목록 조회
+        actual_tables = sorted(sa_inspect(engine).get_table_names())
         db.close()
         db_status = "ok"
     except Exception as e:
         db_status = f"error: {e}"
+        actual_tables = []
+
+    # Base.metadata가 알고 있는 모델 테이블 (코드 기준)
+    expected_tables = sorted(Base.metadata.tables.keys())
 
     return {
         "status": "ok",
@@ -153,6 +188,8 @@ def health_check():
         "db_var_used": db_var,
         "db_url_masked": db_url,
         "env_vars": env_found,
+        "tables_expected": expected_tables,   # 코드에 정의된 테이블
+        "tables_actual": actual_tables,        # DB에 실제 존재하는 테이블
     }
 
 
