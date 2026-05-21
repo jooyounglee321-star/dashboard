@@ -2,6 +2,22 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<!-- 🔒 Admin Guard: 렌더링 전 최우선 실행 — admin role 아니면 즉시 추방 -->
+<style>body{visibility:hidden}</style>
+<script>
+(function(){
+  var token = localStorage.getItem('token');
+  var hasToken = token && token.trim() !== '' && token !== 'undefined' && token !== 'null';
+  if (!hasToken) { window.location.replace('/'); return; }
+  fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } })
+    .then(function(r){ return r.ok ? r.json() : Promise.reject('unauthorized'); })
+    .then(function(d){
+      if (!d || d.role !== 'admin') { window.location.replace('/'); }
+      else { document.body.style.visibility = 'visible'; }
+    })
+    .catch(function(){ window.location.replace('/'); });
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>슈퍼어드민 — 회원관리</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
