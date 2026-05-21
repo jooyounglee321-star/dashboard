@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from enum import Enum as PyEnum
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, Numeric, String, Text, func, UniqueConstraint
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, Numeric, String, Text, func, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
@@ -147,6 +147,22 @@ class PortfolioGroups(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()
     )
+
+
+class RolePermission(Base):
+    """레벨(role)별 권한 매핑 테이블.
+
+    role: admin | premium | free | guest
+    permission_name: superadmin_access | manage_users | manage_permissions |
+                     dashboard_full | dashboard_basic | dashboard_view_only | own_settings
+    """
+    __tablename__ = "permissions"
+    __table_args__ = (UniqueConstraint("role", "permission_name", name="uq_role_permission"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    role: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    permission_name: Mapped[str] = mapped_column(String(50), nullable=False)
+    is_allowed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
 class DailyPortfolioSnapshot(Base):

@@ -4,6 +4,25 @@
 
 ---
 
+## [2026-05-21] — 회원 레벨 시스템 및 권한 관리 추가
+
+### 추가
+- **`models.py`** — `RolePermission` 모델 추가 (`permissions` 테이블: role × permission_name × is_allowed)
+- **`schemas.py`** — `RoleUpdate`, `PermissionUpdateItem`, `PermissionBulkUpdate` 스키마 추가
+- **`main.py`** — `_migrate_user_roles()` (레거시 'Member' → 'free' 변환), `_seed_default_permissions()` (기본 권한 시드)
+- **`PUT /api/admin/users/{id}/role`** — 회원 레벨 변경 (admin/premium/free/guest)
+- **`GET /api/admin/permissions`** — 레벨별 권한 목록 조회
+- **`PUT /api/admin/permissions`** — 권한 일괄 수정
+
+### 변경
+- **`static/superadmin.html`**
+  - 탭 구조 추가 (👥 회원 목록 / 🔒 권한 관리)
+  - 회원 테이블에 "레벨" 컬럼 추가 (badge 표시)
+  - 회원 모달에 "레벨 변경" 섹션 추가 (select + 저장 버튼)
+  - 권한 관리 탭: 7개 권한 × 4개 레벨 토글 매트릭스 + 저장 버튼
+
+---
+
 ## [2026-05-21] — 헤더 로그아웃 버튼 추가
 
 ### 추가

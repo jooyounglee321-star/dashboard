@@ -204,6 +204,36 @@ tbody tr:hover td{background:rgba(196,102,42,0.04);}
   padding:0.65rem 1rem;font-family:monospace;font-size:1rem;letter-spacing:0.12em;
   color:var(--ink);margin:0.5rem 0;word-break:break-all;
 }
+
+/* ── 레벨 뱃지 ── */
+.badge-admin  {background:#f5dfc8;color:#7a2a00;border:1px solid rgba(196,102,42,0.25);}
+.badge-premium{background:#ffd5c0;color:#7a2a00;}
+.badge-free   {background:#ede8e0;color:#6b5e4a;}
+.badge-guest  {background:#dce8ff;color:#1a3d7c;}
+.badge-member {background:#ede8e0;color:#6b5e4a;}  /* 레거시 */
+
+/* ── 탭 바 ── */
+.tab-bar{display:flex;gap:0.4rem;margin-bottom:1rem;}
+.tab-btn{
+  padding:0.42rem 1.1rem;font-size:0.82rem;cursor:pointer;
+  background:var(--card);border:1px solid var(--border);border-radius:20px;
+  color:var(--ink2);font-family:inherit;font-weight:400;transition:all 0.15s;
+}
+.tab-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.tab-btn:hover:not(.active){border-color:var(--accent);color:var(--accent);}
+
+/* ── 권한 토글 ── */
+.perm-toggle{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:30px;height:30px;border-radius:6px;cursor:pointer;
+  border:1px solid var(--border);font-size:0.9rem;font-weight:600;
+  transition:all 0.15s;background:var(--bg);font-family:inherit;
+  line-height:1;
+}
+.perm-toggle.on {background:#c0edd8;border-color:#4a7c59;color:#0d4a2a;}
+.perm-toggle.off{background:#fce0dc;border-color:#c0392b;color:#7a1a0d;}
+.perm-toggle:hover{opacity:0.75;}
+.perm-name-key{font-size:0.68rem;color:var(--ink3);font-family:monospace;}
 </style>
 </head>
 <body>
@@ -248,6 +278,15 @@ tbody tr:hover td{background:rgba(196,102,42,0.04);}
     </div>
   </div>
 
+  <!-- ── 탭 바 ── -->
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tab-btn-users" onclick="switchTab('users')">👥 회원 목록</button>
+    <button class="tab-btn" id="tab-btn-permissions" onclick="switchTab('permissions')">🔒 권한 관리</button>
+  </div>
+
+  <!-- ════ 탭 1: 회원 목록 ════ -->
+  <div id="tab-users">
+
   <!-- ── 회원 테이블 카드 ── -->
   <div class="card">
     <div class="card-top">
@@ -283,6 +322,7 @@ tbody tr:hover td{background:rgba(196,102,42,0.04);}
           <tr>
             <th>#</th>
             <th>이름</th>
+            <th>레벨</th>
             <th>이메일</th>
             <th>가입일</th>
             <th>플랜</th>
@@ -295,7 +335,7 @@ tbody tr:hover td{background:rgba(196,102,42,0.04);}
           </tr>
         </thead>
         <tbody id="user-tbody">
-          <tr class="state-row"><td colspan="11">불러오는 중…</td></tr>
+          <tr class="state-row"><td colspan="12">불러오는 중…</td></tr>
         </tbody>
       </table>
     </div>
@@ -306,6 +346,34 @@ tbody tr:hover td{background:rgba(196,102,42,0.04);}
       <button class="page-btn" id="btn-next" onclick="changePage(1)"  disabled>다음 →</button>
     </div>
   </div>
+
+  </div><!-- /tab-users -->
+
+  <!-- ════ 탭 2: 권한 관리 ════ -->
+  <div id="tab-permissions" style="display:none;">
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title-txt">레벨별 권한 관리</span>
+        <button class="btn btn-primary" onclick="savePermissions()">저장하기</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="min-width:220px;">권한</th>
+              <th style="text-align:center;min-width:80px;">Admin<br><span style="font-size:0.65rem;color:var(--ink3);font-weight:400;">관리자</span></th>
+              <th style="text-align:center;min-width:80px;">Premium<br><span style="font-size:0.65rem;color:var(--ink3);font-weight:400;">프리미엄</span></th>
+              <th style="text-align:center;min-width:80px;">Free<br><span style="font-size:0.65rem;color:var(--ink3);font-weight:400;">무료</span></th>
+              <th style="text-align:center;min-width:80px;">Guest<br><span style="font-size:0.65rem;color:var(--ink3);font-weight:400;">게스트</span></th>
+            </tr>
+          </thead>
+          <tbody id="perm-tbody">
+            <tr class="state-row"><td colspan="5">불러오는 중…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /tab-permissions -->
 
 </div><!-- /main -->
 
@@ -321,6 +389,20 @@ tbody tr:hover td{background:rgba(196,102,42,0.04);}
       <!-- 기본 정보 -->
       <div class="section-title">기본 정보</div>
       <div class="info-grid" id="modal-info"></div>
+
+      <hr class="section-divider">
+
+      <!-- 레벨 변경 -->
+      <div class="section-title">레벨 변경</div>
+      <div class="plan-select-row" style="margin-bottom:0.75rem;">
+        <select id="modal-role">
+          <option value="admin">관리자 (Admin)</option>
+          <option value="premium">프리미엄 (Premium)</option>
+          <option value="free">무료 (Free)</option>
+          <option value="guest">게스트 (Guest)</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="saveRole()">저장</button>
+      </div>
 
       <hr class="section-divider">
 
@@ -380,7 +462,7 @@ let selectedUserId = null;
 /* ── 데이터 로드 ── */
 async function loadUsers() {
   const tbody = document.getElementById('user-tbody');
-  tbody.innerHTML = '<tr class="state-row"><td colspan="11">불러오는 중…</td></tr>';
+  tbody.innerHTML = '<tr class="state-row"><td colspan="12">불러오는 중…</td></tr>';
 
   const [sortBy, order] = document.getElementById('sort-select').value.split('|');
   const search = document.getElementById('search-input').value.trim();
@@ -420,7 +502,7 @@ function renderTable() {
   const page  = filtered.slice(start, start + PAGE_SIZE);
 
   if (!page.length) {
-    tbody.innerHTML = '<tr class="state-row"><td colspan="11">일치하는 회원이 없습니다.</td></tr>';
+    tbody.innerHTML = '<tr class="state-row"><td colspan="12">일치하는 회원이 없습니다.</td></tr>';
     document.getElementById('page-info').textContent = '';
     document.getElementById('btn-prev').disabled = true;
     document.getElementById('btn-next').disabled = true;
@@ -431,6 +513,7 @@ function renderTable() {
     <tr onclick="openModal(${u.id})">
       <td style="color:var(--ink3);font-size:0.75rem;">${start + i + 1}</td>
       <td>${esc(u.name || '—')}</td>
+      <td><span class="badge ${roleBadgeClass(u.role)}">${roleLabel(u.role)}</span></td>
       <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(u.email)}</td>
       <td style="white-space:nowrap;">${fmtDate(u.created_at)}</td>
       <td><span class="badge badge-${esc(u.plan)}">${planLabel(u.plan)}</span></td>
@@ -493,6 +576,7 @@ function renderModalInfo(u) {
       <span class="info-value">${esc(String(val))}</span>
     </div>`).join('');
 
+  document.getElementById('modal-role').value = u.role || 'free';
   document.getElementById('modal-plan').value = u.plan || 'free';
   document.getElementById('modal-plan-expires').value = u.plan_expires_at ? u.plan_expires_at.slice(0,10) : '';
   document.getElementById('modal-memo').value = u.admin_memo || '';
@@ -581,6 +665,14 @@ function showToast(msg, type = 'ok') {
 
 /* ── 유틸 ── */
 function planLabel(p)   { return p === 'premium' ? 'Premium' : 'Free'; }
+function roleLabel(r) {
+  return { admin:'관리자', premium:'프리미엄', free:'무료', guest:'게스트', Member:'멤버(구)' }[r] || r || '—';
+}
+function roleBadgeClass(r) {
+  const k = (r || '').toLowerCase();
+  if (k === 'member') return 'badge-free';
+  return `badge-${k || 'free'}`;
+}
 function statusLabel(s) {
   return { active:'활성', inactive:'비활성', suspended:'정지' }[s] || s || '—';
 }
@@ -596,6 +688,95 @@ function fmtDatetime(iso) {
 function esc(s) {
   return String(s ?? '')
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── 레벨 변경 ── */
+async function saveRole() {
+  if (!selectedUserId) return;
+  const role = document.getElementById('modal-role').value;
+  const res = await fetch(`/api/admin/users/${selectedUserId}/role`, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ role }),
+  });
+  if (res.ok) { showToast(`레벨이 [${roleLabel(role)}]로 변경되었습니다.`, 'ok'); loadUsers(); }
+  else showToast('변경 실패', 'err');
+}
+
+/* ── 탭 전환 ── */
+function switchTab(name) {
+  document.getElementById('tab-users').style.display       = name === 'users'       ? '' : 'none';
+  document.getElementById('tab-permissions').style.display = name === 'permissions' ? '' : 'none';
+  document.getElementById('tab-btn-users').classList.toggle('active',       name === 'users');
+  document.getElementById('tab-btn-permissions').classList.toggle('active', name === 'permissions');
+  if (name === 'permissions') loadPermissions();
+}
+
+/* ── 권한 관리 ── */
+const PERMS_DEF = [
+  { key: 'superadmin_access',   label: '슈퍼어드민 접근' },
+  { key: 'manage_users',        label: '회원 관리' },
+  { key: 'manage_permissions',  label: '권한 관리' },
+  { key: 'dashboard_full',      label: '대시보드 전체 기능' },
+  { key: 'dashboard_basic',     label: '대시보드 기본 기능' },
+  { key: 'dashboard_view_only', label: '대시보드 조회만' },
+  { key: 'own_settings',        label: '본인 설정 변경' },
+];
+const ROLES_LIST  = ['admin', 'premium', 'free', 'guest'];
+let _permData = {};
+
+async function loadPermissions() {
+  try {
+    const res = await fetch('/api/admin/permissions');
+    if (!res.ok) return;
+    const data = await res.json();
+    _permData = data.permissions || {};
+    renderPermissions();
+  } catch {}
+}
+
+function renderPermissions() {
+  const tbody = document.getElementById('perm-tbody');
+  tbody.innerHTML = PERMS_DEF.map(p => `
+    <tr>
+      <td>
+        <div style="font-size:0.83rem;color:var(--ink);font-weight:400;">${p.label}</div>
+        <div class="perm-name-key">${p.key}</div>
+      </td>
+      ${ROLES_LIST.map(role => {
+        const allowed = !!(_permData[role] && _permData[role][p.key]);
+        return `<td style="text-align:center;">
+          <button class="perm-toggle ${allowed ? 'on' : 'off'}"
+            data-role="${role}" data-perm="${p.key}"
+            onclick="togglePerm(this)">${allowed ? '✓' : '✗'}</button>
+        </td>`;
+      }).join('')}
+    </tr>`).join('');
+}
+
+function togglePerm(btn) {
+  const isOn = btn.classList.contains('on');
+  btn.classList.toggle('on', !isOn);
+  btn.classList.toggle('off', isOn);
+  btn.textContent = isOn ? '✗' : '✓';
+}
+
+async function savePermissions() {
+  const toggles = document.querySelectorAll('#perm-tbody .perm-toggle');
+  const permissions = Array.from(toggles).map(btn => ({
+    role: btn.dataset.role,
+    permission_name: btn.dataset.perm,
+    is_allowed: btn.classList.contains('on'),
+  }));
+  try {
+    const res = await fetch('/api/admin/permissions', {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ permissions }),
+    });
+    if (res.ok) showToast('권한이 저장되었습니다.', 'ok');
+    else showToast('저장 실패', 'err');
+  } catch { showToast('서버 오류', 'err'); }
 }
 
 /* ── 이벤트 ── */
