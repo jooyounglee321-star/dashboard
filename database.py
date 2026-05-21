@@ -79,16 +79,22 @@ if DATABASE_URL.startswith("sqlite"):
         connect_args={"check_same_thread": False},
     )
 else:
+    # Railway 내부 네트워크 주소(*.railway.internal)는 SSL 미사용
+    # 외부/퍼블릭 주소는 SSL 필수
+    _is_internal = ".railway.internal" in DATABASE_URL
+    _ssl_mode = "disable" if _is_internal else "require"
+    logger.info("[DB] 연결 유형: %s / sslmode=%s",
+                "내부(internal)" if _is_internal else "외부(public)", _ssl_mode)
+
     engine = create_engine(
         DATABASE_URL,
         pool_pre_ping=True,    # 유휴 연결 유효성 자동 확인
         pool_recycle=300,      # 5분마다 연결 재생성 (Railway 타임아웃 방지)
         pool_size=5,
         max_overflow=10,
-        # Railway PostgreSQL은 SSL 연결 필수
-        connect_args={"sslmode": "require"},
+        connect_args={"sslmode": _ssl_mode},
     )
-    logger.info("[DB] PostgreSQL 엔진 생성 완료 (SSL 활성화)")
+    logger.info("[DB] PostgreSQL 엔진 생성 완료")
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
