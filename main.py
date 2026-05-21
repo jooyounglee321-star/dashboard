@@ -29,6 +29,7 @@ from models import (  # noqa: F401  (import side-effect 목적)
     TimezoneConfig,
     PortfolioGroups,
     DailyPortfolioSnapshot,
+    RolePermission,
 )
 
 from routers import auth as auth_router
@@ -94,6 +95,53 @@ def _migrate_user_columns():
                     logger.warning("[MIGRATE] %s 컬럼 추가 실패: %s", col_name, e)
 
 
+def _migrate_user_roles():
+    """users.role 컬럼의 레거시 'Member' 값을 'free'로 일괄 변환."""
+    db = SessionLocal()
+    try:
+        updated = db.query(User).filter(User.role == "Member").update({"role": "free"})
+        if updated:
+            db.commit()
+            logger.info("[MIGRATE] users.role 'Member' → 'free' %d건 변환", updated)
+    except Exception as e:
+        logger.warning("[MIGRATE] role 변환 실패: %s", e)
+    finally:
+        db.close()
+
+
+_ALL_PERMS = [
+    "superadmin_access", "manage_users", "manage_permissions",
+    "dashboard_full", "dashboard_basic", "dashboard_view_only", "own_settings",
+]
+_DEFAULT_ALLOWED: dict[str, list[str]] = {
+    "admin":   _ALL_PERMS,
+    "premium": ["dashboard_full", "dashboard_basic", "dashboard_view_only", "own_settings"],
+    "free":    ["dashboard_basic", "dashboard_view_only", "own_settings"],
+    "guest":   ["dashboard_view_only"],
+}
+
+
+def _seed_default_permissions():
+    """permissions 테이블이 비어 있을 때 기본 권한을 시드."""
+    db = SessionLocal()
+    try:
+        if db.query(RolePermission).count() > 0:
+            return  # 이미 시드됨
+        for role, allowed in _DEFAULT_ALLOWED.items():
+            for perm in _ALL_PERMS:
+                db.add(RolePermission(
+                    role=role,
+                    permission_name=perm,
+                    is_allowed=(perm in allowed),
+                ))
+        db.commit()
+        logger.info("[SEED] 기본 권한 시드 완료 (%d개)", len(_ALL_PERMS) * len(_DEFAULT_ALLOWED))
+    except Exception as e:
+        logger.warning("[SEED] 권한 시드 실패: %s", e)
+    finally:
+        db.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     db_type = "PostgreSQL" if not DATABASE_URL.startswith("sqlite") else "SQLite"
@@ -111,6 +159,8 @@ async def lifespan(app: FastAPI):
         raise  # DB 없이 서버 기동은 의미 없으므로 재크래시 허용
 
     _migrate_user_columns()
+    _migrate_user_roles()
+    _seed_default_permissions()
     logger.info("[DB] 테이블 생성/확인 완료")
 
     # APScheduler: 매일 23:59:00 KST

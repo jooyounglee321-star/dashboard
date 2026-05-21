@@ -9,13 +9,21 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User
-from schemas import AdminMemoUpdate, PlanUpdate, StatusUpdate, UserAdminOut
+from models import RolePermission, User
+from schemas import (
+    AdminMemoUpdate, PermissionBulkUpdate, PlanUpdate,
+    RoleUpdate, StatusUpdate, UserAdminOut,
+)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-ALLOWED_SORT = {"created_at", "last_login_at", "login_count", "total_payment", "email", "name"}
+ALLOWED_SORT  = {"created_at", "last_login_at", "login_count", "total_payment", "email", "name"}
+ALLOWED_ROLES = {"admin", "premium", "free", "guest"}
+ALL_PERMS     = [
+    "superadmin_access", "manage_users", "manage_permissions",
+    "dashboard_full", "dashboard_basic", "dashboard_view_only", "own_settings",
+]
 
 
 @router.get("/users", response_model=list[UserAdminOut])
@@ -109,6 +117,64 @@ def update_memo(user_id: int, body: AdminMemoUpdate, db: Session = Depends(get_d
     db.commit()
     return {"ok": True}
 
+
+# ── PUT /api/admin/users/{id}/role ───────────────────────────────────────────
+
+@router.put("/users/{user_id}/role", summary="회원 레벨 변경")
+def update_role(user_id: int, body: RoleUpdate, db: Session = Depends(get_db)):
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+    if body.role not in ALLOWED_ROLES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"올바르지 않은 레벨입니다. 허용: {', '.join(sorted(ALLOWED_ROLES))}",
+        )
+    user.role = body.role
+    db.commit()
+    return {"ok": True}
+
+
+# ── GET /api/admin/permissions ────────────────────────────────────────────────
+
+@router.get("/permissions", summary="레벨별 권한 목록 조회")
+def get_permissions(db: Session = Depends(get_db)):
+    """역할별 권한 맵 반환: {role: {permission_name: is_allowed, ...}, ...}"""
+    rows = db.query(RolePermission).order_by(RolePermission.role, RolePermission.permission_name).all()
+    result: dict[str, dict[str, bool]] = {}
+    for r in rows:
+        result.setdefault(r.role, {})[r.permission_name] = r.is_allowed
+    return {"permissions": result}
+
+
+# ── PUT /api/admin/permissions ────────────────────────────────────────────────
+
+@router.put("/permissions", summary="레벨별 권한 일괄 수정")
+def update_permissions(body: PermissionBulkUpdate, db: Session = Depends(get_db)):
+    for item in body.permissions:
+        if item.role not in ALLOWED_ROLES:
+            continue
+        row = (
+            db.query(RolePermission)
+            .filter(
+                RolePermission.role == item.role,
+                RolePermission.permission_name == item.permission_name,
+            )
+            .first()
+        )
+        if row:
+            row.is_allowed = item.is_allowed
+        else:
+            db.add(RolePermission(
+                role=item.role,
+                permission_name=item.permission_name,
+                is_allowed=item.is_allowed,
+            ))
+    db.commit()
+    return {"ok": True}
+
+
+# ── POST /api/admin/users/{id}/reset-password ─────────────────────────────────
 
 @router.post("/users/{user_id}/reset-password")
 def reset_password(user_id: int, db: Session = Depends(get_db)):

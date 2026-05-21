@@ -257,6 +257,22 @@ class AdminMemoUpdate(BaseModel):
     admin_memo: str | None = None
 
 
+class RoleUpdate(BaseModel):
+    """회원 레벨 변경 요청."""
+    role: str  # admin | premium | free | guest
+
+
+class PermissionUpdateItem(BaseModel):
+    role: str
+    permission_name: str
+    is_allowed: bool
+
+
+class PermissionBulkUpdate(BaseModel):
+    """권한 일괄 수정 요청."""
+    permissions: list[PermissionUpdateItem]
+
+
 # ── Profile (내 계정) ─────────────────────────────────────────────────────────
 
 class ProfileOut(BaseModel):
