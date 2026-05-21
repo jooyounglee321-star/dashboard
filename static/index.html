@@ -67,6 +67,8 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
 .profile-btn{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:rgba(232,160,96,0.15);border:1px solid rgba(232,160,96,0.35);color:var(--accent2);text-decoration:none;font-size:1rem;transition:background 0.15s;}
 .profile-btn:hover{background:rgba(232,160,96,0.28);}
 .profile-avatar-sm{width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid rgba(232,160,96,0.4);}
+.logout-btn{font-size:0.78rem;color:#c0392b;background:none;border:1px solid rgba(192,57,43,0.35);padding:0.28rem 0.7rem;border-radius:20px;cursor:pointer;font-family:inherit;font-weight:400;transition:border-color 0.15s,background 0.15s;}
+.logout-btn:hover{border-color:#c0392b;background:rgba(192,57,43,0.08);}
 
 /* ── PC GRID ── */
 .main{max-width:1400px;margin:0 auto;padding:1.2rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;}
@@ -346,6 +348,7 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
     <span class="header-date" id="headerDate"></span>
     <a href="/admin" class="admin-link">⚙ 관리자</a>
     <a href="/profile" class="profile-btn" id="profile-btn" title="내 프로필">👤</a>
+    <button class="logout-btn" onclick="logout()" title="로그아웃">로그아웃</button>
   </div>
 </header>
 
@@ -607,6 +610,15 @@ const ld=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}c
 const gel=id=>document.getElementById(id);
 const DAYS=['일','월','화','수','목','금','토'];
 const MON=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+
+/* ── 로그아웃 ── */
+async function logout(){
+  const token=localStorage.getItem('token');
+  try{ await fetch('/api/auth/logout',{method:'POST',headers:{'Authorization':'Bearer '+(token||'')}}).catch(()=>{}); }catch{}
+  localStorage.clear();
+  sessionStorage.clear();
+  window.location.replace('/login');
+}
 
 /* ── DB 전환용 전역 캐시 ── */
 let _zones=null;          // 3개 시간대 (API에서 로드)
