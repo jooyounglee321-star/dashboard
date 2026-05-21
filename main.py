@@ -4,6 +4,8 @@ from datetime import date as dt_date
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -193,29 +195,35 @@ def health_check():
     }
 
 
-@app.get("/admin", include_in_schema=False)
-def admin_page():
-    return FileResponse("static/admin.html")
+_DIST = Path("frontend/dist")
+_STATIC = Path("static")  # legacy fallback during development
 
 
-@app.get("/register", include_in_schema=False)
-def register_page():
-    return FileResponse("static/register.html")
+@app.get("/{full_path:path}", include_in_schema=False)
+async def spa_fallback(full_path: str):
+    """SPA catch-all: serve built React files or fall back to index.html.
 
+    Priority:
+    1. Exact file in frontend/dist  (e.g. /assets/index-xxx.js, /kr_stocks.json)
+    2. React SPA index.html         (for /login, /admin, /register, etc.)
+    3. Legacy static/ folder        (development mode before first build)
+    """
+    # 1) Exact file hit inside the Vite dist folder
+    candidate = _DIST / full_path
+    if candidate.is_file():
+        return FileResponse(candidate)
 
-@app.get("/login", include_in_schema=False)
-def login_page():
-    return FileResponse("static/login.html")
+    # 2) SPA index.html (React Router handles the actual routing client-side)
+    dist_index = _DIST / "index.html"
+    if dist_index.exists():
+        return FileResponse(dist_index)
 
+    # 3) Legacy: serve from static/ while frontend hasn't been built yet
+    legacy = _STATIC / (full_path or "index.html")
+    if legacy.is_file():
+        return FileResponse(legacy)
+    legacy_index = _STATIC / "index.html"
+    if legacy_index.exists():
+        return FileResponse(legacy_index)
 
-@app.get("/admin_users", include_in_schema=False)
-def admin_users_page():
-    return FileResponse("static/admin_users.html")
-
-
-@app.get("/superadmin", include_in_schema=False)
-def superadmin_page():
-    return FileResponse("static/superadmin.html")
-
-
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+    return FileResponse(_STATIC / "login.html")

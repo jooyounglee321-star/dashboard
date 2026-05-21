@@ -4,6 +4,46 @@
 
 ---
 
+## [2026-05-21] — React + Vite 프론트엔드 전환 완료
+
+### 추가
+- **frontend/** — React 18 + Vite 5 + React Router v6 프론트엔드 세팅
+  - `package.json`, `vite.config.js`, `index.html` (Vite 엔트리)
+  - `src/main.jsx` — React 18 createRoot
+  - `src/App.jsx` — BrowserRouter + AuthGuard (토큰 검사), 6개 라우트
+  - `src/styles/globals.css` — 공유 디자인 시스템 CSS 변수 + 컴포넌트
+  - `src/components/Toast.jsx` — useToast 훅 + Toast 컴포넌트
+- **pages/LoginPage.jsx** — login.html 완전 변환 (JWT 로그인, 소셜 버튼 UI)
+- **pages/RegisterPage.jsx** — register.html 완전 변환 (회원가입, 비밀번호 확인)
+- **pages/AdminUsersPage.jsx** — admin_users.html 완전 변환 (회원 목록, 클라이언트 필터·페이지네이션)
+- **pages/SuperadminPage.jsx** — superadmin.html 완전 변환 (슈퍼어드민, 디바운스 검색, 회원 상세 모달)
+- **pages/AdminPage.jsx** — admin.html 완전 변환 (포트폴리오 그룹 CRUD, 매입/매도, 유튜브·북마크·타임존 설정)
+- **pages/index/IndexPage.jsx** — index.html 완전 변환 (메인 대시보드)
+  - PC 3컬럼 그리드 + 모바일 4탭 바텀 네비게이션 레이아웃
+  - `HeroSection.jsx` — 3개 시간대 10초 클락 + 날씨 (geolocation + open-meteo API)
+  - `StockCard.jsx` — 포트폴리오 그룹 실시간 시세 표시 (LIVE/평균가 뱃지, 평가손익/실현손익)
+  - `StockStatsOverlay.jsx` — 전체화면 주식 통계 (Chart.js 파이/라인/바 차트)
+  - `ExpenseCard.jsx` — 오늘 지출 CRUD
+  - `DietCard.jsx` — 오늘 식단 CRUD (식사 유형별 그룹핑)
+  - `MemoCard.jsx` — 하루 마무리 메모 CRUD
+  - `NewsCard.jsx` — 한국/미국 뉴스 탭 (하드코딩 링크)
+  - `YoutubeCard.jsx` — 즐겨찾기 유튜브 채널
+  - `SitesCard.jsx` — 단골 사이트 북마크 (파비콘 자동 조회)
+  - `ScheduleCard.jsx` — Google Calendar 연동 플레이스홀더
+  - `index.css` — 인덱스 페이지 전용 CSS (PC 그리드, 모바일 카드, 주식 통계 오버레이)
+  - 서버 헬스 배너 (30초 폴링), 23:59 데일리 스냅샷 타이머
+- **frontend/public/kr_stocks.json** — static/kr_stocks.json 복사 (Vite 정적 서빙)
+
+### 변경
+- **main.py** 개별 HTML 라우트 (`/admin`, `/login`, `/register`, `/admin_users`, `/superadmin`) 제거
+- **main.py** `StaticFiles(directory="static")` 마운트 제거
+- **main.py** SPA catch-all `/{full_path:path}` 라우트 추가
+  - `frontend/dist/` 실제 파일 우선 서빙 (JS/CSS/JSON 등)
+  - 파일 없으면 `frontend/dist/index.html` 서빙 (React Router SPA 폴백)
+  - `frontend/dist/` 미빌드 상태 시 `static/` 레거시 폴백 (개발 편의)
+
+---
+
 ## [2026-05-19] — Railway DB 테이블 자동 생성 보장
 
 ### 수정

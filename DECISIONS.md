@@ -1,16 +1,35 @@
 # 프로젝트 결정 기록
 
 ---
-## 2026-05-20 04:13 — DB 초기화: 모든 모델 명시적 import
-**결정:** `main.py` 에서 `from models import DailyPortfolioSnapshot` (단일 import) → 모든 11개 모델을 명시적으로 import하는 형태로 변경. 각 모델마다 한 줄씩 나열하여 누락 방지.
-**이유:** SQLAlchemy의 `Base.metadata.create_all()`이 테이블을 생성하려면 모든 모델 클래스가 메모리에 로드되어 있어야 함. 이전 배포에서 DB 연결 실패 시 서버가 lifespan 진입 전 크래시하면서 `create_all()`이 실행되지 않아 테이블이 생성되지 않는 문제 발생. 명시적 import로 임포트 누락 방지 및 코드 명확성 강화.
-**대안:** (1) 동적 import 활용 - 복잡성 증가, 테이블 누락 위험성 유지; (2) 명시적 list 구성 후 동적 로드 - 중간 수준 명확성; (3) 명시적 일괄 import (선택된 접근) - 가장 명확하고 디버깅 용이
-**파일:** C:\Users\Jason\Desktop\dashboard\main.py
+## 2026-05-21 — React + Vite SPA 전환 아키텍처
+**결정:** Vanilla JS 6개 HTML 파일을 React 18 + Vite 5 + React Router v6 SPA로 전환했습니다.
+**이유:** 컴포넌트 재사용성, 상태 관리 단순화, 코드 분리가 가능해집니다. 기존 FastAPI 백엔드와 API 엔드포인트는 동일하게 유지하므로 백엔드 변경이 없습니다.
+**대안:** (1) Next.js — SSR이 필요 없는 SPA이므로 불필요한 복잡성; (2) 기존 HTML 유지 — 코드 중복 증가, 컴포넌트 재사용 불가
+**파일:** frontend/src/App.jsx, frontend/vite.config.js
 
 ---
-## 2026-05-15 03:43 — API 스키마: 토큰 필드명 엄격화
-**결정:** 프론트엔드에서 토큰 저장 시 `data.token || data.access_token || '__registered__'` 폴백 체인 제거, 백엔드 `AuthOut` 스키마의 정확한 필드명 `data.access_token` 직접 참조로 변경
-**이유:** 백엔드가 `AuthOut` Pydantic 모델로 `access_token: str` 필드를 필수 반환하므로, 폴백 로직은 불필요. 스키마 엄격화로 타입 안정성 강화 및 코드 의도 명확화
-**대안:** (1) 폴백 체인 유지 - 레거시 호환성은 증가하나 모호한 상태 처리; (2) 백엔드 응답 스키마 강화 후 프론트엔드 엄격화 (선택된 접근)
-**파일:** C:\Users\Jason\Desktop\dashboard\static\register.html
+## 2026-05-21 — IndexPage 서브컴포넌트 분리 전략
+**결정:** index.html을 11개 독립 컴포넌트로 분리했습니다 (HeroSection, StockCard, StockStatsOverlay, ExpenseCard, DietCard, MemoCard, NewsCard, YoutubeCard, SitesCard, ScheduleCard).
+**이유:** 각 카드는 독립된 상태와 API를 가지므로 분리하면 유지보수성이 높아집니다. PC/모바일 공유 컴포넌트로 isMobile prop을 사용해 CSS 클래스만 다르게 렌더링합니다.
+**대안:** 단일 거대 컴포넌트 — 가독성 저하, 리렌더링 최적화 어려움
+**파일:** frontend/src/pages/index/
 
+---
+## 2026-05-21 — FastAPI SPA 폴백 전략
+**결정:** 개별 HTML 라우트를 제거하고 `/{full_path:path}` 단일 catch-all 라우트로 교체했습니다. `frontend/dist/` 파일 우선, 없으면 `index.html` 서빙.
+**이유:** React Router BrowserRouter는 서버가 모든 경로에서 `index.html`을 반환해야 클라이언트 라우팅이 작동합니다. API 라우트(`/api/...`)는 먼저 등록되어 catch-all보다 우선합니다.
+**대안:** StaticFiles(html=True) 마운트 — 제한적 폴백 동작, 커스텀 로직 추가 어려움
+**파일:** main.py
+
+---
+## 2026-05-22 — SPA 구조로 마이그레이션 (멀티 라우트 → 캐치올)
+
+**결정:** 기존의 URL별 정적 HTML 파일 제공 방식에서 React SPA 패턴으로 변경. 단일 캐치올 라우트 핸들러로 모든 요청을 처리하고, 라우팅은 클라이언트 측 React Router에 위임.
+
+**이유:** 프론트엔드를 Vite 번들러로 빌드하면서 React Router 기반 SPA 아키텍처로 전환. 개발 중에는 기존 static/ 폴더 지원, 프로덕션에는 frontend/dist/ 정적 자산 사용.
+
+**대안:** 
+- 기존 방식 유지: 각 페이지별 @app.get 라우트 유지 (스케일링 어려움, 라우트 추가마다 서버 코드 수정)
+- StaticFiles 마운트만 사용: 더 단순하지만 폴백 로직 부족, 프론트엔드 미빌드 시 동작 안 함
+
+**파일:** C:\Users\Jason\Desktop\dashboard\main.py
