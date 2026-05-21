@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import './index.css'
 
 import HeroSection from './HeroSection'
@@ -22,6 +22,8 @@ function getHeaderDate() {
 }
 
 export default function IndexPage() {
+  const navigate = useNavigate()
+
   // Mobile tab state
   const [mobileTab, setMobileTab] = useState('home')
 
@@ -47,6 +49,15 @@ export default function IndexPage() {
     const id = setInterval(() => setHeaderDate(getHeaderDate()), 10000)
     return () => clearInterval(id)
   }, [])
+
+  // 로그아웃
+  async function handleLogout() {
+    const token = localStorage.getItem('token')
+    try { await fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + (token || '') } }).catch(() => {}) } catch {}
+    localStorage.clear()
+    sessionStorage.clear()
+    navigate('/login', { replace: true })
+  }
 
   // 헤더 닉네임
   const [userName, setUserName] = useState('')
@@ -263,6 +274,17 @@ export default function IndexPage() {
         <div className="header-right">
           <span className="header-date">{headerDate}</span>
           <Link to="/admin" className="admin-link">⚙ 관리자</Link>
+          <button
+            onClick={handleLogout}
+            title="로그아웃"
+            style={{
+              fontSize: '0.78rem', color: '#c0392b', background: 'none',
+              border: '1px solid rgba(192,57,43,0.35)', padding: '0.28rem 0.7rem',
+              borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 400,
+            }}
+          >
+            로그아웃
+          </button>
           <Link
             to="/profile"
             title="내 프로필"

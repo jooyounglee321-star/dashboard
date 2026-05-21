@@ -183,6 +183,18 @@ def update_me(
     return current_user
 
 
+# ── POST /api/auth/logout ────────────────────────────────────────────────────
+
+@router.post("/logout", status_code=status.HTTP_200_OK, summary="로그아웃")
+def logout(current_user: User = Depends(get_current_user)):
+    """로그아웃 처리.
+
+    JWT는 무상태(stateless)이므로 서버에서 토큰을 강제 무효화하려면 블랙리스트 DB가 필요합니다.
+    현재는 클라이언트 측에서 토큰을 삭제하는 방식으로 로그아웃을 처리합니다.
+    """
+    return {"message": "로그아웃 되었습니다."}
+
+
 # ── GET /api/auth/users ───────────────────────────────────────────────────────
 
 @router.get(

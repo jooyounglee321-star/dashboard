@@ -4,6 +4,15 @@
 
 ---
 
+## [2026-05-21] — 헤더 로그아웃 버튼 추가
+
+### 추가
+- **`static/index.html`** 헤더 — 프로필 아이콘 옆에 로그아웃 버튼 추가 (localStorage·sessionStorage 초기화 후 `/login` 이동)
+- **`frontend/src/pages/index/IndexPage.jsx`** 헤더 — React 동일 로그아웃 버튼 추가 (`/api/auth/logout` 호출 후 navigate)
+- **`POST /api/auth/logout`** — 서버측 로그아웃 엔드포인트 (JWT 무상태 특성상 클라이언트 삭제가 실질적 무효화)
+
+---
+
 ## [2026-05-21] — 프로필 페이지 및 헤더 닉네임 기능 추가
 
 ### 추가
