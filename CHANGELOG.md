@@ -4,6 +4,23 @@
 
 ---
 
+## [2026-05-21] — 프로필 페이지 및 헤더 닉네임 기능 추가
+
+### 추가
+- **`static/profile.html`** — 프로필 페이지 (닉네임·이메일·플랜·가입일 표시, 닉네임 수정, 비밀번호 변경, 프로필 사진 업로드)
+- **`frontend/src/pages/ProfilePage.jsx`** — React 프로필 페이지 (동일 기능, React SPA 라우팅)
+- **`GET /api/auth/me`** — JWT 인증 기반 현재 사용자 프로필 조회 엔드포인트
+- **`PUT /api/auth/me`** — 닉네임 변경 + 비밀번호 변경 엔드포인트
+- **`schemas.py`** — `ProfileOut`, `ProfileUpdate` 스키마 추가
+- **`routers/auth.py`** — `get_current_user` JWT 의존성 추가
+
+### 변경
+- **`static/index.html`** 헤더 — 로그인 시 "닉네임의 하루"로 표시, 우측에 프로필 아이콘(👤) 추가 → `/profile` 링크
+- **`frontend/src/pages/index/IndexPage.jsx`** 헤더 — 동일 닉네임 표시 + 프로필 아이콘
+- **`frontend/src/App.jsx`** — `/profile` 라우트 추가, `LoginGuard` 추가 (로그인 상태에서 `/login`·`/register` 접근 시 `/`로 리다이렉트), 미정의 경로 catch-all을 `/login`으로 수정
+
+---
+
 ## [2026-05-21] — React + Vite 프론트엔드 전환 완료
 
 ### 추가

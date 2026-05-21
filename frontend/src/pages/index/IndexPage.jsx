@@ -48,6 +48,27 @@ export default function IndexPage() {
     return () => clearInterval(id)
   }, [])
 
+  // 헤더 닉네임
+  const [userName, setUserName] = useState('')
+  const [avatarSrc, setAvatarSrc] = useState(null)
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    // 로컬 캐시 우선 표시
+    try {
+      const cached = JSON.parse(localStorage.getItem('user') || '{}')
+      if (cached.name) setUserName(cached.name)
+    } catch {}
+    // 아바타
+    const av = localStorage.getItem('avatar_data')
+    if (av) setAvatarSrc(av)
+    // API 최신 닉네임
+    fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.name) setUserName(d.name) })
+      .catch(() => {})
+  }, [])
+
   // Load timezone zones
   useEffect(() => {
     fetch('/api/timezone')
@@ -237,11 +258,26 @@ export default function IndexPage() {
       {/* 헤더 */}
       <header className="header">
         <span className="header-title" style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.25rem', color: 'var(--accent2)' }}>
-          ✦ 나의 하루
+          ✦ {userName ? `${userName}의 하루` : '나의 하루'}
         </span>
         <div className="header-right">
           <span className="header-date">{headerDate}</span>
           <Link to="/admin" className="admin-link">⚙ 관리자</Link>
+          <Link
+            to="/profile"
+            title="내 프로필"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 30, height: 30, borderRadius: '50%',
+              background: 'rgba(232,160,96,0.15)', border: '1px solid rgba(232,160,96,0.35)',
+              color: 'var(--accent2)', textDecoration: 'none', fontSize: '1rem',
+              overflow: 'hidden', flexShrink: 0,
+            }}
+          >
+            {avatarSrc
+              ? <img src={avatarSrc} alt="프로필" style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: '50%' }} />
+              : '👤'}
+          </Link>
         </div>
       </header>
 
