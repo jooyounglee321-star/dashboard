@@ -14,7 +14,8 @@ from schemas import AuthOut, ProfileOut, ProfileUpdate, UserLogin, UserOut, User
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+EMAIL_RE   = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+ADMIN_EMAIL = "jooyounglee321123@gmail.com"   # 이 이메일로 가입하면 자동 admin
 
 # JWT 설정
 SECRET_KEY = os.getenv("SECRET_KEY", "dashboard-dev-secret-change-in-production")
@@ -67,10 +68,11 @@ def register(body: UserRegister, db: Session = Depends(get_db)):
             detail="이미 사용 중인 이메일입니다.",
         )
 
+    auto_role = "admin" if body.email.lower() == ADMIN_EMAIL else "free"
     user = User(
         email=body.email,
         hashed_password=_hash(body.password),
-        role="Member",
+        role=auto_role,
         provider="local",
     )
     db.add(user)

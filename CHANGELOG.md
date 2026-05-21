@@ -4,6 +4,16 @@
 
 ---
 
+## [2026-05-21] — superadmin 접근 제한 (admin 전용)
+
+### 추가
+- **`routers/auth.py`** — 가입 시 `jooyounglee321123@gmail.com` 이메일은 자동으로 `role = "admin"` 설정
+- **`main.py`** — 서버 시작 시 `_seed_admin_email()`: 이미 가입된 경우에도 role을 admin으로 자동 업데이트
+- **`main.py`** — `GET /superadmin` 전용 라우트 추가 (SPA catch-all 우선, `static/superadmin.html` 직접 서빙)
+- **`static/superadmin.html`** — 페이지 로드 시 `/api/auth/me` role 검증 가드 추가: admin이 아니면 즉시 `/`로 리다이렉트
+
+---
+
 ## [2026-05-21] — 회원 레벨 시스템 및 권한 관리 추가
 
 ### 추가

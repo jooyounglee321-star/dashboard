@@ -95,6 +95,9 @@ def _migrate_user_columns():
                     logger.warning("[MIGRATE] %s 컬럼 추가 실패: %s", col_name, e)
 
 
+_ADMIN_EMAIL = "jooyounglee321123@gmail.com"
+
+
 def _migrate_user_roles():
     """users.role 컬럼의 레거시 'Member' 값을 'free'로 일괄 변환."""
     db = SessionLocal()
@@ -105,6 +108,21 @@ def _migrate_user_roles():
             logger.info("[MIGRATE] users.role 'Member' → 'free' %d건 변환", updated)
     except Exception as e:
         logger.warning("[MIGRATE] role 변환 실패: %s", e)
+    finally:
+        db.close()
+
+
+def _seed_admin_email():
+    """지정된 이메일 계정이 존재하면 role을 'admin'으로 설정."""
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.email == _ADMIN_EMAIL).first()
+        if user and user.role != "admin":
+            user.role = "admin"
+            db.commit()
+            logger.info("[SEED] %s → role=admin 설정 완료", _ADMIN_EMAIL)
+    except Exception as e:
+        logger.warning("[SEED] admin 설정 실패: %s", e)
     finally:
         db.close()
 
@@ -160,6 +178,7 @@ async def lifespan(app: FastAPI):
 
     _migrate_user_columns()
     _migrate_user_roles()
+    _seed_admin_email()
     _seed_default_permissions()
     logger.info("[DB] 테이블 생성/확인 완료")
 
@@ -259,6 +278,22 @@ if _DIST_ASSETS.is_dir():
         StaticFiles(directory=str(_DIST_ASSETS)),
         name="vite-assets",
     )
+
+
+@app.get("/superadmin", include_in_schema=False)
+async def serve_superadmin():
+    """/superadmin — static/superadmin.html을 직접 서빙.
+    HTML 내부 JS가 /api/auth/me로 admin role 여부를 확인하고,
+    admin이 아니면 / 로 리다이렉트합니다.
+    """
+    p = _STATIC / "superadmin.html"
+    if p.exists():
+        return FileResponse(p)
+    # 빌드된 SPA가 있으면 React 라우터에 위임
+    dist_index = _DIST / "index.html"
+    if dist_index.exists():
+        return FileResponse(dist_index)
+    return FileResponse(_STATIC / "index.html")
 
 
 @app.get("/{full_path:path}", include_in_schema=False)
