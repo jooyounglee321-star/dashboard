@@ -195,30 +195,42 @@ def health_check():
     }
 
 
-_DIST = Path("frontend/dist")
-_STATIC = Path("static")  # legacy fallback during development
+_DIST   = Path("frontend/dist")
+_STATIC = Path("static")          # legacy fallback during development
+
+# ── Vite 빌드 에셋 (/assets/* — JS/CSS 해시 파일) ────────────────────────────
+# StaticFiles를 사용하면 올바른 MIME 타입(application/javascript, text/css) +
+# ETag + Last-Modified 캐싱 헤더를 Starlette가 자동으로 처리해줍니다.
+# 빌드가 아직 없는 환경(로컬 첫 실행)에서는 조용히 건너뜁니다.
+_DIST_ASSETS = _DIST / "assets"
+if _DIST_ASSETS.is_dir():
+    app.mount(
+        "/assets",
+        StaticFiles(directory=str(_DIST_ASSETS)),
+        name="vite-assets",
+    )
 
 
 @app.get("/{full_path:path}", include_in_schema=False)
 async def spa_fallback(full_path: str):
-    """SPA catch-all: serve built React files or fall back to index.html.
+    """SPA catch-all: React 정적 파일 서빙 + React Router 폴백.
 
-    Priority:
-    1. Exact file in frontend/dist  (e.g. /assets/index-xxx.js, /kr_stocks.json)
-    2. React SPA index.html         (for /login, /admin, /register, etc.)
-    3. Legacy static/ folder        (development mode before first build)
+    우선순위:
+    1. frontend/dist/ 내 실제 파일   (kr_stocks.json 등)
+    2. React SPA index.html          (/login, /admin, /register … 모두 React Router 처리)
+    3. 레거시 static/ 폴백            (빌드 전 개발 모드용)
     """
-    # 1) Exact file hit inside the Vite dist folder
+    # 1) dist/ 내 실제 파일
     candidate = _DIST / full_path
     if candidate.is_file():
         return FileResponse(candidate)
 
-    # 2) SPA index.html (React Router handles the actual routing client-side)
+    # 2) React SPA — index.html 반환 (클라이언트 라우팅)
     dist_index = _DIST / "index.html"
     if dist_index.exists():
         return FileResponse(dist_index)
 
-    # 3) Legacy: serve from static/ while frontend hasn't been built yet
+    # 3) 레거시: npm build 전 개발 단계에서 static/ 사용
     legacy = _STATIC / (full_path or "index.html")
     if legacy.is_file():
         return FileResponse(legacy)
