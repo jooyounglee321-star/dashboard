@@ -2,52 +2,56 @@ import logging
 import os
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 logger = logging.getLogger(__name__)
 
-# .env 파일 로드 (로컬 개발용 — Railway에서는 환경변수가 자동 주입됨)
-# load_dotenv()는 이미 설정된 환경변수를 덮어쓰지 않으므로 Railway 값이 우선됨
+# .env 파일 로드 (로컬 개발용)
+# load_dotenv()는 이미 설정된 환경변수를 절대 덮어쓰지 않으므로
+# Railway가 주입한 DATABASE_URL이 항상 최우선으로 사용됨
 load_dotenv()
 
-# ── Railway PostgreSQL 환경변수 탐색 (우선순위 순) ────────────────────────────
-# Railway는 서비스 연결 방식에 따라 아래 변수명 중 하나를 자동 주입함:
-#   DATABASE_URL          — 가장 일반적 (Railway 기본)
-#   DATABASE_PRIVATE_URL  — Railway 내부 네트워크 전용 URL (2024+ 신규 프로젝트)
-#   POSTGRES_URL          — 일부 플러그인/템플릿
-#   POSTGRESQL_URL        — 대체 명칭
-#   DATABASE_PUBLIC_URL   — 외부 접근용 퍼블릭 URL (마지막 수단)
+# ── Railway PostgreSQL 환경변수 탐색 (우선순위 순) ───────────────────────────
+# Railway 프로젝트 설정 방식에 따라 아래 중 하나로 주입됨.
+# Variables 탭에서 PostgreSQL 서비스 변수를 "Reference"로 연결해야 자동 주입됨.
 _CANDIDATE_VARS = [
-    "DATABASE_URL",
-    "DATABASE_PRIVATE_URL",
-    "POSTGRES_URL",
-    "POSTGRESQL_URL",
-    "DATABASE_PUBLIC_URL",
+    "DATABASE_URL",           # Railway 기본 — 가장 일반적
+    "DATABASE_PRIVATE_URL",   # Railway 내부 네트워크 전용 (2024+ 신규 프로젝트)
+    "POSTGRES_URL",           # 일부 Railway 플러그인/템플릿
+    "POSTGRESQL_URL",         # 대체 명칭
+    "DATABASE_PUBLIC_URL",    # 외부 접근용 퍼블릭 URL
 ]
 
-DATABASE_URL: str | None = None
-_found_var: str | None = None
+_raw_url: str = ""
+_found_var: str = "fallback_sqlite"
 
 for _var in _CANDIDATE_VARS:
     _val = os.environ.get(_var, "").strip()
     if _val and not _val.startswith("sqlite"):
-        DATABASE_URL = _val
+        _raw_url = _val
         _found_var = _var
         break
 
-if not DATABASE_URL:
-    # 로컬 SQLite 폴백 (개발 환경)
-    DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./dashboard.db")
-    _found_var = "fallback_sqlite"
+if not _raw_url:
+    # Railway에서 PostgreSQL 환경변수를 하나도 찾지 못한 경우 → 로컬 SQLite 폴백
+    _raw_url = "sqlite:///./dashboard.db"
+    logger.warning(
+        "[DB] PostgreSQL 환경변수 없음 → SQLite 폴백. "
+        "Railway 배포 시 Variables 탭에서 DATABASE_URL을 PostgreSQL 서비스 Reference로 연결하세요."
+    )
 
-# ── postgres:// → postgresql+psycopg2:// 변환 (SQLAlchemy 호환) ───────────────
+
+# ── postgres:// → postgresql+psycopg2:// 변환 (SQLAlchemy 호환) ─────────────
+DATABASE_URL: str = _raw_url
+
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
 elif DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+# postgresql+psycopg2:// 로 이미 시작하는 경우 그대로 사용
 
-# 로그에 비밀번호 마스킹 처리
+
 def _mask_url(url: str) -> str:
     """비밀번호 부분을 ***로 마스킹해 로그에 출력."""
     try:
@@ -59,30 +63,32 @@ def _mask_url(url: str) -> str:
                 return f"{scheme}//{user}:***@{rest}"
     except Exception:
         pass
-    return url[:30] + "..."
+    return url[:40] + "..."
+
 
 logger.info(
-    "[DB] 환경변수 탐색 완료 — 변수: %s / URL: %s",
+    "[DB] 환경변수 탐색 완료 — 사용 변수: %s / URL: %s",
     _found_var,
     _mask_url(DATABASE_URL),
 )
 
-# ── SQLAlchemy 엔진 생성 ─────────────────────────────────────────────────────
+# ── SQLAlchemy 엔진 생성 ────────────────────────────────────────────────────
 if DATABASE_URL.startswith("sqlite"):
     engine = create_engine(
         DATABASE_URL,
-        connect_args={"check_same_thread": False},  # SQLite 전용 옵션
+        connect_args={"check_same_thread": False},
     )
-    logger.warning("[DB] SQLite 로컬 DB 사용 중 — Railway 환경변수가 설정됐는지 확인하세요.")
 else:
     engine = create_engine(
         DATABASE_URL,
-        pool_pre_ping=True,   # 유휴 연결 유효성 자동 확인
-        pool_recycle=300,     # 5분마다 연결 재생성 (Railway 타임아웃 방지)
-        pool_size=5,          # 기본 연결 풀 크기
-        max_overflow=10,      # 풀 초과 시 최대 추가 연결 수
+        pool_pre_ping=True,    # 유휴 연결 유효성 자동 확인
+        pool_recycle=300,      # 5분마다 연결 재생성 (Railway 타임아웃 방지)
+        pool_size=5,
+        max_overflow=10,
+        # Railway PostgreSQL은 SSL 연결 필수
+        connect_args={"sslmode": "require"},
     )
-    logger.info("[DB] PostgreSQL 엔진 생성 완료")
+    logger.info("[DB] PostgreSQL 엔진 생성 완료 (SSL 활성화)")
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
