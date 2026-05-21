@@ -2,14 +2,14 @@ import os
 import re
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from jose import jwt
+from fastapi import APIRouter, Depends, Header, HTTPException, status
+from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from database import get_db
 from models import User
-from schemas import AuthOut, UserLogin, UserOut, UserRegister
+from schemas import AuthOut, ProfileOut, ProfileUpdate, UserLogin, UserOut, UserRegister
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -110,6 +110,77 @@ def login(body: UserLogin, db: Session = Depends(get_db)):
 
     token = _create_token(user.id, user.email)
     return AuthOut(access_token=token, user=UserOut.model_validate(user))
+
+
+# ── JWT 인증 의존성 ───────────────────────────────────────────────────────────
+
+def get_current_user(
+    authorization: str | None = Header(None, alias="Authorization"),
+    db: Session = Depends(get_db),
+) -> User:
+    """Authorization: Bearer <token> 헤더에서 현재 로그인 사용자를 추출."""
+    credentials_exc = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="인증이 필요합니다.",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    if not authorization or not authorization.startswith("Bearer "):
+        raise credentials_exc
+    token = authorization[7:]
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = int(payload.get("sub"))
+    except (JWTError, TypeError, ValueError):
+        raise credentials_exc
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="사용자를 찾을 수 없습니다.")
+    return user
+
+
+# ── GET /api/auth/me ──────────────────────────────────────────────────────────
+
+@router.get("/me", response_model=ProfileOut, summary="내 프로필 조회")
+def get_me(current_user: User = Depends(get_current_user)):
+    """현재 로그인된 사용자의 프로필을 반환합니다."""
+    return current_user
+
+
+# ── PUT /api/auth/me ──────────────────────────────────────────────────────────
+
+@router.put("/me", response_model=ProfileOut, summary="내 프로필 수정")
+def update_me(
+    body: ProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """닉네임 변경 및 비밀번호 변경을 처리합니다."""
+    # 닉네임 수정
+    if body.name is not None:
+        current_user.name = body.name.strip() or None
+
+    # 비밀번호 변경 (new_password 입력 시)
+    if body.new_password is not None:
+        if len(body.new_password) < 8:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="새 비밀번호는 8자 이상이어야 합니다.",
+            )
+        if body.current_password is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="현재 비밀번호를 입력해주세요.",
+            )
+        if not _verify(body.current_password, current_user.hashed_password or ""):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="현재 비밀번호가 올바르지 않습니다.",
+            )
+        current_user.hashed_password = _hash(body.new_password)
+
+    db.commit()
+    db.refresh(current_user)
+    return current_user
 
 
 # ── GET /api/auth/users ───────────────────────────────────────────────────────

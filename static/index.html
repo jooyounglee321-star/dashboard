@@ -64,6 +64,9 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
 .header-right{display:flex;align-items:center;gap:0.8rem;}
 .header-date{font-size:0.78rem;color:#a89880;}
 .admin-link{font-size:0.78rem;color:var(--accent2);text-decoration:none;border:1px solid rgba(232,160,96,0.4);padding:0.28rem 0.7rem;border-radius:20px;}
+.profile-btn{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:rgba(232,160,96,0.15);border:1px solid rgba(232,160,96,0.35);color:var(--accent2);text-decoration:none;font-size:1rem;transition:background 0.15s;}
+.profile-btn:hover{background:rgba(232,160,96,0.28);}
+.profile-avatar-sm{width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid rgba(232,160,96,0.4);}
 
 /* ── PC GRID ── */
 .main{max-width:1400px;margin:0 auto;padding:1.2rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;}
@@ -338,10 +341,11 @@ body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',sans-serif
 </div>
 
 <header class="header">
-  <span class="header-title">✦ 나의 하루</span>
+  <span class="header-title" id="header-title">✦ 나의 하루</span>
   <div class="header-right">
     <span class="header-date" id="headerDate"></span>
-    <a href="admin.html" class="admin-link">⚙ 관리자</a>
+    <a href="/admin" class="admin-link">⚙ 관리자</a>
+    <a href="/profile" class="profile-btn" id="profile-btn" title="내 프로필">👤</a>
   </div>
 </header>
 
@@ -608,6 +612,33 @@ const MON=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월
 let _zones=null;          // 3개 시간대 (API에서 로드)
 let _dietCache=[];        // 오늘 식단 목록 (ID 참조용)
 let _memoData=null;       // 오늘 메모 {id, content, updated_at}
+
+/* ── 헤더 닉네임 + 프로필 아바타 ── */
+async function loadHeaderProfile(){
+  try{
+    const token=localStorage.getItem('token');
+    if(!token) return;
+    const r=await fetch('/api/auth/me',{headers:{'Authorization':'Bearer '+token}});
+    if(!r.ok) return;
+    const d=await r.json();
+    if(d.name){
+      const el=gel('header-title');
+      if(el) el.textContent='✦ '+d.name+'의 하루';
+    }
+    // 아바타 이미지 (localStorage에 저장된 경우)
+    const avatarData=localStorage.getItem('avatar_data');
+    if(avatarData){
+      const btn=gel('profile-btn');
+      if(btn){
+        const img=document.createElement('img');
+        img.src=avatarData;
+        img.className='profile-avatar-sm';
+        btn.textContent='';
+        btn.appendChild(img);
+      }
+    }
+  }catch{}
+}
 
 async function loadZones(){
   try{
@@ -1419,6 +1450,7 @@ async function renderSites(){
 
 /* ── 초기화 (API 로드) ── */
 (async()=>{
+  loadHeaderProfile();  // 헤더 닉네임 비동기 업데이트
   await loadZones();
   tickClock();
   setInterval(tickClock,10000);

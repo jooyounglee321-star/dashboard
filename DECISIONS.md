@@ -1,35 +1,45 @@
 # 프로젝트 결정 기록
 
 ---
-## 2026-05-21 — React + Vite SPA 전환 아키텍처
-**결정:** Vanilla JS 6개 HTML 파일을 React 18 + Vite 5 + React Router v6 SPA로 전환했습니다.
-**이유:** 컴포넌트 재사용성, 상태 관리 단순화, 코드 분리가 가능해집니다. 기존 FastAPI 백엔드와 API 엔드포인트는 동일하게 유지하므로 백엔드 변경이 없습니다.
-**대안:** (1) Next.js — SSR이 필요 없는 SPA이므로 불필요한 복잡성; (2) 기존 HTML 유지 — 코드 중복 증가, 컴포넌트 재사용 불가
-**파일:** frontend/src/App.jsx, frontend/vite.config.js
+## 2025-05-15 — 사용자 정보 표시: 로컬캐시 우선 + API 동기화 전략
 
----
-## 2026-05-21 — IndexPage 서브컴포넌트 분리 전략
-**결정:** index.html을 11개 독립 컴포넌트로 분리했습니다 (HeroSection, StockCard, StockStatsOverlay, ExpenseCard, DietCard, MemoCard, NewsCard, YoutubeCard, SitesCard, ScheduleCard).
-**이유:** 각 카드는 독립된 상태와 API를 가지므로 분리하면 유지보수성이 높아집니다. PC/모바일 공유 컴포넌트로 isMobile prop을 사용해 CSS 클래스만 다르게 렌더링합니다.
-**대안:** 단일 거대 컴포넌트 — 가독성 저하, 리렌더링 최적화 어려움
-**파일:** frontend/src/pages/index/
+**결정:** IndexPage에서 사용자 이름과 아바타를 로드할 때 localStorage 캐시를 우선 표시한 후 API에서 최신 데이터를 가져오는 두 단계 방식 구현
 
----
-## 2026-05-21 — FastAPI SPA 폴백 전략
-**결정:** 개별 HTML 라우트를 제거하고 `/{full_path:path}` 단일 catch-all 라우트로 교체했습니다. `frontend/dist/` 파일 우선, 없으면 `index.html` 서빙.
-**이유:** React Router BrowserRouter는 서버가 모든 경로에서 `index.html`을 반환해야 클라이언트 라우팅이 작동합니다. API 라우트(`/api/...`)는 먼저 등록되어 catch-all보다 우선합니다.
-**대안:** StaticFiles(html=True) 마운트 — 제한적 폴백 동작, 커스텀 로직 추가 어려움
-**파일:** main.py
-
----
-## 2026-05-22 — SPA 구조로 마이그레이션 (멀티 라우트 → 캐치올)
-
-**결정:** 기존의 URL별 정적 HTML 파일 제공 방식에서 React SPA 패턴으로 변경. 단일 캐치올 라우트 핸들러로 모든 요청을 처리하고, 라우팅은 클라이언트 측 React Router에 위임.
-
-**이유:** 프론트엔드를 Vite 번들러로 빌드하면서 React Router 기반 SPA 아키텍처로 전환. 개발 중에는 기존 static/ 폴더 지원, 프로덕션에는 frontend/dist/ 정적 자산 사용.
+**이유:** 사용자 경험 최적화. localStorage 캐시를 먼저 표시하면 API 응답 대기 없이 빠른 초기 렌더링이 가능하고, 백그라운드에서 API 호출로 최신 정보를 동기화할 수 있음
 
 **대안:** 
-- 기존 방식 유지: 각 페이지별 @app.get 라우트 유지 (스케일링 어려움, 라우트 추가마다 서버 코드 수정)
-- StaticFiles 마운트만 사용: 더 단순하지만 폴백 로직 부족, 프론트엔드 미빌드 시 동작 안 함
+- API 직접 호출만 사용 (초기 로드 지연)
+- localStorage 캐시만 사용 (오래된 데이터 문제)
+- 서버 세션 기반 인증 (다른 아키텍처)
 
-**파일:** C:\Users\Jason\Desktop\dashboard\main.py
+**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\index\IndexPage.jsx
+
+---
+## 2025-05-15 — 인증 가드 패턴: 양방향 라우트 보호
+
+**결정:** 로그인/회원가입 페이지를 LoginGuard로 보호하고, 유효한 토큰이 있으면 인덱스 페이지로 리다이렉트하는 새로운 가드 컴포넌트 도입
+
+**이유:** 인증 상태 기반 라우팅을 완전히 관리하기 위해. AuthGuard (보호된 경로용)와 LoginGuard (공개 경로용)를 함께 사용하면 이미 로그인한 사용자가 /login이나 /register에 접근할 수 없도록 방지할 수 있음. hasValidToken() 함수 추출로 토큰 검증 로직을 한 곳에서 관리
+
+**대안:**
+- 클라이언트 사이드 검증 없이 백엔드에만 의존 (선택 후 리다이렉트 지연)
+- AuthGuard만 사용하여 보호된 경로 관리 (로그인 페이지 재방문 방지 불가)
+- 각 페이지에서 개별 토큰 검증 (중복 코드, 유지보수 어려움)
+
+**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\App.jsx
+
+---
+## 2026-05-21 — 프로필 페이지 및 /api/auth/me 설계
+
+**결정:** 프로필 수정을 위한 `GET/PUT /api/auth/me` 엔드포인트를 `routers/auth.py`에 추가하고, `get_current_user` JWT 의존성을 공유 함수로 정의했습니다.
+**이유:** 닉네임 표시(헤더)와 프로필 편집 모두 동일 엔드포인트를 사용해 코드 중복을 방지합니다. Bearer 토큰 기반 인증으로 기존 JWT 체계를 재사용합니다.
+**대안:** 소셜 로그인 등 대형 auth 라이브러리 도입 — 현 규모에서 과도한 복잡성
+**파일:** routers/auth.py, schemas.py
+
+---
+## 2026-05-21 — 프로필 사진을 localStorage에 저장
+
+**결정:** 프로필 사진은 서버 업로드 없이 base64로 localStorage에 저장합니다.
+**이유:** DB 컬럼 추가, 파일 스토리지(S3 등) 설정 없이 즉시 구현 가능합니다. 개인 대시보드 특성상 기기별 저장으로 충분합니다.
+**대안:** S3 + `users.avatar_url` 컬럼 — 다기기 동기화 필요 시 전환 고려
+**파일:** static/profile.html, frontend/src/pages/ProfilePage.jsx

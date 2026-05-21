@@ -257,6 +257,27 @@ class AdminMemoUpdate(BaseModel):
     admin_memo: str | None = None
 
 
+# ── Profile (내 계정) ─────────────────────────────────────────────────────────
+
+class ProfileOut(BaseModel):
+    """내 프로필 응답 (GET /api/auth/me)."""
+    id: int
+    email: str
+    name: str | None = None
+    role: str
+    plan: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ProfileUpdate(BaseModel):
+    """프로필 수정 요청 (PUT /api/auth/me)."""
+    name: str | None = None
+    current_password: str | None = None   # 비밀번호 변경 시 필수
+    new_password: str | None = None
+
+
 # ── Timezone ──────────────────────────────────────────────────────────────────
 
 class TimezoneUpdate(BaseModel):
