@@ -82,7 +82,7 @@ export default function IndexPage() {
 
   // Load timezone zones
   useEffect(() => {
-    fetch('/api/timezone')
+    fetch('/api/timezone', { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } })
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.zones?.length === 3) setZones(d.zones) })
       .catch(() => {})
@@ -109,7 +109,7 @@ export default function IndexPage() {
     setStockLoading(true)
     setStockError(false)
     try {
-      const dbRes = await fetch('/api/portfolio/groups', { signal: AbortSignal.timeout(8000) })
+      const dbRes = await fetch('/api/portfolio/groups', { signal: AbortSignal.timeout(8000), headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } })
       if (!dbRes.ok) throw new Error('HTTP ' + dbRes.status)
       const dbJson = await dbRes.json()
       const rawGroups = dbJson.data || []
@@ -163,7 +163,7 @@ export default function IndexPage() {
         if (lastSnapshotDate === today) return
         try {
           // Re-fetch stock data for snapshot
-          const dbRes = await fetch('/api/portfolio/groups', { signal: AbortSignal.timeout(8000) })
+          const dbRes = await fetch('/api/portfolio/groups', { signal: AbortSignal.timeout(8000), headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } })
           if (!dbRes.ok) return
           const dbJson = await dbRes.json()
           const groups = (dbJson.data || []).map(g => ({ ...g, stocks: (g.stocks || []).filter(s => !s.is_deleted) }))
@@ -224,7 +224,7 @@ export default function IndexPage() {
 
           const r = await fetch('/api/portfolio/snapshot', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('token') },
             body: JSON.stringify(payload),
           })
           if (r.ok) {

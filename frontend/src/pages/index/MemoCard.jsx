@@ -7,8 +7,10 @@ export default function MemoCard({ isMobile = false }) {
   const [editing, setEditing] = useState(false)
   const [text, setText] = useState('')
 
+  const authHeader = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') })
+
   async function loadMemo() {
-    const list = await fetch('/api/memos?date=' + todayKey())
+    const list = await fetch('/api/memos?date=' + todayKey(), { headers: authHeader() })
       .then(r => r.ok ? r.json() : [])
       .catch(() => [])
     setMemoData(list.length ? list[0] : null)
@@ -24,7 +26,7 @@ export default function MemoCard({ isMobile = false }) {
 
   // Refresh text from latest memo before editing
   async function startEditFresh() {
-    const list = await fetch('/api/memos?date=' + todayKey())
+    const list = await fetch('/api/memos?date=' + todayKey(), { headers: authHeader() })
       .then(r => r.ok ? r.json() : [])
       .catch(() => [])
     const latest = list.length ? list[0] : null
@@ -37,13 +39,13 @@ export default function MemoCard({ isMobile = false }) {
     if (memoData?.id) {
       await fetch('/api/memos/' + memoData.id, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...authHeader(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: text }),
       })
     } else {
       const res = await fetch('/api/memos', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...authHeader(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ date: todayKey(), content: text }),
       })
       const created = await res.json()

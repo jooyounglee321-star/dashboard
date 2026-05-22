@@ -6,6 +6,7 @@ import Toast, { useToast } from '../components/Toast'
 const sv = (k, v) => localStorage.setItem(k, JSON.stringify(v))
 const ld = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d } catch { return d } }
 const genId = () => Math.random().toString(36).slice(2, 10)
+const authH = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') })
 const TOTAL_MODE_KEY = 'stock_total_mode'
 
 const ALL_TZ = [
@@ -384,7 +385,7 @@ export default function AdminPage() {
 
   async function loadGroups() {
     try {
-      const res = await fetch('/api/portfolio/groups', { signal: AbortSignal.timeout(8000) })
+      const res = await fetch('/api/portfolio/groups', { signal: AbortSignal.timeout(8000), headers: authH() })
       if (!res.ok) throw new Error()
       const json = await res.json()
       let data = json.data || []
@@ -397,7 +398,7 @@ export default function AdminPage() {
   async function saveGroupsToDB(newGroups) {
     setGroups(newGroups)
     await fetch('/api/portfolio/groups', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { ...authH(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ data: newGroups }),
     }).catch(e => console.warn('[saveGroups] DB 저장 실패:', e))
   }
@@ -449,7 +450,7 @@ export default function AdminPage() {
         })
         return { ...g, stocks }
       })
-      fetch('/api/portfolio/groups', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: next }) }).catch(() => {})
+      fetch('/api/portfolio/groups', { method: 'POST', headers: { ...authH(), 'Content-Type': 'application/json' }, body: JSON.stringify({ data: next }) }).catch(() => {})
       return next
     })
     setExpanded(prev => new Set([...prev, sid]))
@@ -463,7 +464,7 @@ export default function AdminPage() {
     setGroups(prev => {
       const next = prev.map(g => g.id !== deleteModal.gid ? g
         : { ...g, stocks: g.stocks.map(s => s.id !== deleteModal.sid ? s : { ...s, is_deleted: true }) })
-      fetch('/api/portfolio/groups', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: next }) }).catch(() => {})
+      fetch('/api/portfolio/groups', { method: 'POST', headers: { ...authH(), 'Content-Type': 'application/json' }, body: JSON.stringify({ data: next }) }).catch(() => {})
       return next
     })
     setExpanded(prev => { const n = new Set(prev); n.delete(deleteModal.sid); return n })
@@ -473,7 +474,7 @@ export default function AdminPage() {
 
   /* ── 유튜브 ── */
   async function loadYTChannels() {
-    const ch = await fetch('/api/youtube-channels').then(r => r.ok ? r.json() : []).catch(() => [])
+    const ch = await fetch('/api/youtube-channels', { headers: authH() }).then(r => r.ok ? r.json() : []).catch(() => [])
     setYtChannels(ch)
   }
   function saveYTAccount() {
@@ -483,17 +484,17 @@ export default function AdminPage() {
   }
   async function addYT() {
     if (!ytName || !ytUrl) { showToast('이름과 URL을 모두 입력해주세요', 'err'); return }
-    await fetch('/api/youtube-channels', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ channel_name: ytName, channel_url: ytUrl }) })
+    await fetch('/api/youtube-channels', { method: 'POST', headers: { ...authH(), 'Content-Type': 'application/json' }, body: JSON.stringify({ channel_name: ytName, channel_url: ytUrl }) })
     setYtName(''); setYtUrl(''); await loadYTChannels(); showToast('✓ 채널이 추가되었습니다', 'ok')
   }
   async function delYT(id) {
-    await fetch('/api/youtube-channels/' + id, { method: 'DELETE' })
+    await fetch('/api/youtube-channels/' + id, { method: 'DELETE', headers: authH() })
     await loadYTChannels(); showToast('삭제되었습니다', 'ok')
   }
 
   /* ── 사이트 ── */
   async function loadSites() {
-    const data = await fetch('/api/bookmarks').then(r => r.ok ? r.json() : []).catch(() => [])
+    const data = await fetch('/api/bookmarks', { headers: authH() }).then(r => r.ok ? r.json() : []).catch(() => [])
     setSites(data)
   }
   async function addSite() {
@@ -501,29 +502,29 @@ export default function AdminPage() {
     if (!url) { showToast('URL을 입력해주세요', 'err'); return }
     if (!url.startsWith('http')) url = 'https://' + url
     if (!name) name = url
-    await fetch('/api/bookmarks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: name, url }) })
+    await fetch('/api/bookmarks', { method: 'POST', headers: { ...authH(), 'Content-Type': 'application/json' }, body: JSON.stringify({ title: name, url }) })
     setSiteName(''); setSiteUrl(''); await loadSites(); showToast('✓ 사이트가 추가되었습니다', 'ok')
   }
   async function quickSite(name, url) {
     if (sites.find(s => s.url === url)) { showToast('이미 추가된 사이트입니다', 'err'); return }
-    await fetch('/api/bookmarks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: name, url }) })
+    await fetch('/api/bookmarks', { method: 'POST', headers: { ...authH(), 'Content-Type': 'application/json' }, body: JSON.stringify({ title: name, url }) })
     await loadSites(); showToast(`✓ ${name} 추가!`, 'ok')
   }
   async function delSite(id) {
-    await fetch('/api/bookmarks/' + id, { method: 'DELETE' })
+    await fetch('/api/bookmarks/' + id, { method: 'DELETE', headers: authH() })
     await loadSites(); showToast('삭제되었습니다', 'ok')
   }
 
   /* ── 시간대 ── */
   async function loadTZData() {
     try {
-      const r = await fetch('/api/timezone')
+      const r = await fetch('/api/timezone', { headers: authH() })
       if (r.ok) { const d = await r.json(); if (d.zones?.length === 3) setTzData(d.zones) }
     } catch {}
   }
   async function saveTZ() {
     try {
-      await fetch('/api/timezone', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ zones: tzData }) })
+      await fetch('/api/timezone', { method: 'PUT', headers: { ...authH(), 'Content-Type': 'application/json' }, body: JSON.stringify({ zones: tzData }) })
       showToast('✓ 시간대가 저장되었습니다', 'ok')
     } catch { showToast('저장 실패 - 서버 연결을 확인해주세요', 'err') }
   }
