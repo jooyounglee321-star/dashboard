@@ -654,7 +654,7 @@ async function loadHeaderProfile(){
 
 async function loadZones(){
   try{
-    const r=await fetch('/api/timezone');
+    const r=await fetch('/api/timezone',{headers:{'Authorization':'Bearer '+localStorage.getItem('token')}});
     if(r.ok){const d=await r.json();if(d.zones&&d.zones.length===3)_zones=d.zones;}
   }catch{}
 }
@@ -822,7 +822,7 @@ renderNews();
 
 /* ── 유튜브 ── */
 async function renderYT(){
-  const ch=await fetch('/api/youtube-channels').then(r=>r.ok?r.json():[]).catch(()=>[]);
+  const ch=await fetch('/api/youtube-channels',{headers:{'Authorization':'Bearer '+localStorage.getItem('token')}}).then(r=>r.ok?r.json():[]).catch(()=>[]);
   const account=ld('yt_account',{email:'',name:''});
   ['pc-yt-account-val'].forEach(id=>{
     const e=gel(id);
@@ -860,7 +860,7 @@ async function renderStock(){
   /* DB에서만 로드 */
   let groups=[];
   try{
-    const dbRes=await fetch('/api/portfolio/groups',{signal:AbortSignal.timeout(8000)});
+    const dbRes=await fetch('/api/portfolio/groups',{signal:AbortSignal.timeout(8000),headers:{'Authorization':'Bearer '+localStorage.getItem('token')}});
     if(!dbRes.ok) throw new Error('HTTP '+dbRes.status);
     const dbJson=await dbRes.json();
     groups=dbJson.data||[];
@@ -1124,7 +1124,7 @@ async function _renderStatsContent(){
   let data=_lastStockData;
   if(!data){
     try{
-      const res=await fetch('/api/portfolio/groups',{signal:AbortSignal.timeout(8000)});
+      const res=await fetch('/api/portfolio/groups',{signal:AbortSignal.timeout(8000),headers:{'Authorization':'Bearer '+localStorage.getItem('token')}});
       const json=await res.json();
       const groups=(json.data||[]).map(g=>({...g,stocks:(g.stocks||[]).filter(s=>!s.is_deleted)}));
       // 가격 조회
@@ -1318,7 +1318,7 @@ async function savePortfolioSnapshot(stockData){
     };
     const r=await fetch('/api/portfolio/snapshot',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Authorization':'Bearer '+localStorage.getItem('token'),'Content-Type':'application/json'},
       body:JSON.stringify(payload),
     });
     if(r.ok){
@@ -1348,7 +1348,7 @@ function _startSnapshotTimer(){
 
 /* ── 지출 ── */
 async function renderExp(){
-  const list=await fetch('/api/expenses?date='+todayKey()).then(r=>r.ok?r.json():[]).catch(()=>[]);
+  const list=await fetch('/api/expenses?date='+todayKey(),{headers:{'Authorization':'Bearer '+localStorage.getItem('token')}}).then(r=>r.ok?r.json():[]).catch(()=>[]);
   const tot='₩'+list.reduce((s,e)=>s+(Number(e.amount)||0),0).toLocaleString();
   ['pc-exp-total','m-exp-total'].forEach(id=>{const e=gel(id);if(e)e.textContent=tot;});
   const pe=gel('pc-exp-list');const me=gel('m-exp-list');
@@ -1366,20 +1366,20 @@ async function addExp(pre){
   const amount=gel(pre+'-eamt').value;
   const cat=gel(pre+'-ecat').value;
   if(!item||!amount)return;
-  await fetch('/api/expenses',{method:'POST',headers:{'Content-Type':'application/json'},
+  await fetch('/api/expenses',{method:'POST',headers:{'Authorization':'Bearer '+localStorage.getItem('token'),'Content-Type':'application/json'},
     body:JSON.stringify({date:todayKey(),amount:Number(amount),category:cat,description:item})});
   gel(pre+'-eitem').value='';gel(pre+'-eamt').value='';
   await renderExp();
 }
 async function delExp(id){
-  await fetch('/api/expenses/'+id,{method:'DELETE'});
+  await fetch('/api/expenses/'+id,{method:'DELETE',headers:{'Authorization':'Bearer '+localStorage.getItem('token')}});
   await renderExp();
 }
 
 /* ── 식단 ── */
 const MORD=['아침','점심','저녁','간식'];
 async function renderMeal(){
-  const list=await fetch('/api/diets?date='+todayKey()).then(r=>r.ok?r.json():[]).catch(()=>[]);
+  const list=await fetch('/api/diets?date='+todayKey(),{headers:{'Authorization':'Bearer '+localStorage.getItem('token')}}).then(r=>r.ok?r.json():[]).catch(()=>[]);
   _dietCache=list;
   /* meal_type별로 그룹핑 */
   const meals={};
@@ -1396,20 +1396,20 @@ async function renderMeal(){
 }
 async function addMeal(pre){
   const t=gel(pre+'-mtime').value;const tx=gel(pre+'-mtext').value.trim();if(!tx)return;
-  await fetch('/api/diets',{method:'POST',headers:{'Content-Type':'application/json'},
+  await fetch('/api/diets',{method:'POST',headers:{'Authorization':'Bearer '+localStorage.getItem('token'),'Content-Type':'application/json'},
     body:JSON.stringify({date:todayKey(),meal_type:t,content:tx})});
   gel(pre+'-mtext').value='';
   await renderMeal();
 }
 async function delMeal(t){
   const toDelete=_dietCache.filter(d=>d.meal_type===t);
-  await Promise.all(toDelete.map(d=>fetch('/api/diets/'+d.id,{method:'DELETE'})));
+  await Promise.all(toDelete.map(d=>fetch('/api/diets/'+d.id,{method:'DELETE',headers:{'Authorization':'Bearer '+localStorage.getItem('token')}})));
   await renderMeal();
 }
 
 /* ── 메모 ── */
 async function renderMemo(){
-  const list=await fetch('/api/memos?date='+todayKey()).then(r=>r.ok?r.json():[]).catch(()=>[]);
+  const list=await fetch('/api/memos?date='+todayKey(),{headers:{'Authorization':'Bearer '+localStorage.getItem('token')}}).then(r=>r.ok?r.json():[]).catch(()=>[]);
   _memoData=list.length?list[0]:null;
   ['pc','m'].forEach(pre=>{
     const d=gel(pre+'-memo-disp');if(!d)return;
@@ -1421,7 +1421,7 @@ async function renderMemo(){
   });
 }
 async function memoEdit(pre){
-  const list=await fetch('/api/memos?date='+todayKey()).then(r=>r.ok?r.json():[]).catch(()=>[]);
+  const list=await fetch('/api/memos?date='+todayKey(),{headers:{'Authorization':'Bearer '+localStorage.getItem('token')}}).then(r=>r.ok?r.json():[]).catch(()=>[]);
   _memoData=list.length?list[0]:null;
   gel(pre+'-memo-ta').value=_memoData?.content||'';
   gel(pre+'-memo-disp').style.display='none';gel(pre+'-memo-ta').style.display='block';
@@ -1430,10 +1430,10 @@ async function memoEdit(pre){
 async function memoSave(pre){
   const text=gel(pre+'-memo-ta').value;
   if(_memoData){
-    await fetch('/api/memos/'+_memoData.id,{method:'PUT',headers:{'Content-Type':'application/json'},
+    await fetch('/api/memos/'+_memoData.id,{method:'PUT',headers:{'Authorization':'Bearer '+localStorage.getItem('token'),'Content-Type':'application/json'},
       body:JSON.stringify({content:text})});
   }else{
-    const res=await fetch('/api/memos',{method:'POST',headers:{'Content-Type':'application/json'},
+    const res=await fetch('/api/memos',{method:'POST',headers:{'Authorization':'Bearer '+localStorage.getItem('token'),'Content-Type':'application/json'},
       body:JSON.stringify({date:todayKey(),content:text})});
     _memoData=await res.json();
   }
@@ -1444,7 +1444,7 @@ async function memoSave(pre){
 
 /* ── 즐겨찾기 ── */
 async function renderSites(){
-  const sites=await fetch('/api/bookmarks').then(r=>r.ok?r.json():[]).catch(()=>[]);
+  const sites=await fetch('/api/bookmarks',{headers:{'Authorization':'Bearer '+localStorage.getItem('token')}}).then(r=>r.ok?r.json():[]).catch(()=>[]);
   const pe=gel('pc-sites-grid');const me=gel('m-sites-grid');
   if(!sites.length){
     if(pe)pe.innerHTML='<span class="empty-msg">관리자에서 사이트를 추가하세요</span>';
