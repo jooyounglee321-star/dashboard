@@ -4,6 +4,32 @@
 
 ---
 
+## [2026-05-21] — 멀티유저 데이터 격리 (user_id FK 전면 도입)
+
+### 변경
+- **`models.py`**
+  - `Expense`, `Diet`, `Memo`, `Stock`, `Bookmark`, `YoutubeChannel` — `user_id INTEGER NOT NULL FK → users.id CASCADE` 추가
+  - `TimezoneConfig` — 단일 행 구조 폐기, `user_id` 추가 + `UNIQUE(user_id)` (`uq_timezone_user`)
+  - `PortfolioGroups` — 단일 행 구조 폐기, `user_id` 추가 + `UNIQUE(user_id)` (`uq_portfolio_groups_user`)
+  - `DailyPortfolioSnapshot` — `user_id INTEGER NULLABLE FK` 추가, UNIQUE 제약 `uq_snapshot_date` → `uq_user_snapshot_date(user_id, snapshot_date)` 변경
+- **`main.py`**
+  - `_migrate_add_user_id()` 함수 추가: 기존 테이블에 `user_id` 컬럼 자동 추가 + 기존 rows `user_id=1` 설정 + snapshot UNIQUE 제약 교체
+  - `_daily_snapshot_job()`: scheduler 플레이스홀더 중복 방지를 위해 `user_id IS NULL` 조건 추가
+- **`routers/expenses.py`, `diets.py`, `memos.py`, `stocks.py`, `bookmarks.py`, `youtube.py`**
+  - 모든 CRUD 엔드포인트에 `get_current_user` 의존성 추가
+  - 조회: `user_id == current_user.id` 필터, 생성: `user_id=current_user.id` 주입, 삭제: 소유권 확인
+- **`routers/timezone.py`**
+  - 단일 행 쿼리 → `user_id` 기준 UPSERT로 변경
+- **`routers/portfolio.py`**
+  - `get_groups`, `save_groups`, `save_snapshot`, `get_history`, `get_history_by_date` 모두 `user_id` 기준 격리
+- **`DB_SCHEMA.md`** — 전체 테이블 스키마 업데이트 (user_id FK 관계 반영)
+
+### 마이그레이션 전략
+- 기존 데이터 `user_id = NULL` → `1` (admin 계정 소유로 이전)
+- 서버 시작 시 `_migrate_add_user_id()` 자동 실행 (멱등성 보장)
+
+---
+
 ## [2026-05-21] — DB 스키마 문서 추가
 
 ### 추가

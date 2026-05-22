@@ -11,17 +11,17 @@
 | # | 테이블명 | 설명 |
 |---|----------|------|
 | 1 | `users` | SaaS 회원 정보 |
-| 2 | `expenses` | 지출 내역 |
-| 3 | `diets` | 식단 기록 |
-| 4 | `memos` | 일일 메모 |
-| 5 | `stocks` | 보유 종목 (포트폴리오) |
+| 2 | `expenses` | 지출 내역 (user_id 기준 격리) |
+| 3 | `diets` | 식단 기록 (user_id 기준 격리) |
+| 4 | `memos` | 일일 메모 (user_id 기준 격리) |
+| 5 | `stocks` | 보유 종목 (user_id 기준 격리) |
 | 6 | `stock_price_history` | 종목별 일별 시세 스냅샷 |
-| 7 | `bookmarks` | 북마크 (즐겨찾기) |
-| 8 | `youtube_channels` | 유튜브 채널 목록 |
-| 9 | `timezone_config` | 시간대 설정 (단일 행) |
-| 10 | `portfolio_groups` | 포트폴리오 그룹 데이터 (단일 행) |
+| 7 | `bookmarks` | 북마크 (user_id 기준 격리) |
+| 8 | `youtube_channels` | 유튜브 채널 목록 (user_id 기준 격리) |
+| 9 | `timezone_config` | 시간대 설정 (user_id 당 1행) |
+| 10 | `portfolio_groups` | 포트폴리오 그룹 데이터 (user_id 당 1행) |
 | 11 | `permissions` | 레벨별 권한 매핑 |
-| 12 | `daily_portfolio_snapshot` | 일별 포트폴리오 스냅샷 |
+| 12 | `daily_portfolio_snapshot` | 일별 포트폴리오 스냅샷 (user_id 기준 격리) |
 
 ---
 
@@ -56,11 +56,12 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 
 ## 2. `expenses`
 
-지출 내역 기록 테이블.
+지출 내역 기록 테이블. **사용자별 데이터 격리 (user_id FK).**
 
 | 컬럼명 | 타입 | 제약조건 | 설명 |
 |--------|------|----------|------|
 | `id` | INTEGER | PK, INDEX | 자동 증가 고유 ID |
+| `user_id` | INTEGER | NOT NULL, FK → `users.id` CASCADE, INDEX | 소유 사용자 ID |
 | `date` | DATE | NOT NULL, INDEX | 지출 날짜 |
 | `amount` | NUMERIC(12,2) | NOT NULL | 지출 금액 |
 | `category` | VARCHAR(100) | NULLABLE | 지출 카테고리 (예: 식비, 교통) |
@@ -71,11 +72,12 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 
 ## 3. `diets`
 
-식단(끼니) 기록 테이블.
+식단(끼니) 기록 테이블. **사용자별 데이터 격리 (user_id FK).**
 
 | 컬럼명 | 타입 | 제약조건 | 설명 |
 |--------|------|----------|------|
 | `id` | INTEGER | PK, INDEX | 자동 증가 고유 ID |
+| `user_id` | INTEGER | NOT NULL, FK → `users.id` CASCADE, INDEX | 소유 사용자 ID |
 | `date` | DATE | NOT NULL, INDEX | 식단 날짜 |
 | `meal_type` | VARCHAR(50) | NULLABLE | 끼니 구분: `아침` / `점심` / `저녁` / `간식` 등 |
 | `content` | TEXT | NULLABLE | 식단 내용 |
@@ -86,11 +88,12 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 
 ## 4. `memos`
 
-일일 메모 테이블.
+일일 메모 테이블. **사용자별 데이터 격리 (user_id FK).**
 
 | 컬럼명 | 타입 | 제약조건 | 설명 |
 |--------|------|----------|------|
 | `id` | INTEGER | PK, INDEX | 자동 증가 고유 ID |
+| `user_id` | INTEGER | NOT NULL, FK → `users.id` CASCADE, INDEX | 소유 사용자 ID |
 | `date` | DATE | NOT NULL, INDEX | 메모 날짜 |
 | `title` | VARCHAR(200) | NULLABLE | 메모 제목 |
 | `content` | TEXT | NULLABLE | 메모 본문 |
@@ -101,11 +104,12 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 
 ## 5. `stocks`
 
-보유 종목(포트폴리오) 테이블. 카테고리당 최대 10개.
+보유 종목(포트폴리오) 테이블. **사용자별 데이터 격리 (user_id FK).** 카테고리당 최대 10개.
 
 | 컬럼명 | 타입 | 제약조건 | 설명 |
 |--------|------|----------|------|
 | `id` | INTEGER | PK, INDEX | 자동 증가 고유 ID |
+| `user_id` | INTEGER | NOT NULL, FK → `users.id` CASCADE, INDEX | 소유 사용자 ID |
 | `category` | VARCHAR(20) | NOT NULL, INDEX | 종목 카테고리: `USD` / `KRW` 등 |
 | `ticker` | VARCHAR(20) | NOT NULL | 종목 코드 (예: `AAPL`, `005930`) |
 | `name` | VARCHAR(200) | NULLABLE | 종목명 |
@@ -120,7 +124,7 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 
 ## 6. `stock_price_history`
 
-종목별 일별 시세 스냅샷 테이블.
+종목별 일별 시세 스냅샷 테이블. **stocks.user_id 를 통해 간접적으로 사용자 격리.**
 
 | 컬럼명 | 타입 | 제약조건 | 설명 |
 |--------|------|----------|------|
@@ -141,11 +145,12 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 
 ## 7. `bookmarks`
 
-북마크(즐겨찾기) 테이블.
+북마크(즐겨찾기) 테이블. **사용자별 데이터 격리 (user_id FK).**
 
 | 컬럼명 | 타입 | 제약조건 | 설명 |
 |--------|------|----------|------|
 | `id` | INTEGER | PK, INDEX | 자동 증가 고유 ID |
+| `user_id` | INTEGER | NOT NULL, FK → `users.id` CASCADE, INDEX | 소유 사용자 ID |
 | `title` | VARCHAR(200) | NOT NULL | 북마크 제목 |
 | `url` | VARCHAR(2000) | NOT NULL | 북마크 URL |
 | `category` | VARCHAR(100) | NULLABLE | 북마크 카테고리 |
@@ -156,11 +161,12 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 
 ## 8. `youtube_channels`
 
-유튜브 채널 구독 목록 테이블.
+유튜브 채널 구독 목록 테이블. **사용자별 데이터 격리 (user_id FK).**
 
 | 컬럼명 | 타입 | 제약조건 | 설명 |
 |--------|------|----------|------|
 | `id` | INTEGER | PK, INDEX | 자동 증가 고유 ID |
+| `user_id` | INTEGER | NOT NULL, FK → `users.id` CASCADE, INDEX | 소유 사용자 ID |
 | `channel_name` | VARCHAR(200) | NOT NULL | 채널명 |
 | `channel_url` | VARCHAR(2000) | NULLABLE | 채널 URL |
 | `category` | VARCHAR(100) | NULLABLE | 채널 카테고리 |
@@ -171,29 +177,33 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 
 ## 9. `timezone_config`
 
-시간대 설정 테이블. 단일 행(`id=1`)으로 운용.
+시간대 설정 테이블. **단일 행 구조 폐기 → user_id 당 1행.**
 
 | 컬럼명 | 타입 | 제약조건 | 설명 |
 |--------|------|----------|------|
-| `id` | INTEGER | PK, INDEX | 고정값 `1` |
+| `id` | INTEGER | PK, INDEX | 자동 증가 고유 ID |
+| `user_id` | INTEGER | NOT NULL, FK → `users.id` CASCADE, INDEX, UNIQUE | 소유 사용자 ID (1인당 1행) |
 | `timezone` | TEXT | NOT NULL, DEFAULT `'UTC'` | JSON 배열로 최대 3개 시간대 저장 (예: `["Asia/Seoul","America/New_York","UTC"]`) |
 | `updated_at` | DATETIME | DEFAULT `now()`, ON UPDATE `now()` | 마지막 수정 일시 |
 
-**비고:** 행이 1개만 존재하며, UPSERT(`id=1`)로 갱신
+**UNIQUE 제약:** `(user_id)` — `uq_timezone_user`  
+**비고:** user_id 기준 UPSERT (로그인 사용자별 독립 설정)
 
 ---
 
 ## 10. `portfolio_groups`
 
-포트폴리오 그룹 전체 데이터 테이블. 단일 행(`id=1`)으로 운용.
+포트폴리오 그룹 전체 데이터 테이블. **단일 행 구조 폐기 → user_id 당 1행.**
 
 | 컬럼명 | 타입 | 제약조건 | 설명 |
 |--------|------|----------|------|
-| `id` | INTEGER | PK, INDEX | 고정값 `1` |
+| `id` | INTEGER | PK, INDEX | 자동 증가 고유 ID |
+| `user_id` | INTEGER | NOT NULL, FK → `users.id` CASCADE, INDEX, UNIQUE | 소유 사용자 ID (1인당 1행) |
 | `data` | TEXT | NOT NULL, DEFAULT `'[]'` | `stock_groups_v2` JSON 배열 전체 저장 |
 | `updated_at` | DATETIME | DEFAULT `now()`, ON UPDATE `now()` | 마지막 수정 일시 |
 
-**비고:** `localStorage` 미러 역할. 단일 행 UPSERT로 갱신
+**UNIQUE 제약:** `(user_id)` — `uq_portfolio_groups_user`  
+**비고:** `localStorage` 미러. user_id 기준 UPSERT
 
 ---
 
@@ -238,11 +248,12 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 
 ## 12. `daily_portfolio_snapshot`
 
-매일 23:59 KST 자동 저장되는 포트폴리오 일별 스냅샷 테이블.
+매일 23:59 KST 자동 저장되는 포트폴리오 일별 스냅샷 테이블. **사용자별 데이터 격리 (user_id FK).**
 
 | 컬럼명 | 타입 | 제약조건 | 설명 |
 |--------|------|----------|------|
 | `id` | INTEGER | PK, INDEX | 자동 증가 고유 ID |
+| `user_id` | INTEGER | NULLABLE, FK → `users.id` CASCADE, INDEX | 소유 사용자 ID (`NULL` = scheduler 자동 생성) |
 | `snapshot_date` | DATE | NOT NULL, INDEX | 스냅샷 기준 날짜 |
 | `usd_krw` | FLOAT | NULLABLE | USD/KRW 환율 |
 | `total_usd` | FLOAT | NULLABLE | USD 그룹 합계 (달러) |
@@ -253,22 +264,32 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 | `created_at` | DATETIME | DEFAULT `now()` (서버) | 레코드 생성 일시 |
 | `updated_at` | DATETIME | DEFAULT `now()`, ON UPDATE `now()` | 마지막 수정 일시 |
 
-**UNIQUE 제약:** `(snapshot_date)` — `uq_snapshot_date`
+**UNIQUE 제약:** `(user_id, snapshot_date)` — `uq_user_snapshot_date`
 
 **비고:**
-- 프런트엔드가 당일 스냅샷을 저장하지 않으면 APScheduler가 23:59 KST에 빈 플레이스홀더(`saved_by='scheduler'`) 자동 저장
-- UPSERT 방식으로 날짜당 1건만 유지
+- 프런트엔드가 당일 스냅샷을 저장하지 않으면 APScheduler가 23:59 KST에 `user_id=NULL` 플레이스홀더 자동 저장
+- API 조회 시 항상 현재 로그인 사용자의 `user_id` 기준으로 필터링
+- 기존 데이터 마이그레이션: 서버 시작 시 `user_id=NULL` 인 기존 rows를 `user_id=1`(admin)으로 설정
 
 ---
 
 ## Foreign Key 관계 요약
 
 ```
-stocks (id)
-  └─── stock_price_history (stock_id)  ON DELETE CASCADE
-```
+users (id)
+  ├─── expenses          (user_id)  ON DELETE CASCADE
+  ├─── diets             (user_id)  ON DELETE CASCADE
+  ├─── memos             (user_id)  ON DELETE CASCADE
+  ├─── stocks            (user_id)  ON DELETE CASCADE
+  │      └─── stock_price_history (stock_id) ON DELETE CASCADE
+  ├─── bookmarks         (user_id)  ON DELETE CASCADE
+  ├─── youtube_channels  (user_id)  ON DELETE CASCADE
+  ├─── timezone_config   (user_id)  ON DELETE CASCADE
+  ├─── portfolio_groups  (user_id)  ON DELETE CASCADE
+  └─── daily_portfolio_snapshot (user_id, nullable) ON DELETE CASCADE
 
-나머지 11개 테이블은 독립 테이블로 외래 키 관계 없음.
+permissions  — 독립 테이블 (FK 없음)
+```
 
 ---
 
@@ -278,6 +299,7 @@ stocks (id)
 |------|------|------|
 | 1 | `Base.metadata.create_all()` | 존재하지 않는 테이블 자동 생성 |
 | 2 | `_migrate_user_columns()` | `users` 테이블에 신규 컬럼 누락 시 `ALTER TABLE`로 추가 |
-| 3 | `_migrate_user_roles()` | `users.role = 'Member'` → `'free'` 일괄 변환 |
-| 4 | `_seed_admin_email()` | `jooyounglee321123@gmail.com` 계정의 `role`을 `'admin'`으로 설정 |
-| 5 | `_seed_default_permissions()` | `permissions` 테이블이 비어 있으면 기본 28개 권한 행 삽입 |
+| 3 | `_migrate_add_user_id()` | 각 데이터 테이블에 `user_id` 컬럼 추가, 기존 rows → `user_id=1`, `daily_portfolio_snapshot` UNIQUE 제약 교체 |
+| 4 | `_migrate_user_roles()` | `users.role = 'Member'` → `'free'` 일괄 변환 |
+| 5 | `_seed_admin_email()` | `jooyounglee321123@gmail.com` 계정의 `role`을 `'admin'`으로 설정 |
+| 6 | `_seed_default_permissions()` | `permissions` 테이블이 비어 있으면 기본 28개 권한 행 삽입 |

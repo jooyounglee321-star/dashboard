@@ -43,20 +43,23 @@ _scheduler = AsyncIOScheduler(timezone="Asia/Seoul")
 
 
 async def _daily_snapshot_job():
-    """매일 23:59:00 KST 실행 — 당일 스냅샷이 없으면 플레이스홀더 저장."""
+    """매일 23:59:00 KST 실행 — 당일 scheduler 플레이스홀더(user_id=NULL)가 없으면 저장."""
     today = dt_date.today()
     db = SessionLocal()
     try:
+        # user_id IS NULL 인 scheduler 전용 플레이스홀더만 확인
         existing = db.query(DailyPortfolioSnapshot).filter(
-            DailyPortfolioSnapshot.snapshot_date == today
+            DailyPortfolioSnapshot.snapshot_date == today,
+            DailyPortfolioSnapshot.user_id == None,  # noqa: E711
         ).first()
         if existing:
             logger.info("[SCHEDULER] %s 스냅샷 이미 존재 (saved_by=%s)", today, existing.saved_by)
             return
-        # 프런트엔드 스냅샷 미수신 → 빈 플레이스홀더 저장
+        # 프런트엔드 스냅샷 미수신 → 빈 플레이스홀더 저장 (user_id=NULL)
         row = DailyPortfolioSnapshot(
             snapshot_date=today,
             saved_by="scheduler",
+            user_id=None,
         )
         db.add(row)
         db.commit()
@@ -93,6 +96,86 @@ def _migrate_user_columns():
                     logger.info("[MIGRATE] users.%s 컬럼 추가", col_name)
                 except Exception as e:
                     logger.warning("[MIGRATE] %s 컬럼 추가 실패: %s", col_name, e)
+
+
+def _migrate_add_user_id():
+    """user_id 컬럼이 없는 데이터 테이블에 추가하고 기존 데이터를 user_id=1(admin)로 설정.
+
+    - expenses / diets / memos / stocks / bookmarks / youtube_channels /
+      timezone_config / portfolio_groups : NOT NULL DEFAULT 1
+    - daily_portfolio_snapshot : NULL 허용 (scheduler 플레이스홀더용)
+    기존 unique 제약 uq_snapshot_date 를 uq_user_snapshot_date 로 교체.
+    """
+    tables_not_null = [
+        "expenses", "diets", "memos", "stocks",
+        "bookmarks", "youtube_channels", "timezone_config", "portfolio_groups",
+    ]
+    with engine.connect() as conn:
+        try:
+            insp = inspect(conn)
+            existing_tables = set(insp.get_table_names())
+        except Exception:
+            return
+
+        # ── NOT NULL DEFAULT 1 테이블 ──────────────────────────────────────
+        for table in tables_not_null:
+            if table not in existing_tables:
+                continue
+            try:
+                existing_cols = {c["name"] for c in insp.get_columns(table)}
+            except Exception:
+                continue
+            if "user_id" not in existing_cols:
+                try:
+                    conn.execute(text(
+                        f"ALTER TABLE {table} ADD COLUMN user_id INTEGER NOT NULL DEFAULT 1"
+                    ))
+                    conn.commit()
+                    logger.info("[MIGRATE] %s.user_id 컬럼 추가 (DEFAULT 1)", table)
+                except Exception as e:
+                    logger.warning("[MIGRATE] %s.user_id 추가 실패: %s", table, e)
+
+        # ── daily_portfolio_snapshot (nullable) ───────────────────────────
+        snap = "daily_portfolio_snapshot"
+        if snap in existing_tables:
+            try:
+                snap_cols = {c["name"] for c in insp.get_columns(snap)}
+            except Exception:
+                snap_cols = set()
+            if "user_id" not in snap_cols:
+                try:
+                    conn.execute(text(
+                        f"ALTER TABLE {snap} ADD COLUMN user_id INTEGER"
+                    ))
+                    conn.commit()
+                    logger.info("[MIGRATE] %s.user_id 컬럼 추가 (nullable)", snap)
+                    # 기존 rows → user_id=1 (admin 소유로 마이그레이션)
+                    conn.execute(text(
+                        f"UPDATE {snap} SET user_id = 1 WHERE user_id IS NULL"
+                    ))
+                    conn.commit()
+                    logger.info("[MIGRATE] %s 기존 rows user_id=1 설정", snap)
+                except Exception as e:
+                    logger.warning("[MIGRATE] %s.user_id 추가 실패: %s", snap, e)
+
+            # 기존 unique 제약 uq_snapshot_date 제거 후 uq_user_snapshot_date 추가
+            try:
+                conn.execute(text(
+                    f"ALTER TABLE {snap} DROP CONSTRAINT IF EXISTS uq_snapshot_date"
+                ))
+                conn.commit()
+                logger.info("[MIGRATE] uq_snapshot_date 제약 삭제")
+            except Exception as e:
+                logger.warning("[MIGRATE] uq_snapshot_date 삭제 실패: %s", e)
+            try:
+                conn.execute(text(
+                    f"ALTER TABLE {snap} ADD CONSTRAINT uq_user_snapshot_date "
+                    f"UNIQUE (user_id, snapshot_date)"
+                ))
+                conn.commit()
+                logger.info("[MIGRATE] uq_user_snapshot_date 제약 추가")
+            except Exception as e:
+                logger.warning("[MIGRATE] uq_user_snapshot_date 추가 실패: %s", e)
 
 
 _ADMIN_EMAIL = "jooyounglee321123@gmail.com"
@@ -177,6 +260,7 @@ async def lifespan(app: FastAPI):
         raise  # DB 없이 서버 기동은 의미 없으므로 재크래시 허용
 
     _migrate_user_columns()
+    _migrate_add_user_id()
     _migrate_user_roles()
     _seed_admin_email()
     _seed_default_permissions()

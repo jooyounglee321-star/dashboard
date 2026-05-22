@@ -12,7 +12,8 @@ from sqlalchemy.orm import Session
 logger = logging.getLogger(__name__)
 
 from database import get_db
-from models import Stock
+from models import Stock, User
+from routers.auth import get_current_user
 from schemas import StockCategory, StockCreate, StockOut, StockPrice, StockUpdate
 
 router = APIRouter(prefix="/stocks", tags=["stocks"])
@@ -112,9 +113,12 @@ def _fetch_price(ticker: str, category: str | None = None) -> dict:
 
 # ── GET /api/stocks/summary ─────────────────────────────────────────────────
 @router.get("/summary")
-def get_stock_summary(db: Session = Depends(get_db)):
+def get_stock_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """카테고리별 평균단가 기준 평가금액 합계 (실시간 가격 미적용)."""
-    stocks = db.query(Stock).all()
+    stocks = db.query(Stock).filter(Stock.user_id == current_user.id).all()
     categories = {}
     grand_total = 0.0
 
@@ -165,8 +169,12 @@ async def get_exchange_rate():
 
 # ── GET /api/stocks ─────────────────────────────────────────────────────────
 @router.get("", response_model=list[StockOut])
-def get_stocks(category: StockCategory | None = None, db: Session = Depends(get_db)):
-    q = db.query(Stock)
+def get_stocks(
+    category: StockCategory | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    q = db.query(Stock).filter(Stock.user_id == current_user.id)
     if category:
         q = q.filter(Stock.category == category.value)
     return q.order_by(Stock.category.asc(), Stock.ticker.asc()).all()
@@ -174,8 +182,15 @@ def get_stocks(category: StockCategory | None = None, db: Session = Depends(get_
 
 # ── POST /api/stocks ─────────────────────────────────────────────────────────
 @router.post("", response_model=StockOut, status_code=201)
-def create_stock(body: StockCreate, db: Session = Depends(get_db)):
-    count = db.query(Stock).filter(Stock.category == body.category.value).count()
+def create_stock(
+    body: StockCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    count = db.query(Stock).filter(
+        Stock.user_id == current_user.id,
+        Stock.category == body.category.value,
+    ).count()
     if count >= MAX_PER_CATEGORY:
         raise HTTPException(
             status_code=400,
@@ -183,6 +198,7 @@ def create_stock(body: StockCreate, db: Session = Depends(get_db)):
         )
     data = body.model_dump()
     data["category"] = data["category"].value
+    data["user_id"] = current_user.id
     row = Stock(**data)
     db.add(row)
     db.commit()
@@ -192,9 +208,14 @@ def create_stock(body: StockCreate, db: Session = Depends(get_db)):
 
 # ── PUT /api/stocks/{id} ─────────────────────────────────────────────────────
 @router.put("/{stock_id}", response_model=StockOut)
-def update_stock(stock_id: int, body: StockUpdate, db: Session = Depends(get_db)):
+def update_stock(
+    stock_id: int,
+    body: StockUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     row = db.get(Stock, stock_id)
-    if not row:
+    if not row or row.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Stock not found")
     data = body.model_dump(exclude_unset=True)
     if "category" in data and data["category"] is not None:
@@ -208,9 +229,13 @@ def update_stock(stock_id: int, body: StockUpdate, db: Session = Depends(get_db)
 
 # ── DELETE /api/stocks/{id} ──────────────────────────────────────────────────
 @router.delete("/{stock_id}", status_code=204)
-def delete_stock(stock_id: int, db: Session = Depends(get_db)):
+def delete_stock(
+    stock_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     row = db.get(Stock, stock_id)
-    if not row:
+    if not row or row.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Stock not found")
     db.delete(row)
     db.commit()
