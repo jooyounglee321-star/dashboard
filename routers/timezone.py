@@ -5,7 +5,8 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import TimezoneConfig
+from models import TimezoneConfig, User
+from routers.auth import get_current_user
 
 router = APIRouter(prefix="/timezone", tags=["timezone"])
 
@@ -40,24 +41,31 @@ def _load_zones(row: TimezoneConfig | None) -> list[dict]:
 
 # ── GET /api/timezone ───────────────────────────────────────────────────────
 @router.get("")
-def get_timezone(db: Session = Depends(get_db)):
-    """3개 시간대 배열 반환."""
-    row = db.query(TimezoneConfig).first()
+def get_timezone(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """현재 로그인 사용자의 3개 시간대 배열 반환."""
+    row = db.query(TimezoneConfig).filter(TimezoneConfig.user_id == current_user.id).first()
     return {"zones": _load_zones(row)}
 
 
 # ── PUT /api/timezone ───────────────────────────────────────────────────────
 @router.put("")
-def update_timezone(body: TimezoneZonesBody, db: Session = Depends(get_db)):
-    """3개 시간대 배열을 JSON 문자열로 저장."""
+def update_timezone(
+    body: TimezoneZonesBody,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """현재 로그인 사용자의 3개 시간대 배열을 JSON 문자열로 저장."""
     zones_json = json.dumps(
         [z.model_dump() for z in body.zones], ensure_ascii=False
     )
-    row = db.query(TimezoneConfig).first()
+    row = db.query(TimezoneConfig).filter(TimezoneConfig.user_id == current_user.id).first()
     if row:
         row.timezone = zones_json
     else:
-        row = TimezoneConfig(timezone=zones_json)
+        row = TimezoneConfig(user_id=current_user.id, timezone=zones_json)
         db.add(row)
     db.commit()
     return {"zones": body.zones}
