@@ -4,6 +4,27 @@
 
 ---
 
+## [2026-05-22] — React 프론트엔드 전체 JWT Authorization 헤더 추가 (401 근본 수정)
+
+### 배경
+콘솔 로그 분석 결과 401 에러가 `static/index.html`·`admin.html`이 아닌 React 번들(`index-BeSkwyd0.js`)에서 발생함을 확인. React 소스 파일에 Authorization 헤더가 전혀 없었던 것이 근본 원인.
+
+### 수정 (9개 파일, ~30개 fetch 호출)
+- **`frontend/src/pages/index/IndexPage.jsx`** — `/api/timezone`, `/api/portfolio/groups` (×2), `/api/portfolio/snapshot` 에 Authorization 헤더 추가
+- **`frontend/src/pages/index/ExpenseCard.jsx`** — GET·POST·DELETE `/api/expenses` 에 Authorization 헤더 추가, `authHeader()` 헬퍼 추가
+- **`frontend/src/pages/index/DietCard.jsx`** — GET·POST·DELETE `/api/diets` 에 Authorization 헤더 추가, `authHeader()` 헬퍼 추가
+- **`frontend/src/pages/index/MemoCard.jsx`** — GET(×2)·PUT·POST `/api/memos` 에 Authorization 헤더 추가, `authHeader()` 헬퍼 추가
+- **`frontend/src/pages/index/SitesCard.jsx`** — GET `/api/bookmarks` 에 Authorization 헤더 추가
+- **`frontend/src/pages/index/YoutubeCard.jsx`** — GET `/api/youtube-channels` 에 Authorization 헤더 추가
+- **`frontend/src/pages/AdminPage.jsx`** — `authH()` 유틸 추가, `/api/portfolio/groups`(×4)·`/api/youtube-channels`(×3)·`/api/bookmarks`(×4)·`/api/timezone`(×2) 총 13개 호출에 Authorization 헤더 추가
+- **`frontend/src/pages/AdminUsersPage.jsx`** — GET `/api/auth/users` 에 Authorization 헤더 추가
+- **`frontend/src/pages/SuperadminPage.jsx`** — `/api/admin/users`·`/api/admin/stats` 등 8개 호출에 Authorization 헤더 추가
+
+### 빌드
+- `npm run build` 완료 → `frontend/dist/assets/index-Bq0xY0CZ.js` 생성
+
+---
+
 ## [2026-05-22] — admin.html 주식 종목 저장 디버깅 로그 추가 (임시)
 
 ### 변경 (디버그 전용 — 확인 후 제거 예정)

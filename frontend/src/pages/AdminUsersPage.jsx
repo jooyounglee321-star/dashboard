@@ -37,7 +37,7 @@ export default function AdminUsersPage() {
   const loadUsers = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/auth/users')
+      const res = await fetch('/api/auth/users', { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } })
       const data = res.ok ? await res.json() : []
       setAllUsers(data)
     } catch { setAllUsers([]) }

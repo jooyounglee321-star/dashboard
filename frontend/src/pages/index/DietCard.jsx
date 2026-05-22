@@ -8,8 +8,10 @@ export default function DietCard({ isMobile = false }) {
   const [mtime, setMtime] = useState('아침')
   const [mtext, setMtext] = useState('')
 
+  const authHeader = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') })
+
   async function loadMeal() {
-    const list = await fetch('/api/diets?date=' + todayKey())
+    const list = await fetch('/api/diets?date=' + todayKey(), { headers: authHeader() })
       .then(r => r.ok ? r.json() : [])
       .catch(() => [])
     setDietList(list)
@@ -21,7 +23,7 @@ export default function DietCard({ isMobile = false }) {
     if (!mtext.trim()) return
     await fetch('/api/diets', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...authHeader(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ date: todayKey(), meal_type: mtime, content: mtext.trim() }),
     })
     setMtext('')
@@ -30,7 +32,7 @@ export default function DietCard({ isMobile = false }) {
 
   async function delMeal(mealType) {
     const toDelete = dietList.filter(d => d.meal_type === mealType)
-    await Promise.all(toDelete.map(d => fetch('/api/diets/' + d.id, { method: 'DELETE' })))
+    await Promise.all(toDelete.map(d => fetch('/api/diets/' + d.id, { method: 'DELETE', headers: authHeader() })))
     await loadMeal()
   }
 

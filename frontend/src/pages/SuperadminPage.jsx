@@ -49,10 +49,11 @@ export default function SuperadminPage() {
     if (s)  params.set('search', s)
     if (p)  params.set('plan', p)
     if (st) params.set('status', st)
+    const tok = { Authorization: 'Bearer ' + localStorage.getItem('token') }
     try {
       const [usersRes, statsRes] = await Promise.all([
-        fetch('/api/admin/users?' + params),
-        fetch('/api/admin/stats'),
+        fetch('/api/admin/users?' + params, { headers: tok }),
+        fetch('/api/admin/stats', { headers: tok }),
       ])
       setAllUsers(usersRes.ok ? await usersRes.json() : [])
       if (statsRes.ok) setStats(await statsRes.json())
@@ -74,7 +75,7 @@ export default function SuperadminPage() {
   async function openModal(id) {
     setPwResult('')
     try {
-      const res = await fetch(`/api/admin/users/${id}`)
+      const res = await fetch(`/api/admin/users/${id}`, { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } })
       if (!res.ok) throw new Error()
       const u = await res.json()
       setModal(u)
@@ -87,7 +88,7 @@ export default function SuperadminPage() {
   async function savePlan() {
     if (!modal) return
     const res = await fetch(`/api/admin/users/${modal.id}/plan`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('token') },
       body: JSON.stringify({ plan: modalPlan, plan_expires_at: modalExpires || null }),
     })
     if (res.ok) { showToast('플랜이 변경되었습니다.', 'ok'); loadUsers() }
@@ -97,13 +98,13 @@ export default function SuperadminPage() {
   async function saveStatus(status) {
     if (!modal) return
     const res = await fetch(`/api/admin/users/${modal.id}/status`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('token') },
       body: JSON.stringify({ status }),
     })
     if (res.ok) {
       showToast(`계정 상태가 [${statusLabel(status)}]로 변경되었습니다.`, 'ok')
       loadUsers()
-      const r2 = await fetch(`/api/admin/users/${modal.id}`)
+      const r2 = await fetch(`/api/admin/users/${modal.id}`, { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } })
       if (r2.ok) { const u = await r2.json(); setModal(u) }
     } else showToast('변경 실패', 'err')
   }
@@ -111,7 +112,7 @@ export default function SuperadminPage() {
   async function resetPassword() {
     if (!modal) return
     if (!window.confirm('임시 비밀번호를 발급하시겠습니까? 기존 비밀번호는 즉시 무효화됩니다.')) return
-    const res = await fetch(`/api/admin/users/${modal.id}/reset-password`, { method: 'POST' })
+    const res = await fetch(`/api/admin/users/${modal.id}/reset-password`, { method: 'POST', headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } })
     if (res.ok) {
       const data = await res.json()
       setPwResult(data.new_password)
@@ -125,7 +126,7 @@ export default function SuperadminPage() {
   async function saveMemo() {
     if (!modal) return
     const res = await fetch(`/api/admin/users/${modal.id}/memo`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('token') },
       body: JSON.stringify({ admin_memo: modalMemo }),
     })
     if (res.ok) showToast('메모가 저장되었습니다.', 'ok')

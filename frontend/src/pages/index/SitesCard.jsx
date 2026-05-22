@@ -12,7 +12,7 @@ export default function SitesCard({ isMobile = false }) {
   const [sites, setSites] = useState([])
 
   useEffect(() => {
-    fetch('/api/bookmarks')
+    fetch('/api/bookmarks', { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } })
       .then(r => r.ok ? r.json() : [])
       .catch(() => [])
       .then(setSites)

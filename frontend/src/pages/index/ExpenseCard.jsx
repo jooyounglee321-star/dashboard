@@ -9,8 +9,10 @@ export default function ExpenseCard({ isMobile = false }) {
   const [amount, setAmount] = useState('')
   const [cat, setCat] = useState('식비')
 
+  const authHeader = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') })
+
   async function loadExp() {
-    const list = await fetch('/api/expenses?date=' + todayKey())
+    const list = await fetch('/api/expenses?date=' + todayKey(), { headers: authHeader() })
       .then(r => r.ok ? r.json() : [])
       .catch(() => [])
     setExpenses(list)
@@ -22,7 +24,7 @@ export default function ExpenseCard({ isMobile = false }) {
     if (!item.trim() || !amount) return
     await fetch('/api/expenses', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...authHeader(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ date: todayKey(), amount: Number(amount), category: cat, description: item.trim() }),
     })
     setItem(''); setAmount('')
@@ -30,7 +32,7 @@ export default function ExpenseCard({ isMobile = false }) {
   }
 
   async function delExp(id) {
-    await fetch('/api/expenses/' + id, { method: 'DELETE' })
+    await fetch('/api/expenses/' + id, { method: 'DELETE', headers: authHeader() })
     await loadExp()
   }
 
