@@ -4,6 +4,26 @@
 
 ---
 
+## [2026-05-22] — 불필요한 static 파일 정리 (login.html 제외)
+
+### 삭제
+React로 완전히 대체된 static 파일 7개 삭제. `login.html`은 `main.py` 마지막 폴백으로 참조 중이므로 유지.
+
+| 삭제 파일 | React 대체 |
+|-----------|-----------|
+| `static/index.html` | `IndexPage.jsx` (route: `/`) |
+| `static/admin.html` | `AdminPage.jsx` (route: `/admin`) |
+| `static/admin_users.html` | `AdminUsersPage.jsx` (route: `/admin_users`) |
+| `static/profile.html` | `ProfilePage.jsx` (route: `/profile`) |
+| `static/register.html` | `RegisterPage.jsx` (route: `/register`) |
+| `static/superadmin.html` | `SuperadminPage.jsx` (route: `/superadmin`) |
+| `static/kr_stocks.json` | `frontend/public/kr_stocks.json` (빌드 시 dist로 복사) |
+
+### 유지
+- `static/login.html` — `main.py` line 410 마지막 폴백으로 명시적 참조 중, 삭제 금지
+
+---
+
 ## [2026-05-22] — React 프론트엔드 전체 JWT Authorization 헤더 추가 (401 근본 수정)
 
 ### 배경
