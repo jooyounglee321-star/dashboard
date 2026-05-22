@@ -4,6 +4,16 @@
 
 ---
 
+## [2026-05-22] — admin.html 네비게이션 가드 추가 (401 원인 수정)
+
+### 수정
+- **`static/admin.html`** — 페이지 상단에 로그인 토큰 체크 가드 추가
+  - 토큰 없이 admin.html 직접 접근 시 `/login`으로 즉시 리다이렉트
+  - `index.html`과 동일한 방식: `body{visibility:hidden}` → 인증 확인 후 표시
+  - 원인: 가드 부재로 비로그인 상태 접근 시 `localStorage.getItem('token') = null` → `Authorization: Bearer null` → 서버 JWT decode 실패 → **401**
+
+---
+
 ## [2026-05-22] — index.html · admin.html JWT Authorization 헤더 전면 추가
 
 ### 변경
