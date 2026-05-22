@@ -2,6 +2,21 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<!-- 🔒 Navigation Guard: 토큰 없으면 즉시 로그인 페이지로 추방 -->
+<style>body{visibility:hidden}</style>
+<script>
+(function(){
+  var token   = localStorage.getItem('token');
+  var pending = sessionStorage.getItem('auth_pending');
+  var hasToken = token && token.trim() !== '' && token !== 'undefined' && token !== 'null';
+  if (!hasToken && !pending) {
+    window.location.replace('/login');
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    document.body.style.visibility = 'visible';
+  });
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>관리자 — 나의 하루</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
