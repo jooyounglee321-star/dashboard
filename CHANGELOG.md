@@ -4,6 +4,17 @@
 
 ---
 
+## [2026-05-22] — admin.html 주식 종목 저장 디버깅 로그 추가 (임시)
+
+### 변경 (디버그 전용 — 확인 후 제거 예정)
+- **`static/admin.html`** — 주식 종목 추가/저장 흐름 전체에 `console.log` 추가
+  - `addStock()`: ticker·gid·토큰 값, 그룹 정보 출력
+  - `saveGroups()`: 토큰 유효 여부, URL, 요청 헤더·body, 응답 status·body 전체 출력
+  - `saveGroups()`을 async로 변경하여 응답 대기 후 로그 출력 가능하게 함
+  - 브라우저 Console에서 `[addStock]`, `[saveGroups]` 그룹으로 확인
+
+---
+
 ## [2026-05-22] — admin.html 네비게이션 가드 추가 (401 원인 수정)
 
 ### 수정

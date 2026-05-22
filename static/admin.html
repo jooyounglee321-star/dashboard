@@ -497,13 +497,35 @@ function loadGroups(){
 }
 
 /* DB에 저장 + 인메모리 캐시 갱신 */
-function saveGroups(g){
+async function saveGroups(g){
   _groups=g;
-  fetch('/api/portfolio/groups',{
-    method:'POST',
-    headers:{'Authorization':'Bearer '+localStorage.getItem('token'),'Content-Type':'application/json'},
-    body:JSON.stringify({data:g})
-  }).catch(e=>console.warn('[saveGroups] DB 저장 실패:', e));
+  const token=localStorage.getItem('token');
+  const url='/api/portfolio/groups';
+  const headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'};
+  const body=JSON.stringify({data:g});
+
+  console.group('[saveGroups] ── DB 저장 요청 ──');
+  console.log('토큰:', token);
+  console.log('토큰 유효?', token && token !== 'null' && token !== 'undefined' ? '✅ 있음' : '❌ 없음/무효');
+  console.log('URL:', url);
+  console.log('헤더:', headers);
+  console.log('body (그룹 수):', g.length, '개');
+  console.log('body (전체):', JSON.parse(body));
+  console.groupEnd();
+
+  try{
+    const res=await fetch(url,{method:'POST',headers,body});
+    let resBody;
+    try{resBody=await res.json();}catch{resBody='(응답 body 없음)';}
+    console.group('[saveGroups] ── 응답 ──');
+    console.log('status:', res.status, res.statusText);
+    console.log('ok:', res.ok ? '✅' : '❌');
+    console.log('응답 body:', resBody);
+    if(!res.ok) console.error('[saveGroups] ❌ 저장 실패! status='+res.status);
+    console.groupEnd();
+  }catch(e){
+    console.error('[saveGroups] ❌ fetch 오류:', e);
+  }
 }
 
 /* 페이지 로드 시 DB에서 그룹 데이터 초기 로드 */
@@ -572,12 +594,20 @@ function updateGroup(gid,field,value){
 function addStock(gid){
   const ticker=(gel('ticker-'+gid)?.value||'').trim().toUpperCase();
   const name=(gel('name-'+gid)?.value||'').trim();
-  if(!ticker){toast('티커 심볼을 입력해주세요');return;}
+  console.group('[addStock] ── 종목 추가 클릭 ──');
+  console.log('gid:', gid);
+  console.log('ticker:', ticker||'(비어 있음)');
+  console.log('name:', name||'(비어 있음)');
+  console.log('현재 토큰:', localStorage.getItem('token'));
+  if(!ticker){toast('티커 심볼을 입력해주세요');console.warn('❌ ticker 없음 → 중단');console.groupEnd();return;}
   const groups=loadGroups();const g=groups.find(g=>g.id===gid);
-  if(!g)return;
-  if(g.stocks.length>=10){toast('그룹당 최대 10개까지 가능합니다');return;}
+  if(!g){console.error('❌ gid에 해당하는 그룹 없음');console.groupEnd();return;}
+  if(g.stocks.length>=10){toast('그룹당 최대 10개까지 가능합니다');console.warn('❌ 10개 초과');console.groupEnd();return;}
   const newId=genId();
   g.stocks.push({id:newId,ticker,name,purchases:[],sells:[]});
+  console.log('추가된 종목:', {id:newId,ticker,name});
+  console.log('그룹 내 종목 수:', g.stocks.length);
+  console.groupEnd();
   saveGroups(groups);
   renderGroups();
   toast(`✓ ${ticker} 추가`);
