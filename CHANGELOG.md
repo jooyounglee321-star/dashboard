@@ -4,6 +4,28 @@
 
 ---
 
+## [2026-05-21] — 종합 요약
+
+### 추가
+- **회원 레벨 시스템** — `admin` / `premium` / `free` / `guest` 4단계 레벨 도입
+  - `permissions` DB 테이블 신설 (role × permission_name × is_allowed, 28개 기본 시드)
+  - `PUT /api/admin/users/{id}/role`, `GET /api/admin/permissions`, `PUT /api/admin/permissions` API
+- **superadmin.html 권한 관리 탭** — 회원 목록 탭 / 권한 관리 탭 분리, 7권한 × 4레벨 토글 매트릭스
+- **superadmin 접근 제한** — `jooyounglee321123@gmail.com` 이메일만 admin 자동 설정, 페이지 로드 시 role 검증 가드
+- **헤더 로그아웃 버튼** — `static/index.html` 및 React `IndexPage.jsx` 헤더에 로그아웃 버튼 추가
+- **`POST /api/auth/logout`** — 서버측 로그아웃 엔드포인트 추가
+- **DB_SCHEMA.md** — 전체 12개 테이블 구조 최초 문서화
+
+### 변경 (멀티유저 데이터 격리)
+- **`models.py`** — `Expense`, `Diet`, `Memo`, `Stock`, `Bookmark`, `YoutubeChannel`, `DailyPortfolioSnapshot`에 `user_id FK` 추가
+  - `TimezoneConfig`, `PortfolioGroups` — 단일 행 구조 → `user_id` 당 1행으로 재설계
+  - `DailyPortfolioSnapshot` — UNIQUE `(snapshot_date)` → `(user_id, snapshot_date)` 변경
+- **`main.py`** — `_migrate_add_user_id()` 자동 마이그레이션 추가 (기존 rows → user_id=1 백필)
+- **모든 API 라우터** — JWT에서 `user_id` 추출 → 저장·조회 모두 로그인 사용자 데이터만 반환
+  - `expenses`, `diets`, `memos`, `stocks`, `bookmarks`, `youtube_channels`, `timezone`, `portfolio` 전체 적용
+
+---
+
 ## [2026-05-21] — 멀티유저 데이터 격리 (user_id FK 전면 도입)
 
 ### 변경
