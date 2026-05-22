@@ -330,7 +330,7 @@ let tzData=[...DEFAULT_ZONES];
 
 async function loadTZData(){
   try{
-    const r=await fetch('/api/timezone');
+    const r=await fetch('/api/timezone',{headers:{'Authorization':'Bearer '+localStorage.getItem('token')}});
     if(r.ok){const d=await r.json();if(d.zones&&d.zones.length===3)tzData=d.zones;}
   }catch{}
   buildTZGrid();
@@ -378,7 +378,7 @@ async function saveTZ(){
     label:''
   }));
   try{
-    await fetch('/api/timezone',{method:'PUT',headers:{'Content-Type':'application/json'},
+    await fetch('/api/timezone',{method:'PUT',headers:{'Authorization':'Bearer '+localStorage.getItem('token'),'Content-Type':'application/json'},
       body:JSON.stringify({zones:tzData})});
     toast('✓ 시간대가 저장되었습니다');
   }catch{toast('저장 실패 - 서버 연결을 확인해주세요');}
@@ -414,7 +414,7 @@ function saveYTAccount(){
 let _ytChannels=[];
 
 async function loadYTChannels(){
-  _ytChannels=await fetch('/api/youtube-channels').then(r=>r.ok?r.json():[]).catch(()=>[]);
+  _ytChannels=await fetch('/api/youtube-channels',{headers:{'Authorization':'Bearer '+localStorage.getItem('token')}}).then(r=>r.ok?r.json():[]).catch(()=>[]);
   renderYTList();
 }
 function renderYTList(){
@@ -431,13 +431,13 @@ async function addYT(){
   const name=gel('yt-name').value.trim();
   const url=gel('yt-url').value.trim();
   if(!name||!url){toast('이름과 URL을 모두 입력해주세요');return;}
-  await fetch('/api/youtube-channels',{method:'POST',headers:{'Content-Type':'application/json'},
+  await fetch('/api/youtube-channels',{method:'POST',headers:{'Authorization':'Bearer '+localStorage.getItem('token'),'Content-Type':'application/json'},
     body:JSON.stringify({channel_name:name,channel_url:url})});
   gel('yt-name').value='';gel('yt-url').value='';
   await loadYTChannels();toast('✓ 채널이 추가되었습니다');
 }
 async function delYT(id){
-  await fetch('/api/youtube-channels/'+id,{method:'DELETE'});
+  await fetch('/api/youtube-channels/'+id,{method:'DELETE',headers:{'Authorization':'Bearer '+localStorage.getItem('token')}});
   await loadYTChannels();toast('삭제되었습니다');
 }
 renderYTAccount();
@@ -486,7 +486,7 @@ function saveGroups(g){
   _groups=g;
   fetch('/api/portfolio/groups',{
     method:'POST',
-    headers:{'Content-Type':'application/json'},
+    headers:{'Authorization':'Bearer '+localStorage.getItem('token'),'Content-Type':'application/json'},
     body:JSON.stringify({data:g})
   }).catch(e=>console.warn('[saveGroups] DB 저장 실패:', e));
 }
@@ -494,7 +494,7 @@ function saveGroups(g){
 /* 페이지 로드 시 DB에서 그룹 데이터 초기 로드 */
 async function initGroupsFromDB(){
   try{
-    const res=await fetch('/api/portfolio/groups',{signal:AbortSignal.timeout(8000)});
+    const res=await fetch('/api/portfolio/groups',{signal:AbortSignal.timeout(8000),headers:{'Authorization':'Bearer '+localStorage.getItem('token')}});
     if(!res.ok) throw new Error('HTTP '+res.status);
     const json=await res.json();
     const dbGroups=json.data||[];
@@ -503,7 +503,7 @@ async function initGroupsFromDB(){
     if(dirty){
       // 마이그레이션 결과를 DB에 저장
       fetch('/api/portfolio/groups',{method:'POST',
-        headers:{'Content-Type':'application/json'},
+        headers:{'Authorization':'Bearer '+localStorage.getItem('token'),'Content-Type':'application/json'},
         body:JSON.stringify({data:migrated})}).catch(()=>{});
     }
     console.log('[initGroupsFromDB] DB 로드 완료 (그룹 수:',_groups.length,')');
@@ -1252,7 +1252,7 @@ initGroupsFromDB(); // DB 우선 로드 → 완료 후 renderGroups() 호출
 let _sites=[];
 
 async function loadSites(){
-  _sites=await fetch('/api/bookmarks').then(r=>r.ok?r.json():[]).catch(()=>[]);
+  _sites=await fetch('/api/bookmarks',{headers:{'Authorization':'Bearer '+localStorage.getItem('token')}}).then(r=>r.ok?r.json():[]).catch(()=>[]);
   renderSiteList();
 }
 function renderSiteList(){
@@ -1274,19 +1274,19 @@ async function addSite(){
   if(!url){toast('URL을 입력해주세요');return;}
   if(!url.startsWith('http'))url='https://'+url;
   if(!name)name=url;
-  await fetch('/api/bookmarks',{method:'POST',headers:{'Content-Type':'application/json'},
+  await fetch('/api/bookmarks',{method:'POST',headers:{'Authorization':'Bearer '+localStorage.getItem('token'),'Content-Type':'application/json'},
     body:JSON.stringify({title:name,url:url})});
   gel('site-name').value='';gel('site-url').value='';
   await loadSites();toast('✓ 사이트가 추가되었습니다');
 }
 async function quickSite(name,url){
   if(_sites.find(s=>s.url===url)){toast('이미 추가된 사이트입니다');return;}
-  await fetch('/api/bookmarks',{method:'POST',headers:{'Content-Type':'application/json'},
+  await fetch('/api/bookmarks',{method:'POST',headers:{'Authorization':'Bearer '+localStorage.getItem('token'),'Content-Type':'application/json'},
     body:JSON.stringify({title:name,url:url})});
   await loadSites();toast(`✓ ${name} 추가!`);
 }
 async function delSite(id){
-  await fetch('/api/bookmarks/'+id,{method:'DELETE'});
+  await fetch('/api/bookmarks/'+id,{method:'DELETE',headers:{'Authorization':'Bearer '+localStorage.getItem('token')}});
   await loadSites();toast('삭제되었습니다');
 }
 

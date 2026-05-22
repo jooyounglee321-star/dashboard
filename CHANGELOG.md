@@ -4,6 +4,27 @@
 
 ---
 
+## [2026-05-22] — index.html · admin.html JWT Authorization 헤더 전면 추가
+
+### 변경
+- **`static/index.html`** — 모든 유저 데이터 API 호출에 `Authorization: Bearer <token>` 헤더 추가
+  - `loadZones()` → `GET /api/timezone`
+  - `renderYT()` → `GET /api/youtube-channels`
+  - `renderStock()`, `_renderStatsContent()` → `GET /api/portfolio/groups`
+  - `savePortfolioSnapshot()` → `POST /api/portfolio/snapshot`
+  - `renderExp()`, `addExp()`, `delExp()` → expenses API
+  - `renderMeal()`, `addMeal()`, `delMeal()` → diets API
+  - `renderMemo()`, `memoEdit()`, `memoSave()` → memos API (GET/PUT/POST)
+  - `renderSites()` → `GET /api/bookmarks`
+- **`static/admin.html`** — 동일하게 유저 데이터 API 호출 전체 업데이트
+  - `loadTZData()`, `saveTZ()` → timezone API (GET/PUT)
+  - `loadYTChannels()`, `addYT()`, `delYT()` → youtube-channels API
+  - `saveGroups()`, `initGroupsFromDB()` (초기로드 + 마이그레이션 저장) → portfolio/groups API
+  - `loadSites()`, `addSite()`, `quickSite()`, `delSite()` → bookmarks API
+- 공개 API(주식 시세·환율·검색·히스토리, `/api/health`)는 auth 헤더 미추가 (의도적)
+
+---
+
 ## [2026-05-21] — 종합 요약
 
 ### 추가
