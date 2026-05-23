@@ -4,6 +4,29 @@
 
 ---
 
+## [2026-05-22] — 사용자별 위젯 설정 기능 추가
+
+### 신규 기능
+- **사용자마다 대시보드 위젯 on/off 독립 설정** 가능
+- **시계 위젯: 표시 개수 1 / 2 / 3개 선택** 가능
+- 설정은 DB(`users.widget_config`)에 저장되어 다른 기기에서 로그인해도 유지
+
+### 백엔드 변경
+- **`models.py`** — `User.widget_config TEXT` 컬럼 추가
+- **`main.py`** — `_migrate_user_columns`에 `widget_config` 자동 마이그레이션 추가
+- **`schemas.py`** — `DEFAULT_WIDGET_CONFIG`, `WidgetConfigUpdate`, `WidgetConfigOut` 추가
+- **`routers/auth.py`** — `GET /api/auth/widget-config`, `PUT /api/auth/widget-config` 엔드포인트 추가
+
+### 프론트엔드 변경
+- **`HeroSection.jsx`** — `clockCount` prop 추가 (1·2·3개 지원)
+- **`IndexPage.jsx`** — 위젯 설정 API 로드 + 9개 위젯 조건부 렌더링
+- **`AdminPage.jsx`** — `① 위젯 설정` 섹션 추가 (토글 스위치 + 시계 개수 버튼)
+
+### 지원 위젯
+시계/날씨, 일정, 유튜브, 주식, 가계부, 식단, 메모, 뉴스, 즐겨찾기 (총 9개)
+
+---
+
 ## [2026-05-22] — 불필요한 static 파일 정리 (login.html 제외)
 
 ### 삭제

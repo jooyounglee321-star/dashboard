@@ -294,6 +294,31 @@ class ProfileUpdate(BaseModel):
     new_password: str | None = None
 
 
+# ── Widget Config ─────────────────────────────────────────────────────────────
+
+DEFAULT_WIDGET_CONFIG: dict = {
+    "hero":     {"enabled": True, "clock_count": 3},
+    "schedule": {"enabled": True},
+    "youtube":  {"enabled": True},
+    "stock":    {"enabled": True},
+    "expense":  {"enabled": True},
+    "diet":     {"enabled": True},
+    "memo":     {"enabled": True},
+    "news":     {"enabled": True},
+    "sites":    {"enabled": True},
+}
+
+
+class WidgetConfigUpdate(BaseModel):
+    """위젯 설정 저장 요청."""
+    config: dict
+
+
+class WidgetConfigOut(BaseModel):
+    """위젯 설정 응답."""
+    config: dict
+
+
 # ── Timezone ──────────────────────────────────────────────────────────────────
 
 class TimezoneUpdate(BaseModel):

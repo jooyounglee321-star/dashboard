@@ -1,3 +1,4 @@
+import json
 import os
 import re
 from datetime import datetime, timedelta, timezone
@@ -9,7 +10,10 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import User
-from schemas import AuthOut, ProfileOut, ProfileUpdate, UserLogin, UserOut, UserRegister
+from schemas import (
+    AuthOut, ProfileOut, ProfileUpdate, UserLogin, UserOut, UserRegister,
+    WidgetConfigOut, WidgetConfigUpdate, DEFAULT_WIDGET_CONFIG,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -195,6 +199,38 @@ def logout(current_user: User = Depends(get_current_user)):
     현재는 클라이언트 측에서 토큰을 삭제하는 방식으로 로그아웃을 처리합니다.
     """
     return {"message": "로그아웃 되었습니다."}
+
+
+# ── GET /api/auth/widget-config ──────────────────────────────────────────────
+
+@router.get("/widget-config", response_model=WidgetConfigOut, summary="위젯 설정 조회")
+def get_widget_config(current_user: User = Depends(get_current_user)):
+    """현재 사용자의 위젯 설정을 반환합니다. 저장된 값이 없으면 기본값을 반환합니다."""
+    if not current_user.widget_config:
+        return WidgetConfigOut(config=DEFAULT_WIDGET_CONFIG)
+    try:
+        cfg = json.loads(current_user.widget_config)
+        # 새로 추가된 위젯 키가 빠져 있으면 기본값으로 채움
+        for key, default in DEFAULT_WIDGET_CONFIG.items():
+            if key not in cfg:
+                cfg[key] = default
+        return WidgetConfigOut(config=cfg)
+    except (json.JSONDecodeError, TypeError):
+        return WidgetConfigOut(config=DEFAULT_WIDGET_CONFIG)
+
+
+# ── PUT /api/auth/widget-config ───────────────────────────────────────────────
+
+@router.put("/widget-config", response_model=WidgetConfigOut, summary="위젯 설정 저장")
+def update_widget_config(
+    body: WidgetConfigUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """현재 사용자의 위젯 설정을 저장합니다."""
+    current_user.widget_config = json.dumps(body.config, ensure_ascii=False)
+    db.commit()
+    return WidgetConfigOut(config=body.config)
 
 
 # ── GET /api/auth/users ───────────────────────────────────────────────────────
