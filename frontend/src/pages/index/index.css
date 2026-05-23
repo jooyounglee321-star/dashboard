@@ -22,8 +22,11 @@
 .admin-link{font-size:0.78rem;color:var(--accent2);text-decoration:none;border:1px solid rgba(232,160,96,0.4);padding:0.28rem 0.7rem;border-radius:20px;}
 
 /* ── PC GRID ── */
-.main{max-width:1400px;margin:0 auto;padding:1.2rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;}
-.card-hero{grid-column:1/-1;}
+.main{max-width:1400px;margin:0 auto;padding:1.2rem;display:grid;grid-template-columns:repeat(3,1fr);grid-auto-flow:row dense;gap:1rem;align-items:start;}
+.card-hero{grid-column:span 3;}
+/* ── 위젯 등장 애니메이션 ── */
+@keyframes widget-in{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.card{animation:widget-in 0.25s ease;}
 .hero-inner{display:grid;grid-template-columns:repeat(3,1fr) 1fr;min-height:120px;}
 .time-zone{display:flex;flex-direction:column;justify-content:center;padding:1.2rem 1.4rem;border-right:1px solid var(--border);}
 .tz-region{font-size:0.7rem;letter-spacing:0.1em;color:var(--ink3);text-transform:uppercase;margin-bottom:0.3rem;}
@@ -39,7 +42,7 @@
 .w-btn{font-size:0.68rem;color:var(--ink3);cursor:pointer;background:none;border:none;text-decoration:underline;margin-top:2px;}
 
 /* ── 일정 ── */
-.card-schedule{grid-column:1/2;}
+.card-schedule{grid-column:span 1;}
 .gcal-connect{display:flex;flex-direction:column;align-items:center;gap:0.6rem;padding:1rem 0;text-align:center;}
 .gcal-icon{font-size:2rem;}
 .gcal-desc{font-size:0.8rem;color:var(--ink2);line-height:1.6;}
@@ -54,7 +57,7 @@
 .sched-refresh:hover{color:var(--ink);}
 
 /* ── 유튜브 ── */
-.card-yt{grid-column:2/3;}
+.card-yt{grid-column:span 2;}
 .yt-account-bar{display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.7rem;background:var(--card2);border-radius:8px;margin-bottom:0.7rem;border:1px solid var(--border);}
 .yt-account-label{font-size:0.72rem;color:var(--ink3);}
 .yt-account-val{font-size:0.82rem;color:var(--ink2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -66,7 +69,7 @@
 .yt-url{font-size:0.68rem;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px;}
 
 /* ── 주식 ── */
-.card-stock{grid-column:3/4;grid-row:2/5;}
+.card-stock{grid-column:span 3;}
 .stock-cat{margin-bottom:0.8rem;}
 .stock-cat-header{display:flex;justify-content:space-between;align-items:center;padding:0.35rem 0.6rem;border-radius:6px;margin-bottom:0.35rem;}
 .stock-cat-name{font-size:0.72rem;font-weight:500;letter-spacing:0.05em;}
@@ -85,7 +88,7 @@
 .stock-divider{height:0.5px;background:var(--border);margin:0.6rem 0;}
 
 /* ── 지출 ── */
-.card-expense{grid-column:1/2;}
+.card-expense{grid-column:span 2;}
 .exp-today{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.7rem;}
 .exp-label{font-size:0.78rem;color:var(--ink3);}
 .exp-amount{font-size:1.5rem;font-weight:700;}
@@ -99,7 +102,7 @@
 .exp-db-badge{font-size:0.68rem;color:var(--green);border:1px solid var(--green);padding:0.1rem 0.5rem;border-radius:10px;margin-left:auto;}
 
 /* ── 식단 ── */
-.card-diet{grid-column:2/3;}
+.card-diet{grid-column:span 2;}
 .meal-row{display:flex;gap:0.5rem;align-items:flex-start;margin-bottom:0.5rem;}
 .meal-label{font-size:0.72rem;color:var(--accent);font-weight:500;min-width:28px;margin-top:0.25rem;}
 .meal-content{font-size:0.83rem;color:var(--ink2);flex:1;line-height:1.5;}
@@ -110,7 +113,7 @@
 .meal-form input{flex:1;}
 
 /* ── 메모 ── */
-.card-memo{grid-column:1/2;}
+.card-memo{grid-column:span 1;}
 .memo-display{font-size:0.85rem;color:var(--ink2);line-height:1.7;white-space:pre-wrap;word-break:break-all;min-height:55px;}
 .memo-ta{width:100%;min-height:85px;padding:0.55rem;border:1px solid var(--border);border-radius:8px;font-size:0.83rem;color:var(--ink);font-family:inherit;font-weight:300;background:var(--bg);resize:vertical;line-height:1.6;}
 .memo-ta:focus{outline:none;border-color:var(--accent);}
@@ -118,7 +121,7 @@
 .memo-date{font-size:0.7rem;color:var(--ink3);margin-top:0.35rem;}
 
 /* ── 뉴스 ── */
-.card-news{grid-column:2/3;}
+.card-news{grid-column:span 1;}
 .news-tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:0.7rem;}
 .news-tab{padding:0.3rem 0.8rem;font-size:0.75rem;cursor:pointer;background:none;border:none;color:var(--ink3);font-family:inherit;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.15s;}
 .news-tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:500;}
@@ -129,7 +132,7 @@
 .news-source{font-size:0.68rem;color:var(--ink3);display:block;margin-top:0.1rem;}
 
 /* ── 사이트 ── */
-.card-sites{grid-column:1/3;}
+.card-sites{grid-column:span 2;}
 .sites-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:0.5rem;}
 .site-item{display:flex;flex-direction:column;align-items:center;gap:0.35rem;padding:0.65rem 0.4rem;background:var(--card2);border-radius:10px;border:1px solid var(--border);text-decoration:none;color:var(--ink2);font-size:0.72rem;text-align:center;transition:all 0.15s;word-break:break-all;}
 .site-item:hover{background:var(--bg);border-color:var(--accent);transform:translateY(-1px);}
@@ -228,16 +231,13 @@
 .m-site-item{display:flex;flex-direction:column;align-items:center;gap:0.35rem;padding:0.7rem 0.3rem;background:var(--card2);border-radius:10px;border:1px solid var(--border);text-decoration:none;color:var(--ink2);font-size:0.7rem;text-align:center;word-break:break-all;}
 
 /* ── RESPONSIVE ── */
-@media(max-width:1100px){
-  .card-stock{grid-column:auto;grid-row:auto;}
-  .card-sites{grid-column:1/-1;}
-}
 @media(max-width:960px){
-  .main{grid-template-columns:1fr 1fr;}
+  .main{grid-template-columns:repeat(2,1fr);}
+  .card-hero,.card-stock{grid-column:span 2;}
+  .card-expense,.card-diet,.card-yt,.card-sites{grid-column:span 1;}
   .hero-inner{grid-template-columns:1fr 1fr 1fr;}
   .hero-inner .time-zone:last-of-type{display:none;}
   .hero-weather{display:none;}
-  .card-stock,.card-sites{grid-column:1/-1;}
 }
 @media(max-width:640px){
   .header-date{display:none;}
