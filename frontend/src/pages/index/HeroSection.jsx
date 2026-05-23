@@ -28,7 +28,7 @@ function formatTZ(tz) {
   } catch { return { time: '--:--', date: '' } }
 }
 
-export default function HeroSection({ zones: propZones, isMobile = false, clockCount = 3 }) {
+export default function HeroSection({ zones: propZones, isMobile = false, clockCount = 3, tempUnit = 'C' }) {
   const zones = (propZones?.length === 3) ? propZones : DEFAULT_ZONES
 
   const [tick, setTick] = useState(0)
@@ -71,6 +71,11 @@ export default function HeroSection({ zones: propZones, isMobile = false, clockC
   const z2 = formatTZ(zones[2].tz)
   const now = new Date()
   const dateStr = `${MON[now.getMonth()]} ${now.getDate()}일 (${DAYS[now.getDay()]})`
+  const dispTemp = weather.temp === '--' ? '--' : (tempUnit === 'F' ? Math.round(weather.temp * 9 / 5 + 32) : weather.temp)
+  const tempLabel = `${dispTemp}°${tempUnit}`
+  const mobileZones = []
+  if (clockCount >= 2) mobileZones.push({ z: z1, zone: zones[1] })
+  if (clockCount >= 3) mobileZones.push({ z: z2, zone: zones[2] })
 
   if (isMobile) {
     return (
@@ -82,19 +87,21 @@ export default function HeroSection({ zones: propZones, isMobile = false, clockC
           </div>
           <div className="m-weather-block">
             <div className="m-w-emoji">{weather.emoji}</div>
-            <div className="m-w-temp">{weather.temp}°C</div>
+            <div className="m-w-temp">{tempLabel}</div>
             <div className="m-w-desc">{weather.desc}</div>
           </div>
         </div>
-        <div className="m-hero-zones">
-          {[{ z: z1, zone: zones[1] }, { z: z2, zone: zones[2] }].map(({ z, zone }, i) => (
-            <div key={i} className="m-zone">
-              <div className="m-zone-region">{zone.region}</div>
-              <div className="m-zone-time">{z.time}</div>
-              <div className="m-zone-name">{zone.label || ''}</div>
-            </div>
-          ))}
-        </div>
+        {mobileZones.length > 0 && (
+          <div className="m-hero-zones">
+            {mobileZones.map(({ z, zone }, i) => (
+              <div key={i} className="m-zone">
+                <div className="m-zone-region">{zone.region}</div>
+                <div className="m-zone-time">{z.time}</div>
+                <div className="m-zone-name">{zone.label || ''}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     )
   }
@@ -126,7 +133,7 @@ export default function HeroSection({ zones: propZones, isMobile = false, clockC
         )}
         <div className="hero-weather">
           <div className="w-emoji">{weather.emoji}</div>
-          <div className="w-temp">{weather.temp}°C</div>
+          <div className="w-temp">{tempLabel}</div>
           <div className="w-desc">{weather.desc}</div>
           <div className="w-loc">{weather.loc}</div>
           <button className="w-btn" onClick={loadWeather}>새로고침</button>

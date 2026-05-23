@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-export default function YoutubeCard({ isMobile = false }) {
+export default function YoutubeCard({ isMobile = false, maxCount = 10 }) {
   const [channels, setChannels] = useState([])
   const [ytAccount, setYtAccount] = useState('')
 
@@ -39,7 +39,7 @@ export default function YoutubeCard({ isMobile = false }) {
           </ul>
         ) : (
           <ul className={isMobile ? 'm-yt-list' : 'yt-list'}>
-            {channels.map(c => (
+            {channels.slice(0, maxCount).map(c => (
               <li key={c.id} className={isMobile ? 'm-yt-item' : 'yt-item'}>
                 <a href={c.channel_url || '#'} target="_blank" rel="noreferrer">
                   <div className={isMobile ? 'm-yt-ico' : 'yt-ico'}>▶</div>

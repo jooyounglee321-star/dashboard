@@ -370,14 +370,14 @@ export default function AdminPage() {
 
   /* ── 위젯 설정 ── */
   const DEFAULT_WIDGET_CFG = {
-    hero:     { enabled: true, clock_count: 3 },
+    hero:     { enabled: true, clock_count: 3, temp_unit: 'C' },
     schedule: { enabled: true },
-    youtube:  { enabled: true },
-    stock:    { enabled: true },
+    youtube:  { enabled: true, max_count: 10 },
+    stock:    { enabled: true, currency_display: 'KRW' },
     expense:  { enabled: true },
-    diet:     { enabled: true },
+    diet:     { enabled: true, meals: { 아침: true, 점심: true, 저녁: true, 간식: true } },
     memo:     { enabled: true },
-    news:     { enabled: true },
+    news:     { enabled: true, default_tab: 'kr' },
     sites:    { enabled: true },
   }
   const WIDGET_LABELS = {
@@ -623,21 +623,96 @@ export default function AdminPage() {
                   <span style={{ fontSize: '0.88rem', color: widgetCfg[key]?.enabled !== false ? 'var(--ink)' : 'var(--ink3)' }}>{label}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                  {/* 시계 위젯 전용: 시계 개수 선택 */}
+                  {/* 시계 위젯: 시계 개수 + 온도 단위 */}
                   {key === 'hero' && widgetCfg.hero?.enabled !== false && (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>시계</span>
+                        {[1, 2, 3].map(n => (
+                          <button
+                            key={n}
+                            onClick={() => setWidget('hero', 'clock_count', n)}
+                            style={{
+                              width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)',
+                              background: widgetCfg.hero?.clock_count === n ? 'var(--accent)' : 'var(--card2)',
+                              color: widgetCfg.hero?.clock_count === n ? '#fff' : 'var(--ink)',
+                              cursor: 'pointer', fontSize: '0.8rem', fontFamily: 'inherit', fontWeight: 500,
+                            }}
+                          >{n}</button>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>온도</span>
+                        {['C', 'F'].map(u => (
+                          <button
+                            key={u}
+                            onClick={() => setWidget('hero', 'temp_unit', u)}
+                            style={{
+                              width: 30, height: 28, borderRadius: 6, border: '1px solid var(--border)',
+                              background: (widgetCfg.hero?.temp_unit ?? 'C') === u ? 'var(--accent)' : 'var(--card2)',
+                              color: (widgetCfg.hero?.temp_unit ?? 'C') === u ? '#fff' : 'var(--ink)',
+                              cursor: 'pointer', fontSize: '0.78rem', fontFamily: 'inherit', fontWeight: 500,
+                            }}
+                          >°{u}</button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  {/* 유튜브: 최대 표시 개수 */}
+                  {key === 'youtube' && widgetCfg.youtube?.enabled !== false && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>시계</span>
-                      {[1, 2, 3].map(n => (
+                      <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>최대</span>
+                      <input
+                        type="number" min="1" max="20"
+                        value={widgetCfg.youtube?.max_count ?? 10}
+                        onChange={e => setWidget('youtube', 'max_count', Math.max(1, Math.min(20, parseInt(e.target.value) || 10)))}
+                        style={{ width: 44, padding: '0.22rem 0.35rem', fontSize: '0.8rem', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit', textAlign: 'center' }}
+                      />
+                      <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>개</span>
+                    </div>
+                  )}
+                  {/* 주식: 합계 표시 통화 */}
+                  {key === 'stock' && widgetCfg.stock?.enabled !== false && (
+                    <select
+                      value={widgetCfg.stock?.currency_display ?? 'KRW'}
+                      onChange={e => setWidget('stock', 'currency_display', e.target.value)}
+                      style={{ fontSize: '0.75rem', padding: '0.22rem 0.5rem', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit' }}
+                    >
+                      <option value="KRW">₩ 원화만</option>
+                      <option value="USD">$ 달러만</option>
+                      <option value="BOTH">$ + ₩</option>
+                    </select>
+                  )}
+                  {/* 식단: 표시할 끼니 */}
+                  {key === 'diet' && widgetCfg.diet?.enabled !== false && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {['아침', '점심', '저녁', '간식'].map(m => (
+                        <label key={m} style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', cursor: 'pointer', fontSize: '0.72rem', color: 'var(--ink2)' }}>
+                          <input
+                            type="checkbox"
+                            checked={(widgetCfg.diet?.meals ?? { 아침: true, 점심: true, 저녁: true, 간식: true })[m] !== false}
+                            onChange={e => setWidget('diet', 'meals', { ...(widgetCfg.diet?.meals ?? { 아침: true, 점심: true, 저녁: true, 간식: true }), [m]: e.target.checked })}
+                            style={{ width: 13, height: 13 }}
+                          />
+                          {m}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  {/* 뉴스: 기본 탭 */}
+                  {key === 'news' && widgetCfg.news?.enabled !== false && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      {[['kr', '🇰🇷 한국'], ['us', '🇺🇸 미국']].map(([v, l]) => (
                         <button
-                          key={n}
-                          onClick={() => setWidget('hero', 'clock_count', n)}
+                          key={v}
+                          onClick={() => setWidget('news', 'default_tab', v)}
                           style={{
-                            width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)',
-                            background: widgetCfg.hero?.clock_count === n ? 'var(--accent)' : 'var(--card2)',
-                            color: widgetCfg.hero?.clock_count === n ? '#fff' : 'var(--ink)',
-                            cursor: 'pointer', fontSize: '0.8rem', fontFamily: 'inherit', fontWeight: 500,
+                            padding: '0.2rem 0.48rem', borderRadius: 6, border: '1px solid var(--border)',
+                            background: (widgetCfg.news?.default_tab ?? 'kr') === v ? 'var(--accent)' : 'var(--card2)',
+                            color: (widgetCfg.news?.default_tab ?? 'kr') === v ? '#fff' : 'var(--ink)',
+                            cursor: 'pointer', fontSize: '0.72rem', fontFamily: 'inherit',
                           }}
-                        >{n}</button>
+                        >{l}</button>
                       ))}
                     </div>
                   )}

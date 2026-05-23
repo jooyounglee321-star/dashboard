@@ -3,10 +3,19 @@ import { useState, useEffect } from 'react'
 const todayKey = () => new Date().toISOString().slice(0, 10)
 const MORD = ['아침', '점심', '저녁', '간식']
 
-export default function DietCard({ isMobile = false }) {
+export default function DietCard({ isMobile = false, mealConfig = null }) {
+  const visibleMeals = mealConfig ? MORD.filter(m => mealConfig[m] !== false) : MORD
+
   const [dietList, setDietList] = useState([])
   const [mtime, setMtime] = useState('아침')
   const [mtext, setMtext] = useState('')
+
+  useEffect(() => {
+    if (visibleMeals.length > 0 && !visibleMeals.includes(mtime)) {
+      setMtime(visibleMeals[0])
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mealConfig])
 
   const authHeader = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') })
 
@@ -41,7 +50,7 @@ export default function DietCard({ isMobile = false }) {
     if (!meals[d.meal_type]) meals[d.meal_type] = []
     meals[d.meal_type].push(d.content || '')
   })
-  const hasMeals = MORD.some(m => meals[m]?.length)
+  const hasMeals = visibleMeals.some(m => meals[m]?.length)
 
   const hdr = isMobile ? 'm-card-header' : 'card-header'
   const titleCls = isMobile ? 'm-card-title' : 'card-title'
@@ -59,7 +68,7 @@ export default function DietCard({ isMobile = false }) {
           {!hasMeals ? (
             <div className="empty-msg">식단을 입력해보세요</div>
           ) : (
-            MORD.filter(m => meals[m]?.length).map(m => (
+            visibleMeals.filter(m => meals[m]?.length).map(m => (
               <div key={m} className={isMobile ? 'm-meal-row' : 'meal-row'}>
                 <span className={isMobile ? 'm-meal-label' : 'meal-label'}>{m}</span>
                 <div className={isMobile ? 'm-meal-content' : 'meal-content'}>{meals[m].join(', ')}</div>
@@ -73,7 +82,7 @@ export default function DietCard({ isMobile = false }) {
           <>
             <div className="m-row">
               <select className="m-select" value={mtime} onChange={e => setMtime(e.target.value)}>
-                {MORD.map(m => <option key={m}>{m}</option>)}
+                {visibleMeals.map(m => <option key={m}>{m}</option>)}
               </select>
               <input
                 className="m-input"
@@ -91,7 +100,7 @@ export default function DietCard({ isMobile = false }) {
           <div className="meal-form">
             <div className="meal-form-row">
               <select value={mtime} onChange={e => setMtime(e.target.value)}>
-                {MORD.map(m => <option key={m}>{m}</option>)}
+                {visibleMeals.map(m => <option key={m}>{m}</option>)}
               </select>
               <input
                 type="text"

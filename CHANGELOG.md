@@ -4,6 +4,29 @@
 
 ---
 
+## [2026-05-22] — 위젯 세부 옵션 추가 구현
+
+### 신규 기능 (위젯별 상세 옵션)
+- **시계/날씨** — 온도 단위 °C / °F 선택, 모바일 clockCount 버그 수정 (1개 시 보조 시계 미표시)
+- **유튜브** — 최대 표시 채널 수 설정 (1~20개, 기본 10개)
+- **주식** — 합계 표시 통화 선택 (₩ 원화만 / $ 달러만 / $ + ₩ 둘 다), 위젯 설정 → props 전달로 localStorage 우선순위 대체
+- **식단** — 표시할 끼니 선택 (아침/점심/저녁/간식 개별 on/off)
+- **뉴스** — 기본 탭 설정 (🇰🇷 한국 / 🇺🇸 미국)
+
+### 백엔드 변경
+- **`schemas.py`** — `DEFAULT_WIDGET_CONFIG`에 `temp_unit`, `max_count`, `currency_display`, `meals`, `default_tab` 필드 추가
+
+### 프론트엔드 변경
+- **`HeroSection.jsx`** — `tempUnit` prop 추가, Celsius↔Fahrenheit 변환, 모바일 clockCount 버그 수정
+- **`DietCard.jsx`** — `mealConfig` prop 추가, 숨김 끼니 필터링
+- **`NewsCard.jsx`** — `defaultTab` prop 추가, useEffect로 탭 동기화
+- **`YoutubeCard.jsx`** — `maxCount` prop 추가, `channels.slice(0, maxCount)` 렌더링
+- **`StockCard.jsx`** — `currencyDisplay` prop 추가, localStorage 폴백 유지
+- **`IndexPage.jsx`** — 모든 컴포넌트에 widgetCfg 기반 신규 props 전달 (PC + 모바일)
+- **`AdminPage.jsx`** — 위젯 설정 UI에 5개 옵션 컨트롤 추가 (°C/°F 버튼, 최대개수 입력, 통화 셀렉트, 끼니 체크박스, 뉴스탭 버튼)
+
+---
+
 ## [2026-05-22] — 사용자별 위젯 설정 기능 추가
 
 ### 신규 기능

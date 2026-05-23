@@ -297,14 +297,14 @@ class ProfileUpdate(BaseModel):
 # ── Widget Config ─────────────────────────────────────────────────────────────
 
 DEFAULT_WIDGET_CONFIG: dict = {
-    "hero":     {"enabled": True, "clock_count": 3},
+    "hero":     {"enabled": True, "clock_count": 3, "temp_unit": "C"},
     "schedule": {"enabled": True},
-    "youtube":  {"enabled": True},
-    "stock":    {"enabled": True},
+    "youtube":  {"enabled": True, "max_count": 10},
+    "stock":    {"enabled": True, "currency_display": "KRW"},
     "expense":  {"enabled": True},
-    "diet":     {"enabled": True},
+    "diet":     {"enabled": True, "meals": {"아침": True, "점심": True, "저녁": True, "간식": True}},
     "memo":     {"enabled": True},
-    "news":     {"enabled": True},
+    "news":     {"enabled": True, "default_tab": "kr"},
     "sites":    {"enabled": True},
 }
 
