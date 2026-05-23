@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './index.css'
 
@@ -15,9 +15,14 @@ import SitesCard from './SitesCard'
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토']
 const MON = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월']
+const DAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const MON_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
-function getHeaderDate() {
+function getHeaderDate(lang = 'ko') {
   const n = new Date()
+  if (lang === 'en') {
+    return `${MON_EN[n.getMonth()]} ${n.getDate()}, ${n.getFullYear()} (${DAYS_EN[n.getDay()]})`
+  }
   return `${n.getFullYear()}년 ${MON[n.getMonth()]} ${n.getDate()}일 (${DAYS[n.getDay()]})`
 }
 
@@ -49,9 +54,10 @@ export default function IndexPage() {
   const w = (key) => !widgetCfg || widgetCfg[key]?.enabled !== false
 
   // Header date tick
+  const headerLangRef = useRef('ko')
   const [headerDate, setHeaderDate] = useState(getHeaderDate)
   useEffect(() => {
-    const id = setInterval(() => setHeaderDate(getHeaderDate()), 10000)
+    const id = setInterval(() => setHeaderDate(getHeaderDate(headerLangRef.current)), 10000)
     return () => clearInterval(id)
   }, [])
 
@@ -100,6 +106,13 @@ export default function IndexPage() {
       .then(d => { if (d?.config) setWidgetCfg(d.config) })
       .catch(() => {})
   }, [])
+
+  // 언어 변경 시 헤더 날짜 동기화
+  useEffect(() => {
+    const newLang = widgetCfg?.language ?? 'ko'
+    headerLangRef.current = newLang
+    setHeaderDate(getHeaderDate(newLang))
+  }, [widgetCfg])
 
   // Server health check
   const checkHealth = useCallback(async () => {
@@ -324,6 +337,7 @@ export default function IndexPage() {
             zones={zones}
             clockCount={widgetCfg?.hero?.clock_count ?? 3}
             tempUnit={widgetCfg?.hero?.temp_unit ?? 'C'}
+            lang={widgetCfg?.language ?? 'ko'}
           />
         )}
 
@@ -366,7 +380,7 @@ export default function IndexPage() {
 
         {/* 홈: 시간+날씨+일정+사이트 */}
         <div className={`mob-section${mobileTab === 'home' ? ' active' : ''}`}>
-          {w('hero') && <HeroSection zones={zones} isMobile clockCount={widgetCfg?.hero?.clock_count ?? 3} tempUnit={widgetCfg?.hero?.temp_unit ?? 'C'} />}
+          {w('hero') && <HeroSection zones={zones} isMobile clockCount={widgetCfg?.hero?.clock_count ?? 3} tempUnit={widgetCfg?.hero?.temp_unit ?? 'C'} lang={widgetCfg?.language ?? 'ko'} />}
           {w('schedule') && <ScheduleCard isMobile />}
           {w('sites') && <SitesCard isMobile />}
         </div>
