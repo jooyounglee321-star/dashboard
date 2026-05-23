@@ -28,3 +28,33 @@
 
 **파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\AdminPage.jsx
 
+---
+## 2026-05-23 15:45 — HeroSection 온도 단위 변환 및 동적 모바일 존 렌더링
+**결정:** HeroSection 컴포넌트에서 온도 단위 변환(섭씨↔화씨)을 위해 `dispTemp` 변수를 계산하고, 모바일 뷰에서 `clockCount` prop에 따라 동적으로 `mobileZones` 배열을 생성하여 시간대 표시를 제어합니다.
+
+**이유:** 온도 변환은 `tempUnit === 'F'` 조건으로 분기하여 화씨 계산(C × 9/5 + 32)을 적용하고, `weather.temp === '--'`일 때 미리 로드된 상태를 반영합니다. 동적 `mobileZones` 배열은 `clockCount` 값에 따라 표시될 시간대를 결정하므로, 동일 컴포넌트로 2개 또는 3개 시간대 모드를 지원할 수 있습니다.
+
+**대안:** 1) 온도 변환을 부모 컴포넌트에서 수행(prop drilling 증가), 2) 하드코딩된 3개 존 항상 표시(clockCount 무시), 3) 조건부 렌더링으로 z1/z2 직접 사용(`if (clockCount >= 2) render(<z1/>)` 반복)
+
+**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\index\HeroSection.jsx
+
+---
+## 2026-05-23 — StockCard 컴포넌트: currencyDisplay 프롭으로 부모 제어 지원
+**결정:** StockCard 컴포넌트에 `currencyDisplay` 프롭을 추가하고, `totalMode` 초기화 로직을 `currencyDisplay ?? fallback(localStorage)` 구조로 변경했습니다. 프롭 값이 존재하면 우선 사용하고, 없으면 localStorage에서 읽습니다.
+
+**이유:** 부모 컴포넌트가 StockCard의 통화 표시 모드를 명시적으로 제어할 수 있도록 하기 위함입니다. 이는 상태 관리 도구(Redux 등), 서버 사이드 렌더링, 또는 높은 수준의 앱 상태 동기화에서 StockCard의 유연성을 높입니다. 동시에 localStorage 폴백을 유지하여 프롭이 전달되지 않을 때 기존 동작을 보장합니다.
+
+**대안:** 1) 항상 localStorage 사용 (부모 제어 불가), 2) 프롭 필수로 강제 (기존 호출 지점 수정 필요), 3) 조건부 렌더링으로 두 가지 컴포넌트 분리 (코드 중복)
+
+**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\index\StockCard.jsx
+
+---
+## 2026-05-23 — 온도 단위 설정을 widgetCfg에 통합
+**결정:** IndexPage에서 HeroSection 컴포넌트에 `tempUnit={widgetCfg?.hero?.temp_unit ?? 'C'}` prop을 전달하여, 온도 표시 단위(섭씨/화씨)를 사용자 위젯 설정에서 읽도록 변경했습니다.
+
+**이유:** 온도 단위는 지역별 선호도가 다르므로(미국은 화씨, 대부분의 국가는 섭씨), 사용자가 선택 가능하도록 설정 시스템에 통합하는 것이 적절합니다. widgetCfg의 JSON 스키마에 `hero.temp_unit` 필드를 추가하여 AdminPage에서 사용자가 변경할 수 있도록 하고, 백엔드에서 User 모델의 widget_config 컬럼에 영속적으로 저장합니다.
+
+**대안:** 1) 하드코딩된 기본값만 사용 (사용자 선호도 무시), 2) localStorage만 사용 (로그인 후 초기화됨), 3) 시스템 로케일 자동 감지 (사용자 의도 모호), 4) AdminPage 별도 섹션 추가 (이미 widgetCfg 시스템 존재하므로 불필요)
+
+**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\index\IndexPage.jsx
+

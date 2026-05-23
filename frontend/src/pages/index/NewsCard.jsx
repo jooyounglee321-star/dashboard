@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const NEWS = {
   kr: [
@@ -19,8 +19,10 @@ const NEWS = {
   ],
 }
 
-export default function NewsCard({ isMobile = false }) {
-  const [tab, setTab] = useState('kr')
+export default function NewsCard({ isMobile = false, defaultTab = 'kr' }) {
+  const [tab, setTab] = useState(defaultTab)
+
+  useEffect(() => { setTab(defaultTab) }, [defaultTab])
 
   const hdr = isMobile ? 'm-card-header' : 'card-header'
   const title = isMobile ? 'm-card-title' : 'card-title'

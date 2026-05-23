@@ -31,8 +31,8 @@ function calcStock(s, priceMap) {
   return { holdQty, avgCost, cur, chP, val, evalPL, evalPct, realizedPL, totalSellQty, isLive }
 }
 
-export default function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, isMobile = false }) {
-  const totalMode = (() => { try { return localStorage.getItem(TOTAL_MODE_KEY) || 'KRW' } catch { return 'KRW' } })()
+export default function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, isMobile = false, currencyDisplay }) {
+  const totalMode = currencyDisplay ?? (() => { try { return localStorage.getItem(TOTAL_MODE_KEY) || 'KRW' } catch { return 'KRW' } })()
   const fxText = fxRate ? `$1 = ₩${fmtKRW(fxRate)}` : ''
   const rowS = { display: 'flex', justifyContent: 'space-between', alignItems: 'center' }
   const divS = { height: '0.5px', background: 'rgba(255,255,255,0.18)', margin: '0.2rem 0' }

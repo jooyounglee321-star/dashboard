@@ -323,6 +323,7 @@ export default function IndexPage() {
           <HeroSection
             zones={zones}
             clockCount={widgetCfg?.hero?.clock_count ?? 3}
+            tempUnit={widgetCfg?.hero?.temp_unit ?? 'C'}
           />
         )}
 
@@ -330,7 +331,7 @@ export default function IndexPage() {
         {w('schedule') && <ScheduleCard />}
 
         {/* ③ 유튜브 */}
-        {w('youtube') && <YoutubeCard />}
+        {w('youtube') && <YoutubeCard maxCount={widgetCfg?.youtube?.max_count ?? 10} />}
 
         {/* ④ 주식 */}
         {w('stock') && (
@@ -340,6 +341,7 @@ export default function IndexPage() {
             fxRate={fxRate}
             loading={stockLoading}
             onOpenStats={() => setStatsOpen(true)}
+            currencyDisplay={widgetCfg?.stock?.currency_display}
           />
         )}
 
@@ -347,13 +349,13 @@ export default function IndexPage() {
         {w('expense') && <ExpenseCard />}
 
         {/* ⑥ 식단 */}
-        {w('diet') && <DietCard />}
+        {w('diet') && <DietCard mealConfig={widgetCfg?.diet?.meals} />}
 
         {/* ⑦ 메모 */}
         {w('memo') && <MemoCard />}
 
         {/* ⑧ 뉴스 */}
-        {w('news') && <NewsCard />}
+        {w('news') && <NewsCard defaultTab={widgetCfg?.news?.default_tab ?? 'kr'} />}
 
         {/* ⑨ 즐겨찾기 */}
         {w('sites') && <SitesCard />}
@@ -364,7 +366,7 @@ export default function IndexPage() {
 
         {/* 홈: 시간+날씨+일정+사이트 */}
         <div className={`mob-section${mobileTab === 'home' ? ' active' : ''}`}>
-          {w('hero') && <HeroSection zones={zones} isMobile clockCount={widgetCfg?.hero?.clock_count ?? 3} />}
+          {w('hero') && <HeroSection zones={zones} isMobile clockCount={widgetCfg?.hero?.clock_count ?? 3} tempUnit={widgetCfg?.hero?.temp_unit ?? 'C'} />}
           {w('schedule') && <ScheduleCard isMobile />}
           {w('sites') && <SitesCard isMobile />}
         </div>
@@ -379,6 +381,7 @@ export default function IndexPage() {
               fxRate={fxRate}
               loading={stockLoading}
               onOpenStats={() => setStatsOpen(true)}
+              currencyDisplay={widgetCfg?.stock?.currency_display}
               isMobile
             />
           )}
@@ -386,14 +389,14 @@ export default function IndexPage() {
 
         {/* 건강: 식단+메모 */}
         <div className={`mob-section${mobileTab === 'health' ? ' active' : ''}`}>
-          {w('diet') && <DietCard isMobile />}
+          {w('diet') && <DietCard isMobile mealConfig={widgetCfg?.diet?.meals} />}
           {w('memo') && <MemoCard isMobile />}
         </div>
 
         {/* 미디어: 뉴스+유튜브 */}
         <div className={`mob-section${mobileTab === 'media' ? ' active' : ''}`}>
-          {w('news') && <NewsCard isMobile />}
-          {w('youtube') && <YoutubeCard isMobile />}
+          {w('news') && <NewsCard isMobile defaultTab={widgetCfg?.news?.default_tab ?? 'kr'} />}
+          {w('youtube') && <YoutubeCard isMobile maxCount={widgetCfg?.youtube?.max_count ?? 10} />}
         </div>
 
       </div>
