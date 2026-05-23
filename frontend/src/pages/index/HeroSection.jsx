@@ -9,6 +9,8 @@ const WC = {
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토']
 const MON = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월']
+const DAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const MON_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
 const DEFAULT_ZONES = [
   { region: '내 위치', tz: Intl.DateTimeFormat().resolvedOptions().timeZone, label: '' },
@@ -16,19 +18,19 @@ const DEFAULT_ZONES = [
   { region: '런던', tz: 'Europe/London', label: 'GMT/BST' },
 ]
 
-function formatTZ(tz) {
+function formatTZ(tz, locale = 'ko-KR') {
   try {
     const n = new Date()
     const opt = { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false }
     const dopt = { timeZone: tz, month: 'long', day: 'numeric', weekday: 'short' }
     return {
-      time: new Intl.DateTimeFormat('ko-KR', opt).format(n),
-      date: new Intl.DateTimeFormat('ko-KR', dopt).format(n),
+      time: new Intl.DateTimeFormat(locale, opt).format(n),
+      date: new Intl.DateTimeFormat(locale, dopt).format(n),
     }
   } catch { return { time: '--:--', date: '' } }
 }
 
-export default function HeroSection({ zones: propZones, isMobile = false, clockCount = 3, tempUnit = 'C' }) {
+export default function HeroSection({ zones: propZones, isMobile = false, clockCount = 3, tempUnit = 'C', lang = 'ko' }) {
   const zones = (propZones?.length === 3) ? propZones : DEFAULT_ZONES
 
   const [tick, setTick] = useState(0)
@@ -66,11 +68,14 @@ export default function HeroSection({ zones: propZones, isMobile = false, clockC
 
   useEffect(() => { loadWeather() }, [])
 
-  const z0 = formatTZ(zones[0].tz)
-  const z1 = formatTZ(zones[1].tz)
-  const z2 = formatTZ(zones[2].tz)
+  const locale = lang === 'en' ? 'en-US' : 'ko-KR'
+  const z0 = formatTZ(zones[0].tz, locale)
+  const z1 = formatTZ(zones[1].tz, locale)
+  const z2 = formatTZ(zones[2].tz, locale)
   const now = new Date()
-  const dateStr = `${MON[now.getMonth()]} ${now.getDate()}일 (${DAYS[now.getDay()]})`
+  const dateStr = lang === 'en'
+    ? `${MON_EN[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()} (${DAYS_EN[now.getDay()]})`
+    : `${MON[now.getMonth()]} ${now.getDate()}일 (${DAYS[now.getDay()]})`
   const dispTemp = weather.temp === '--' ? '--' : (tempUnit === 'F' ? Math.round(weather.temp * 9 / 5 + 32) : weather.temp)
   const tempLabel = `${dispTemp}°${tempUnit}`
   const mobileZones = []

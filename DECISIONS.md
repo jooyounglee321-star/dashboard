@@ -58,3 +58,23 @@
 
 **파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\index\IndexPage.jsx
 
+---
+## 2026-05-23 — 언어 변경 시 위젯 설정 자동 동기화 (비대칭 정책)
+**결정:** AdminPage에 `handleLangChange(newLang)` 함수를 추가하여 언어 선택 시 위젯 설정을 조건부로 자동 동기화합니다. 온도 단위는 사용자가 수동 설정하지 않았을 때만 자동 변경(en → F, 그 외 → C)하고, 통화는 항상 동기화합니다(en → USD, 그 외 → KRW).
+
+**이유:** 사용자 경험과 의도 존중의 균형을 맞추기 위해 비대칭 정책을 적용했습니다. 온도 단위는 과학 커뮤니티나 특정 선호도가 있을 수 있으므로 수동 설정 여부(`temp_unit_manual` 플래그)를 확인합니다. 반면 통화는 언어 변경만으로도 명확하게 지역이 결정되므로 항상 동기화합니다. 이는 불필요한 사용자 개입을 줄이면서도 의도를 무시하지 않습니다.
+
+**대안:** 1) 언어 변경 시 모든 설정 자동 동기화 (사용자 수동 설정 무시), 2) 언어 변경 시 아무것도 동기화하지 않음 (사용자가 매번 수정 필요), 3) 동기화 전 사용자 확인 대화상자 (UX 마찰 증가), 4) 별도의 국가/지역 선택 필드 추가 (복잡도 증가)
+
+**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\AdminPage.jsx
+
+---
+## 2026-05-23 — 온도 단위 수동 선택 추적: temp_unit_manual 플래그 도입
+**결정:** AdminPage 온도 단위 선택 버튼의 onClick 핸들러에서 `setWidgetCfg(prev => ({ ...prev, hero: { ...prev.hero, temp_unit: u, temp_unit_manual: true } }))`로 변경하여, 사용자가 수동으로 온도 단위를 선택할 때마다 `temp_unit_manual` 플래그를 true로 설정합니다.
+
+**이유:** 언어 변경 시 자동 동기화 정책(handleLangChange)에서 온도 단위의 자동 변경 여부를 결정하기 위해서입니다. 사용자가 한 번 온도 단위를 수동 선택하면 `temp_unit_manual=true`가 되어, 이후 언어를 변경해도 온도 단위는 자동으로 바뀌지 않습니다. 반대로 수동 설정 없이 언어만 변경하면 온도 단위가 자동으로 동기화됩니다(en→F, 그 외→C).
+
+**대안:** 1) temp_unit_manual 플래그 없음 (언어 변경 시 항상 온도도 자동 변경, 사용자 의도 무시), 2) 수동 선택 후 별도 "자동 동기화" 체크박스 (UI 복잡도 증가), 3) 마지막 수동 설정 시점 저장 후 시간 경과로 판단 (구현 복잡, 시간 기반 휴리스틱)
+
+**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\AdminPage.jsx
+

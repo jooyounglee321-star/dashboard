@@ -4,6 +4,26 @@
 
 ---
 
+## [2026-05-22] — 언어 설정 추가 (ko/en 자동 연동)
+
+### 신규 기능
+- **언어 선택** (🇰🇷 한국어 / 🇺🇸 English) — 관리자 위젯 설정 최상단에 추가
+- **언어 변경 시 자동 연동:**
+  - 온도 단위: ko → °C, en → °F (단, 수동 설정 시 수동 값 우선)
+  - 날짜 형식: ko → `2026년 5월 22일 (목)`, en → `May 22, 2026 (Thu)`
+  - 통화 표시: ko → ₩ 원화 우선, en → $ 달러 우선
+- **수동 override**: °C/°F 버튼 클릭 시 `temp_unit_manual = true` 저장 → 이후 언어 변경에도 온도 단위 고정
+
+### 백엔드 변경
+- **`schemas.py`** — `DEFAULT_WIDGET_CONFIG`에 `"language": "ko"`, `"temp_unit_manual": False` 추가
+
+### 프론트엔드 변경
+- **`HeroSection.jsx`** — `lang` prop 추가; `formatTZ` locale 파라미터화; 날짜 문자열 언어별 분기
+- **`AdminPage.jsx`** — `language` 필드 추가, `handleLangChange()` 함수 추가, °C/°F 버튼 클릭 시 `temp_unit_manual: true` 저장
+- **`IndexPage.jsx`** — `useRef` 추가, `getHeaderDate(lang)` 파라미터화, 헤더 날짜 언어 동기화 useEffect 추가
+
+---
+
 ## [2026-05-22] — 위젯 세부 옵션 추가 구현
 
 ### 신규 기능 (위젯별 상세 옵션)

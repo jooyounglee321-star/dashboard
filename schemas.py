@@ -297,7 +297,8 @@ class ProfileUpdate(BaseModel):
 # ── Widget Config ─────────────────────────────────────────────────────────────
 
 DEFAULT_WIDGET_CONFIG: dict = {
-    "hero":     {"enabled": True, "clock_count": 3, "temp_unit": "C"},
+    "language": "ko",
+    "hero":     {"enabled": True, "clock_count": 3, "temp_unit": "C", "temp_unit_manual": False},
     "schedule": {"enabled": True},
     "youtube":  {"enabled": True, "max_count": 10},
     "stock":    {"enabled": True, "currency_display": "KRW"},
