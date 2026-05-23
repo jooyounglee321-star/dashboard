@@ -4,6 +4,21 @@
 
 ---
 
+## [2026-05-22] — 작업 요약
+
+### 완료
+- React 빌드 파일과 static HTML 충돌 문제 해결
+- 불필요한 static 파일 정리 (login.html 제외)
+- 위젯 동적 레이아웃 추가 (grid-auto-flow:row dense, 9개 위젯 span 적용)
+- 언어 설정 기능 추가 (users.widget_config JSON에 language 저장)
+- °C/°F 온도 단위 설정 기능 추가 (HeroSection.jsx tempUnit prop)
+
+### 참고
+- user_widget_settings 별도 테이블 없음 → users.widget_config JSON 블롭으로 통합 구현
+- users.language 별도 컬럼 없음 → widget_config JSON 안에 language 포함
+
+---
+
 ## [2026-05-22] — 대시보드 위젯 그리드 레이아웃 동적화
 
 ### 문제
