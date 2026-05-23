@@ -33,6 +33,7 @@ class User(Base):
     total_payment: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False, default=0)
     primary_device: Mapped[str | None] = mapped_column(String(20), nullable=True)
     admin_memo: Mapped[str | None] = mapped_column(Text, nullable=True)
+    widget_config: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON
 
 
 class Expense(Base):

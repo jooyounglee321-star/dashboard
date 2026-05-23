@@ -368,9 +368,34 @@ export default function AdminPage() {
 
   const [deleteModal, setDeleteModal] = useState(null) // {gid, sid}
 
+  /* ── 위젯 설정 ── */
+  const DEFAULT_WIDGET_CFG = {
+    hero:     { enabled: true, clock_count: 3 },
+    schedule: { enabled: true },
+    youtube:  { enabled: true },
+    stock:    { enabled: true },
+    expense:  { enabled: true },
+    diet:     { enabled: true },
+    memo:     { enabled: true },
+    news:     { enabled: true },
+    sites:    { enabled: true },
+  }
+  const WIDGET_LABELS = {
+    hero:     { icon: '🕐', label: '시계 / 날씨' },
+    schedule: { icon: '📅', label: '일정' },
+    youtube:  { icon: '▶', label: '유튜브' },
+    stock:    { icon: '📈', label: '주식' },
+    expense:  { icon: '💳', label: '가계부' },
+    diet:     { icon: '🥗', label: '식단' },
+    memo:     { icon: '📝', label: '메모' },
+    news:     { icon: '📰', label: '뉴스' },
+    sites:    { icon: '🌐', label: '즐겨찾기' },
+  }
+  const [widgetCfg, setWidgetCfg] = useState(DEFAULT_WIDGET_CFG)
+
   /* ── 초기 데이터 로드 ── */
   useEffect(() => {
-    loadGroups(); loadYTChannels(); loadSites(); loadTZData()
+    loadGroups(); loadYTChannels(); loadSites(); loadTZData(); loadWidgetCfg()
     setYtAccName(ld('yt_account', { name: '' }).name || '')
     setYtAccEmail(ld('yt_account', { email: '' }).email || '')
   }, [])
@@ -532,6 +557,28 @@ export default function AdminPage() {
     setTzData(prev => prev.map((z, idx) => idx === i ? { ...z, [field]: value } : z))
   }
 
+  /* ── 위젯 설정 로드/저장 ── */
+  async function loadWidgetCfg() {
+    try {
+      const r = await fetch('/api/auth/widget-config', { headers: authH() })
+      if (r.ok) { const d = await r.json(); setWidgetCfg(d.config) }
+    } catch {}
+  }
+  async function saveWidgetCfg() {
+    try {
+      const r = await fetch('/api/auth/widget-config', {
+        method: 'PUT',
+        headers: { ...authH(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config: widgetCfg }),
+      })
+      if (r.ok) showToast('✓ 위젯 설정이 저장되었습니다', 'ok')
+      else showToast('저장 실패', 'err')
+    } catch { showToast('저장 실패 - 서버 연결을 확인해주세요', 'err') }
+  }
+  function setWidget(key, field, value) {
+    setWidgetCfg(prev => ({ ...prev, [key]: { ...prev[key], [field]: value } }))
+  }
+
   /* ── 전체 저장 ── */
   async function saveAll() {
     await saveTZ()
@@ -559,7 +606,67 @@ export default function AdminPage() {
 
       <main style={{ maxWidth: 860, margin: '0 auto', padding: '1.5rem 1.2rem 4rem', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
 
-        {/* ① 보유 주식 관리 */}
+        {/* ① 위젯 설정 */}
+        <div style={secStyle}>
+          <div style={secHdStyle}>
+            <span style={secTitle}>🧩 위젯 설정</span>
+            <button className="btn btn-primary btn-sm" onClick={saveWidgetCfg}>저장</button>
+          </div>
+          <div style={{ ...secBdStyle, gap: '0' }}>
+            <p style={{ fontSize: '0.78rem', color: 'var(--ink3)', marginBottom: '0.9rem' }}>
+              대시보드에 표시할 위젯을 선택하세요. 설정은 이 계정에만 적용됩니다.
+            </p>
+            {Object.entries(WIDGET_LABELS).map(([key, { icon, label }]) => (
+              <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.65rem 0', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <span style={{ fontSize: '1rem', width: 22, textAlign: 'center' }}>{icon}</span>
+                  <span style={{ fontSize: '0.88rem', color: widgetCfg[key]?.enabled !== false ? 'var(--ink)' : 'var(--ink3)' }}>{label}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                  {/* 시계 위젯 전용: 시계 개수 선택 */}
+                  {key === 'hero' && widgetCfg.hero?.enabled !== false && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>시계</span>
+                      {[1, 2, 3].map(n => (
+                        <button
+                          key={n}
+                          onClick={() => setWidget('hero', 'clock_count', n)}
+                          style={{
+                            width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)',
+                            background: widgetCfg.hero?.clock_count === n ? 'var(--accent)' : 'var(--card2)',
+                            color: widgetCfg.hero?.clock_count === n ? '#fff' : 'var(--ink)',
+                            cursor: 'pointer', fontSize: '0.8rem', fontFamily: 'inherit', fontWeight: 500,
+                          }}
+                        >{n}</button>
+                      ))}
+                    </div>
+                  )}
+                  {/* ON/OFF 토글 */}
+                  <label style={{ position: 'relative', display: 'inline-block', width: 40, height: 22, cursor: 'pointer', flexShrink: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={widgetCfg[key]?.enabled !== false}
+                      onChange={e => setWidget(key, 'enabled', e.target.checked)}
+                      style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+                    />
+                    <span style={{
+                      position: 'absolute', inset: 0, borderRadius: 22,
+                      background: widgetCfg[key]?.enabled !== false ? 'var(--accent)' : '#ccc',
+                      transition: 'background 0.2s',
+                    }} />
+                    <span style={{
+                      position: 'absolute', top: 3, left: widgetCfg[key]?.enabled !== false ? 21 : 3,
+                      width: 16, height: 16, borderRadius: '50%', background: '#fff',
+                      transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                    }} />
+                  </label>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ③ 보유 주식 관리 */}
         <div style={secStyle}>
           <div style={secHdStyle}>
             <span style={secTitle}>📈 보유 주식 관리</span>

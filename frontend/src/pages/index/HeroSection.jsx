@@ -28,7 +28,7 @@ function formatTZ(tz) {
   } catch { return { time: '--:--', date: '' } }
 }
 
-export default function HeroSection({ zones: propZones, isMobile = false }) {
+export default function HeroSection({ zones: propZones, isMobile = false, clockCount = 3 }) {
   const zones = (propZones?.length === 3) ? propZones : DEFAULT_ZONES
 
   const [tick, setTick] = useState(0)
@@ -108,18 +108,22 @@ export default function HeroSection({ zones: propZones, isMobile = false }) {
           <div className="tz-date">{z0.date}</div>
           <div className="tz-name">{zones[0].label || ''}</div>
         </div>
-        <div className="time-zone">
-          <div className="tz-region">{zones[1].region}</div>
-          <div className="tz-time">{z1.time}</div>
-          <div className="tz-date">{z1.date}</div>
-          <div className="tz-name">{zones[1].label || ''}</div>
-        </div>
-        <div className="time-zone">
-          <div className="tz-region">{zones[2].region}</div>
-          <div className="tz-time">{z2.time}</div>
-          <div className="tz-date">{z2.date}</div>
-          <div className="tz-name">{zones[2].label || ''}</div>
-        </div>
+        {clockCount >= 2 && (
+          <div className="time-zone">
+            <div className="tz-region">{zones[1].region}</div>
+            <div className="tz-time">{z1.time}</div>
+            <div className="tz-date">{z1.date}</div>
+            <div className="tz-name">{zones[1].label || ''}</div>
+          </div>
+        )}
+        {clockCount >= 3 && (
+          <div className="time-zone">
+            <div className="tz-region">{zones[2].region}</div>
+            <div className="tz-time">{z2.time}</div>
+            <div className="tz-date">{z2.date}</div>
+            <div className="tz-name">{zones[2].label || ''}</div>
+          </div>
+        )}
         <div className="hero-weather">
           <div className="w-emoji">{weather.emoji}</div>
           <div className="w-temp">{weather.temp}°C</div>

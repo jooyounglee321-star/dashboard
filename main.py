@@ -82,6 +82,7 @@ def _migrate_user_columns():
         ("total_payment",   "NUMERIC(12,2) DEFAULT 0"),
         ("primary_device",  "VARCHAR(20)"),
         ("admin_memo",      "TEXT"),
+        ("widget_config",   "TEXT"),
     ]
     with engine.connect() as conn:
         try:

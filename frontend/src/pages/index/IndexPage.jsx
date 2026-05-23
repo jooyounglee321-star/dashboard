@@ -43,6 +43,11 @@ export default function IndexPage() {
   // Stats overlay
   const [statsOpen, setStatsOpen] = useState(false)
 
+  // 위젯 설정
+  const [widgetCfg, setWidgetCfg] = useState(null)
+  // widgetCfg가 null(로딩 중)이면 모두 보여줌, 이후 설정대로 표시
+  const w = (key) => !widgetCfg || widgetCfg[key]?.enabled !== false
+
   // Header date tick
   const [headerDate, setHeaderDate] = useState(getHeaderDate)
   useEffect(() => {
@@ -85,6 +90,14 @@ export default function IndexPage() {
     fetch('/api/timezone', { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } })
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.zones?.length === 3) setZones(d.zones) })
+      .catch(() => {})
+  }, [])
+
+  // 위젯 설정 로드
+  useEffect(() => {
+    fetch('/api/auth/widget-config', { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.config) setWidgetCfg(d.config) })
       .catch(() => {})
   }, [])
 
@@ -305,38 +318,45 @@ export default function IndexPage() {
 
       {/* ═══ PC 레이아웃 ═══ */}
       <main className="main">
-        {/* ① 시간 3지역 + 날씨 */}
-        <HeroSection zones={zones} />
+        {/* ① 시간 + 날씨 */}
+        {w('hero') && (
+          <HeroSection
+            zones={zones}
+            clockCount={widgetCfg?.hero?.clock_count ?? 3}
+          />
+        )}
 
         {/* ② 일정 */}
-        <ScheduleCard />
+        {w('schedule') && <ScheduleCard />}
 
         {/* ③ 유튜브 */}
-        <YoutubeCard />
+        {w('youtube') && <YoutubeCard />}
 
-        {/* ④ 주식 (오른쪽 열, 세로로 길게) */}
-        <StockCard
-          groups={stockGroups}
-          priceMap={priceMap}
-          fxRate={fxRate}
-          loading={stockLoading}
-          onOpenStats={() => setStatsOpen(true)}
-        />
+        {/* ④ 주식 */}
+        {w('stock') && (
+          <StockCard
+            groups={stockGroups}
+            priceMap={priceMap}
+            fxRate={fxRate}
+            loading={stockLoading}
+            onOpenStats={() => setStatsOpen(true)}
+          />
+        )}
 
         {/* ⑤ 지출 */}
-        <ExpenseCard />
+        {w('expense') && <ExpenseCard />}
 
         {/* ⑥ 식단 */}
-        <DietCard />
+        {w('diet') && <DietCard />}
 
         {/* ⑦ 메모 */}
-        <MemoCard />
+        {w('memo') && <MemoCard />}
 
         {/* ⑧ 뉴스 */}
-        <NewsCard />
+        {w('news') && <NewsCard />}
 
         {/* ⑨ 즐겨찾기 */}
-        <SitesCard />
+        {w('sites') && <SitesCard />}
       </main>
 
       {/* ═══ 모바일 레이아웃 ═══ */}
@@ -344,34 +364,36 @@ export default function IndexPage() {
 
         {/* 홈: 시간+날씨+일정+사이트 */}
         <div className={`mob-section${mobileTab === 'home' ? ' active' : ''}`}>
-          <HeroSection zones={zones} isMobile />
-          <ScheduleCard isMobile />
-          <SitesCard isMobile />
+          {w('hero') && <HeroSection zones={zones} isMobile clockCount={widgetCfg?.hero?.clock_count ?? 3} />}
+          {w('schedule') && <ScheduleCard isMobile />}
+          {w('sites') && <SitesCard isMobile />}
         </div>
 
         {/* 가계부: 지출+주식 */}
         <div className={`mob-section${mobileTab === 'money' ? ' active' : ''}`}>
-          <ExpenseCard isMobile />
-          <StockCard
-            groups={stockGroups}
-            priceMap={priceMap}
-            fxRate={fxRate}
-            loading={stockLoading}
-            onOpenStats={() => setStatsOpen(true)}
-            isMobile
-          />
+          {w('expense') && <ExpenseCard isMobile />}
+          {w('stock') && (
+            <StockCard
+              groups={stockGroups}
+              priceMap={priceMap}
+              fxRate={fxRate}
+              loading={stockLoading}
+              onOpenStats={() => setStatsOpen(true)}
+              isMobile
+            />
+          )}
         </div>
 
         {/* 건강: 식단+메모 */}
         <div className={`mob-section${mobileTab === 'health' ? ' active' : ''}`}>
-          <DietCard isMobile />
-          <MemoCard isMobile />
+          {w('diet') && <DietCard isMobile />}
+          {w('memo') && <MemoCard isMobile />}
         </div>
 
         {/* 미디어: 뉴스+유튜브 */}
         <div className={`mob-section${mobileTab === 'media' ? ' active' : ''}`}>
-          <NewsCard isMobile />
-          <YoutubeCard isMobile />
+          {w('news') && <NewsCard isMobile />}
+          {w('youtube') && <YoutubeCard isMobile />}
         </div>
 
       </div>
