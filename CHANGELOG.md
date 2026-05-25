@@ -4,6 +4,24 @@
 
 ---
 
+## [2026-05-25] — 언어 설정 위치 이동 (대시보드 설정 → 프로필)
+
+### 변경
+- **언어 설정 UI를 `AdminPage` → `ProfilePage`로 이동**
+- 프로필 페이지 "계정 정보" 섹션 아래 "언어 / Language" 섹션 추가
+- 언어 선택 즉시 저장 (저장 버튼 없이 클릭하면 바로 API 저장)
+
+### 언어 변경 자동 연동 (ProfilePage 동일하게 유지)
+- 한국어 → °C, ₩ KRW, 한국어 날짜 형식
+- English → °F, $ USD, 영어 날짜 형식
+- 온도·통화를 위젯 설정에서 수동 변경한 경우 수동 설정 우선
+
+### 파일 변경
+- `AdminPage.jsx` — `handleLangChange()` 함수 및 언어 UI 블록 제거
+- `ProfilePage.jsx` — `widgetCfg` / `langSaving` 상태 추가, 위젯 설정 로드 useEffect 추가, `handleLangChange()` 추가, 언어 선택 UI 추가
+
+---
+
 ## [2026-05-25] — 헤더 슈퍼어드민 버튼 빨간색 스타일 적용
 
 ### 변경

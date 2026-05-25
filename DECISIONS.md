@@ -1,6 +1,16 @@
 # 프로젝트 결정 기록
 
 ---
+## 2026-05-25 — 회원관리 페이지 통합: AdminUsersPage 삭제, SuperadminPage로 완전 대체
+**결정:** 별도로 존재하던 `/admin_users` 라우트와 `AdminUsersPage.jsx` 컴포넌트를 삭제하고, 회원관리 기능을 `/superadmin` 라우트의 `SuperadminPage.jsx`로 완전히 통합합니다. 레거시 북마크 대응을 위해 `/admin_users` → `/superadmin`로 리다이렉트합니다.
+
+**이유:** 두 페이지가 모두 관리자용 회원 목록을 표시하는 중복된 기능을 가지고 있었습니다. SuperadminPage가 더 풍부한 기능(역할 관리, 권한 관리, 상세 모달)을 제공하므로, AdminUsersPage는 불필요한 코드 중복입니다. 통합하면 유지보수 부담을 줄이고, 사용자는 하나의 일관된 관리 인터페이스에서 모든 회원 관리 작업을 수행할 수 있습니다.
+
+**대안:** 1) 두 페이지 병행 (코드 중복 증가, 동기화 문제), 2) AdminUsersPage에 역할/권한 관리 기능 추가 (라우트 구조 복잡화), 3) 별도의 AdminPage처럼 특화된 기능 유지 (기능 산재)
+
+**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\App.jsx, C:\Users\Jason\Desktop\dashboard\frontend\src\pages\SuperadminPage.jsx
+
+---
 ## 2026-05-22 — 사용자 위젯 설정을 User 모델의 JSON 컬럼에 저장
 **결정:** 위젯 설정(활성화/비활성화, 옵션)을 User 테이블의 `widget_config` 컬럼에 JSON 문자열로 직렬화하여 저장하고, GET/PUT 엔드포인트(/api/auth/widget-config)로 관리합니다.
 
@@ -77,4 +87,24 @@
 **대안:** 1) temp_unit_manual 플래그 없음 (언어 변경 시 항상 온도도 자동 변경, 사용자 의도 무시), 2) 수동 선택 후 별도 "자동 동기화" 체크박스 (UI 복잡도 증가), 3) 마지막 수동 설정 시점 저장 후 시간 경과로 판단 (구현 복잡, 시간 기반 휴리스틱)
 
 **파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\AdminPage.jsx
+
+---
+## 2026-05-23 — 클라이언트 기반 역할 기반 접근 제어(RBAC): AdminRoleGuard 도입
+**결정:** App.jsx에 `getStoredRole()` 유틸리티 함수와 `AdminRoleGuard` 컴포넌트를 추가하여, localStorage에 저장된 사용자 역할 정보를 파싱하고, admin 역할이 아닌 경우 홈(/)으로 리다이렉트하는 클라이언트 측 보호 메커니즘을 구현했습니다.
+
+**이유:** 어드민 페이지에 대한 초기 접근 제어를 클라이언트에서 수행하여 UX를 개선(불필요한 페이지 로드 방지)하고, 라우팅 계층에서 역할 검증을 명시적으로 처리합니다. localStorage에 저장된 사용자 객체(JSON)에서 role 필드를 안전하게 추출하되, 파싱 실패 시 기본값('free')으로 폴백합니다. 이는 인증 검증(AuthGuard)과 동일한 패턴으로 보호된 경로를 구현합니다.
+
+**대안:** 1) 서버에서만 역할 검증 (클라이언트가 어드민 페이지를 먼저 로드하므로 지연), 2) URL 기반 숨김만 적용 (기술적 보호 부족), 3) 서버에서 403 응답 (이미 보호된 엔드포인트와 중복), 4) 전역 상태 관리자(Redux/Context)에 역할 저장 (추가 복잡도)
+
+**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\App.jsx
+
+---
+## 2026-05-25 — ProfilePage에서 언어 변경 시 위젯 설정 자동 동기화 기능 추가
+**결정:** ProfilePage에 `useEffect`로 widgetCfg를 로드하고, `handleLangChange(newLang)` 함수를 추가하여 사용자가 언어를 변경할 때 온도 단위와 통화를 조건부로 자동 동기화합니다. 온도 단위는 `temp_unit_manual` 플래그가 false일 때만 자동 변경(en→F, 그 외→C)하고, 통화는 항상 동기화합니다(en→USD, 그 외→KRW). 변경 후 즉시 PUT 요청으로 백엔드에 저장합니다.
+
+**이유:** 프로필 페이지가 사용자의 주요 설정 진입점이므로, AdminPage뿐만 아니라 ProfilePage에서도 언어 설정 시 관련 위젯 옵션을 자동으로 동기화하는 것이 사용자 경험을 향상시킵니다. 비대칭 정책(온도는 수동 설정 존중, 통화는 자동 동기화)은 AdminPage의 handleLangChange와 동일한 로직을 유지하여 일관성을 보장합니다.
+
+**대안:** 1) 언어만 변경하고 동기화하지 않음 (사용자가 매번 설정 수정 필요), 2) 모든 관련 설정 항상 동기화 (사용자 수동 선택 무시), 3) 동기화 전 확인 대화상자 (UX 마찰 증가), 4) AdminPage에만 기능 제한 (프로필 페이지에서는 설정 변경 불가)
+
+**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\ProfilePage.jsx
 
