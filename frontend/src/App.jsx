@@ -12,9 +12,23 @@ function hasValidToken() {
   return token && token.trim() !== '' && token !== 'undefined' && token !== 'null'
 }
 
+function getStoredRole() {
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    return user.role || 'free'
+  } catch { return 'free' }
+}
+
 /** 로그인 필요 페이지 — 토큰 없으면 /login으로 */
 function AuthGuard({ children }) {
   if (!hasValidToken()) return <Navigate to="/login" replace />
+  return children
+}
+
+/** 어드민 전용 페이지 — role이 admin이 아니면 /로 리다이렉트 */
+function AdminRoleGuard({ children }) {
+  if (!hasValidToken()) return <Navigate to="/login" replace />
+  if (getStoredRole() !== 'admin') return <Navigate to="/" replace />
   return children
 }
 
@@ -34,7 +48,7 @@ export default function App() {
         <Route path="/profile"    element={<AuthGuard><ProfilePage /></AuthGuard>} />
         <Route path="/admin"      element={<AuthGuard><AdminPage /></AuthGuard>} />
         <Route path="/admin_users" element={<AuthGuard><AdminUsersPage /></AuthGuard>} />
-        <Route path="/superadmin"  element={<AuthGuard><SuperadminPage /></AuthGuard>} />
+        <Route path="/superadmin"  element={<AdminRoleGuard><SuperadminPage /></AdminRoleGuard>} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>

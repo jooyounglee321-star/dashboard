@@ -35,11 +35,12 @@ def _verify(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 
-def _create_token(user_id: int, email: str) -> str:
+def _create_token(user_id: int, email: str, role: str = "free") -> str:
     """30일 유효 JWT 생성."""
     payload = {
         "sub": str(user_id),
         "email": email,
+        "role": role,
         "exp": datetime.now(timezone.utc) + timedelta(days=TOKEN_EXPIRE_DAYS),
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
@@ -83,7 +84,7 @@ def register(body: UserRegister, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
 
-    token = _create_token(user.id, user.email)
+    token = _create_token(user.id, user.email, user.role)
     return AuthOut(access_token=token, user=UserOut.model_validate(user))
 
 
@@ -114,7 +115,7 @@ def login(body: UserLogin, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
 
-    token = _create_token(user.id, user.email)
+    token = _create_token(user.id, user.email, user.role)
     return AuthOut(access_token=token, user=UserOut.model_validate(user))
 
 
