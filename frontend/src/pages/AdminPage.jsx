@@ -580,20 +580,6 @@ export default function AdminPage() {
     setWidgetCfg(prev => ({ ...prev, [key]: { ...prev[key], [field]: value } }))
   }
 
-  /* 언어 변경 — 온도단위(수동 미설정 시)·통화 자동 연동 */
-  function handleLangChange(newLang) {
-    setWidgetCfg(prev => {
-      const next = { ...prev, language: newLang }
-      // 온도 단위: 수동 설정이 없을 때만 자동 변경
-      if (!prev.hero?.temp_unit_manual) {
-        next.hero = { ...next.hero, temp_unit: newLang === 'en' ? 'F' : 'C' }
-      }
-      // 통화: 언어 변경 시 항상 연동
-      next.stock = { ...next.stock, currency_display: newLang === 'en' ? 'USD' : 'KRW' }
-      return next
-    })
-  }
-
   /* ── 전체 저장 ── */
   async function saveAll() {
     await saveTZ()
@@ -631,29 +617,6 @@ export default function AdminPage() {
             <p style={{ fontSize: '0.78rem', color: 'var(--ink3)', marginBottom: '0.9rem' }}>
               대시보드에 표시할 위젯을 선택하세요. 설정은 이 계정에만 적용됩니다.
             </p>
-
-            {/* 언어 설정 — 온도단위·통화·날짜형식 자동 연동 */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.65rem 0', borderBottom: '1px solid var(--border)', marginBottom: '0.2rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <span style={{ fontSize: '1rem', width: 22, textAlign: 'center' }}>🌐</span>
-                <span style={{ fontSize: '0.88rem', color: 'var(--ink)' }}>언어 / Language</span>
-                <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>— 온도단위·통화 자동 연동</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                {[['ko', '🇰🇷 한국어'], ['en', '🇺🇸 English']].map(([v, l]) => (
-                  <button
-                    key={v}
-                    onClick={() => handleLangChange(v)}
-                    style={{
-                      padding: '0.25rem 0.7rem', borderRadius: 7, border: '1px solid var(--border)',
-                      background: (widgetCfg.language ?? 'ko') === v ? 'var(--accent)' : 'var(--card2)',
-                      color: (widgetCfg.language ?? 'ko') === v ? '#fff' : 'var(--ink)',
-                      cursor: 'pointer', fontSize: '0.8rem', fontFamily: 'inherit', fontWeight: 500,
-                    }}
-                  >{l}</button>
-                ))}
-              </div>
-            </div>
 
             {Object.entries(WIDGET_LABELS).map(([key, { icon, label }]) => (
               <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.65rem 0', borderBottom: '1px solid var(--border)' }}>

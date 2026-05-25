@@ -20,6 +20,8 @@ export default function ProfilePage() {
   const [avatarSrc, setAvatarSrc] = useState(null)
   const [saving, setSaving]     = useState(false)
   const [msg, setMsg]           = useState(null) // { type: 'success'|'error', text }
+  const [widgetCfg, setWidgetCfg] = useState(null)
+  const [langSaving, setLangSaving] = useState(false)
   const fileRef = useRef(null)
 
   const token = localStorage.getItem('token')
@@ -44,6 +46,38 @@ export default function ProfilePage() {
       })
       .catch(() => {})
   }, [token, navigate])
+
+  // 위젯 설정(언어) 로드
+  useEffect(() => {
+    fetch('/api/auth/widget-config', { headers: { Authorization: 'Bearer ' + token } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.config) setWidgetCfg(d.config) })
+      .catch(() => {})
+  }, [token])
+
+  // 언어 변경 — 온도단위(수동 미설정 시)·통화 자동 연동 후 즉시 저장
+  async function handleLangChange(newLang) {
+    if (!widgetCfg) return
+    const next = { ...widgetCfg, language: newLang }
+    if (!widgetCfg.hero?.temp_unit_manual) {
+      next.hero = { ...next.hero, temp_unit: newLang === 'en' ? 'F' : 'C' }
+    }
+    next.stock = { ...next.stock, currency_display: newLang === 'en' ? 'USD' : 'KRW' }
+    setWidgetCfg(next)
+    setLangSaving(true)
+    try {
+      await fetch('/api/auth/widget-config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ config: next }),
+      })
+      setMsg({ type: 'success', text: '언어 설정이 저장되었습니다.' })
+    } catch {
+      setMsg({ type: 'error', text: '언어 설정 저장에 실패했습니다.' })
+    } finally {
+      setLangSaving(false)
+    }
+  }
 
   function onAvatarChange(e) {
     const file = e.target.files[0]
@@ -184,6 +218,35 @@ export default function ProfilePage() {
             <InfoRow label="가입일">
               <span style={{ fontSize: '0.88rem', color: 'var(--ink)' }}>{joinedAt || '—'}</span>
             </InfoRow>
+
+            {/* 언어 설정 */}
+            <SectionLabel>언어 / Language</SectionLabel>
+            <div style={{ marginBottom: '1.2rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.6rem' }}>
+                {[['ko', '🇰🇷 한국어'], ['en', '🇺🇸 English']].map(([v, l]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => handleLangChange(v)}
+                    disabled={langSaving || !widgetCfg}
+                    style={{
+                      padding: '0.45rem 1.1rem', borderRadius: 9,
+                      border: '1.5px solid var(--border)',
+                      background: (widgetCfg?.language ?? 'ko') === v ? 'var(--accent)' : 'var(--card2)',
+                      color: (widgetCfg?.language ?? 'ko') === v ? '#fff' : 'var(--ink)',
+                      cursor: (langSaving || !widgetCfg) ? 'not-allowed' : 'pointer',
+                      fontSize: '0.88rem', fontFamily: 'inherit', fontWeight: 500,
+                      opacity: (langSaving || !widgetCfg) ? 0.6 : 1,
+                    }}
+                  >{l}</button>
+                ))}
+                {langSaving && <span style={{ fontSize: '0.75rem', color: 'var(--ink3)', alignSelf: 'center' }}>저장 중…</span>}
+              </div>
+              <div style={{ fontSize: '0.73rem', color: 'var(--ink3)', lineHeight: 1.6 }}>
+                언어 변경 시 온도 단위, 통화, 날짜 형식이 자동으로 연동됩니다.<br />
+                온도·통화를 위젯 설정에서 직접 변경한 경우 수동 설정이 우선됩니다.
+              </div>
+            </div>
 
             {/* 비밀번호 변경 */}
             <SectionLabel>비밀번호 변경</SectionLabel>
