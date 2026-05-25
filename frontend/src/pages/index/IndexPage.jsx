@@ -306,7 +306,11 @@ export default function IndexPage() {
           <span className="header-date">{headerDate}</span>
           <Link to="/admin" className="admin-link">⚙ 관리자</Link>
           {userRole === 'admin' && (
-            <Link to="/superadmin" className="admin-link">👑 슈퍼어드민</Link>
+            <Link to="/superadmin" style={{
+              fontSize: '0.78rem', color: '#c0392b', textDecoration: 'none',
+              border: '1px solid rgba(192,57,43,0.45)', padding: '0.28rem 0.7rem',
+              borderRadius: 20, fontFamily: 'inherit', fontWeight: 500,
+            }}>👑 슈퍼어드민</Link>
           )}
           <button
             onClick={handleLogout}
