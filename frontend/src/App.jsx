@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
-import AdminUsersPage from './pages/AdminUsersPage'
 import SuperadminPage from './pages/SuperadminPage'
 import AdminPage from './pages/AdminPage'
 import IndexPage from './pages/index/IndexPage'
@@ -47,7 +46,7 @@ export default function App() {
         <Route path="/"           element={<AuthGuard><IndexPage /></AuthGuard>} />
         <Route path="/profile"    element={<AuthGuard><ProfilePage /></AuthGuard>} />
         <Route path="/admin"      element={<AuthGuard><AdminPage /></AuthGuard>} />
-        <Route path="/admin_users" element={<AuthGuard><AdminUsersPage /></AuthGuard>} />
+        <Route path="/admin_users" element={<Navigate to="/superadmin" replace />} />
         <Route path="/superadmin"  element={<AdminRoleGuard><SuperadminPage /></AdminRoleGuard>} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
