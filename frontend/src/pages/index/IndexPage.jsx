@@ -70,8 +70,9 @@ export default function IndexPage() {
     navigate('/login', { replace: true })
   }
 
-  // 헤더 닉네임
+  // 헤더 닉네임 + role
   const [userName, setUserName] = useState('')
+  const [userRole, setUserRole] = useState('')
   const [avatarSrc, setAvatarSrc] = useState(null)
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -80,14 +81,18 @@ export default function IndexPage() {
     try {
       const cached = JSON.parse(localStorage.getItem('user') || '{}')
       if (cached.name) setUserName(cached.name)
+      if (cached.role) setUserRole(cached.role)
     } catch {}
     // 아바타
     const av = localStorage.getItem('avatar_data')
     if (av) setAvatarSrc(av)
-    // API 최신 닉네임
+    // API 최신 닉네임 + role
     fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } })
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.name) setUserName(d.name) })
+      .then(d => {
+        if (d?.name) setUserName(d.name)
+        if (d?.role) setUserRole(d.role)
+      })
       .catch(() => {})
   }, [])
 
@@ -300,6 +305,9 @@ export default function IndexPage() {
         <div className="header-right">
           <span className="header-date">{headerDate}</span>
           <Link to="/admin" className="admin-link">⚙ 관리자</Link>
+          {userRole === 'admin' && (
+            <Link to="/superadmin" className="admin-link">👑 슈퍼어드민</Link>
+          )}
           <button
             onClick={handleLogout}
             title="로그아웃"

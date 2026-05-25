@@ -4,6 +4,22 @@
 
 ---
 
+## [2026-05-25] — 슈퍼어드민 버튼 및 접근 제한 추가
+
+### 신규 기능
+- **헤더 슈퍼어드민 버튼** — `role === 'admin'`인 사용자에게만 표시, 클릭 시 `/superadmin` 이동
+- **`/superadmin` 접근 제한** — `role !== 'admin'`이면 대시보드(`/`)로 리다이렉트
+
+### 백엔드 변경
+- **`routers/auth.py`** — `_create_token()`에 `role` 파라미터 추가, JWT payload에 `"role"` 포함
+  - `register`, `login` 엔드포인트 모두 `user.role` 전달하도록 수정
+
+### 프론트엔드 변경
+- **`App.jsx`** — `getStoredRole()` 헬퍼 추가, `AdminRoleGuard` 컴포넌트 추가, `/superadmin` 라우트에 적용
+- **`IndexPage.jsx`** — `userRole` 상태 추가, `/api/auth/me` + localStorage 캐시에서 role 읽기, 헤더에 슈퍼어드민 버튼 조건부 렌더링
+
+---
+
 ## [2026-05-22] — 작업 요약
 
 ### 완료
