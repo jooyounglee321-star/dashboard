@@ -4,6 +4,21 @@
 
 ---
 
+## [2026-05-25] — 슈퍼어드민 회원 목록 역할 컬럼 추가
+
+### 신규 기능
+- **회원 목록 테이블 "역할" 컬럼 추가** — 플랜 컬럼 옆에 위치
+  - admin: 빨간색 배지 (`badge-role-admin`)
+  - premium: 골드 배지 (`badge-role-premium`)
+  - free: 회색 배지 (`badge-role-free`)
+  - guest: 연한 회색 배지 (`badge-role-guest`)
+- 백엔드 `UserAdminOut`에 `role` 필드 이미 포함 — 백엔드 변경 없음
+
+### 프론트엔드 변경
+- **`SuperadminPage.jsx`** — `roleLabel()` 함수 추가, 테이블 헤더/바디에 역할 컬럼 추가, colSpan 11→12, 역할 배지 CSS 4종 추가
+
+---
+
 ## [2026-05-25] — 슈퍼어드민 버튼 및 접근 제한 추가
 
 ### 신규 기능
