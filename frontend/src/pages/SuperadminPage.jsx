@@ -15,6 +15,7 @@ function fmtDatetime(iso) {
 }
 function planLabel(p)   { return p === 'premium' ? 'Premium' : 'Free' }
 function statusLabel(s) { return { active:'활성', inactive:'비활성', suspended:'정지' }[s] || s || '—' }
+function roleLabel(r)   { return { admin:'admin', premium:'premium', free:'free', guest:'guest' }[r] || r || '—' }
 
 function debounce(fn, ms) {
   let t
@@ -209,15 +210,15 @@ export default function SuperadminPage() {
               <thead>
                 <tr>
                   <th>#</th><th>이름</th><th>이메일</th><th>가입일</th>
-                  <th>플랜</th><th>플랜 만료일</th><th>계정 상태</th>
+                  <th>플랜</th><th>역할</th><th>플랜 만료일</th><th>계정 상태</th>
                   <th>마지막 접속</th><th>로그인</th><th>누적결제</th><th>기기</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr className="state-row"><td colSpan={11}>불러오는 중…</td></tr>
+                  <tr className="state-row"><td colSpan={12}>불러오는 중…</td></tr>
                 ) : !page.length ? (
-                  <tr className="state-row"><td colSpan={11}>일치하는 회원이 없습니다.</td></tr>
+                  <tr className="state-row"><td colSpan={12}>일치하는 회원이 없습니다.</td></tr>
                 ) : page.map((u, i) => (
                   <tr key={u.id} style={{ cursor: 'pointer' }} onClick={() => openModal(u.id)}>
                     <td style={{ color: 'var(--ink3)', fontSize: '0.75rem' }}>{start + i + 1}</td>
@@ -225,6 +226,7 @@ export default function SuperadminPage() {
                     <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(u.created_at)}</td>
                     <td><span className={`badge badge-${u.plan}`}>{planLabel(u.plan)}</span></td>
+                    <td><span className={`badge badge-role-${u.role}`}>{roleLabel(u.role)}</span></td>
                     <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(u.plan_expires_at)}</td>
                     <td><span className={`badge badge-${u.status}`}>{statusLabel(u.status)}</span></td>
                     <td style={{ whiteSpace: 'nowrap' }}>{fmtDatetime(u.last_login_at)}</td>
@@ -343,6 +345,10 @@ export default function SuperadminPage() {
         .badge-facebook { background: #dce8ff; color: #1a3d7c; }
         .badge-pc       { background: #dce8ff; color: #1a3d7c; }
         .badge-mobile   { background: #d8f0e8; color: #1a4d2a; }
+        .badge-role-admin   { background: #fce0dc; color: #7a1a0d; font-weight: 600; }
+        .badge-role-premium { background: #fff0c0; color: #7a5a00; font-weight: 600; }
+        .badge-role-free    { background: #e8e4dc; color: #6b5e4a; }
+        .badge-role-guest   { background: #f0eeec; color: #9a9080; }
       `}</style>
     </div>
   )
