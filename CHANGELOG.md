@@ -4,6 +4,21 @@
 
 ---
 
+## [2026-05-25] — 언어 설정 저장/적용 버그 수정
+
+### 버그
+- `handleLangChange`에서 `fetch`는 HTTP 4xx/5xx에 throw하지 않음
+  → PUT 실패해도 "저장되었습니다" 표시 (silent failure)
+- IndexPage 초기 `widgetCfg = null` → API 응답 전까지 `language ?? 'ko'`로 한국어 표시
+
+### 수정
+- **`ProfilePage.jsx`** — `r.ok` 체크 추가: 4xx/5xx 시 실제 에러 메시지 표시,
+  성공 시 `localStorage.setItem('dashboard_lang', newLang)` 캐시
+- **`IndexPage.jsx`** — `widgetCfg` 초기값을 localStorage 캐시에서 읽어 즉시 언어 반영,
+  `headerLangRef`, `headerDate` 초기값도 캐시 언어로 설정
+
+---
+
 ## [2026-05-25] — 언어 설정 위치 이동 (대시보드 설정 → 프로필)
 
 ### 변경
