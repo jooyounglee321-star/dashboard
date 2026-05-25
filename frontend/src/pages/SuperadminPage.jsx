@@ -160,7 +160,6 @@ export default function SuperadminPage() {
         </div>
         <nav className="header-nav">
           <Link to="/admin" className="nav-link">대시보드 설정</Link>
-          <Link to="/admin_users" className="nav-link">회원관리(구)</Link>
           <Link to="/superadmin" className="nav-link active">슈퍼어드민</Link>
           <Link to="/" className="nav-link">홈으로</Link>
         </nav>

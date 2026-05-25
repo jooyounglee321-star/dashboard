@@ -4,6 +4,20 @@
 
 ---
 
+## [2026-05-25] — admin_users 페이지 삭제 및 superadmin으로 통합
+
+### 변경
+- **`AdminUsersPage.jsx` 삭제** — superadmin 페이지로 완전 대체
+- **`/admin_users` 라우트** → `/superadmin` 으로 리다이렉트 (기존 북마크 대응)
+- **SuperadminPage 헤더 nav** — `회원관리(구)` 링크 제거
+
+### 파일 변경
+- `frontend/src/pages/AdminUsersPage.jsx` 삭제
+- `App.jsx` — import 제거, `/admin_users` 라우트를 `<Navigate to="/superadmin" replace />` 로 교체
+- `SuperadminPage.jsx` — 헤더 nav에서 `/admin_users` 링크 제거
+
+---
+
 ## [2026-05-25] — 슈퍼어드민 회원 목록 역할 컬럼 추가
 
 ### 신규 기능
