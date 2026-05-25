@@ -66,14 +66,20 @@ export default function ProfilePage() {
     setWidgetCfg(next)
     setLangSaving(true)
     try {
-      await fetch('/api/auth/widget-config', {
+      const res = await fetch('/api/auth/widget-config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
         body: JSON.stringify({ config: next }),
       })
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.detail || `저장 실패 (HTTP ${res.status})`)
+      }
+      // 대시보드 즉시 반영을 위해 localStorage에도 캐시
+      try { localStorage.setItem('dashboard_lang', newLang) } catch {}
       setMsg({ type: 'success', text: '언어 설정이 저장되었습니다.' })
-    } catch {
-      setMsg({ type: 'error', text: '언어 설정 저장에 실패했습니다.' })
+    } catch (e) {
+      setMsg({ type: 'error', text: e.message || '언어 설정 저장에 실패했습니다.' })
     } finally {
       setLangSaving(false)
     }

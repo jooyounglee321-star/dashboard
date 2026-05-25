@@ -48,14 +48,21 @@ export default function IndexPage() {
   // Stats overlay
   const [statsOpen, setStatsOpen] = useState(false)
 
-  // 위젯 설정
-  const [widgetCfg, setWidgetCfg] = useState(null)
+  // 위젯 설정 (localStorage 캐시로 언어 즉시 반영)
+  const [widgetCfg, setWidgetCfg] = useState(() => {
+    try {
+      const lang = localStorage.getItem('dashboard_lang')
+      if (lang) return { language: lang }
+    } catch {}
+    return null
+  })
   // widgetCfg가 null(로딩 중)이면 모두 보여줌, 이후 설정대로 표시
   const w = (key) => !widgetCfg || widgetCfg[key]?.enabled !== false
 
-  // Header date tick
-  const headerLangRef = useRef('ko')
-  const [headerDate, setHeaderDate] = useState(getHeaderDate)
+  // Header date tick (localStorage 캐시 언어로 초기화)
+  const cachedLang = (() => { try { return localStorage.getItem('dashboard_lang') || 'ko' } catch { return 'ko' } })()
+  const headerLangRef = useRef(cachedLang)
+  const [headerDate, setHeaderDate] = useState(() => getHeaderDate(cachedLang))
   useEffect(() => {
     const id = setInterval(() => setHeaderDate(getHeaderDate(headerLangRef.current)), 10000)
     return () => clearInterval(id)
