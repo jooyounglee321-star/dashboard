@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { t } from './i18n'
 
-export default function ScheduleCard({ isMobile = false }) {
+export default function ScheduleCard({ isMobile = false, lang = 'ko' }) {
   const [connected] = useState(() => {
     try { return JSON.parse(localStorage.getItem('gcal_connected')) } catch { return false }
   })
@@ -24,21 +25,21 @@ export default function ScheduleCard({ isMobile = false }) {
     <div className={wrapper}>
       <div className={hdr}>
         <span className="card-icon">📅</span>
-        <span className={title}>오늘의 일정</span>
+        <span className={title}>{t(lang, 'scheduleTitle')}</span>
       </div>
       <div className={body}>
         {!connected ? (
           <div className="gcal-connect">
             <div className="gcal-icon" style={isMobile ? { fontSize: '1.5rem' } : {}}>📆</div>
             <div className="gcal-desc" style={isMobile ? { fontSize: '0.82rem' } : {}}>
-              Google Calendar와 연동하면<br />일정이 자동으로 표시돼요
+              {t(lang, 'scheduleGcalLine1')}<br />{t(lang, 'scheduleGcalLine2')}
             </div>
             <button
               className="gcal-btn"
               onClick={connectGCal}
               style={isMobile ? { fontSize: '0.82rem', padding: '0.4rem 1rem' } : {}}
             >
-              Google 계정 연동
+              {t(lang, 'scheduleGcalBtn')}
             </button>
           </div>
         ) : (
@@ -53,7 +54,7 @@ export default function ScheduleCard({ isMobile = false }) {
               ))}
             </ul>
             {!isMobile && (
-              <button className="sched-refresh">🔄 일정 새로고침</button>
+              <button className="sched-refresh">{t(lang, 'scheduleRefresh')}</button>
             )}
           </>
         )}

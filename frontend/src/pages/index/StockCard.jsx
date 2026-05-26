@@ -1,3 +1,5 @@
+import { t } from './i18n'
+
 const GRP_COLORS = [
   { bg: '#c8deff', tx: '#1a3d7c' }, { bg: '#c0edd8', tx: '#0d4a2a' },
   { bg: '#ffd5c0', tx: '#7a2a00' }, { bg: '#ddd0f5', tx: '#3a1870' },
@@ -31,9 +33,10 @@ function calcStock(s, priceMap) {
   return { holdQty, avgCost, cur, chP, val, evalPL, evalPct, realizedPL, totalSellQty, isLive }
 }
 
-export default function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, isMobile = false, currencyDisplay }) {
+export default function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, isMobile = false, currencyDisplay, lang = 'ko' }) {
   const totalMode = currencyDisplay ?? (() => { try { return localStorage.getItem(TOTAL_MODE_KEY) || 'KRW' } catch { return 'KRW' } })()
   const fxText = fxRate ? `$1 = ₩${fmtKRW(fxRate)}` : ''
+  const fxNote = fxRate ? ` (${t(lang, 'stockFxLabel')} ₩${fmtKRW(fxRate)}/$)` : ''
   const rowS = { display: 'flex', justifyContent: 'space-between', alignItems: 'center' }
   const divS = { height: '0.5px', background: 'rgba(255,255,255,0.18)', margin: '0.2rem 0' }
 
@@ -47,12 +50,12 @@ export default function StockCard({ groups, priceMap, fxRate, loading, onOpenSta
       <div className={wrapper}>
         <div className={hdr} onClick={isMobile ? onOpenStats : undefined}>
           <span className="card-icon">📈</span>
-          <span className={titleCls}>보유 주식</span>
+          <span className={titleCls}>{t(lang, 'stockTitle')}</span>
           {isMobile && <span style={{ fontSize: '0.6rem', color: 'var(--ink3)', marginLeft: '0.25rem' }}>↗</span>}
           <span style={{ marginLeft: 'auto', fontSize: '0.68rem', color: 'var(--ink3)' }}>{fxText}</span>
         </div>
         <div className={body}>
-          <div className="empty-msg">⏳ 시세 불러오는 중…</div>
+          <div className="empty-msg">{t(lang, 'stockLoading')}</div>
         </div>
       </div>
     )
@@ -63,13 +66,13 @@ export default function StockCard({ groups, priceMap, fxRate, loading, onOpenSta
       <div className={wrapper}>
         <div className={!isMobile ? 'card-header' : hdr} onClick={isMobile ? onOpenStats : undefined}>
           <span className="card-icon">📈</span>
-          <span className={titleCls}>보유 주식</span>
-          {!isMobile && <span style={{ fontSize: '0.65rem', color: 'var(--ink3)', marginLeft: '0.3rem' }}>↗ 통계</span>}
+          <span className={titleCls}>{t(lang, 'stockTitle')}</span>
+          {!isMobile && <span style={{ fontSize: '0.65rem', color: 'var(--ink3)', marginLeft: '0.3rem' }}>{t(lang, 'stockStats')}</span>}
           {isMobile && <span style={{ fontSize: '0.6rem', color: 'var(--ink3)', marginLeft: '0.25rem' }}>↗</span>}
           <span style={{ marginLeft: 'auto', fontSize: isMobile ? '0.65rem' : '0.68rem', color: 'var(--ink3)' }}>{fxText}</span>
         </div>
         <div className={body}>
-          <div className="empty-msg">관리자에서 종목을 추가하세요</div>
+          <div className="empty-msg">{t(lang, 'stockEmpty')}</div>
         </div>
       </div>
     )
@@ -93,7 +96,7 @@ export default function StockCard({ groups, priceMap, fxRate, loading, onOpenSta
       const rps = realizedPL >= 0 ? 'up' : 'down'
       const liveBadge = isLive
         ? <span style={{ fontSize: '0.52rem', background: '#4a7c59', color: '#fff', padding: '0.05rem 0.38rem', borderRadius: 8, verticalAlign: 'middle', marginLeft: '0.25rem' }}>LIVE</span>
-        : <span style={{ fontSize: '0.52rem', background: '#a89880', color: '#fff', padding: '0.05rem 0.38rem', borderRadius: 8, verticalAlign: 'middle', marginLeft: '0.25rem' }}>평균가</span>
+        : <span style={{ fontSize: '0.52rem', background: '#a89880', color: '#fff', padding: '0.05rem 0.38rem', borderRadius: 8, verticalAlign: 'middle', marginLeft: '0.25rem' }}>{t(lang, 'stockAvgBadge')}</span>
 
       if (!isMobile) {
         return (
@@ -104,7 +107,7 @@ export default function StockCard({ groups, priceMap, fxRate, loading, onOpenSta
                 <span style={{ fontSize: '0.65rem', color: 'var(--ink3)', marginLeft: 4 }}>{s.ticker}</span>
               </div>
               <div className="stock-qty">
-                {holdQty.toLocaleString()}주{avgCost > 0 ? ` · 평균 ${sym}${fmt(avgCost)}` : ''}
+                {holdQty.toLocaleString()}{t(lang, 'stockHoldSuffix')}{avgCost > 0 ? ` · ${t(lang, 'stockAvg')} ${sym}${fmt(avgCost)}` : ''}
               </div>
             </div>
             <div className="stock-right">
@@ -112,22 +115,22 @@ export default function StockCard({ groups, priceMap, fxRate, loading, onOpenSta
               <div className="stock-val">{sym}{fmt(val)}</div>
               {evalPL != null && (
                 <div className={eps} style={{ fontSize: '0.62rem' }}>
-                  평가손익 {evalPL >= 0 ? '+' : ''}{sym}{fmt(Math.abs(evalPL))} ({evalPct >= 0 ? '+' : ''}{evalPct.toFixed(2)}%)
+                  {t(lang, 'stockEvalPL')} {evalPL >= 0 ? '+' : ''}{sym}{fmt(Math.abs(evalPL))} ({evalPct >= 0 ? '+' : ''}{evalPct.toFixed(2)}%)
                 </div>
               )}
               {totalSellQty > 0 && (
                 <div className={rps} style={{ fontSize: '0.62rem' }}>
-                  실현손익 {realizedPL >= 0 ? '+' : ''}{sym}{fmt(Math.abs(realizedPL))}
+                  {t(lang, 'stockRealPL')} {realizedPL >= 0 ? '+' : ''}{sym}{fmt(Math.abs(realizedPL))}
                 </div>
               )}
-              <div className={cs} style={{ fontSize: '0.62rem' }}>전일比 {sg}{Math.abs(chP).toFixed(2)}%</div>
+              <div className={cs} style={{ fontSize: '0.62rem' }}>{t(lang, 'stockChange')} {sg}{Math.abs(chP).toFixed(2)}%</div>
             </div>
           </li>
         )
       } else {
         const liveBadgeM = isLive
           ? <span style={{ fontSize: '0.5rem', background: '#4a7c59', color: '#fff', padding: '0.04rem 0.3rem', borderRadius: 6, marginLeft: '0.2rem' }}>LIVE</span>
-          : <span style={{ fontSize: '0.5rem', background: '#a89880', color: '#fff', padding: '0.04rem 0.3rem', borderRadius: 6, marginLeft: '0.2rem' }}>평균가</span>
+          : <span style={{ fontSize: '0.5rem', background: '#a89880', color: '#fff', padding: '0.04rem 0.3rem', borderRadius: 6, marginLeft: '0.2rem' }}>{t(lang, 'stockAvgBadge')}</span>
         return (
           <li key={s.ticker} className="m-stock-item">
             <div>
@@ -136,16 +139,16 @@ export default function StockCard({ groups, priceMap, fxRate, loading, onOpenSta
                 <span style={{ fontSize: '0.6rem', color: 'var(--ink3)' }}> {s.ticker}</span>
               </div>
               <div className="m-stock-qty">
-                {holdQty.toLocaleString()}주{avgCost > 0 ? ` · 평균 ${sym}${fmt(avgCost)}` : ''}
+                {holdQty.toLocaleString()}{t(lang, 'stockHoldSuffix')}{avgCost > 0 ? ` · ${t(lang, 'stockAvg')} ${sym}${fmt(avgCost)}` : ''}
               </div>
               {evalPL != null && (
                 <div className="m-stock-qty" style={{ fontSize: '0.65rem' }}>
-                  <span className={eps}>평가손익 {evalPL >= 0 ? '+' : ''}{sym}{fmt(Math.abs(evalPL))} ({evalPct >= 0 ? '+' : ''}{evalPct.toFixed(1)}%)</span>
+                  <span className={eps}>{t(lang, 'stockEvalPL')} {evalPL >= 0 ? '+' : ''}{sym}{fmt(Math.abs(evalPL))} ({evalPct >= 0 ? '+' : ''}{evalPct.toFixed(1)}%)</span>
                 </div>
               )}
               {totalSellQty > 0 && (
                 <div className="m-stock-qty" style={{ fontSize: '0.65rem' }}>
-                  <span className={rps}>실현손익 {realizedPL >= 0 ? '+' : ''}{sym}{fmt(Math.abs(realizedPL))}</span>
+                  <span className={rps}>{t(lang, 'stockRealPL')} {realizedPL >= 0 ? '+' : ''}{sym}{fmt(Math.abs(realizedPL))}</span>
                 </div>
               )}
             </div>
@@ -166,20 +169,19 @@ export default function StockCard({ groups, priceMap, fxRate, loading, onOpenSta
   })
 
   // Total bar
-  const fxNote = fxRate ? ` (환율 ₩${fmtKRW(fxRate)}/$)` : ''
   let totalBar, mTotalBar
 
   if (totalMode === 'KRW') {
     const tot = grandKRW + (fxRate ? grandUSD * fxRate : 0)
     totalBar = (
       <div className="stock-total-bar">
-        <span className="stock-total-label">전체 합계{fxNote}</span>
+        <span className="stock-total-label">{t(lang, 'stockTotalLabel')}{fxNote}</span>
         <span className="stock-total-value">₩{fmtKRW(tot)}</span>
       </div>
     )
     mTotalBar = (
       <div className="m-total-bar">
-        <span style={{ fontSize: '0.72rem', color: '#a89880' }}>전체 합계{fxNote}</span>
+        <span style={{ fontSize: '0.72rem', color: '#a89880' }}>{t(lang, 'stockTotalLabel')}{fxNote}</span>
         <span style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--accent2)' }}>₩{fmtKRW(tot)}</span>
       </div>
     )
@@ -187,13 +189,13 @@ export default function StockCard({ groups, priceMap, fxRate, loading, onOpenSta
     const tot = grandUSD + (fxRate ? grandKRW / fxRate : 0)
     totalBar = (
       <div className="stock-total-bar">
-        <span className="stock-total-label">전체 합계{fxNote}</span>
+        <span className="stock-total-label">{t(lang, 'stockTotalLabel')}{fxNote}</span>
         <span className="stock-total-value">${fmtUSD(tot)}</span>
       </div>
     )
     mTotalBar = (
       <div className="m-total-bar">
-        <span style={{ fontSize: '0.72rem', color: '#a89880' }}>전체 합계{fxNote}</span>
+        <span style={{ fontSize: '0.72rem', color: '#a89880' }}>{t(lang, 'stockTotalLabel')}{fxNote}</span>
         <span style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--accent2)' }}>${fmtUSD(tot)}</span>
       </div>
     )
@@ -201,18 +203,18 @@ export default function StockCard({ groups, priceMap, fxRate, loading, onOpenSta
     const totKRW = grandKRW + (fxRate ? grandUSD * fxRate : 0)
     totalBar = (
       <div className="stock-total-bar" style={{ flexDirection: 'column', gap: '0.28rem', alignItems: 'stretch' }}>
-        <div style={rowS}><span className="stock-total-label">$ USD 합계</span><span className="stock-total-value" style={{ fontSize: '0.82rem' }}>${fmtUSD(grandUSD)}</span></div>
-        <div style={rowS}><span className="stock-total-label">₩ KRW 합계</span><span className="stock-total-value" style={{ fontSize: '0.82rem' }}>₩{fmtKRW(grandKRW)}</span></div>
+        <div style={rowS}><span className="stock-total-label">{t(lang, 'stockUSDSum')}</span><span className="stock-total-value" style={{ fontSize: '0.82rem' }}>${fmtUSD(grandUSD)}</span></div>
+        <div style={rowS}><span className="stock-total-label">{t(lang, 'stockKRWSum')}</span><span className="stock-total-value" style={{ fontSize: '0.82rem' }}>₩{fmtKRW(grandKRW)}</span></div>
         <div style={divS} />
-        <div style={rowS}><span className="stock-total-label">원화환산 전체{fxNote}</span><span className="stock-total-value">₩{fmtKRW(totKRW)}</span></div>
+        <div style={rowS}><span className="stock-total-label">{t(lang, 'stockKRWEquiv')}{fxNote}</span><span className="stock-total-value">₩{fmtKRW(totKRW)}</span></div>
       </div>
     )
     mTotalBar = (
       <div className="m-total-bar" style={{ flexDirection: 'column', gap: '0.25rem', alignItems: 'stretch' }}>
-        <div style={rowS}><span style={{ fontSize: '0.72rem', color: '#a89880' }}>$ USD</span><span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--accent2)' }}>${fmtUSD(grandUSD)}</span></div>
-        <div style={rowS}><span style={{ fontSize: '0.72rem', color: '#a89880' }}>₩ KRW</span><span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--accent2)' }}>₩{fmtKRW(grandKRW)}</span></div>
+        <div style={rowS}><span style={{ fontSize: '0.72rem', color: '#a89880' }}>{t(lang, 'stockUSDSum')}</span><span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--accent2)' }}>${fmtUSD(grandUSD)}</span></div>
+        <div style={rowS}><span style={{ fontSize: '0.72rem', color: '#a89880' }}>{t(lang, 'stockKRWSum')}</span><span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--accent2)' }}>₩{fmtKRW(grandKRW)}</span></div>
         <div style={divS} />
-        <div style={rowS}><span style={{ fontSize: '0.72rem', color: '#a89880' }}>원화환산{fxNote}</span><span style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--accent2)' }}>₩{fmtKRW(totKRW)}</span></div>
+        <div style={rowS}><span style={{ fontSize: '0.72rem', color: '#a89880' }}>{t(lang, 'stockKRWEquivShort')}{fxNote}</span><span style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--accent2)' }}>₩{fmtKRW(totKRW)}</span></div>
       </div>
     )
   }
@@ -227,8 +229,8 @@ export default function StockCard({ groups, priceMap, fxRate, loading, onOpenSta
         style={{ cursor: 'pointer' }}
       >
         <span className="card-icon">📈</span>
-        <span className={titleCls}>보유 주식</span>
-        {!isMobile && <span style={{ fontSize: '0.65rem', color: 'var(--ink3)', marginLeft: '0.3rem' }}>↗ 통계</span>}
+        <span className={titleCls}>{t(lang, 'stockTitle')}</span>
+        {!isMobile && <span style={{ fontSize: '0.65rem', color: 'var(--ink3)', marginLeft: '0.3rem' }}>{t(lang, 'stockStats')}</span>}
         {isMobile && <span style={{ fontSize: '0.6rem', color: 'var(--ink3)', marginLeft: '0.25rem' }}>↗</span>}
         <span style={{ marginLeft: 'auto', fontSize: isMobile ? '0.65rem' : '0.68rem', color: 'var(--ink3)', fontWeight: 400 }}>
           {fxText}

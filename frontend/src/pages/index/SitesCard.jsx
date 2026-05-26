@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { t } from './i18n'
 
 function getFavicon(url) {
   try {
@@ -8,7 +9,7 @@ function getFavicon(url) {
   }
 }
 
-export default function SitesCard({ isMobile = false }) {
+export default function SitesCard({ isMobile = false, lang = 'ko' }) {
   const [sites, setSites] = useState([])
 
   useEffect(() => {
@@ -27,11 +28,11 @@ export default function SitesCard({ isMobile = false }) {
     <div className={wrapper}>
       <div className={hdr}>
         <span className="card-icon">🌐</span>
-        <span className={title}>단골 사이트</span>
+        <span className={title}>{t(lang, 'sitesTitle')}</span>
       </div>
       <div className={body}>
         {!sites.length ? (
-          <span className="empty-msg">관리자에서 사이트를 추가하세요</span>
+          <span className="empty-msg">{t(lang, 'sitesEmpty')}</span>
         ) : (
           <div className={isMobile ? 'm-sites-grid' : 'sites-grid'}>
             {sites.map(s => {
