@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Toast, { useToast } from '../components/Toast'
+import { t, T } from './index/i18n'
 
 /* ── 유틸 ── */
 const sv = (k, v) => localStorage.setItem(k, JSON.stringify(v))
@@ -381,18 +382,20 @@ export default function AdminPage() {
     news:     { enabled: true, default_tab: 'kr' },
     sites:    { enabled: true },
   }
-  const WIDGET_LABELS = {
-    hero:     { icon: '🕐', label: '시계 / 날씨' },
-    schedule: { icon: '📅', label: '일정' },
-    youtube:  { icon: '▶', label: '유튜브' },
-    stock:    { icon: '📈', label: '주식' },
-    expense:  { icon: '💳', label: '가계부' },
-    diet:     { icon: '🥗', label: '식단' },
-    memo:     { icon: '📝', label: '메모' },
-    news:     { icon: '📰', label: '뉴스' },
-    sites:    { icon: '🌐', label: '즐겨찾기' },
+  const WIDGET_ICONS = {
+    hero: '🕐', schedule: '📅', youtube: '▶', stock: '📈',
+    expense: '💳', diet: '🥗', memo: '📝', news: '📰', sites: '🌐',
   }
-  const [widgetCfg, setWidgetCfg] = useState(DEFAULT_WIDGET_CFG)
+  const WIDGET_LABEL_KEYS = {
+    hero: 'adminWHero', schedule: 'adminWSchedule', youtube: 'adminWYoutube',
+    stock: 'adminWStock', expense: 'adminWExpense', diet: 'adminWDiet',
+    memo: 'adminWMemo', news: 'adminWNews', sites: 'adminWSites',
+  }
+  const [widgetCfg, setWidgetCfg] = useState(() => {
+    const cached = localStorage.getItem('dashboard_lang')
+    return { ...DEFAULT_WIDGET_CFG, language: cached || 'ko' }
+  })
+  const lang = widgetCfg?.language ?? 'ko'
 
   /* ── 초기 데이터 로드 ── */
   useEffect(() => {
@@ -432,7 +435,7 @@ export default function AdminPage() {
   /* ── 그룹 CRUD ── */
   function addGroup() {
     if (groups.length >= 10) { showToast('그룹은 최대 10개까지 가능합니다', 'err'); return }
-    saveGroupsToDB([...groups, { id: genId(), name: '새 그룹', currency: 'KRW', stocks: [] }])
+    saveGroupsToDB([...groups, { id: genId(), name: t(lang, 'adminNewGroup'), currency: 'KRW', stocks: [] }])
   }
   function delGroup(gid) {
     if (!window.confirm('그룹과 모든 종목을 삭제하시겠습니까?')) return
@@ -601,8 +604,8 @@ export default function AdminPage() {
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', color: 'var(--ink)', fontFamily: "'Noto Sans KR', sans-serif", fontWeight: 300 }}>
       <header className="header">
-        <span className="header-title">⚙ 관리자 설정</span>
-        <Link to="/" className="nav-link">← 대시보드로</Link>
+        <span className="header-title">⚙ {t(lang, 'adminTitle')}</span>
+        <Link to="/" className="nav-link">← {t(lang, 'adminToDashboard')}</Link>
       </header>
 
       <main style={{ maxWidth: 860, margin: '0 auto', padding: '1.5rem 1.2rem 4rem', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
@@ -610,26 +613,26 @@ export default function AdminPage() {
         {/* ① 위젯 설정 */}
         <div style={secStyle}>
           <div style={secHdStyle}>
-            <span style={secTitle}>🧩 위젯 설정</span>
-            <button className="btn btn-primary btn-sm" onClick={saveWidgetCfg}>저장</button>
+            <span style={secTitle}>🧩 {t(lang, 'adminWidgetSettings')}</span>
+            <button className="btn btn-primary btn-sm" onClick={saveWidgetCfg}>{t(lang, 'adminSave')}</button>
           </div>
           <div style={{ ...secBdStyle, gap: '0' }}>
             <p style={{ fontSize: '0.78rem', color: 'var(--ink3)', marginBottom: '0.9rem' }}>
               대시보드에 표시할 위젯을 선택하세요. 설정은 이 계정에만 적용됩니다.
             </p>
 
-            {Object.entries(WIDGET_LABELS).map(([key, { icon, label }]) => (
+            {Object.entries(WIDGET_ICONS).map(([key, icon]) => (
               <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.65rem 0', borderBottom: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                   <span style={{ fontSize: '1rem', width: 22, textAlign: 'center' }}>{icon}</span>
-                  <span style={{ fontSize: '0.88rem', color: widgetCfg[key]?.enabled !== false ? 'var(--ink)' : 'var(--ink3)' }}>{label}</span>
+                  <span style={{ fontSize: '0.88rem', color: widgetCfg[key]?.enabled !== false ? 'var(--ink)' : 'var(--ink3)' }}>{t(lang, WIDGET_LABEL_KEYS[key])}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
                   {/* 시계 위젯: 시계 개수 + 온도 단위 */}
                   {key === 'hero' && widgetCfg.hero?.enabled !== false && (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>시계</span>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>{t(lang, 'adminClockLabel')}</span>
                         {[1, 2, 3].map(n => (
                           <button
                             key={n}
@@ -644,7 +647,7 @@ export default function AdminPage() {
                         ))}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>온도</span>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>{t(lang, 'adminTempLabel')}</span>
                         {['C', 'F'].map(u => (
                           <button
                             key={u}
@@ -663,14 +666,14 @@ export default function AdminPage() {
                   {/* 유튜브: 최대 표시 개수 */}
                   {key === 'youtube' && widgetCfg.youtube?.enabled !== false && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>최대</span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>{t(lang, 'adminMax')}</span>
                       <input
                         type="number" min="1" max="20"
                         value={widgetCfg.youtube?.max_count ?? 10}
                         onChange={e => setWidget('youtube', 'max_count', Math.max(1, Math.min(20, parseInt(e.target.value) || 10)))}
                         style={{ width: 44, padding: '0.22rem 0.35rem', fontSize: '0.8rem', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit', textAlign: 'center' }}
                       />
-                      <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>개</span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>{t(lang, 'adminMaxUnit')}</span>
                     </div>
                   )}
                   {/* 주식: 합계 표시 통화 */}
@@ -680,9 +683,9 @@ export default function AdminPage() {
                       onChange={e => setWidget('stock', 'currency_display', e.target.value)}
                       style={{ fontSize: '0.75rem', padding: '0.22rem 0.5rem', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit' }}
                     >
-                      <option value="KRW">₩ 원화만</option>
-                      <option value="USD">$ 달러만</option>
-                      <option value="BOTH">$ + ₩</option>
+                      <option value="KRW">{t(lang, 'adminKRWOnly')}</option>
+                      <option value="USD">{t(lang, 'adminUSDOnly')}</option>
+                      <option value="BOTH">{t(lang, 'adminBothFull')}</option>
                     </select>
                   )}
                   {/* 식단: 표시할 끼니 */}
@@ -696,7 +699,7 @@ export default function AdminPage() {
                             onChange={e => setWidget('diet', 'meals', { ...(widgetCfg.diet?.meals ?? { 아침: true, 점심: true, 저녁: true, 간식: true }), [m]: e.target.checked })}
                             style={{ width: 13, height: 13 }}
                           />
-                          {m}
+                          {(T[lang]?.dietMeals ?? T.ko.dietMeals)[m]}
                         </label>
                       ))}
                     </div>
@@ -704,7 +707,7 @@ export default function AdminPage() {
                   {/* 뉴스: 기본 탭 */}
                   {key === 'news' && widgetCfg.news?.enabled !== false && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      {[['kr', '🇰🇷 한국'], ['us', '🇺🇸 미국']].map(([v, l]) => (
+                      {[['kr', t(lang, 'newsKr')], ['us', t(lang, 'newsUs')]].map(([v, l]) => (
                         <button
                           key={v}
                           onClick={() => setWidget('news', 'default_tab', v)}
@@ -746,19 +749,19 @@ export default function AdminPage() {
         {/* ③ 보유 주식 관리 */}
         <div style={secStyle}>
           <div style={secHdStyle}>
-            <span style={secTitle}>📈 보유 주식 관리</span>
+            <span style={secTitle}>📈 {t(lang, 'adminStockMgmt')}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <label style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>합계 표시</label>
+              <label style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>{t(lang, 'adminTotalDisplay')}</label>
               <select value={totalMode} onChange={e => { setTotalMode(e.target.value); sv(TOTAL_MODE_KEY, e.target.value); showToast('✓ 합계 표시 방식이 저장되었습니다', 'ok') }}
                 style={{ fontSize: '0.78rem', padding: '0.22rem 0.5rem', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit' }}>
-                <option value="KRW">₩ 원화만</option>
-                <option value="USD">$ 달러만</option>
-                <option value="BOTH">$ + ₩ 둘 다</option>
+                <option value="KRW">{t(lang, 'adminKRWOnly')}</option>
+                <option value="USD">{t(lang, 'adminUSDOnly')}</option>
+                <option value="BOTH">{t(lang, 'adminBothFull')}</option>
               </select>
             </div>
           </div>
           <div style={secBdStyle}>
-            <p style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>그룹 최대 10개 · 그룹당 종목 최대 10개 · Yahoo Finance 실시간 시세</p>
+            <p style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>{t(lang, 'adminStockHint')}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {!groups.length
                 ? <div style={{ fontSize: '0.82rem', color: 'var(--ink3)', fontStyle: 'italic', textAlign: 'center', padding: '0.5rem' }}>그룹을 추가해보세요</div>
@@ -780,7 +783,7 @@ export default function AdminPage() {
                           <option value="USD">$ USD</option>
                         </select>
                         <span style={{ fontSize: '0.72rem', color: col.tx, opacity: 0.7 }}>{g.stocks.length}/10</span>
-                        <button onClick={() => delGroup(g.id)} style={{ padding: '0.28rem 0.65rem', fontSize: '0.78rem', cursor: 'pointer', background: 'transparent', color: '#c0392b', border: '1px solid #c0392b', borderRadius: 6, fontFamily: 'inherit', transition: 'all 0.15s' }}>그룹 삭제</button>
+                        <button onClick={() => delGroup(g.id)} style={{ padding: '0.28rem 0.65rem', fontSize: '0.78rem', cursor: 'pointer', background: 'transparent', color: '#c0392b', border: '1px solid #c0392b', borderRadius: 6, fontFamily: 'inherit', transition: 'all 0.15s' }}>{t(lang, 'adminDelGroup')}</button>
                       </div>
                       {/* 종목 목록 */}
                       <div style={{ background: 'var(--card2)' }}>
@@ -802,7 +805,7 @@ export default function AdminPage() {
                                       {totalSellQty > 0 ? ` · 매도 ${totalSellQty.toLocaleString()}주` : ''}
                                     </div>
                                   </div>
-                                  <button onClick={() => confirmDelStock(g.id, s.id)} style={{ padding: '0.16rem 0.48rem', fontSize: '0.72rem', cursor: 'pointer', border: '1px solid #c0392b', borderRadius: 5, background: 'transparent', color: '#c0392b', fontFamily: 'inherit', transition: 'all 0.12s' }}>삭제</button>
+                                  <button onClick={() => confirmDelStock(g.id, s.id)} style={{ padding: '0.16rem 0.48rem', fontSize: '0.72rem', cursor: 'pointer', border: '1px solid #c0392b', borderRadius: 5, background: 'transparent', color: '#c0392b', fontFamily: 'inherit', transition: 'all 0.12s' }}>{t(lang, 'adminDelStock')}</button>
                                 </div>
                                 {isOpen && <StockDetailPanel g={g} s={s} onUpdate={handleStockUpdate} />}
                               </div>
@@ -820,7 +823,7 @@ export default function AdminPage() {
             </div>
             {groups.length < 10 && (
               <button onClick={addGroup} style={{ alignSelf: 'flex-start', marginTop: '0.2rem', padding: '0.48rem 1.1rem', fontSize: '0.85rem', fontWeight: 500, cursor: 'pointer', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, fontFamily: 'inherit', transition: 'background 0.15s' }}>
-                + 그룹 추가
+                {t(lang, 'adminAddGroup')}
               </button>
             )}
           </div>
@@ -968,7 +971,7 @@ export default function AdminPage() {
         </div>
 
         <button onClick={saveAll} style={{ padding: '0.9rem 2rem', fontSize: '0.95rem', fontWeight: 700, cursor: 'pointer', background: 'var(--green)', color: '#fff', border: 'none', borderRadius: 12, fontFamily: 'inherit', width: '100%', letterSpacing: '0.04em', transition: 'background 0.15s' }}>
-          ✅ 모두 저장하고 대시보드로 이동
+          {t(lang, 'adminSaveAll')}
         </button>
       </main>
 

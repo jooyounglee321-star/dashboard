@@ -4,6 +4,28 @@
 
 ---
 
+## [2026-05-26] — AdminPage.jsx 전체 i18n 적용 (한국어/영어)
+
+### 변경
+- **`i18n.js`** — AdminPage 번역 키 추가 (ko + en 동시)
+  - 섹션 제목: `adminTitle`, `adminWidgetSettings`, `adminStockMgmt`, `adminSave`, `adminToDashboard`, `adminSaveAll`
+  - 위젯 이름: `adminWHero` ~ `adminWSites` (9개)
+  - 위젯 세부: `adminClockLabel`, `adminTempLabel`, `adminMax`, `adminMaxUnit`
+  - 통화 옵션: `adminKRWOnly`, `adminUSDOnly`, `adminBothFull`
+  - 주식 관리: `adminTotalDisplay`, `adminStockHint`, `adminNewGroup`, `adminDelGroup`, `adminDelStock`, `adminAddGroup`
+- **`AdminPage.jsx`**
+  - `import { t, T } from './index/i18n'` 추가
+  - `WIDGET_LABELS` → `WIDGET_ICONS` + `WIDGET_LABEL_KEYS` 분리 (렌더 시 `t(lang, key)` 호출)
+  - `widgetCfg` 초기화에 `localStorage.getItem('dashboard_lang')` 캐시 적용
+  - `const lang = widgetCfg?.language ?? 'ko'` 파생
+  - 헤더, 위젯 설정, 주식 관리 섹션의 모든 하드코딩 한국어 문자열 → `t(lang, key)`
+  - 식단 끼니 표시: `T[lang]?.dietMeals[m]` (DB 키는 한국어 유지)
+  - 뉴스 탭: `t(lang, 'newsKr')`, `t(lang, 'newsUs')`
+  - `addGroup()` 새 그룹명: `t(lang, 'adminNewGroup')`
+- **`frontend/dist/`** — 빌드 결과물 갱신 (`index-rFujoztq.js`)
+
+---
+
 ## [2026-05-26] — frontend/dist 빌드 결과물 커밋 포함 (Railway 배포 반영)
 
 ### 수정
