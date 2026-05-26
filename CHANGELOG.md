@@ -4,6 +4,22 @@
 
 ---
 
+## [2026-05-26] — frontend/dist 빌드 결과물 커밋 포함 (Railway 배포 반영)
+
+### 수정
+- `frontend/dist/` 최신 빌드 파일을 git에 포함 (i18n 적용 버전)
+  - 추가: `index-3s16AGe_.js` (i18n 전체 적용)
+  - 제거: `index-DBizcD0d.js` (구버전, i18n 없음)
+- `CLAUDE.md` — 프론트엔드 빌드 규칙 추가:
+  React 소스 수정 시 `npm run build` 실행 후 `frontend/dist/` 포함 커밋
+
+### 원인
+- Railway는 Python 앱으로 감지하여 `npm run build` 를 자동 실행하지 않음
+- `main.py`가 커밋된 `frontend/dist/` 를 직접 서빙하므로
+  dist가 미포함이면 소스 변경이 배포에 반영되지 않음
+
+---
+
 ## [2026-05-26] — i18n 보완: 슈퍼어드민 버튼·ProfilePage 메시지 번역, 실시간 언어 전환
 
 ### 변경
