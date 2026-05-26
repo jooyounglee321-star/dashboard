@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
+import { t } from './i18n'
 
-export default function YoutubeCard({ isMobile = false, maxCount = 10 }) {
+export default function YoutubeCard({ isMobile = false, maxCount = 10, lang = 'ko' }) {
   const [channels, setChannels] = useState([])
   const [ytAccount, setYtAccount] = useState('')
 
@@ -24,18 +25,18 @@ export default function YoutubeCard({ isMobile = false, maxCount = 10 }) {
     <div className={wrapper}>
       <div className={hdr}>
         <span className="card-icon">▶</span>
-        <span className={title}>즐겨 듣는 유튜브</span>
+        <span className={title}>{t(lang, 'youtubeTitle')}</span>
       </div>
       <div className={body}>
         {!isMobile && (
           <div className="yt-account-bar">
-            <span className="yt-account-label">계정</span>
-            <span className="yt-account-val">{ytAccount || '관리자에서 계정을 설정하세요'}</span>
+            <span className="yt-account-label">{t(lang, 'youtubeAccount')}</span>
+            <span className="yt-account-val">{ytAccount || t(lang, 'youtubeNoAccount')}</span>
           </div>
         )}
         {!channels.length ? (
           <ul className={isMobile ? 'm-yt-list' : 'yt-list'}>
-            <li className="empty-msg">관리자에서 채널을 추가하세요</li>
+            <li className="empty-msg">{t(lang, 'youtubeNoChannel')}</li>
           </ul>
         ) : (
           <ul className={isMobile ? 'm-yt-list' : 'yt-list'}>

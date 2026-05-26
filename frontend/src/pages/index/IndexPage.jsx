@@ -12,6 +12,7 @@ import DietCard from './DietCard'
 import MemoCard from './MemoCard'
 import NewsCard from './NewsCard'
 import SitesCard from './SitesCard'
+import { t } from './i18n'
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토']
 const MON = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월']
@@ -278,6 +279,7 @@ export default function IndexPage() {
   }, [])
 
   const stockData = stockError ? null : { groups: stockGroups, priceMap, fxRate }
+  const lang = widgetCfg?.language ?? 'ko'
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
@@ -289,10 +291,10 @@ export default function IndexPage() {
           padding: '10px 16px', fontSize: 14, fontWeight: 600,
           letterSpacing: '0.01em', boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
         }}>
-          ⚠️ 서버가 꺼져 있습니다.&nbsp;
+          {t(lang, 'serverDown')}&nbsp;
           <a href="https://railway.app" target="_blank" rel="noreferrer"
             style={{ color: '#ffe', textDecoration: 'underline', fontWeight: 700 }}>
-            Railway에서 서버를 켜주세요
+            {t(lang, 'serverLink')}
           </a>
         </div>
       )}
@@ -302,16 +304,17 @@ export default function IndexPage() {
         isOpen={statsOpen}
         onClose={() => setStatsOpen(false)}
         stockData={stockData}
+        lang={lang}
       />
 
       {/* 헤더 */}
       <header className="header">
         <span className="header-title" style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.25rem', color: 'var(--accent2)' }}>
-          ✦ {userName ? `${userName}의 하루` : '나의 하루'}
+          ✦ {userName ? `${userName}${t(lang, 'ofDay')}` : t(lang, 'myDay')}
         </span>
         <div className="header-right">
           <span className="header-date">{headerDate}</span>
-          <Link to="/admin" className="admin-link">⚙ 관리자</Link>
+          <Link to="/admin" className="admin-link">{t(lang, 'admin')}</Link>
           {userRole === 'admin' && (
             <Link to="/superadmin" style={{
               fontSize: '0.78rem', color: '#c0392b', textDecoration: 'none',
@@ -321,14 +324,14 @@ export default function IndexPage() {
           )}
           <button
             onClick={handleLogout}
-            title="로그아웃"
+            title={t(lang, 'logout')}
             style={{
               fontSize: '0.78rem', color: '#c0392b', background: 'none',
               border: '1px solid rgba(192,57,43,0.35)', padding: '0.28rem 0.7rem',
               borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 400,
             }}
           >
-            로그아웃
+            {t(lang, 'logout')}
           </button>
           <Link
             to="/profile"
@@ -356,15 +359,15 @@ export default function IndexPage() {
             zones={zones}
             clockCount={widgetCfg?.hero?.clock_count ?? 3}
             tempUnit={widgetCfg?.hero?.temp_unit ?? 'C'}
-            lang={widgetCfg?.language ?? 'ko'}
+            lang={lang}
           />
         )}
 
         {/* ② 일정 */}
-        {w('schedule') && <ScheduleCard />}
+        {w('schedule') && <ScheduleCard lang={lang} />}
 
         {/* ③ 유튜브 */}
-        {w('youtube') && <YoutubeCard maxCount={widgetCfg?.youtube?.max_count ?? 10} />}
+        {w('youtube') && <YoutubeCard maxCount={widgetCfg?.youtube?.max_count ?? 10} lang={lang} />}
 
         {/* ④ 주식 */}
         {w('stock') && (
@@ -375,23 +378,24 @@ export default function IndexPage() {
             loading={stockLoading}
             onOpenStats={() => setStatsOpen(true)}
             currencyDisplay={widgetCfg?.stock?.currency_display}
+            lang={lang}
           />
         )}
 
         {/* ⑤ 지출 */}
-        {w('expense') && <ExpenseCard />}
+        {w('expense') && <ExpenseCard lang={lang} />}
 
         {/* ⑥ 식단 */}
-        {w('diet') && <DietCard mealConfig={widgetCfg?.diet?.meals} />}
+        {w('diet') && <DietCard mealConfig={widgetCfg?.diet?.meals} lang={lang} />}
 
         {/* ⑦ 메모 */}
-        {w('memo') && <MemoCard />}
+        {w('memo') && <MemoCard lang={lang} />}
 
         {/* ⑧ 뉴스 */}
-        {w('news') && <NewsCard defaultTab={widgetCfg?.news?.default_tab ?? 'kr'} />}
+        {w('news') && <NewsCard defaultTab={widgetCfg?.news?.default_tab ?? 'kr'} lang={lang} />}
 
         {/* ⑨ 즐겨찾기 */}
-        {w('sites') && <SitesCard />}
+        {w('sites') && <SitesCard lang={lang} />}
       </main>
 
       {/* ═══ 모바일 레이아웃 ═══ */}
@@ -399,14 +403,14 @@ export default function IndexPage() {
 
         {/* 홈: 시간+날씨+일정+사이트 */}
         <div className={`mob-section${mobileTab === 'home' ? ' active' : ''}`}>
-          {w('hero') && <HeroSection zones={zones} isMobile clockCount={widgetCfg?.hero?.clock_count ?? 3} tempUnit={widgetCfg?.hero?.temp_unit ?? 'C'} lang={widgetCfg?.language ?? 'ko'} />}
-          {w('schedule') && <ScheduleCard isMobile />}
-          {w('sites') && <SitesCard isMobile />}
+          {w('hero') && <HeroSection zones={zones} isMobile clockCount={widgetCfg?.hero?.clock_count ?? 3} tempUnit={widgetCfg?.hero?.temp_unit ?? 'C'} lang={lang} />}
+          {w('schedule') && <ScheduleCard isMobile lang={lang} />}
+          {w('sites') && <SitesCard isMobile lang={lang} />}
         </div>
 
         {/* 가계부: 지출+주식 */}
         <div className={`mob-section${mobileTab === 'money' ? ' active' : ''}`}>
-          {w('expense') && <ExpenseCard isMobile />}
+          {w('expense') && <ExpenseCard isMobile lang={lang} />}
           {w('stock') && (
             <StockCard
               groups={stockGroups}
@@ -416,20 +420,21 @@ export default function IndexPage() {
               onOpenStats={() => setStatsOpen(true)}
               currencyDisplay={widgetCfg?.stock?.currency_display}
               isMobile
+              lang={lang}
             />
           )}
         </div>
 
         {/* 건강: 식단+메모 */}
         <div className={`mob-section${mobileTab === 'health' ? ' active' : ''}`}>
-          {w('diet') && <DietCard isMobile mealConfig={widgetCfg?.diet?.meals} />}
-          {w('memo') && <MemoCard isMobile />}
+          {w('diet') && <DietCard isMobile mealConfig={widgetCfg?.diet?.meals} lang={lang} />}
+          {w('memo') && <MemoCard isMobile lang={lang} />}
         </div>
 
         {/* 미디어: 뉴스+유튜브 */}
         <div className={`mob-section${mobileTab === 'media' ? ' active' : ''}`}>
-          {w('news') && <NewsCard isMobile defaultTab={widgetCfg?.news?.default_tab ?? 'kr'} />}
-          {w('youtube') && <YoutubeCard isMobile maxCount={widgetCfg?.youtube?.max_count ?? 10} />}
+          {w('news') && <NewsCard isMobile defaultTab={widgetCfg?.news?.default_tab ?? 'kr'} lang={lang} />}
+          {w('youtube') && <YoutubeCard isMobile maxCount={widgetCfg?.youtube?.max_count ?? 10} lang={lang} />}
         </div>
 
       </div>
@@ -437,10 +442,10 @@ export default function IndexPage() {
       {/* ═══ 모바일 하단 네비게이션 ═══ */}
       <nav className="mobile-nav">
         {[
-          { key: 'home', icon: '🏠', label: '홈' },
-          { key: 'money', icon: '💰', label: '가계부' },
-          { key: 'health', icon: '🥗', label: '건강' },
-          { key: 'media', icon: '📰', label: '미디어' },
+          { key: 'home', icon: '🏠', label: t(lang, 'navHome') },
+          { key: 'money', icon: '💰', label: t(lang, 'navMoney') },
+          { key: 'health', icon: '🥗', label: t(lang, 'navHealth') },
+          { key: 'media', icon: '📰', label: t(lang, 'navMedia') },
         ].map(({ key, icon, label }) => (
           <button
             key={key}
@@ -453,7 +458,7 @@ export default function IndexPage() {
         ))}
         <Link to="/admin" className="mnav-item">
           <span className="mnav-icon">⚙️</span>
-          관리
+          {t(lang, 'navAdmin')}
         </Link>
       </nav>
     </div>

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
+import { t, T } from './i18n'
 
 const todayKey = () => new Date().toISOString().slice(0, 10)
 const MORD = ['아침', '점심', '저녁', '간식']
 
-export default function DietCard({ isMobile = false, mealConfig = null }) {
+export default function DietCard({ isMobile = false, mealConfig = null, lang = 'ko' }) {
   const visibleMeals = mealConfig ? MORD.filter(m => mealConfig[m] !== false) : MORD
+  const mealLabel = key => (T[lang]?.dietMeals ?? T.ko.dietMeals)[key] ?? key
 
   const [dietList, setDietList] = useState([])
   const [mtime, setMtime] = useState('아침')
@@ -61,16 +63,16 @@ export default function DietCard({ isMobile = false, mealConfig = null }) {
     <div className={wrapper}>
       <div className={hdr}>
         <span className="card-icon">🥗</span>
-        <span className={titleCls}>오늘의 식단</span>
+        <span className={titleCls}>{t(lang, 'dietTitle')}</span>
       </div>
       <div className={body}>
         <div style={isMobile ? { marginBottom: '0.8rem' } : {}}>
           {!hasMeals ? (
-            <div className="empty-msg">식단을 입력해보세요</div>
+            <div className="empty-msg">{t(lang, 'dietEmpty')}</div>
           ) : (
             visibleMeals.filter(m => meals[m]?.length).map(m => (
               <div key={m} className={isMobile ? 'm-meal-row' : 'meal-row'}>
-                <span className={isMobile ? 'm-meal-label' : 'meal-label'}>{m}</span>
+                <span className={isMobile ? 'm-meal-label' : 'meal-label'}>{mealLabel(m)}</span>
                 <div className={isMobile ? 'm-meal-content' : 'meal-content'}>{meals[m].join(', ')}</div>
                 <button className="btn-del" onClick={() => delMeal(m)}>✕</button>
               </div>
@@ -82,35 +84,35 @@ export default function DietCard({ isMobile = false, mealConfig = null }) {
           <>
             <div className="m-row">
               <select className="m-select" value={mtime} onChange={e => setMtime(e.target.value)}>
-                {visibleMeals.map(m => <option key={m}>{m}</option>)}
+                {visibleMeals.map(m => <option key={m} value={m}>{mealLabel(m)}</option>)}
               </select>
               <input
                 className="m-input"
                 type="text"
                 value={mtext}
                 onChange={e => setMtext(e.target.value)}
-                placeholder="예: 현미밥, 된장국"
+                placeholder={t(lang, 'dietPlaceholder')}
                 style={{ flex: 1 }}
                 onKeyDown={e => e.key === 'Enter' && addMeal()}
               />
             </div>
-            <button className="m-btn" onClick={addMeal} style={{ width: '100%' }}>식단 추가</button>
+            <button className="m-btn" onClick={addMeal} style={{ width: '100%' }}>{t(lang, 'dietAddMobile')}</button>
           </>
         ) : (
           <div className="meal-form">
             <div className="meal-form-row">
               <select value={mtime} onChange={e => setMtime(e.target.value)}>
-                {visibleMeals.map(m => <option key={m}>{m}</option>)}
+                {visibleMeals.map(m => <option key={m} value={m}>{mealLabel(m)}</option>)}
               </select>
               <input
                 type="text"
                 value={mtext}
                 onChange={e => setMtext(e.target.value)}
-                placeholder="예: 현미밥, 된장국"
+                placeholder={t(lang, 'dietPlaceholder')}
                 onKeyDown={e => e.key === 'Enter' && addMeal()}
               />
             </div>
-            <button className="btn-sm" onClick={addMeal}>추가</button>
+            <button className="btn-sm" onClick={addMeal}>{t(lang, 'dietAdd')}</button>
           </div>
         )}
       </div>

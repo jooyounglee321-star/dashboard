@@ -1,5 +1,6 @@
 import { useEffect, useRef, useMemo } from 'react'
 import { Chart, registerables } from 'chart.js'
+import { t } from './i18n'
 Chart.register(...registerables)
 
 const CHART_COLORS = ['#2563eb', '#16a34a', '#d97706', '#9333ea', '#dc2626', '#0891b2', '#65a30d', '#c026d3']
@@ -77,7 +78,7 @@ function computeStockStats(stockData) {
   return { grpTotals, grandUSD, grandKRW, totalKRW, stockEvals, lineDatasets, fxRate }
 }
 
-export default function StockStatsOverlay({ isOpen, onClose, stockData }) {
+export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = 'ko' }) {
   const pieRef = useRef(null)
   const lineRef = useRef(null)
   const barRef = useRef(null)
@@ -116,7 +117,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData }) {
       chartsRef.current.push(inst)
     }
 
-    // Line chart (누적 투자금액)
+    // Line chart (cumulative investment)
     if (lineRef.current && lineDatasets.length) {
       const inst = new Chart(lineRef.current, {
         type: 'line',
@@ -124,9 +125,9 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData }) {
         options: {
           responsive: true,
           scales: {
-            x: { type: 'category', title: { display: true, text: '매입일' } },
+            x: { type: 'category', title: { display: true, text: t(lang, 'statsAxisDate') } },
             y: {
-              title: { display: true, text: '누적 투자금액' },
+              title: { display: true, text: t(lang, 'statsAxisInvest') },
               ticks: { callback: v => v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `${(v / 1000).toFixed(0)}K` : v },
             },
           },
@@ -136,7 +137,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData }) {
       chartsRef.current.push(inst)
     }
 
-    // Bar chart (종목별 평가손익)
+    // Bar chart (unrealized P/L by stock)
     if (barRef.current && stockEvals.length) {
       const sorted = [...stockEvals].sort((a, b) => b.evalPL - a.evalPL)
       const inst = new Chart(barRef.current, {
@@ -144,7 +145,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData }) {
         data: {
           labels: sorted.map(s => s.label),
           datasets: [{
-            label: '평가손익',
+            label: t(lang, 'statsBarLabel'),
             data: sorted.map(s => parseFloat(s.evalPL.toFixed(2))),
             backgroundColor: sorted.map(s => s.evalPL >= 0 ? 'rgba(74,124,89,0.75)' : 'rgba(220,38,38,0.75)'),
             borderColor: sorted.map(s => s.evalPL >= 0 ? '#4a7c59' : '#dc2626'),
@@ -155,7 +156,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData }) {
           responsive: true,
           scales: {
             y: {
-              title: { display: true, text: '손익' },
+              title: { display: true, text: t(lang, 'statsAxisPL') },
               ticks: { callback: v => v >= 0 ? `+${v}` : `${v}` },
             },
           },
@@ -179,7 +180,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData }) {
       chartsRef.current.forEach(c => c.destroy())
       chartsRef.current = []
     }
-  }, [isOpen, computed])
+  }, [isOpen, computed, lang])
 
   if (!isOpen) return null
 
@@ -192,57 +193,57 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData }) {
       style={{ display: 'block', position: 'fixed', inset: 0, zIndex: 500, background: 'var(--bg)', overflowY: 'auto' }}
     >
       <div className="stats-header">
-        <button className="stats-back" onClick={onClose}>← 뒤로</button>
-        <span className="stats-title">📊 주식 통계</span>
+        <button className="stats-back" onClick={onClose}>{t(lang, 'statsBack')}</button>
+        <span className="stats-title">{t(lang, 'statsTitle')}</span>
       </div>
       <div className="stats-body">
         {!computed ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--ink3)' }}>데이터 불러오는 중…</div>
+          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--ink3)' }}>{t(lang, 'statsLoading')}</div>
         ) : (
           <>
-            {/* 요약 */}
+            {/* Summary */}
             <div className="stats-section">
-              <div className="stats-section-title">전체 합계 요약</div>
+              <div className="stats-section-title">{t(lang, 'statsSummaryTitle')}</div>
               <div className="stats-summary-grid">
                 <div className="stats-summary-card">
-                  <div className="stats-summary-label">$ USD 그룹</div>
+                  <div className="stats-summary-label">{t(lang, 'statsUSDGroup')}</div>
                   <div className="stats-summary-value">${fmtUSD(grandUSD ?? 0)}</div>
                 </div>
                 <div className="stats-summary-card">
-                  <div className="stats-summary-label">₩ KRW 그룹</div>
+                  <div className="stats-summary-label">{t(lang, 'statsKRWGroup')}</div>
                   <div className="stats-summary-value">₩{fmtKRW(grandKRW ?? 0)}</div>
                 </div>
                 <div className="stats-summary-card">
                   <div className="stats-summary-label">
-                    원화환산 전체{fxRate ? ` ($1=₩${fmtKRW(fxRate)})` : ' (환율 미조회)'}
+                    {t(lang, 'statsKRWEquiv')}{fxRate ? ` ($1=₩${fmtKRW(fxRate)})` : ` (${t(lang, 'statsFxNone')})`}
                   </div>
                   <div className="stats-summary-value">₩{fmtKRW(totalKRW ?? 0)}</div>
                 </div>
               </div>
             </div>
 
-            {/* 파이차트 */}
+            {/* Pie chart */}
             <div className="stats-section">
-              <div className="stats-section-title">그룹별 자산 비중</div>
+              <div className="stats-section-title">{t(lang, 'statsPieTitle')}</div>
               <div className="stats-chart-wrap pie-wrap">
                 <canvas ref={pieRef} />
               </div>
             </div>
 
-            {/* 라인차트 */}
+            {/* Line chart */}
             {lineDatasets?.length > 0 && (
               <div className="stats-section">
-                <div className="stats-section-title">그룹별 누적 투자금액 추이</div>
+                <div className="stats-section-title">{t(lang, 'statsLineTitle')}</div>
                 <div className="stats-chart-wrap">
                   <canvas ref={lineRef} />
                 </div>
               </div>
             )}
 
-            {/* 바차트 */}
+            {/* Bar chart */}
             {stockEvals?.length > 0 && (
               <div className="stats-section">
-                <div className="stats-section-title">종목별 평가손익</div>
+                <div className="stats-section-title">{t(lang, 'statsBarTitle')}</div>
                 <div className="stats-chart-wrap">
                   <canvas ref={barRef} />
                 </div>

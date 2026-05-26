@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
+import { t } from './i18n'
 
 const todayKey = () => new Date().toISOString().slice(0, 10)
 
-export default function MemoCard({ isMobile = false }) {
+export default function MemoCard({ isMobile = false, lang = 'ko' }) {
   const [memoData, setMemoData] = useState(null)
   const [editing, setEditing] = useState(false)
   const [text, setText] = useState('')
@@ -58,6 +59,9 @@ export default function MemoCard({ isMobile = false }) {
   const savedTime = memoData?.updated_at
     ? (() => {
         const u = new Date(memoData.updated_at)
+        if (lang === 'en') {
+          return `Saved: ${u.getHours()}:${String(u.getMinutes()).padStart(2, '0')}`
+        }
         return `저장: ${u.getHours()}시 ${u.getMinutes()}분`
       })()
     : ''
@@ -71,14 +75,14 @@ export default function MemoCard({ isMobile = false }) {
     <div className={wrapper}>
       <div className={hdr}>
         <span className="card-icon">📝</span>
-        <span className={titleCls}>하루 마무리 메모</span>
+        <span className={titleCls}>{t(lang, 'memoTitle')}</span>
       </div>
       <div className={body}>
         {!editing ? (
           <div className={isMobile ? 'm-memo-display' : 'memo-display'}>
             {memoData?.content
               ? memoData.content
-              : <span style={{ color: '#a89880', fontStyle: 'italic', fontSize: isMobile ? undefined : '0.82rem' }}>오늘 하루를 기록해보세요...</span>
+              : <span style={{ color: '#a89880', fontStyle: 'italic', fontSize: isMobile ? undefined : '0.82rem' }}>{t(lang, 'memoPlaceholder')}</span>
             }
           </div>
         ) : (
@@ -87,7 +91,7 @@ export default function MemoCard({ isMobile = false }) {
             style={{ display: 'block' }}
             value={text}
             onChange={e => setText(e.target.value)}
-            placeholder="감사한 일, 배운 것, 내일의 다짐을 써보세요."
+            placeholder={t(lang, 'memoTaPlaceholder')}
           />
         )}
 
@@ -100,14 +104,14 @@ export default function MemoCard({ isMobile = false }) {
               className={isMobile ? 'm-btn' : 'btn-sm'}
               onClick={startEditFresh}
             >
-              수정하기
+              {t(lang, 'memoEditBtn')}
             </button>
           ) : (
             <button
               className={isMobile ? 'm-btn-outline' : 'btn-outline'}
               onClick={saveMemo}
             >
-              저장
+              {t(lang, 'memoSaveBtn')}
             </button>
           )}
         </div>

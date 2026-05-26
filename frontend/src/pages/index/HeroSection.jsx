@@ -1,10 +1,26 @@
 import { useState, useEffect } from 'react'
+import { t } from './i18n'
 
-const WC = {
-  0: '☀️ 맑음', 1: '🌤 거의 맑음', 2: '⛅ 부분 흐림', 3: '☁️ 흐림',
-  45: '🌫 안개', 48: '🌫 안개', 51: '🌦 이슬비', 53: '🌦 이슬비', 55: '🌧 이슬비',
-  61: '🌧 비', 63: '🌧 비', 65: '🌧 폭우', 71: '🌨 눈', 73: '🌨 눈', 75: '❄️ 폭설',
-  80: '🌦 소나기', 81: '🌧 소나기', 82: '⛈ 폭우', 95: '⛈ 뇌우', 99: '⛈ 뇌우',
+const W_EMOJI = {
+  0: '☀️', 1: '🌤', 2: '⛅', 3: '☁️',
+  45: '🌫', 48: '🌫', 51: '🌦', 53: '🌦', 55: '🌧',
+  61: '🌧', 63: '🌧', 65: '🌧', 71: '🌨', 73: '🌨', 75: '❄️',
+  80: '🌦', 81: '🌧', 82: '⛈', 95: '⛈', 99: '⛈',
+}
+
+const W_DESC = {
+  ko: {
+    0: '맑음', 1: '거의 맑음', 2: '부분 흐림', 3: '흐림',
+    45: '안개', 48: '안개', 51: '이슬비', 53: '이슬비', 55: '이슬비',
+    61: '비', 63: '비', 65: '폭우', 71: '눈', 73: '눈', 75: '폭설',
+    80: '소나기', 81: '소나기', 82: '폭우', 95: '뇌우', 99: '뇌우',
+  },
+  en: {
+    0: 'Clear', 1: 'Mostly Clear', 2: 'Partly Cloudy', 3: 'Overcast',
+    45: 'Foggy', 48: 'Foggy', 51: 'Drizzle', 53: 'Drizzle', 55: 'Drizzle',
+    61: 'Rain', 63: 'Rain', 65: 'Heavy Rain', 71: 'Snow', 73: 'Snow', 75: 'Heavy Snow',
+    80: 'Showers', 81: 'Showers', 82: 'Heavy Rain', 95: 'Thunderstorm', 99: 'Thunderstorm',
+  },
 }
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토']
@@ -12,10 +28,15 @@ const MON = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9�
 const DAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MON_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
-const DEFAULT_ZONES = [
+const DEFAULT_ZONES_KO = [
   { region: '내 위치', tz: Intl.DateTimeFormat().resolvedOptions().timeZone, label: '' },
   { region: '뉴욕', tz: 'America/New_York', label: 'EST/EDT' },
   { region: '런던', tz: 'Europe/London', label: 'GMT/BST' },
+]
+const DEFAULT_ZONES_EN = [
+  { region: 'My Location', tz: Intl.DateTimeFormat().resolvedOptions().timeZone, label: '' },
+  { region: 'New York', tz: 'America/New_York', label: 'EST/EDT' },
+  { region: 'London', tz: 'Europe/London', label: 'GMT/BST' },
 ]
 
 function formatTZ(tz, locale = 'ko-KR') {
@@ -31,19 +52,21 @@ function formatTZ(tz, locale = 'ko-KR') {
 }
 
 export default function HeroSection({ zones: propZones, isMobile = false, clockCount = 3, tempUnit = 'C', lang = 'ko' }) {
-  const zones = (propZones?.length === 3) ? propZones : DEFAULT_ZONES
+  // Use lang-appropriate default zones when no propZones provided
+  const defaultZones = lang === 'en' ? DEFAULT_ZONES_EN : DEFAULT_ZONES_KO
+  const zones = (propZones?.length === 3) ? propZones : defaultZones
 
   const [tick, setTick] = useState(0)
-  const [weather, setWeather] = useState({ emoji: '🌤', temp: '--', desc: '날씨 확인 중', loc: '' })
+  // Store weather code instead of translated desc so language switches work without re-fetch
+  const [weather, setWeather] = useState({ emoji: '🌤', temp: '--', code: null, status: 'init', loc: '' })
 
-  // Clock ticking (managed in parent via setInterval, but we also need a local trigger)
   useEffect(() => {
-    const id = setInterval(() => setTick(t => t + 1), 10000)
+    const id = setInterval(() => setTick(p => p + 1), 10000)
     return () => clearInterval(id)
   }, [])
 
   async function loadWeather() {
-    setWeather({ emoji: '🌤', temp: '--', desc: '불러오는 중...', loc: '' })
+    setWeather(w => ({ ...w, status: 'loading', temp: '--', loc: '' }))
     try {
       const pos = await new Promise((res, rej) =>
         navigator.geolocation.getCurrentPosition(res, rej, { timeout: 6000 })
@@ -55,18 +78,26 @@ export default function HeroSection({ zones: propZones, isMobile = false, clockC
       ])
       const meteo = await meteoRes.json()
       const geo = await geoRes.json()
-      const info = WC[meteo.current.weathercode] || '🌡 알 수 없음'
-      const spaceIdx = info.indexOf(' ')
-      const emoji = info.slice(0, spaceIdx)
-      const desc = info.slice(spaceIdx + 1)
-      const loc = geo.address.city || geo.address.town || geo.address.village || '내 위치'
-      setWeather({ emoji, temp: Math.round(meteo.current.temperature_2m), desc, loc })
+      const code = meteo.current.weathercode
+      const emoji = W_EMOJI[code] || '🌡'
+      const loc = geo.address.city || geo.address.town || geo.address.village || ''
+      setWeather({ emoji, temp: Math.round(meteo.current.temperature_2m), code, status: 'loaded', loc })
     } catch {
-      setWeather({ emoji: '🌤', temp: '--', desc: '위치 권한을 허용해 주세요', loc: '' })
+      setWeather({ emoji: '🌤', temp: '--', code: null, status: 'error', loc: '' })
     }
   }
 
   useEffect(() => { loadWeather() }, [])
+
+  // Compute description from current lang — updates live when lang prop changes
+  const weatherDesc = (() => {
+    if (weather.status === 'loading') return t(lang, 'weatherFetching')
+    if (weather.status === 'error') return t(lang, 'weatherNoPermission')
+    if (weather.status === 'loaded' && weather.code != null) {
+      return (W_DESC[lang] ?? W_DESC.ko)[weather.code] ?? ''
+    }
+    return t(lang, 'weatherLoading')
+  })()
 
   const locale = lang === 'en' ? 'en-US' : 'ko-KR'
   const z0 = formatTZ(zones[0].tz, locale)
@@ -93,7 +124,7 @@ export default function HeroSection({ zones: propZones, isMobile = false, clockC
           <div className="m-weather-block">
             <div className="m-w-emoji">{weather.emoji}</div>
             <div className="m-w-temp">{tempLabel}</div>
-            <div className="m-w-desc">{weather.desc}</div>
+            <div className="m-w-desc">{weatherDesc}</div>
           </div>
         </div>
         {mobileZones.length > 0 && (
@@ -139,9 +170,9 @@ export default function HeroSection({ zones: propZones, isMobile = false, clockC
         <div className="hero-weather">
           <div className="w-emoji">{weather.emoji}</div>
           <div className="w-temp">{tempLabel}</div>
-          <div className="w-desc">{weather.desc}</div>
+          <div className="w-desc">{weatherDesc}</div>
           <div className="w-loc">{weather.loc}</div>
-          <button className="w-btn" onClick={loadWeather}>새로고침</button>
+          <button className="w-btn" onClick={loadWeather}>{t(lang, 'weatherRefresh')}</button>
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { t } from './i18n'
 
 const NEWS = {
   kr: [
@@ -19,7 +20,7 @@ const NEWS = {
   ],
 }
 
-export default function NewsCard({ isMobile = false, defaultTab = 'kr' }) {
+export default function NewsCard({ isMobile = false, defaultTab = 'kr', lang = 'ko' }) {
   const [tab, setTab] = useState(defaultTab)
 
   useEffect(() => { setTab(defaultTab) }, [defaultTab])
@@ -33,7 +34,7 @@ export default function NewsCard({ isMobile = false, defaultTab = 'kr' }) {
     <div className={wrapper}>
       <div className={hdr}>
         <span className="card-icon">📰</span>
-        <span className={title}>오늘의 뉴스</span>
+        <span className={title}>{t(lang, 'newsTitle')}</span>
       </div>
       <div className={body}>
         <div className={isMobile ? 'm-news-tabs' : 'news-tabs'}>
@@ -43,7 +44,7 @@ export default function NewsCard({ isMobile = false, defaultTab = 'kr' }) {
               className={`${isMobile ? 'm-news-tab' : 'news-tab'}${tab === k ? ' active' : ''}`}
               onClick={() => setTab(k)}
             >
-              {k === 'kr' ? '🇰🇷 한국' : '🇺🇸 미국'}
+              {k === 'kr' ? t(lang, 'newsKr') : t(lang, 'newsUs')}
             </button>
           ))}
         </div>

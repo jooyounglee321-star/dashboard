@@ -4,6 +4,28 @@
 
 ---
 
+## [2026-05-26] — 전체 UI 다국어(i18n) 적용 (한국어/영어)
+
+### 추가
+- **`frontend/src/pages/index/i18n.js`** — 신규 번역 파일 생성
+  - `T` 객체: `ko` / `en` 두 언어, 헤더·위젯 제목·버튼·레이블 등 전체 UI 문자열 포함
+  - `t(lang, key)` 헬퍼 함수 (ko 폴백 적용)
+
+### 변경
+- **`HeroSection.jsx`** — 날씨 코드(`WC`) 구조 재설계: 이모지 분리 + `W_DESC.ko/en` 맵으로 언어 즉시 전환, 새로고침 버튼·로딩 메시지 번역, 기본 시간대 지역명(내 위치/뉴욕/런던 ↔ My Location/New York/London)
+- **`ScheduleCard.jsx`** — 제목·Google 계정 연동 버튼·새로고침 번역, `lang` prop 추가
+- **`YoutubeCard.jsx`** — 제목·계정 레이블·빈 상태 메시지 번역, `lang` prop 추가
+- **`StockCard.jsx`** — 제목·평균가 배지·평가손익·실현손익·전일比·합계 레이블 번역, `lang` prop 추가
+- **`StockStatsOverlay.jsx`** — 뒤로 버튼·통계 제목·차트 축 레이블 번역, `lang` prop 추가
+- **`ExpenseCard.jsx`** — 제목·합계·카테고리(식비→Food 등)·버튼 번역, `lang` prop 추가 (DB 저장값은 한국어 키 유지)
+- **`DietCard.jsx`** — 제목·식단 유형(아침→Breakfast 등)·버튼 번역, `lang` prop 추가 (DB 저장값은 한국어 키 유지)
+- **`MemoCard.jsx`** — 제목·플레이스홀더·수정/저장 버튼·저장 시각 포맷(시분 ↔ HH:MM) 번역, `lang` prop 추가
+- **`NewsCard.jsx`** — 제목·탭(한국/미국 ↔ Korea/US) 번역, `lang` prop 추가
+- **`SitesCard.jsx`** — 제목·빈 상태 메시지 번역, `lang` prop 추가
+- **`IndexPage.jsx`** — `lang = widgetCfg?.language ?? 'ko'` 파생, 헤더(나의 하루·관리자·로그아웃)·서버 배너·모바일 네비 레이블 번역, 모든 위젯에 `lang={lang}` 전달
+
+---
+
 ## [2026-05-25] — 언어 설정 저장/적용 버그 수정
 
 ### 버그
