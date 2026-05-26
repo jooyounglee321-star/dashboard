@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { t } from './index/i18n'
 
 function togglePw(setFn) {
   setFn(v => !v)
@@ -75,9 +76,12 @@ export default function ProfilePage() {
         const errData = await res.json().catch(() => ({}))
         throw new Error(errData.detail || `저장 실패 (HTTP ${res.status})`)
       }
-      // 대시보드 즉시 반영을 위해 localStorage에도 캐시
-      try { localStorage.setItem('dashboard_lang', newLang) } catch {}
-      setMsg({ type: 'success', text: '언어 설정이 저장되었습니다.' })
+      // 대시보드 즉시 반영을 위해 localStorage에도 캐시 + 이벤트 발생
+      try {
+        localStorage.setItem('dashboard_lang', newLang)
+        window.dispatchEvent(new Event('languageChanged'))
+      } catch {}
+      setMsg({ type: 'success', text: t(newLang, 'langSaved') })
     } catch (e) {
       setMsg({ type: 'error', text: e.message || '언어 설정 저장에 실패했습니다.' })
     } finally {
@@ -135,6 +139,8 @@ export default function ProfilePage() {
       setSaving(false)
     }
   }
+
+  const lang = widgetCfg?.language ?? 'ko'
 
   const planLabel = plan === 'premium' ? 'Premium' : 'Free'
   const planStyle = plan === 'premium'
@@ -246,7 +252,7 @@ export default function ProfilePage() {
                     }}
                   >{l}</button>
                 ))}
-                {langSaving && <span style={{ fontSize: '0.75rem', color: 'var(--ink3)', alignSelf: 'center' }}>저장 중…</span>}
+                {langSaving && <span style={{ fontSize: '0.75rem', color: 'var(--ink3)', alignSelf: 'center' }}>{t(lang, 'langSavingMsg')}</span>}
               </div>
               <div style={{ fontSize: '0.73rem', color: 'var(--ink3)', lineHeight: 1.6 }}>
                 언어 변경 시 온도 단위, 통화, 날짜 형식이 자동으로 연동됩니다.<br />

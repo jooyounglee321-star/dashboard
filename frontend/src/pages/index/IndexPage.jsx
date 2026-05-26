@@ -127,6 +127,18 @@ export default function IndexPage() {
     setHeaderDate(getHeaderDate(newLang))
   }, [widgetCfg])
 
+  // ProfilePage에서 언어 저장 시 실시간 반영 (같은 탭 내)
+  useEffect(() => {
+    function onLanguageChanged() {
+      try {
+        const newLang = localStorage.getItem('dashboard_lang') || 'ko'
+        setWidgetCfg(prev => prev ? { ...prev, language: newLang } : { language: newLang })
+      } catch {}
+    }
+    window.addEventListener('languageChanged', onLanguageChanged)
+    return () => window.removeEventListener('languageChanged', onLanguageChanged)
+  }, [])
+
   // Server health check
   const checkHealth = useCallback(async () => {
     try {
@@ -320,7 +332,7 @@ export default function IndexPage() {
               fontSize: '0.78rem', color: '#c0392b', textDecoration: 'none',
               border: '1px solid rgba(192,57,43,0.45)', padding: '0.28rem 0.7rem',
               borderRadius: 20, fontFamily: 'inherit', fontWeight: 500,
-            }}>👑 슈퍼어드민</Link>
+            }}>{t(lang, 'superadminBtn')}</Link>
           )}
           <button
             onClick={handleLogout}

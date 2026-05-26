@@ -4,6 +4,22 @@
 
 ---
 
+## [2026-05-26] — i18n 보완: 슈퍼어드민 버튼·ProfilePage 메시지 번역, 실시간 언어 전환
+
+### 변경
+- **`i18n.js`** — 3개 키 추가: `superadminBtn`, `langSaved`, `langSavingMsg`
+- **`IndexPage.jsx`**
+  - 슈퍼어드민 버튼 텍스트 `t(lang, 'superadminBtn')` 으로 번역 적용
+  - `window.addEventListener('languageChanged', ...)` 추가 — ProfilePage에서 언어 저장 시 `widgetCfg.language` 즉시 업데이트 (같은 탭 내 실시간 반영)
+- **`ProfilePage.jsx`**
+  - `import { t } from './index/i18n'` 추가
+  - `lang = widgetCfg?.language ?? 'ko'` 파생
+  - 성공 메시지 `t(newLang, 'langSaved')` 번역 적용
+  - "저장 중…" 스피너 `t(lang, 'langSavingMsg')` 번역 적용
+  - localStorage 저장 직후 `window.dispatchEvent(new Event('languageChanged'))` 발생
+
+---
+
 ## [2026-05-26] — 전체 UI 다국어(i18n) 적용 (한국어/영어)
 
 ### 추가
