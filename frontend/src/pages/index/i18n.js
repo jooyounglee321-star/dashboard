@@ -99,6 +99,39 @@ export const T = {
     // ProfilePage 언어 메시지
     langSaved: '언어 설정이 저장되었습니다.',
     langSavingMsg: '저장 중…',
+    // AdminPage — 섹션 제목
+    adminTitle: '관리자 설정',
+    adminWidgetSettings: '위젯 설정',
+    adminStockMgmt: '보유 주식 관리',
+    adminSave: '저장',
+    adminToDashboard: '대시보드로',
+    adminSaveAll: '✅ 모두 저장하고 대시보드로 이동',
+    // AdminPage — 위젯 이름
+    adminWHero: '시계 / 날씨',
+    adminWSchedule: '일정',
+    adminWYoutube: '유튜브',
+    adminWStock: '주식',
+    adminWExpense: '가계부',
+    adminWDiet: '식단',
+    adminWMemo: '메모',
+    adminWNews: '뉴스',
+    adminWSites: '즐겨찾기',
+    // AdminPage — 위젯 세부 레이블
+    adminClockLabel: '시계',
+    adminTempLabel: '온도',
+    adminMax: '최대',
+    adminMaxUnit: '개',
+    // AdminPage — 통화 옵션
+    adminKRWOnly: '₩ 원화만',
+    adminUSDOnly: '$ 달러만',
+    adminBothFull: '$ + ₩ 둘 다',
+    // AdminPage — 주식 관리
+    adminTotalDisplay: '합계 표시',
+    adminStockHint: '그룹 최대 10개 · 그룹당 종목 최대 10개 · Yahoo Finance 실시간 시세',
+    adminNewGroup: '새 그룹',
+    adminDelGroup: '그룹 삭제',
+    adminDelStock: '삭제',
+    adminAddGroup: '+ 그룹 추가',
   },
   en: {
     // Header
@@ -200,6 +233,39 @@ export const T = {
     // ProfilePage language messages
     langSaved: 'Language setting saved.',
     langSavingMsg: 'Saving...',
+    // AdminPage — section titles
+    adminTitle: 'Admin Settings',
+    adminWidgetSettings: 'Widget Settings',
+    adminStockMgmt: 'Stock Management',
+    adminSave: 'Save',
+    adminToDashboard: 'Dashboard',
+    adminSaveAll: '✅ Save All & Go to Dashboard',
+    // AdminPage — widget names
+    adminWHero: 'Clock / Weather',
+    adminWSchedule: 'Schedule',
+    adminWYoutube: 'YouTube',
+    adminWStock: 'Stocks',
+    adminWExpense: 'Expense',
+    adminWDiet: 'Diet',
+    adminWMemo: 'Memo',
+    adminWNews: 'News',
+    adminWSites: 'Bookmarks',
+    // AdminPage — widget detail labels
+    adminClockLabel: 'Clock',
+    adminTempLabel: 'Temp',
+    adminMax: 'Max',
+    adminMaxUnit: 'items',
+    // AdminPage — currency options
+    adminKRWOnly: '₩ KRW Only',
+    adminUSDOnly: '$ USD Only',
+    adminBothFull: '$ + ₩ Both',
+    // AdminPage — stock management
+    adminTotalDisplay: 'Total Display',
+    adminStockHint: 'Max 10 groups · Max 10 stocks per group · Yahoo Finance live price',
+    adminNewGroup: 'New Group',
+    adminDelGroup: 'Delete Group',
+    adminDelStock: 'Delete',
+    adminAddGroup: '+ Add Group',
   },
 }
 

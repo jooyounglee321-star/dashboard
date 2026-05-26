@@ -49,6 +49,16 @@
 **파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\index\HeroSection.jsx
 
 ---
+## 2026-05-26 — AdminPage.jsx 다국어(i18n) 구현: 위젯 라벨 분리 및 localStorage 캐싱
+**결정:** AdminPage에 i18n 번역 키를 추가하고, `WIDGET_LABELS`를 `WIDGET_ICONS`와 `WIDGET_LABEL_KEYS`로 분리하여 렌더 시점에 `t(lang, key)` 함수로 동적 번역을 수행합니다. 또한 `localStorage.getItem('dashboard_lang')`으로 언어 설정을 초기화 시 로드하여 API 응답 대기 없이 즉시 적용합니다.
+
+**이유:** 위젯 라벨을 아이콘과 분리하면 가시성 토글과 번역이 독립적으로 작동하고, 렌더 시점 번역(runtime translation)은 언어 변경 시 컴포넌트 재렌더링만으로 모든 문자열이 즉시 업데이트되므로 추가 상태 관리가 불필요합니다. localStorage 캐싱은 백엔드 API 로드 지연 중에도 사용자 선호 언어를 즉시 표시하여 UX를 개선합니다.
+
+**대안:** 1) 모든 번역 키를 사전에 정의하지 않고 하드코딩된 한국어 유지 (확장성 부족), 2) 렌더 시점이 아닌 상태 초기화 시에만 번역 (언어 변경 시 수동 상태 업데이트 필요), 3) localStorage 캐싱 없이 API 응답만 신뢰 (느린 초기 로드), 4) `WIDGET_LABELS`에 { icon, label, labelKey } 객체로 통합 (아이콘 구조 복잡화)
+
+**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\index\i18n.js, C:\Users\Jason\Desktop\dashboard\frontend\src\pages\AdminPage.jsx
+
+---
 ## 2026-05-23 — StockCard 컴포넌트: currencyDisplay 프롭으로 부모 제어 지원
 **결정:** StockCard 컴포넌트에 `currencyDisplay` 프롭을 추가하고, `totalMode` 초기화 로직을 `currencyDisplay ?? fallback(localStorage)` 구조로 변경했습니다. 프롭 값이 존재하면 우선 사용하고, 없으면 localStorage에서 읽습니다.
 
@@ -107,4 +117,25 @@
 **대안:** 1) 언어만 변경하고 동기화하지 않음 (사용자가 매번 설정 수정 필요), 2) 모든 관련 설정 항상 동기화 (사용자 수동 선택 무시), 3) 동기화 전 확인 대화상자 (UX 마찰 증가), 4) AdminPage에만 기능 제한 (프로필 페이지에서는 설정 변경 불가)
 
 **파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\ProfilePage.jsx
+
+---
+## 2026-05-26 — React 빌드 결과물(frontend/dist) Git 커밋 포함 (Railway 배포 전략)
+**결정:** Railway 배포 환경에서 Python 앱으로만 인식되어 `npm run build`가 자동 실행되지 않으므로, `frontend/dist/` 폴더를 git에 포함하고 React 소스 수정 시 항상 빌드 후 커밋하도록 프로세스화했다.
+**이유:** Railway는 프로젝트 루트에 `main.py`가 있으면 Python 앱으로 판단하여 Node.js 빌드 단계를 실행하지 않는다. `main.py`가 `frontend/dist/` 디렉토리를 직접 서빙하므로, 빌드 결과물이 없으면 React 소스 변경이 배포 환경에 전혀 반영되지 않는 문제가 발생한다.
+**대안:** Railway buildpack 설정으로 강제 멀티빌드 구성 (복잡, 빌드 시간 증가), 배포 후 SSH로 수동 빌드 (휴먼 에러 위험), GitHub Actions로 자동 빌드 후 푸시 (추가 CI/CD 인프라)
+**파일:** C:\Users\Jason\Desktop\dashboard\CHANGELOG.md
+
+---
+## 2026-05-26 15:00 — ProfilePage 언어 변경 이벤트 발생 메커니즘 추가
+**결정:** ProfilePage의 언어 저장 핸들러에서 localStorage 저장 후 window 커스텀 이벤트('languageChanged')를 발생시켜, 대시보드의 즉시 반영을 보장하도록 구현했다.
+**이유:** localStorage만으로는 같은 탭 내에서 다른 컴포넌트가 변경을 감지하기 어려우므로, 명시적 이벤트 발생으로 IndexPage 등 다른 페이지가 즉시 반응할 수 있게 했다. 또한 성공 메시지를 t(newLang, 'langSaved')로 변경하여 다국어 지원을 완전히 구현했다.
+**대안:** Storage 이벤트 (크로스탭 통신만 지원), MutationObserver (복잡도 높음), 컴포넌트 상태 끌어올리기 (라우터 구조상 불가능)
+**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\ProfilePage.jsx
+
+---
+## 2026-05-26 — AdminPage i18n: WIDGET_LABELS를 WIDGET_ICONS + WIDGET_LABEL_KEYS로 분리
+**결정:** AdminPage의 `WIDGET_LABELS` 객체(icon+label 혼합)를 `WIDGET_ICONS`(아이콘만)와 `WIDGET_LABEL_KEYS`(i18n 번역 키)로 분리하고, `t(lang, WIDGET_LABEL_KEYS[key])`로 렌더 시점에 언어별 라벨을 조회한다.
+**이유:** i18n 적용 시 정적 한국어 문자열을 컴포넌트 외부 상수에 두면 언어 변경에 반응할 수 없으므로, 렌더 시점에 번역 함수를 호출하는 구조로 변경했다. 아이콘은 언어와 무관하므로 분리 유지한다.
+**대안:** 함수형 WIDGET_LABELS (언어 파라미터 받아 객체 반환) — 호출 방식 변경 필요, 현재 구조 대비 장점 미미
+**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\AdminPage.jsx
 
