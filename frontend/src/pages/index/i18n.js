@@ -94,6 +94,11 @@ export const T = {
     // SitesCard
     sitesTitle: '단골 사이트',
     sitesEmpty: '관리자에서 사이트를 추가하세요',
+    // 슈퍼어드민 버튼
+    superadminBtn: '👑 슈퍼어드민',
+    // ProfilePage 언어 메시지
+    langSaved: '언어 설정이 저장되었습니다.',
+    langSavingMsg: '저장 중…',
   },
   en: {
     // Header
@@ -190,6 +195,11 @@ export const T = {
     // SitesCard
     sitesTitle: 'Favorite Sites',
     sitesEmpty: 'Add sites in Admin',
+    // Superadmin button
+    superadminBtn: '👑 Super Admin',
+    // ProfilePage language messages
+    langSaved: 'Language setting saved.',
+    langSavingMsg: 'Saving...',
   },
 }
 
