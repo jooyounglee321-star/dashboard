@@ -113,8 +113,8 @@ function StockDropdown({ results, onPick, anchorRef }) {
   return (
     <div style={{
       position: 'fixed', zIndex: 9000,
-      top: rect ? rect.bottom + window.scrollY + 2 : 0,
-      left: rect ? rect.left + window.scrollX : 0,
+      top: rect ? rect.bottom + 2 : 0,
+      left: rect ? rect.left : 0,
       minWidth: Math.max(rect?.width || 0, 240),
       background: 'var(--card)', border: '1px solid var(--border)',
       borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.15)',

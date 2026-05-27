@@ -4,6 +4,25 @@
 
 ---
 
+## [2026-05-27] — 한글 주식 자동완성 드롭다운 수정 (AdminPage)
+
+### 버그
+- `StockDropdown`이 `position: fixed`임에도 `window.scrollY`/`window.scrollX`를 좌표에 더함
+- `getBoundingClientRect()`는 이미 viewport 기준 좌표이므로, scroll 값을 더하면 드롭다운이 뷰포트 하단 밖으로 밀려나 보이지 않음
+- 페이지 상단에서는 `scrollY ≈ 0`이라 정상처럼 보였지만, 주식 섹션으로 스크롤하면 드롭다운이 화면 밖으로 사라짐
+
+### 수정
+- **`frontend/src/pages/AdminPage.jsx`**
+  - `StockDropdown` 포지셔닝에서 `window.scrollY`, `window.scrollX` 제거
+  - `top: rect.bottom + 2`, `left: rect.left` (viewport 기준 좌표만 사용)
+- **`frontend/dist/`** — 빌드 결과물 갱신
+
+### 영향
+- 한글 검색(`삼성전자` 등) 드롭다운 정상 표시
+- 영어 티커 검색 드롭다운도 스크롤 시 올바른 위치에 표시
+
+---
+
 ## [2026-05-27] — 시간대 설정 섹션 다국어 지원 (AdminPage)
 
 ### 변경
