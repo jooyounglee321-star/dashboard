@@ -4,6 +4,34 @@
 
 ---
 
+## [2026-05-27] — 히어로 섹션 아날로그 시계 추가 및 동적 그리드 (HeroSection)
+
+### 신규
+- **`AnalogClock` SVG 컴포넌트** — 시침·분침·초침 포함, 매 1초 갱신
+  - 12개 눈금 (3·6·9·12시 강조)
+  - 초침 #e05c3a 색상, 중심 이중 원
+- **동적 그리드 레이아웃** — clockCount에 따라 공란 없이 꽉 채움
+  - 1개: `2fr 1fr` (시계 크게, 날씨 우측)
+  - 2개: `1fr 1fr 0.85fr`
+  - 3개: `1fr 1fr 1fr 0.85fr`
+
+### 변경
+- **`HeroSection.jsx`**
+  - `tick(10s)` → `now(1s)` state로 교체 — 아날로그·디지털 동기화
+  - `formatTZ` — `now` 인수 추가
+  - 각 지역 셀: 지역명 → 아날로그시계 → 디지털시간 → 날짜 → TZ 순
+  - 아날로그 크기: 1개=118px, 2개=90px, 3개=74px
+  - 데스크톱 className `hero-inner--{n}` 으로 그리드 분기
+- **`index.css`**
+  - `.hero-inner` 고정 컬럼 제거 → `.hero-inner--1/2/3` 클래스 분기
+  - `.time-zone` center 정렬 (align-items:center, text-align:center)
+  - `.tz-analog` 새 클래스 추가
+  - 디지털 시간 폰트 크기 소폭 조정 (아날로그와 균형)
+  - 960px 미디어쿼리: 2컬럼 고정 + 3번째 시계 숨김
+- **`frontend/dist/`** — 빌드 결과물 갱신
+
+---
+
 ## [2026-05-27] — 한글 주식 자동완성 드롭다운 수정 (AdminPage)
 
 ### 버그
