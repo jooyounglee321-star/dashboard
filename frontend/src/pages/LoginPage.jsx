@@ -1,8 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { t } from '../i18n'
-
-const lang = (() => { try { return localStorage.getItem('dashboard_lang') || 'ko' } catch { return 'ko' } })()
 
 const GoogleLogo = () => (
   <svg className="g-logo" viewBox="0 0 48 48" style={{ width: 20, height: 20, flexShrink: 0 }}>
@@ -15,11 +13,22 @@ const GoogleLogo = () => (
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const [lang, setLang] = useState(() => {
+    try { return localStorage.getItem('dashboard_lang') || 'ko' } catch { return 'ko' }
+  })
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState({ type: '', text: '' })
+
+  useEffect(() => {
+    function handleLangChange() {
+      try { setLang(localStorage.getItem('dashboard_lang') || 'ko') } catch {}
+    }
+    window.addEventListener('languageChanged', handleLangChange)
+    return () => window.removeEventListener('languageChanged', handleLangChange)
+  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
