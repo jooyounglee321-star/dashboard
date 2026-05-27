@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { t } from '../i18n'
+
+const lang = (() => { try { return localStorage.getItem('dashboard_lang') || 'ko' } catch { return 'ko' } })()
 
 const GoogleLogo = () => (
   <svg viewBox="0 0 48 48" style={{ width: 20, height: 20, flexShrink: 0 }}>
@@ -24,13 +27,13 @@ export default function RegisterPage() {
     e.preventDefault()
     setMsg({ type: '', text: '' })
     if (!email || !password || !password2) {
-      setMsg({ type: 'error', text: '모든 항목을 입력해주세요.' }); return
+      setMsg({ type: 'error', text: t(lang, 'auth.errRequired') }); return
     }
     if (password.length < 8) {
-      setMsg({ type: 'error', text: '비밀번호는 8자 이상이어야 합니다.' }); return
+      setMsg({ type: 'error', text: t(lang, 'auth.errPwLength') }); return
     }
     if (password !== password2) {
-      setMsg({ type: 'error', text: '비밀번호가 일치하지 않습니다.' }); return
+      setMsg({ type: 'error', text: t(lang, 'auth.errPwMatch') }); return
     }
     setLoading(true)
     try {
@@ -43,13 +46,13 @@ export default function RegisterPage() {
       if (res.ok) {
         localStorage.setItem('token', data.access_token)
         if (data.user) localStorage.setItem('user', JSON.stringify(data.user))
-        setMsg({ type: 'success', text: '가입이 완료되었습니다! 잠시 후 이동합니다.' })
+        setMsg({ type: 'success', text: t(lang, 'auth.successRegister') })
         setTimeout(() => navigate('/'), 1800)
       } else {
-        setMsg({ type: 'error', text: data.detail || '가입에 실패했습니다.' })
+        setMsg({ type: 'error', text: data.detail || t(lang, 'auth.errRegister') })
       }
     } catch {
-      setMsg({ type: 'error', text: '서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.' })
+      setMsg({ type: 'error', text: t(lang, 'auth.errServer') })
     } finally {
       setLoading(false)
     }
@@ -58,41 +61,41 @@ export default function RegisterPage() {
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <header className="header">
-        <Link to="/" className="header-title">나의 하루 대시보드</Link>
-        <Link to="/login" className="nav-link">로그인</Link>
+        <Link to="/" className="header-title">{t(lang, 'auth.siteTitle')}</Link>
+        <Link to="/login" className="nav-link">{t(lang, 'auth.toLogin')}</Link>
       </header>
 
       <div className="auth-center">
         <div className="auth-card">
-          <div className="card-eyebrow">시작하기</div>
-          <div className="card-title-auth" style={{ fontSize: '1.6rem' }}>회원가입</div>
-          <div className="card-sub">소셜 계정이나 이메일로 간편하게 시작하세요.</div>
+          <div className="card-eyebrow">{t(lang, 'auth.startNow')}</div>
+          <div className="card-title-auth" style={{ fontSize: '1.6rem' }}>{t(lang, 'auth.registerTitle')}</div>
+          <div className="card-sub">{t(lang, 'auth.registerSub')}</div>
 
           <div className="social-btns">
-            <button className="btn-social btn-google" type="button" onClick={() => alert('구글 로그인 준비 중입니다.')}>
-              <GoogleLogo /> 구글로 시작하기
+            <button className="btn-social btn-google" type="button" onClick={() => alert(t(lang, 'auth.googleComingSoon'))}>
+              <GoogleLogo /> {t(lang, 'auth.googleRegister')}
             </button>
-            <button className="btn-social btn-facebook" type="button" onClick={() => alert('페이스북 로그인 준비 중입니다.')}>
+            <button className="btn-social btn-facebook" type="button" onClick={() => alert(t(lang, 'auth.facebookComingSoon'))}>
               <div style={{ width: 22, height: 22, background: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <span style={{ color: '#1877f2', fontSize: 14, fontWeight: 700, lineHeight: 1, marginTop: 1 }}>f</span>
               </div>
-              페이스북으로 시작하기
+              {t(lang, 'auth.facebookRegister')}
             </button>
           </div>
 
-          <div className="divider"><span className="divider-text">또는 이메일로 가입</span></div>
+          <div className="divider"><span className="divider-text">{t(lang, 'auth.orEmailRegister')}</span></div>
 
           <form onSubmit={handleSubmit} noValidate>
             <div className="field">
-              <label htmlFor="email">이메일</label>
+              <label htmlFor="email">{t(lang, 'auth.email')}</label>
               <input type="email" id="email" placeholder="example@email.com"
                 autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required />
             </div>
             <div className="field">
-              <label htmlFor="password">비밀번호</label>
+              <label htmlFor="password">{t(lang, 'auth.password')}</label>
               <div className="pw-wrap">
                 <input type={showPw ? 'text' : 'password'} id="password"
-                  placeholder="8자 이상 입력" autoComplete="new-password"
+                  placeholder={t(lang, 'auth.passwordHint')} autoComplete="new-password"
                   value={password} onChange={e => setPassword(e.target.value)} required minLength={8} />
                 <button type="button" className="btn-eye" onClick={() => setShowPw(v => !v)}>
                   {showPw ? '🙈' : '👁️'}
@@ -100,10 +103,10 @@ export default function RegisterPage() {
               </div>
             </div>
             <div className="field">
-              <label htmlFor="password2">비밀번호 확인</label>
+              <label htmlFor="password2">{t(lang, 'auth.confirmPassword')}</label>
               <div className="pw-wrap">
                 <input type={showPw2 ? 'text' : 'password'} id="password2"
-                  placeholder="비밀번호 재입력" autoComplete="new-password"
+                  placeholder={t(lang, 'auth.confirmPlaceholder')} autoComplete="new-password"
                   value={password2} onChange={e => setPassword2(e.target.value)} required />
                 <button type="button" className="btn-eye" onClick={() => setShowPw2(v => !v)}>
                   {showPw2 ? '🙈' : '👁️'}
@@ -111,18 +114,21 @@ export default function RegisterPage() {
               </div>
             </div>
             <button type="submit" className="btn-submit" disabled={loading}>
-              {loading ? '처리 중…' : '이메일로 가입하기'}
+              {loading ? t(lang, 'auth.processing') : t(lang, 'auth.registerBtn')}
             </button>
           </form>
 
           {msg.text && <div className={`msg ${msg.type}`}>{msg.text}</div>}
 
           <div style={{ fontSize: '0.72rem', color: 'var(--ink3)', textAlign: 'center', marginTop: '1.1rem', lineHeight: 1.6 }}>
-            가입 시 <a href="#" style={{ color: 'var(--ink2)', textDecoration: 'underline' }}>이용약관</a> 및{' '}
-            <a href="#" style={{ color: 'var(--ink2)', textDecoration: 'underline' }}>개인정보 처리방침</a>에 동의하는 것으로 간주합니다.
+            {t(lang, 'auth.termsPrefix')}
+            <a href="#" style={{ color: 'var(--ink2)', textDecoration: 'underline' }}>{t(lang, 'auth.terms')}</a>
+            {t(lang, 'auth.termsMid')}
+            <a href="#" style={{ color: 'var(--ink2)', textDecoration: 'underline' }}>{t(lang, 'auth.privacy')}</a>
+            {t(lang, 'auth.termsSuffix')}
           </div>
           <div className="footer-link">
-            이미 계정이 있으신가요? <Link to="/login">로그인</Link>
+            {t(lang, 'auth.hasAccount')} <Link to="/login">{t(lang, 'auth.toLogin')}</Link>
           </div>
         </div>
       </div>

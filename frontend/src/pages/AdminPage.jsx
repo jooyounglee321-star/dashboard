@@ -387,9 +387,9 @@ export default function AdminPage() {
     expense: '💳', diet: '🥗', memo: '📝', news: '📰', sites: '🌐',
   }
   const WIDGET_LABEL_KEYS = {
-    hero: 'adminWHero', schedule: 'adminWSchedule', youtube: 'adminWYoutube',
-    stock: 'adminWStock', expense: 'adminWExpense', diet: 'adminWDiet',
-    memo: 'adminWMemo', news: 'adminWNews', sites: 'adminWSites',
+    hero: 'admin.wHero', schedule: 'admin.wSchedule', youtube: 'admin.wYoutube',
+    stock: 'admin.wStock', expense: 'admin.wExpense', diet: 'admin.wDiet',
+    memo: 'admin.wMemo', news: 'admin.wNews', sites: 'admin.wSites',
   }
   const [widgetCfg, setWidgetCfg] = useState(() => {
     const cached = localStorage.getItem('dashboard_lang')
@@ -435,7 +435,7 @@ export default function AdminPage() {
   /* ── 그룹 CRUD ── */
   function addGroup() {
     if (groups.length >= 10) { showToast('그룹은 최대 10개까지 가능합니다', 'err'); return }
-    saveGroupsToDB([...groups, { id: genId(), name: t(lang, 'adminNewGroup'), currency: 'KRW', stocks: [] }])
+    saveGroupsToDB([...groups, { id: genId(), name: t(lang, 'admin.newGroup'), currency: 'KRW', stocks: [] }])
   }
   function delGroup(gid) {
     if (!window.confirm('그룹과 모든 종목을 삭제하시겠습니까?')) return
@@ -604,8 +604,8 @@ export default function AdminPage() {
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', color: 'var(--ink)', fontFamily: "'Noto Sans KR', sans-serif", fontWeight: 300 }}>
       <header className="header">
-        <span className="header-title">⚙ {t(lang, 'adminTitle')}</span>
-        <Link to="/" className="nav-link">← {t(lang, 'adminToDashboard')}</Link>
+        <span className="header-title">⚙ {t(lang, 'admin.title')}</span>
+        <Link to="/" className="nav-link">← {t(lang, 'admin.toDashboard')}</Link>
       </header>
 
       <main style={{ maxWidth: 860, margin: '0 auto', padding: '1.5rem 1.2rem 4rem', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
@@ -613,8 +613,8 @@ export default function AdminPage() {
         {/* ① 위젯 설정 */}
         <div style={secStyle}>
           <div style={secHdStyle}>
-            <span style={secTitle}>🧩 {t(lang, 'adminWidgetSettings')}</span>
-            <button className="btn btn-primary btn-sm" onClick={saveWidgetCfg}>{t(lang, 'adminSave')}</button>
+            <span style={secTitle}>🧩 {t(lang, 'admin.widgetSettings')}</span>
+            <button className="btn btn-primary btn-sm" onClick={saveWidgetCfg}>{t(lang, 'admin.save')}</button>
           </div>
           <div style={{ ...secBdStyle, gap: '0' }}>
             <p style={{ fontSize: '0.78rem', color: 'var(--ink3)', marginBottom: '0.9rem' }}>
@@ -632,7 +632,7 @@ export default function AdminPage() {
                   {key === 'hero' && widgetCfg.hero?.enabled !== false && (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>{t(lang, 'adminClockLabel')}</span>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>{t(lang, 'admin.clockLabel')}</span>
                         {[1, 2, 3].map(n => (
                           <button
                             key={n}
@@ -647,7 +647,7 @@ export default function AdminPage() {
                         ))}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>{t(lang, 'adminTempLabel')}</span>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>{t(lang, 'admin.tempLabel')}</span>
                         {['C', 'F'].map(u => (
                           <button
                             key={u}
@@ -666,14 +666,14 @@ export default function AdminPage() {
                   {/* 유튜브: 최대 표시 개수 */}
                   {key === 'youtube' && widgetCfg.youtube?.enabled !== false && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>{t(lang, 'adminMax')}</span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>{t(lang, 'admin.max')}</span>
                       <input
                         type="number" min="1" max="20"
                         value={widgetCfg.youtube?.max_count ?? 10}
                         onChange={e => setWidget('youtube', 'max_count', Math.max(1, Math.min(20, parseInt(e.target.value) || 10)))}
                         style={{ width: 44, padding: '0.22rem 0.35rem', fontSize: '0.8rem', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit', textAlign: 'center' }}
                       />
-                      <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>{t(lang, 'adminMaxUnit')}</span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>{t(lang, 'admin.maxUnit')}</span>
                     </div>
                   )}
                   {/* 주식: 합계 표시 통화 */}
@@ -683,9 +683,9 @@ export default function AdminPage() {
                       onChange={e => setWidget('stock', 'currency_display', e.target.value)}
                       style={{ fontSize: '0.75rem', padding: '0.22rem 0.5rem', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit' }}
                     >
-                      <option value="KRW">{t(lang, 'adminKRWOnly')}</option>
-                      <option value="USD">{t(lang, 'adminUSDOnly')}</option>
-                      <option value="BOTH">{t(lang, 'adminBothFull')}</option>
+                      <option value="KRW">{t(lang, 'admin.krwOnly')}</option>
+                      <option value="USD">{t(lang, 'admin.usdOnly')}</option>
+                      <option value="BOTH">{t(lang, 'admin.bothFull')}</option>
                     </select>
                   )}
                   {/* 식단: 표시할 끼니 */}
@@ -749,19 +749,19 @@ export default function AdminPage() {
         {/* ③ 보유 주식 관리 */}
         <div style={secStyle}>
           <div style={secHdStyle}>
-            <span style={secTitle}>📈 {t(lang, 'adminStockMgmt')}</span>
+            <span style={secTitle}>📈 {t(lang, 'admin.stockMgmt')}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <label style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>{t(lang, 'adminTotalDisplay')}</label>
+              <label style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>{t(lang, 'admin.totalDisplay')}</label>
               <select value={totalMode} onChange={e => { setTotalMode(e.target.value); sv(TOTAL_MODE_KEY, e.target.value); showToast('✓ 합계 표시 방식이 저장되었습니다', 'ok') }}
                 style={{ fontSize: '0.78rem', padding: '0.22rem 0.5rem', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit' }}>
-                <option value="KRW">{t(lang, 'adminKRWOnly')}</option>
-                <option value="USD">{t(lang, 'adminUSDOnly')}</option>
-                <option value="BOTH">{t(lang, 'adminBothFull')}</option>
+                <option value="KRW">{t(lang, 'admin.krwOnly')}</option>
+                <option value="USD">{t(lang, 'admin.usdOnly')}</option>
+                <option value="BOTH">{t(lang, 'admin.bothFull')}</option>
               </select>
             </div>
           </div>
           <div style={secBdStyle}>
-            <p style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>{t(lang, 'adminStockHint')}</p>
+            <p style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>{t(lang, 'admin.stockHint')}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {!groups.length
                 ? <div style={{ fontSize: '0.82rem', color: 'var(--ink3)', fontStyle: 'italic', textAlign: 'center', padding: '0.5rem' }}>그룹을 추가해보세요</div>
@@ -783,7 +783,7 @@ export default function AdminPage() {
                           <option value="USD">$ USD</option>
                         </select>
                         <span style={{ fontSize: '0.72rem', color: col.tx, opacity: 0.7 }}>{g.stocks.length}/10</span>
-                        <button onClick={() => delGroup(g.id)} style={{ padding: '0.28rem 0.65rem', fontSize: '0.78rem', cursor: 'pointer', background: 'transparent', color: '#c0392b', border: '1px solid #c0392b', borderRadius: 6, fontFamily: 'inherit', transition: 'all 0.15s' }}>{t(lang, 'adminDelGroup')}</button>
+                        <button onClick={() => delGroup(g.id)} style={{ padding: '0.28rem 0.65rem', fontSize: '0.78rem', cursor: 'pointer', background: 'transparent', color: '#c0392b', border: '1px solid #c0392b', borderRadius: 6, fontFamily: 'inherit', transition: 'all 0.15s' }}>{t(lang, 'admin.delGroup')}</button>
                       </div>
                       {/* 종목 목록 */}
                       <div style={{ background: 'var(--card2)' }}>
@@ -805,7 +805,7 @@ export default function AdminPage() {
                                       {totalSellQty > 0 ? ` · 매도 ${totalSellQty.toLocaleString()}주` : ''}
                                     </div>
                                   </div>
-                                  <button onClick={() => confirmDelStock(g.id, s.id)} style={{ padding: '0.16rem 0.48rem', fontSize: '0.72rem', cursor: 'pointer', border: '1px solid #c0392b', borderRadius: 5, background: 'transparent', color: '#c0392b', fontFamily: 'inherit', transition: 'all 0.12s' }}>{t(lang, 'adminDelStock')}</button>
+                                  <button onClick={() => confirmDelStock(g.id, s.id)} style={{ padding: '0.16rem 0.48rem', fontSize: '0.72rem', cursor: 'pointer', border: '1px solid #c0392b', borderRadius: 5, background: 'transparent', color: '#c0392b', fontFamily: 'inherit', transition: 'all 0.12s' }}>{t(lang, 'admin.delStock')}</button>
                                 </div>
                                 {isOpen && <StockDetailPanel g={g} s={s} onUpdate={handleStockUpdate} />}
                               </div>
@@ -823,7 +823,7 @@ export default function AdminPage() {
             </div>
             {groups.length < 10 && (
               <button onClick={addGroup} style={{ alignSelf: 'flex-start', marginTop: '0.2rem', padding: '0.48rem 1.1rem', fontSize: '0.85rem', fontWeight: 500, cursor: 'pointer', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, fontFamily: 'inherit', transition: 'background 0.15s' }}>
-                {t(lang, 'adminAddGroup')}
+                {t(lang, 'admin.addGroup')}
               </button>
             )}
           </div>
@@ -971,7 +971,7 @@ export default function AdminPage() {
         </div>
 
         <button onClick={saveAll} style={{ padding: '0.9rem 2rem', fontSize: '0.95rem', fontWeight: 700, cursor: 'pointer', background: 'var(--green)', color: '#fff', border: 'none', borderRadius: 12, fontFamily: 'inherit', width: '100%', letterSpacing: '0.04em', transition: 'background 0.15s' }}>
-          {t(lang, 'adminSaveAll')}
+          {t(lang, 'admin.saveAll')}
         </button>
       </main>
 
