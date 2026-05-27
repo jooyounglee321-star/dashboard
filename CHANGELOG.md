@@ -4,6 +4,32 @@
 
 ---
 
+## [2026-05-26] — 전체 i18n 시스템 완전 재구축 (6개 페이지 + 중앙 번역 모듈)
+
+### 신규 파일
+- **`frontend/src/locales/ko.json`** — 중앙 한국어 번역 파일 (220줄)
+  - 네임스페이스: `common`, `auth`, `profile`, `admin`, `superadmin`
+  - 하위 호환 flat 키 포함 (위젯 컴포넌트용)
+- **`frontend/src/locales/en.json`** — 중앙 영어 번역 파일 (동일 구조)
+- **`frontend/src/i18n.js`** — 중앙 i18n 모듈
+  - 점 표기법 네스팅 지원: `t(lang, 'auth.loginBtn')`
+  - flat 키 하위 호환: `t(lang, 'stockTitle')`
+  - `T` export: `T[lang]?.expenseCats` 직접 접근
+  - 언어 없을 시 ko → 키명 순서로 폴백
+
+### 변경
+- **`frontend/src/pages/index/i18n.js`** → shim으로 교체 (`export { t, T } from '../../i18n'`)
+- **`frontend/src/pages/index/IndexPage.jsx`** — `t(lang, 'admin')` → `t(lang, 'adminLink')` (JSON 키 충돌 해결)
+- **`frontend/src/pages/AdminPage.jsx`** — 모든 flat `adminXxx` 키 → nested `admin.xxx` 키로 마이그레이션
+- **`frontend/src/pages/LoginPage.jsx`** — i18n 완전 적용 (auth.xxx 네임스페이스)
+- **`frontend/src/pages/RegisterPage.jsx`** — i18n 완전 적용 (auth.xxx 네임스페이스)
+- **`frontend/src/pages/ProfilePage.jsx`** — i18n 완전 적용 (profile.xxx 네임스페이스), import 경로 수정
+- **`frontend/src/pages/SuperadminPage.jsx`** — i18n 완전 적용 (superadmin.xxx + common.xxx)
+- **`CLAUDE.md`** — 다국어(i18n) 규칙 섹션 추가
+- **`frontend/dist/`** — 빌드 결과물 갱신
+
+---
+
 ## [2026-05-26] — AdminPage.jsx 전체 i18n 적용 (한국어/영어)
 
 ### 변경

@@ -326,7 +326,7 @@ export default function IndexPage() {
         </span>
         <div className="header-right">
           <span className="header-date">{headerDate}</span>
-          <Link to="/admin" className="admin-link">{t(lang, 'admin')}</Link>
+          <Link to="/admin" className="admin-link">{t(lang, 'adminLink')}</Link>
           {userRole === 'admin' && (
             <Link to="/superadmin" style={{
               fontSize: '0.78rem', color: '#c0392b', textDecoration: 'none',

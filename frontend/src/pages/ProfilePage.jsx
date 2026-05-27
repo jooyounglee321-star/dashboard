@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { t } from './index/i18n'
+import { t } from '../i18n'
 
 function togglePw(setFn) {
   setFn(v => !v)
@@ -26,6 +26,7 @@ export default function ProfilePage() {
   const fileRef = useRef(null)
 
   const token = localStorage.getItem('token')
+  const lang = widgetCfg?.language ?? 'ko'
 
   useEffect(() => {
     // 아바타 로드 (localStorage)
@@ -42,7 +43,7 @@ export default function ProfilePage() {
         setPlan(d.plan || 'free')
         if (d.created_at) {
           const dt = new Date(d.created_at)
-          setJoinedAt(`${dt.getFullYear()}년 ${dt.getMonth()+1}월 ${dt.getDate()}일`)
+          setJoinedAt(`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`)
         }
       })
       .catch(() => {})
@@ -74,16 +75,16 @@ export default function ProfilePage() {
       })
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.detail || `저장 실패 (HTTP ${res.status})`)
+        throw new Error(errData.detail || `HTTP ${res.status}`)
       }
       // 대시보드 즉시 반영을 위해 localStorage에도 캐시 + 이벤트 발생
       try {
         localStorage.setItem('dashboard_lang', newLang)
         window.dispatchEvent(new Event('languageChanged'))
       } catch {}
-      setMsg({ type: 'success', text: t(newLang, 'langSaved') })
+      setMsg({ type: 'success', text: t(newLang, 'profile.langSaved') })
     } catch (e) {
-      setMsg({ type: 'error', text: e.message || '언어 설정 저장에 실패했습니다.' })
+      setMsg({ type: 'error', text: e.message || t(lang, 'profile.errServer') })
     } finally {
       setLangSaving(false)
     }
@@ -92,12 +93,12 @@ export default function ProfilePage() {
   function onAvatarChange(e) {
     const file = e.target.files[0]
     if (!file) return
-    if (file.size > 2 * 1024 * 1024) { setMsg({ type: 'error', text: '이미지 크기는 2MB 이하여야 합니다.' }); return }
+    if (file.size > 2 * 1024 * 1024) { setMsg({ type: 'error', text: t(lang, 'profile.errImageSize') }); return }
     const reader = new FileReader()
     reader.onload = ev => {
       localStorage.setItem('avatar_data', ev.target.result)
       setAvatarSrc(ev.target.result)
-      setMsg({ type: 'success', text: '프로필 사진이 변경되었습니다. (기기에만 저장)' })
+      setMsg({ type: 'success', text: t(lang, 'profile.successAvatar') })
     }
     reader.readAsDataURL(file)
   }
@@ -107,9 +108,9 @@ export default function ProfilePage() {
     setMsg(null)
 
     if (newPw) {
-      if (newPw.length < 8)  { setMsg({ type: 'error', text: '새 비밀번호는 8자 이상이어야 합니다.' }); return }
-      if (newPw !== confPw)  { setMsg({ type: 'error', text: '새 비밀번호와 확인이 일치하지 않습니다.' }); return }
-      if (!curPw)            { setMsg({ type: 'error', text: '현재 비밀번호를 입력해주세요.' }); return }
+      if (newPw.length < 8)  { setMsg({ type: 'error', text: t(lang, 'profile.errPwLength') }); return }
+      if (newPw !== confPw)  { setMsg({ type: 'error', text: t(lang, 'profile.errPwMatch') }); return }
+      if (!curPw)            { setMsg({ type: 'error', text: t(lang, 'profile.errNoCurPw') }); return }
     }
 
     const body = { name: name.trim() || null }
@@ -129,18 +130,16 @@ export default function ProfilePage() {
           localStorage.setItem('user', JSON.stringify({ ...stored, name: data.name }))
         } catch {}
         if (newPw) { setCurPw(''); setNewPw(''); setConfPw('') }
-        setMsg({ type: 'success', text: '프로필이 저장되었습니다.' })
+        setMsg({ type: 'success', text: t(lang, 'profile.successSave') })
       } else {
-        setMsg({ type: 'error', text: data.detail || '저장에 실패했습니다.' })
+        setMsg({ type: 'error', text: data.detail || t(lang, 'profile.errSave') })
       }
     } catch {
-      setMsg({ type: 'error', text: '서버 연결에 실패했습니다.' })
+      setMsg({ type: 'error', text: t(lang, 'profile.errServer') })
     } finally {
       setSaving(false)
     }
   }
-
-  const lang = widgetCfg?.language ?? 'ko'
 
   const planLabel = plan === 'premium' ? 'Premium' : 'Free'
   const planStyle = plan === 'premium'
@@ -152,10 +151,10 @@ export default function ProfilePage() {
       {/* Header */}
       <header className="header">
         <span style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.2rem', color: 'var(--accent2)' }}>
-          ✦ 나의 하루
+          {t(lang, 'profile.myDay')}
         </span>
         <div className="header-right">
-          <Link to="/" className="admin-link">← 대시보드</Link>
+          <Link to="/" className="admin-link">{t(lang, 'profile.backToDashboard')}</Link>
         </div>
       </header>
 
@@ -171,7 +170,7 @@ export default function ProfilePage() {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '2rem' }}>
             <div
               onClick={() => fileRef.current?.click()}
-              title="프로필 사진 변경"
+              title={t(lang, 'profile.avatarTitle')}
               style={{
                 position: 'relative', width: 88, height: 88, cursor: 'pointer',
                 marginBottom: '0.5rem',
@@ -198,41 +197,41 @@ export default function ProfilePage() {
                 onMouseLeave={e => e.currentTarget.style.opacity = 0}
               >📷</div>
             </div>
-            <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>클릭하여 사진 변경</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>{t(lang, 'profile.avatarClick')}</span>
             <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onAvatarChange} />
           </div>
 
           <form onSubmit={handleSave}>
             {/* 기본 정보 */}
-            <SectionLabel>기본 정보</SectionLabel>
+            <SectionLabel>{t(lang, 'profile.basicInfo')}</SectionLabel>
 
-            <Field label="닉네임 / 이름">
+            <Field label={t(lang, 'profile.nickname')}>
               <input
                 type="text" value={name} onChange={e => setName(e.target.value)}
-                placeholder="표시될 이름을 입력하세요" maxLength={50}
+                placeholder={t(lang, 'profile.nicknamePlaceholder')} maxLength={50}
                 style={inputStyle}
               />
             </Field>
 
-            <Field label="이메일">
+            <Field label={t(lang, 'profile.emailLabel')}>
               <input type="email" value={email} disabled style={{ ...inputStyle, background: 'var(--bg)', color: 'var(--ink3)', cursor: 'not-allowed', border: '1.5px solid transparent' }} />
-              <div style={{ fontSize: '0.73rem', color: 'var(--ink3)', marginTop: '0.3rem' }}>이메일은 변경할 수 없습니다.</div>
+              <div style={{ fontSize: '0.73rem', color: 'var(--ink3)', marginTop: '0.3rem' }}>{t(lang, 'profile.emailNote')}</div>
             </Field>
 
             {/* 계정 정보 */}
-            <SectionLabel>계정 정보</SectionLabel>
+            <SectionLabel>{t(lang, 'profile.accountInfo')}</SectionLabel>
 
-            <InfoRow label="플랜">
+            <InfoRow label={t(lang, 'profile.plan')}>
               <span style={{ display: 'inline-block', padding: '0.18rem 0.65rem', borderRadius: 20, fontSize: '0.72rem', fontWeight: 500, ...planStyle }}>
                 {planLabel}
               </span>
             </InfoRow>
-            <InfoRow label="가입일">
+            <InfoRow label={t(lang, 'profile.joinDate')}>
               <span style={{ fontSize: '0.88rem', color: 'var(--ink)' }}>{joinedAt || '—'}</span>
             </InfoRow>
 
             {/* 언어 설정 */}
-            <SectionLabel>언어 / Language</SectionLabel>
+            <SectionLabel>{t(lang, 'profile.language')}</SectionLabel>
             <div style={{ marginBottom: '1.2rem' }}>
               <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.6rem' }}>
                 {[['ko', '🇰🇷 한국어'], ['en', '🇺🇸 English']].map(([v, l]) => (
@@ -252,25 +251,25 @@ export default function ProfilePage() {
                     }}
                   >{l}</button>
                 ))}
-                {langSaving && <span style={{ fontSize: '0.75rem', color: 'var(--ink3)', alignSelf: 'center' }}>{t(lang, 'langSavingMsg')}</span>}
+                {langSaving && <span style={{ fontSize: '0.75rem', color: 'var(--ink3)', alignSelf: 'center' }}>{t(lang, 'profile.langSavingMsg')}</span>}
               </div>
               <div style={{ fontSize: '0.73rem', color: 'var(--ink3)', lineHeight: 1.6 }}>
-                언어 변경 시 온도 단위, 통화, 날짜 형식이 자동으로 연동됩니다.<br />
-                온도·통화를 위젯 설정에서 직접 변경한 경우 수동 설정이 우선됩니다.
+                {t(lang, 'profile.langHint')}<br />
+                {t(lang, 'profile.langHint2')}
               </div>
             </div>
 
             {/* 비밀번호 변경 */}
-            <SectionLabel>비밀번호 변경</SectionLabel>
+            <SectionLabel>{t(lang, 'profile.changePassword')}</SectionLabel>
 
-            <Field label="현재 비밀번호">
-              <PwField value={curPw} onChange={setCurPw} show={showCur} toggleShow={() => togglePw(setShowCur)} placeholder="현재 비밀번호" />
+            <Field label={t(lang, 'profile.currentPassword')}>
+              <PwField value={curPw} onChange={setCurPw} show={showCur} toggleShow={() => togglePw(setShowCur)} placeholder={t(lang, 'profile.currentPasswordPlaceholder')} />
             </Field>
-            <Field label="새 비밀번호">
-              <PwField value={newPw} onChange={setNewPw} show={showNew} toggleShow={() => togglePw(setShowNew)} placeholder="8자 이상" />
+            <Field label={t(lang, 'profile.newPassword')}>
+              <PwField value={newPw} onChange={setNewPw} show={showNew} toggleShow={() => togglePw(setShowNew)} placeholder={t(lang, 'profile.newPasswordPlaceholder')} />
             </Field>
-            <Field label="새 비밀번호 확인">
-              <PwField value={confPw} onChange={setConfPw} show={showConf} toggleShow={() => togglePw(setShowConf)} placeholder="동일하게 입력" />
+            <Field label={t(lang, 'profile.confirmNewPassword')}>
+              <PwField value={confPw} onChange={setConfPw} show={showConf} toggleShow={() => togglePw(setShowConf)} placeholder={t(lang, 'profile.confirmPasswordPlaceholder')} />
             </Field>
 
             <button
@@ -283,7 +282,7 @@ export default function ProfilePage() {
                 marginTop: '1.6rem', letterSpacing: '0.02em',
               }}
             >
-              {saving ? '저장 중…' : '저장하기'}
+              {saving ? t(lang, 'profile.savingBtn') : t(lang, 'profile.saveBtn')}
             </button>
           </form>
 

@@ -1,6 +1,24 @@
 # 프로젝트 결정 기록
 
 ---
+## 2026-05-26 — i18n 시스템 중앙화: 단일 src/i18n.js + locales/*.json
+**결정:** 기존 `pages/index/i18n.js`에 인라인으로 분산되어 있던 번역 문자열을 `src/locales/en.json`, `src/locales/ko.json`으로 추출하고, 중앙 `src/i18n.js` 모듈에서 점 표기법 네스팅(`auth.loginBtn`)과 flat 키를 모두 지원하는 `t(lang, key)` 함수를 제공합니다. `pages/index/i18n.js`는 shim으로 교체하여 기존 위젯 컴포넌트와의 하위 호환성을 유지합니다.
+
+**이유:** 페이지가 늘어남에 따라 번역 키가 여러 파일에 산재할 경우 유지보수가 어렵습니다. JSON 중앙화로 새 페이지 추가 시 키만 JSON에 추가하면 되고, 번역 누락 여부를 한 곳에서 확인할 수 있습니다. 네임스페이스(`auth`, `profile`, `admin` 등)로 키 충돌 방지 및 구조적 가독성을 확보합니다.
+
+**대안:** 1) 각 페이지마다 별도 i18n 파일 유지 (번역 중복/불일치 위험), 2) i18next 등 외부 라이브러리 도입 (의존성 증가, 현재 규모에 과도), 3) 서버 사이드 번역 (SSR 없는 구조에서 부적합)
+
+**파일:** `frontend/src/i18n.js`, `frontend/src/locales/en.json`, `frontend/src/locales/ko.json`, `frontend/src/pages/index/i18n.js`
+
+---
+## 2026-05-26 — adminLink 키 도입: JSON 네임스페이스 충돌 해결
+**결정:** IndexPage의 네비게이션 링크 텍스트에 사용하던 `"admin"` flat 키를 `"adminLink"`로 이름 변경합니다.
+
+**이유:** JSON 객체는 같은 키에 문자열 값과 객체 값을 동시에 가질 수 없습니다. `"admin": "⚙ 관리자"` (IndexPage용 flat 키)와 `"admin": { "title": "관리자 설정", ... }` (AdminPage용 네스팅) 사이에 충돌이 발생합니다. `adminLink`로 이름을 변경하여 충돌을 해소합니다.
+
+**파일:** `frontend/src/locales/en.json`, `frontend/src/locales/ko.json`, `frontend/src/pages/index/IndexPage.jsx`
+
+---
 ## 2026-05-25 — 회원관리 페이지 통합: AdminUsersPage 삭제, SuperadminPage로 완전 대체
 **결정:** 별도로 존재하던 `/admin_users` 라우트와 `AdminUsersPage.jsx` 컴포넌트를 삭제하고, 회원관리 기능을 `/superadmin` 라우트의 `SuperadminPage.jsx`로 완전히 통합합니다. 레거시 북마크 대응을 위해 `/admin_users` → `/superadmin`로 리다이렉트합니다.
 
@@ -138,4 +156,11 @@
 **이유:** i18n 적용 시 정적 한국어 문자열을 컴포넌트 외부 상수에 두면 언어 변경에 반응할 수 없으므로, 렌더 시점에 번역 함수를 호출하는 구조로 변경했다. 아이콘은 언어와 무관하므로 분리 유지한다.
 **대안:** 함수형 WIDGET_LABELS (언어 파라미터 받아 객체 반환) — 호출 방식 변경 필요, 현재 구조 대비 장점 미미
 **파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\AdminPage.jsx
+
+---
+## 2026-05-26 — RegisterPage 다국어화(i18n): 함수 기반 번역 시스템 도입
+**결정:** RegisterPage의 모든 하드코딩된 한국어 문자열을 `i18n.js`의 `t(lang, key)` 함수로 변경했다. localStorage에서 `dashboard_lang` 설정을 읽고(기본값 'ko'), 모든 UI 텍스트(에러 메시지, 버튼 라벨, 약관 텍스트 등)를 i18n 키로 관리한다.
+**이유:** 사용자 인증 페이지(회원가입, 로그인)는 앱 진입 첫 관문이므로, 전 시스템과 일관된 다국어 지원이 필수다. localStorage 캐싱으로 API 로드 대기 없이 즉시 사용자 선호 언어를 적용할 수 있다. 함수 기반 번역(runtime translation)은 언어 변경 후 자동 재렌더링으로 모든 문자열이 즉시 업데이트된다.
+**대안:** 1) 인증 페이지만 한국어 유지 (사용자 경험 단절), 2) i18next 라이브러리 도입 (외부 의존성 추가, 현재 시스템과 통합 필요), 3) 서버 측 i18n (초기 페이지 로드 지연), 4) 컴포넌트 상태로 언어 관리 (부모 컴포넌트의 상태 끌어올리기 필요)
+**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\RegisterPage.jsx
 
