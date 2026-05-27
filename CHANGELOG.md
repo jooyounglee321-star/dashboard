@@ -4,6 +4,23 @@
 
 ---
 
+## [2026-05-27] — 시간대 설정 섹션 다국어 지원 (AdminPage)
+
+### 변경
+- **`frontend/src/locales/en.json`** — `admin` 섹션에 timezone 번역 키 22개 추가
+  - `tzTitle`, `tzDesc`, `tzZone1~3`, `tzPlaceholder1~3`
+  - 도시 이름 12개: `tzSeoul`, `tzTokyo`, `tzNY`, `tzLA`, `tzLondon`, `tzParis`, `tzSydney`, `tzDubai`, `tzSingapore`, `tzChicago`, `tzHK`, `tzBerlin`
+- **`frontend/src/locales/ko.json`** — 동일 키 한국어 번역 추가
+- **`frontend/src/pages/AdminPage.jsx`**
+  - `ALL_TZ` 배열: `label` (하드코딩 한국어) → `labelKey` (번역 키)
+  - 섹션 제목, 설명, 저장 버튼 → `t(lang, 'admin.tz...')` 사용
+  - 지역 레이블 배열 → `t(lang, 'admin.tzZone1~3')`
+  - 드롭다운 옵션 → `t(lang, 'admin.' + tz.labelKey)` (루프 변수 `t` → `tz` 충돌 해결)
+  - placeholder → `t(lang, 'admin.tzPlaceholder${i+1}')` (지역별 예시 도시명)
+- **`frontend/dist/`** — 빌드 결과물 갱신
+
+---
+
 ## [2026-05-27] — 언어 전환 실시간 반영 버그 수정 (LoginPage, RegisterPage, SuperadminPage)
 
 ### 문제

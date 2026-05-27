@@ -11,18 +11,18 @@ const authH = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') 
 const TOTAL_MODE_KEY = 'stock_total_mode'
 
 const ALL_TZ = [
-  { label: '서울 (KST)', tz: 'Asia/Seoul' },
-  { label: '도쿄 (JST)', tz: 'Asia/Tokyo' },
-  { label: '뉴욕 (ET)', tz: 'America/New_York' },
-  { label: '로스앤젤레스 (PT)', tz: 'America/Los_Angeles' },
-  { label: '런던 (GMT)', tz: 'Europe/London' },
-  { label: '파리 (CET)', tz: 'Europe/Paris' },
-  { label: '시드니 (AEDT)', tz: 'Australia/Sydney' },
-  { label: '두바이 (GST)', tz: 'Asia/Dubai' },
-  { label: '싱가포르 (SGT)', tz: 'Asia/Singapore' },
-  { label: '시카고 (CT)', tz: 'America/Chicago' },
-  { label: '홍콩 (HKT)', tz: 'Asia/Hong_Kong' },
-  { label: '베를린 (CET)', tz: 'Europe/Berlin' },
+  { labelKey: 'tzSeoul', tz: 'Asia/Seoul' },
+  { labelKey: 'tzTokyo', tz: 'Asia/Tokyo' },
+  { labelKey: 'tzNY', tz: 'America/New_York' },
+  { labelKey: 'tzLA', tz: 'America/Los_Angeles' },
+  { labelKey: 'tzLondon', tz: 'Europe/London' },
+  { labelKey: 'tzParis', tz: 'Europe/Paris' },
+  { labelKey: 'tzSydney', tz: 'Australia/Sydney' },
+  { labelKey: 'tzDubai', tz: 'Asia/Dubai' },
+  { labelKey: 'tzSingapore', tz: 'Asia/Singapore' },
+  { labelKey: 'tzChicago', tz: 'America/Chicago' },
+  { labelKey: 'tzHK', tz: 'Asia/Hong_Kong' },
+  { labelKey: 'tzBerlin', tz: 'Europe/Berlin' },
 ]
 const DEFAULT_ZONES = [
   { region: '서울', tz: 'Asia/Seoul', label: 'KST' },
@@ -946,23 +946,23 @@ export default function AdminPage() {
         {/* ⑥ 시간대 설정 */}
         <div style={secStyle}>
           <div style={secHdStyle}>
-            <span style={secTitle}>🕐 세 지역 시간 설정</span>
-            <button onClick={saveTZ} style={{ padding: '0.48rem 1.1rem', fontSize: '0.85rem', fontWeight: 500, cursor: 'pointer', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, fontFamily: 'inherit' }}>저장</button>
+            <span style={secTitle}>🕐 {t(lang, 'admin.tzTitle')}</span>
+            <button onClick={saveTZ} style={{ padding: '0.48rem 1.1rem', fontSize: '0.85rem', fontWeight: 500, cursor: 'pointer', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, fontFamily: 'inherit' }}>{t(lang, 'admin.save')}</button>
           </div>
           <div style={secBdStyle}>
-            <p style={{ fontSize: '0.82rem', color: 'var(--ink3)' }}>세 지역의 시간이 대시보드에 동시에 표시됩니다.</p>
+            <p style={{ fontSize: '0.82rem', color: 'var(--ink3)' }}>{t(lang, 'admin.tzDesc')}</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.8rem' }}>
-              {['지역 1 (기준)', '지역 2', '지역 3'].map((label, i) => (
+              {[t(lang, 'admin.tzZone1'), t(lang, 'admin.tzZone2'), t(lang, 'admin.tzZone3')].map((label, i) => (
                 <div key={i} style={{ background: 'var(--card2)', borderRadius: 10, border: '1px solid var(--border)', padding: '0.9rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   <div style={{ fontSize: '0.7rem', fontWeight: 500, color: 'var(--ink3)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{label}</div>
                   <div style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.4rem', fontWeight: 300, color: 'var(--ink)' }}>{tzPreviews[i]}</div>
                   <div style={{ fontSize: '0.72rem', color: 'var(--ink2)' }}>{tzData[i]?.region}</div>
                   <select value={tzData[i]?.tz || ''} onChange={e => updateTz(i, 'tz', e.target.value)}
                     style={{ padding: '0.4rem 0.6rem', fontSize: '0.82rem', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit', width: '100%' }}>
-                    {ALL_TZ.map(t => <option key={t.tz} value={t.tz}>{t.label}</option>)}
+                    {ALL_TZ.map(tz => <option key={tz.tz} value={tz.tz}>{t(lang, 'admin.' + tz.labelKey)}</option>)}
                   </select>
                   <input type="text" value={tzData[i]?.region || ''} onChange={e => updateTz(i, 'region', e.target.value)}
-                    placeholder={`표시 이름 (예: 서울)`}
+                    placeholder={t(lang, `admin.tzPlaceholder${i + 1}`)}
                     style={{ padding: '0.4rem 0.6rem', fontSize: '0.82rem', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit', width: '100%' }} />
                 </div>
               ))}
