@@ -4,6 +4,27 @@
 
 ---
 
+## [2026-05-27] — 언어 전환 실시간 반영 버그 수정 (LoginPage, RegisterPage, SuperadminPage)
+
+### 문제
+- 3개 페이지에서 `lang` 상수가 모듈 로드 시 IIFE로 1회만 평가되어, 언어를 바꿔도 새로고침 전까지 반영 안 됨
+
+### 수정
+- **`frontend/src/pages/LoginPage.jsx`**
+  - `useEffect` import 추가
+  - 모듈 레벨 `const lang = (() => ...)()` IIFE 제거
+  - `const [lang, setLang] = useState(...)` (lazy initializer) 컴포넌트 내부로 이동
+  - `window.addEventListener('languageChanged', ...)` + cleanup useEffect 추가
+- **`frontend/src/pages/RegisterPage.jsx`** — LoginPage와 동일한 방식으로 수정
+- **`frontend/src/pages/SuperadminPage.jsx`**
+  - 모듈 레벨 IIFE 제거
+  - `fmtDate(iso, lang)` — `lang` 파라미터 추가 (모듈 레벨 함수에서 클로저 의존성 제거)
+  - `lang` state + languageChanged useEffect 컴포넌트 내부 추가
+  - `fmtDate` 호출 3곳에 `lang` 인수 전달
+- **`frontend/dist/`** — 빌드 결과물 갱신
+
+---
+
 ## [2026-05-26] — 전체 i18n 시스템 완전 재구축 (6개 페이지 + 중앙 번역 모듈)
 
 ### 신규 파일

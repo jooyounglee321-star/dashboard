@@ -3,11 +3,9 @@ import { Link } from 'react-router-dom'
 import Toast, { useToast } from '../components/Toast'
 import { t } from '../i18n'
 
-const lang = (() => { try { return localStorage.getItem('dashboard_lang') || 'ko' } catch { return 'ko' } })()
-
 const PAGE_SIZE = 25
 
-function fmtDate(iso) {
+function fmtDate(iso, lang) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString(lang === 'en' ? 'en-US' : 'ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' })
 }
@@ -35,11 +33,22 @@ export default function SuperadminPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [sortSelect, setSortSelect] = useState('created_at|desc')
 
+  const [lang, setLang] = useState(() => {
+    try { return localStorage.getItem('dashboard_lang') || 'ko' } catch { return 'ko' }
+  })
   const [modal, setModal] = useState(null)
   const [modalPlan, setModalPlan] = useState('free')
   const [modalExpires, setModalExpires] = useState('')
   const [modalMemo, setModalMemo] = useState('')
   const [pwResult, setPwResult] = useState('')
+
+  useEffect(() => {
+    function handleLangChange() {
+      try { setLang(localStorage.getItem('dashboard_lang') || 'ko') } catch {}
+    }
+    window.addEventListener('languageChanged', handleLangChange)
+    return () => window.removeEventListener('languageChanged', handleLangChange)
+  }, [])
 
   function statusLabel(s) {
     const map = { active: t(lang, 'superadmin.statusActive'), inactive: t(lang, 'superadmin.statusInactive'), suspended: t(lang, 'superadmin.statusSuspended') }
@@ -237,10 +246,10 @@ export default function SuperadminPage() {
                     <td style={{ color: 'var(--ink3)', fontSize: '0.75rem' }}>{start + i + 1}</td>
                     <td>{u.name || '—'}</td>
                     <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</td>
-                    <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(u.created_at)}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(u.created_at, lang)}</td>
                     <td><span className={`badge badge-${u.plan}`}>{planLabel(u.plan)}</span></td>
                     <td><span className={`badge badge-role-${u.role}`}>{roleLabel(u.role)}</span></td>
-                    <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(u.plan_expires_at)}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(u.plan_expires_at, lang)}</td>
                     <td><span className={`badge badge-${u.status}`}>{statusLabel(u.status)}</span></td>
                     <td style={{ whiteSpace: 'nowrap' }}>{fmtDatetime(u.last_login_at)}</td>
                     <td style={{ textAlign: 'right' }}>{(u.login_count ?? 0).toLocaleString()}</td>
@@ -285,7 +294,7 @@ export default function SuperadminPage() {
                   [t(lang, 'superadmin.fieldProvider'), modal.provider],
                   [t(lang, 'superadmin.fieldJoined'), fmtDatetime(modal.created_at)],
                   [t(lang, 'superadmin.fieldPlan'), planLabel(modal.plan)],
-                  [t(lang, 'superadmin.fieldExpires'), fmtDate(modal.plan_expires_at)],
+                  [t(lang, 'superadmin.fieldExpires'), fmtDate(modal.plan_expires_at, lang)],
                   [t(lang, 'superadmin.fieldStatus'), statusLabel(modal.status)],
                   [t(lang, 'superadmin.fieldLastLogin'), fmtDatetime(modal.last_login_at)],
                   [t(lang, 'superadmin.fieldLoginCount'), (modal.login_count ?? 0).toLocaleString()],
