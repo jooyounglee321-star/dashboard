@@ -211,7 +211,7 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
             onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}
           >
             {CURRENCIES.map(c => (
-              <option key={c.code} value={c.code}>{c.label}</option>
+              <option key={c.code} value={c.code}>{c.symbol} {t(lang, 'currency.' + c.code.toLowerCase())}</option>
             ))}
           </select>
           <input
@@ -287,7 +287,7 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
                 value={editForm.currency}
                 onChange={ev => setEditForm(f => ({ ...f, currency: ev.target.value }))}
               >
-                {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
+                {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.symbol} {t(lang, 'currency.' + c.code.toLowerCase())}</option>)}
               </select>
               {/* 금액 */}
               <input
