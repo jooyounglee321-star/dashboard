@@ -287,6 +287,160 @@ def _seed_exchange_rates():
         db.close()
 
 
+_DEFAULT_CATEGORIES = [
+    {
+        'name_en': 'Utilities',      'name_ko': '공과금',  'icon': '🏠', 'order_num': 1,
+        'subs': [
+            {'name_en': 'Electricity',  'name_ko': '전기',   'icon': '⚡', 'order_num': 1},
+            {'name_en': 'Water',        'name_ko': '수도',   'icon': '💧', 'order_num': 2},
+            {'name_en': 'Gas',          'name_ko': '가스',   'icon': '🔥', 'order_num': 3},
+            {'name_en': 'Internet',     'name_ko': '인터넷', 'icon': '🌐', 'order_num': 4},
+            {'name_en': 'Phone',        'name_ko': '전화',   'icon': '📱', 'order_num': 5},
+            {'name_en': 'Streaming',    'name_ko': '구독',   'icon': '📺', 'order_num': 6},
+        ],
+    },
+    {
+        'name_en': 'Food',           'name_ko': '식비',    'icon': '🍽️', 'order_num': 2,
+        'subs': [
+            {'name_en': 'Grocery',      'name_ko': '장보기', 'icon': '🛒', 'order_num': 1},
+            {'name_en': 'Restaurant',   'name_ko': '외식',   'icon': '🍜', 'order_num': 2},
+            {'name_en': 'Coffee',       'name_ko': '카페',   'icon': '☕', 'order_num': 3},
+            {'name_en': 'Delivery',     'name_ko': '배달',   'icon': '🛵', 'order_num': 4},
+        ],
+    },
+    {
+        'name_en': 'Housing',        'name_ko': '주거',    'icon': '🏡', 'order_num': 3,
+        'subs': [
+            {'name_en': 'Rent',         'name_ko': '임대료',   'icon': '🔑', 'order_num': 1},
+            {'name_en': 'Maintenance',  'name_ko': '유지보수', 'icon': '🔧', 'order_num': 2},
+            {'name_en': 'Furniture',    'name_ko': '가구',     'icon': '🛋️', 'order_num': 3},
+            {'name_en': 'Supplies',     'name_ko': '생활용품', 'icon': '🧹', 'order_num': 4},
+        ],
+    },
+    {
+        'name_en': 'Transportation', 'name_ko': '교통',    'icon': '🚗', 'order_num': 4,
+        'subs': [
+            {'name_en': 'Gas',           'name_ko': '주유',     'icon': '⛽', 'order_num': 1},
+            {'name_en': 'Insurance',     'name_ko': '보험',     'icon': '🛡️', 'order_num': 2},
+            {'name_en': 'Parking',       'name_ko': '주차',     'icon': '🅿️', 'order_num': 3},
+            {'name_en': 'Public Transit','name_ko': '대중교통', 'icon': '🚌', 'order_num': 4},
+            {'name_en': 'Maintenance',   'name_ko': '차량정비', 'icon': '🔧', 'order_num': 5},
+        ],
+    },
+    {
+        'name_en': 'Health',         'name_ko': '의료',    'icon': '🏥', 'order_num': 5,
+        'subs': [
+            {'name_en': 'Doctor',       'name_ko': '진료', 'icon': '👨‍⚕️', 'order_num': 1},
+            {'name_en': 'Dentist',      'name_ko': '치과', 'icon': '🦷',   'order_num': 2},
+            {'name_en': 'Pharmacy',     'name_ko': '약국', 'icon': '💊',   'order_num': 3},
+            {'name_en': 'Gym',          'name_ko': '헬스', 'icon': '💪',   'order_num': 4},
+            {'name_en': 'Vision',       'name_ko': '안과', 'icon': '👁️',  'order_num': 5},
+        ],
+    },
+    {
+        'name_en': 'Education',      'name_ko': '교육',    'icon': '📚', 'order_num': 6,
+        'subs': [
+            {'name_en': 'Tuition',       'name_ko': '학비',       'icon': '🎓', 'order_num': 1},
+            {'name_en': 'Books',         'name_ko': '교재',       'icon': '📖', 'order_num': 2},
+            {'name_en': 'Supplies',      'name_ko': '학용품',     'icon': '✏️', 'order_num': 3},
+            {'name_en': 'Online Course', 'name_ko': '온라인강의', 'icon': '💻', 'order_num': 4},
+        ],
+    },
+    {
+        'name_en': 'Activities',     'name_ko': '활동',    'icon': '🎯', 'order_num': 7,
+        'subs': [
+            {'name_en': 'Sports',        'name_ko': '운동',   'icon': '⚽', 'order_num': 1},
+            {'name_en': 'Entertainment', 'name_ko': '엔터',   'icon': '🎬', 'order_num': 2},
+            {'name_en': 'Hobbies',       'name_ko': '취미',   'icon': '🎨', 'order_num': 3},
+            {'name_en': 'Music',         'name_ko': '음악',   'icon': '🎵', 'order_num': 4},
+        ],
+    },
+    {
+        'name_en': 'Travel',         'name_ko': '여행',    'icon': '✈️', 'order_num': 8,
+        'subs': [
+            {'name_en': 'Flight',       'name_ko': '항공', 'icon': '🛫', 'order_num': 1},
+            {'name_en': 'Hotel',        'name_ko': '숙박', 'icon': '🏨', 'order_num': 2},
+            {'name_en': 'Food',         'name_ko': '식비', 'icon': '🍽️', 'order_num': 3},
+            {'name_en': 'Activities',   'name_ko': '활동', 'icon': '🎡', 'order_num': 4},
+            {'name_en': 'Transport',    'name_ko': '교통', 'icon': '🚕', 'order_num': 5},
+        ],
+    },
+    {
+        'name_en': 'Shopping',       'name_ko': '쇼핑',    'icon': '🛍️', 'order_num': 9,
+        'subs': [
+            {'name_en': 'Clothes',      'name_ko': '의류',     'icon': '👕', 'order_num': 1},
+            {'name_en': 'Electronics',  'name_ko': '전자기기', 'icon': '📱', 'order_num': 2},
+            {'name_en': 'Gifts',        'name_ko': '선물',     'icon': '🎁', 'order_num': 3},
+            {'name_en': 'Accessories',  'name_ko': '악세서리', 'icon': '💍', 'order_num': 4},
+        ],
+    },
+    {
+        'name_en': 'Other',          'name_ko': '기타',    'icon': '📦', 'order_num': 10,
+        'subs': [
+            {'name_en': 'Miscellaneous','name_ko': '기타', 'icon': '📌', 'order_num': 1},
+            {'name_en': 'Donation',     'name_ko': '기부', 'icon': '🤝', 'order_num': 2},
+            {'name_en': 'Savings',      'name_ko': '저축', 'icon': '💰', 'order_num': 3},
+        ],
+    },
+]
+
+
+def _seed_expense_categories():
+    """expense_categories 테이블에 기본 카테고리 시드.
+
+    user_id=NULL, is_default=True 로 저장.
+    이미 기본 카테고리가 존재하면 전체 스킵 (중복 방지).
+    """
+    db = SessionLocal()
+    try:
+        already = db.query(ExpenseCategory).filter(
+            ExpenseCategory.user_id == None,   # noqa: E711
+            ExpenseCategory.is_default == True,  # noqa: E712
+        ).count()
+        if already > 0:
+            logger.info("[SEED] 기본 카테고리 — 이미 존재(%d개), 건너뜀", already)
+            return
+
+        total_subs = 0
+        for cat in _DEFAULT_CATEGORIES:
+            parent = ExpenseCategory(
+                user_id=None,
+                parent_id=None,
+                name_en=cat['name_en'],
+                name_ko=cat['name_ko'],
+                icon=cat['icon'],
+                order_num=cat['order_num'],
+                is_default=True,
+                is_active=True,
+            )
+            db.add(parent)
+            db.flush()  # parent.id 확보
+
+            for sub in cat.get('subs', []):
+                db.add(ExpenseCategory(
+                    user_id=None,
+                    parent_id=parent.id,
+                    name_en=sub['name_en'],
+                    name_ko=sub['name_ko'],
+                    icon=sub['icon'],
+                    order_num=sub['order_num'],
+                    is_default=True,
+                    is_active=True,
+                ))
+                total_subs += 1
+
+        db.commit()
+        logger.info(
+            "[SEED] 기본 카테고리 시드 완료 — 대분류 %d개, 소분류 %d개",
+            len(_DEFAULT_CATEGORIES), total_subs,
+        )
+    except Exception as e:
+        logger.warning("[SEED] 카테고리 시드 실패: %s", e)
+        db.rollback()
+    finally:
+        db.close()
+
+
 def _seed_default_permissions():
     """permissions 테이블이 비어 있을 때 기본 권한을 시드."""
     db = SessionLocal()
@@ -331,6 +485,7 @@ async def lifespan(app: FastAPI):
     _seed_admin_email()
     _seed_default_permissions()
     _seed_exchange_rates()
+    _seed_expense_categories()
     logger.info("[DB] 테이블 생성/확인 완료")
 
     # APScheduler: 매일 23:59:00 KST
