@@ -39,10 +39,22 @@ from routers import auth as auth_router
 from routers import bookmarks, diets, expenses, memos, stocks, timezone, youtube
 from routers import portfolio as portfolio_router
 from routers import admin as admin_router
+from routers.expense import expense_router, exchange_router, do_refresh_rates
 
 logger = logging.getLogger(__name__)
 
 _scheduler = AsyncIOScheduler(timezone="Asia/Seoul")
+
+
+async def _refresh_rates_job():
+    """30분마다 Yahoo Finance에서 환율 자동 갱신."""
+    db = SessionLocal()
+    try:
+        do_refresh_rates(db)
+    except Exception as e:
+        logger.error("[SCHEDULER] 환율 갱신 오류: %s", e)
+    finally:
+        db.close()
 
 
 async def _daily_snapshot_job():
@@ -488,15 +500,23 @@ async def lifespan(app: FastAPI):
     _seed_expense_categories()
     logger.info("[DB] 테이블 생성/확인 완료")
 
-    # APScheduler: 매일 23:59:00 KST
+    # APScheduler: 매일 23:59:00 KST 포트폴리오 스냅샷
     _scheduler.add_job(
         _daily_snapshot_job,
         CronTrigger(hour=23, minute=59, second=0),
         id="daily_portfolio_snapshot",
         replace_existing=True,
     )
+    # APScheduler: 30분마다 환율 자동 갱신
+    from apscheduler.triggers.interval import IntervalTrigger
+    _scheduler.add_job(
+        _refresh_rates_job,
+        IntervalTrigger(minutes=30),
+        id="refresh_exchange_rates",
+        replace_existing=True,
+    )
     _scheduler.start()
-    logger.info("[SCHEDULER] APScheduler 시작 — 매일 23:59 KST 스냅샷 예약")
+    logger.info("[SCHEDULER] APScheduler 시작 — 23:59 KST 스냅샷 / 30분마다 환율 갱신")
 
     yield
 
@@ -514,7 +534,9 @@ app.add_middleware(
 )
 
 app.include_router(auth_router.router, prefix="/api")
-app.include_router(expenses.router, prefix="/api")
+app.include_router(expenses.router, prefix="/api")       # 레거시 /api/expenses
+app.include_router(expense_router,   prefix="/api")       # 신규 /api/expense
+app.include_router(exchange_router,  prefix="/api")       # 신규 /api/exchange-rates
 app.include_router(diets.router, prefix="/api")
 app.include_router(memos.router, prefix="/api")
 app.include_router(stocks.router, prefix="/api")
