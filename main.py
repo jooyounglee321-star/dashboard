@@ -19,7 +19,10 @@ from database import Base, DATABASE_URL, engine, SessionLocal
 # 올라와 있어야 한다. 하나라도 누락되면 해당 테이블이 DB에 만들어지지 않음.
 from models import (  # noqa: F401  (import side-effect 목적)
     User,
+    ExpenseCategory,
     Expense,
+    ExpenseBudget,
+    ExchangeRate,
     Diet,
     Memo,
     Stock,
@@ -223,6 +226,67 @@ _DEFAULT_ALLOWED: dict[str, list[str]] = {
 }
 
 
+def _migrate_expense_columns():
+    """expenses 테이블에 가계부 Phase 1 신규 컬럼 추가 (이미 존재하는 컬럼은 건너뜀)."""
+    new_cols = [
+        ("category_id",      "INTEGER"),
+        ("subcategory_id",   "INTEGER"),
+        ("currency",         "VARCHAR(10) DEFAULT 'USD'"),
+        ("converted_amount", "NUMERIC(14,2)"),
+        ("exchange_rate",    "NUMERIC(14,6)"),
+    ]
+    with engine.connect() as conn:
+        try:
+            existing = {c["name"] for c in inspect(conn).get_columns("expenses")}
+        except Exception:
+            return
+        for col_name, col_def in new_cols:
+            if col_name not in existing:
+                try:
+                    conn.execute(text(f"ALTER TABLE expenses ADD COLUMN {col_name} {col_def}"))
+                    conn.commit()
+                    logger.info("[MIGRATE] expenses.%s 컬럼 추가", col_name)
+                except Exception as e:
+                    logger.warning("[MIGRATE] expenses.%s 컬럼 추가 실패: %s", col_name, e)
+
+
+_DEFAULT_EXCHANGE_RATES = [
+    ("USD", "KRW", 1350),
+    ("USD", "EUR", 0.92),
+    ("USD", "JPY", 149),
+    ("USD", "GBP", 0.79),
+    ("USD", "CAD", 1.36),
+    ("USD", "AUD", 1.53),
+    ("USD", "CNY", 7.24),
+    ("USD", "HKD", 7.82),
+    ("USD", "SGD", 1.34),
+]
+
+
+def _seed_exchange_rates():
+    """exchange_rates 테이블에 기본 환율 시드 (존재하지 않는 쌍만 삽입)."""
+    db = SessionLocal()
+    try:
+        inserted = 0
+        for base, target, rate in _DEFAULT_EXCHANGE_RATES:
+            exists = db.query(ExchangeRate).filter(
+                ExchangeRate.base_currency == base,
+                ExchangeRate.target_currency == target,
+            ).first()
+            if not exists:
+                db.add(ExchangeRate(base_currency=base, target_currency=target, rate=rate))
+                inserted += 1
+        if inserted:
+            db.commit()
+            logger.info("[SEED] 기본 환율 시드 완료 (%d건)", inserted)
+        else:
+            logger.info("[SEED] 환율 시드 — 이미 모두 존재, 건너뜀")
+    except Exception as e:
+        logger.warning("[SEED] 환율 시드 실패: %s", e)
+    finally:
+        db.close()
+
+
 def _seed_default_permissions():
     """permissions 테이블이 비어 있을 때 기본 권한을 시드."""
     db = SessionLocal()
@@ -262,9 +326,11 @@ async def lifespan(app: FastAPI):
 
     _migrate_user_columns()
     _migrate_add_user_id()
+    _migrate_expense_columns()
     _migrate_user_roles()
     _seed_admin_email()
     _seed_default_permissions()
+    _seed_exchange_rates()
     logger.info("[DB] 테이블 생성/확인 완료")
 
     # APScheduler: 매일 23:59:00 KST

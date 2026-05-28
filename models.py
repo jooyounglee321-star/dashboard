@@ -36,6 +36,32 @@ class User(Base):
     widget_config: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON
 
 
+class ExpenseCategory(Base):
+    """가계부 카테고리 (대분류 / 소분류).
+
+    - parent_id = NULL  → 대분류
+    - parent_id = 상위ID → 소분류
+    - user_id   = NULL  → 시스템 기본 카테고리 (모든 사용자 공유)
+    - user_id   = INT   → 사용자 커스텀 카테고리
+    """
+    __tablename__ = "expense_categories"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    parent_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("expense_categories.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    name_ko: Mapped[str] = mapped_column(String(100), nullable=False)
+    name_en: Mapped[str] = mapped_column(String(100), nullable=False)
+    icon: Mapped[str | None] = mapped_column(String(50), nullable=True)       # 이모지 또는 아이콘 코드
+    order_num: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
 class Expense(Base):
     __tablename__ = "expenses"
 
@@ -43,9 +69,58 @@ class Expense(Base):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
-    category: Mapped[str | None] = mapped_column(String(100))
+    category: Mapped[str | None] = mapped_column(String(100))       # 레거시 텍스트 카테고리
     description: Mapped[str | None] = mapped_column(String(500))
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    # ── 가계부 Phase 1 신규 컬럼 ────────────────────────────────────────────
+    category_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("expense_categories.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    subcategory_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("expense_categories.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    currency: Mapped[str] = mapped_column(String(10), nullable=False, default="USD")
+    converted_amount: Mapped[float | None] = mapped_column(Numeric(14, 2), nullable=True)  # USD 환산액
+    exchange_rate: Mapped[float | None] = mapped_column(Numeric(14, 6), nullable=True)     # 적용 환율
+
+
+class ExpenseBudget(Base):
+    """사용자별 카테고리별 예산 설정.
+
+    - category_id = NULL  → 전체 예산 (카테고리 미분류)
+    - month       = NULL  → 연간 예산
+    - month       = 1~12  → 월별 예산
+    """
+    __tablename__ = "expense_budgets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    category_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("expense_categories.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    year: Mapped[int] = mapped_column(Integer, nullable=False)
+    month: Mapped[int | None] = mapped_column(Integer, nullable=True)         # NULL = 연간, 1~12 = 월별
+    amount: Mapped[float] = mapped_column(Numeric(14, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(String(10), nullable=False, default="USD")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+class ExchangeRate(Base):
+    """통화 환율 테이블. base_currency → target_currency 환율.
+
+    기본 시드: USD 기준 9개 통화 (서버 시작 시 존재하지 않는 쌍만 삽입).
+    """
+    __tablename__ = "exchange_rates"
+    __table_args__ = (UniqueConstraint("base_currency", "target_currency", name="uq_exchange_rate_pair"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    base_currency: Mapped[str] = mapped_column(String(10), nullable=False, default="USD", index=True)
+    target_currency: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
+    rate: Mapped[float] = mapped_column(Numeric(14, 6), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
 
 class Diet(Base):

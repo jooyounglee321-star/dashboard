@@ -1,6 +1,6 @@
 # DB Schema Documentation
 
-> 최종 업데이트: 2026-05-21  
+> 최종 업데이트: 2026-05-27  
 > 데이터베이스: PostgreSQL (Railway) / SQLite (로컬 개발)  
 > ORM: SQLAlchemy 2.x (`Mapped` / `mapped_column`)
 
@@ -11,17 +11,20 @@
 | # | 테이블명 | 설명 |
 |---|----------|------|
 | 1 | `users` | SaaS 회원 정보 |
-| 2 | `expenses` | 지출 내역 (user_id 기준 격리) |
-| 3 | `diets` | 식단 기록 (user_id 기준 격리) |
-| 4 | `memos` | 일일 메모 (user_id 기준 격리) |
-| 5 | `stocks` | 보유 종목 (user_id 기준 격리) |
-| 6 | `stock_price_history` | 종목별 일별 시세 스냅샷 |
-| 7 | `bookmarks` | 북마크 (user_id 기준 격리) |
-| 8 | `youtube_channels` | 유튜브 채널 목록 (user_id 기준 격리) |
-| 9 | `timezone_config` | 시간대 설정 (user_id 당 1행) |
-| 10 | `portfolio_groups` | 포트폴리오 그룹 데이터 (user_id 당 1행) |
-| 11 | `permissions` | 레벨별 권한 매핑 |
-| 12 | `daily_portfolio_snapshot` | 일별 포트폴리오 스냅샷 (user_id 기준 격리) |
+| 2 | `expense_categories` | 가계부 카테고리 (대분류/소분류, 시스템+사용자 커스텀) |
+| 3 | `expenses` | 지출 내역 (user_id 기준 격리) |
+| 4 | `expense_budgets` | 사용자별 카테고리별 예산 설정 |
+| 5 | `exchange_rates` | 통화 환율 (USD 기준 9개 시드) |
+| 6 | `diets` | 식단 기록 (user_id 기준 격리) |
+| 7 | `memos` | 일일 메모 (user_id 기준 격리) |
+| 8 | `stocks` | 보유 종목 (user_id 기준 격리) |
+| 9 | `stock_price_history` | 종목별 일별 시세 스냅샷 |
+| 10 | `bookmarks` | 북마크 (user_id 기준 격리) |
+| 11 | `youtube_channels` | 유튜브 채널 목록 (user_id 기준 격리) |
+| 12 | `timezone_config` | 시간대 설정 (user_id 당 1행) |
+| 13 | `portfolio_groups` | 포트폴리오 그룹 데이터 (user_id 당 1행) |
+| 14 | `permissions` | 레벨별 권한 매핑 |
+| 15 | `daily_portfolio_snapshot` | 일별 포트폴리오 스냅샷 (user_id 기준 격리) |
 
 ---
 
@@ -54,7 +57,31 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 
 ---
 
-## 2. `expenses`
+## 2. `expense_categories`
+
+가계부 카테고리 테이블. 대분류 / 소분류 자기 참조 구조.
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+|--------|------|----------|------|
+| `id` | INTEGER | PK, INDEX | 자동 증가 고유 ID |
+| `user_id` | INTEGER | NULLABLE, FK → `users.id` CASCADE, INDEX | 소유 사용자 ID (`NULL` = 시스템 기본 카테고리) |
+| `parent_id` | INTEGER | NULLABLE, FK → `expense_categories.id` CASCADE, INDEX | 부모 카테고리 ID (`NULL` = 대분류, NOT NULL = 소분류) |
+| `name_ko` | VARCHAR(100) | NOT NULL | 카테고리 한국어 이름 |
+| `name_en` | VARCHAR(100) | NOT NULL | 카테고리 영어 이름 |
+| `icon` | VARCHAR(50) | NULLABLE | 이모지 또는 아이콘 코드 |
+| `order_num` | INTEGER | NOT NULL, DEFAULT `0` | 표시 순서 |
+| `is_default` | BOOLEAN | NOT NULL, DEFAULT `false` | 시스템 기본 제공 여부 |
+| `is_active` | BOOLEAN | NOT NULL, DEFAULT `true` | 활성화 여부 |
+| `created_at` | DATETIME | DEFAULT `now()` (서버) | 레코드 생성 일시 |
+
+**비고:**
+- `user_id = NULL`: 모든 사용자에게 표시되는 시스템 기본 카테고리
+- `user_id = INT`: 해당 사용자만 볼 수 있는 커스텀 카테고리
+- 자기 참조 FK로 대분류 → 소분류 2단계 계층 구조 지원
+
+---
+
+## 3. `expenses`
 
 지출 내역 기록 테이블. **사용자별 데이터 격리 (user_id FK).**
 
@@ -63,14 +90,72 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 | `id` | INTEGER | PK, INDEX | 자동 증가 고유 ID |
 | `user_id` | INTEGER | NOT NULL, FK → `users.id` CASCADE, INDEX | 소유 사용자 ID |
 | `date` | DATE | NOT NULL, INDEX | 지출 날짜 |
-| `amount` | NUMERIC(12,2) | NOT NULL | 지출 금액 |
-| `category` | VARCHAR(100) | NULLABLE | 지출 카테고리 (예: 식비, 교통) |
+| `amount` | NUMERIC(12,2) | NOT NULL | 지출 금액 (원래 통화 기준) |
+| `category` | VARCHAR(100) | NULLABLE | 레거시 텍스트 카테고리 (Phase 1 이전 데이터 호환용) |
 | `description` | VARCHAR(500) | NULLABLE | 지출 내용 설명 |
 | `created_at` | DATETIME | DEFAULT `now()` (서버) | 레코드 생성 일시 |
+| `category_id` | INTEGER | NULLABLE, FK → `expense_categories.id` SET NULL, INDEX | 대분류 카테고리 ID |
+| `subcategory_id` | INTEGER | NULLABLE, FK → `expense_categories.id` SET NULL, INDEX | 소분류 카테고리 ID |
+| `currency` | VARCHAR(10) | NOT NULL, DEFAULT `'USD'` | 지출 통화 코드 (예: KRW, USD, EUR) |
+| `converted_amount` | NUMERIC(14,2) | NULLABLE | USD 환산 금액 |
+| `exchange_rate` | NUMERIC(14,6) | NULLABLE | 적용 환율 (원래통화 → USD) |
+
+**비고:**
+- `category` 컬럼은 Phase 1 이전 레거시 데이터 보존용 (신규 입력 시 `category_id` 사용 권장)
+- `category_id` 카테고리 삭제 시 `SET NULL` (지출 내역 보존)
+- Phase 1 신규 컬럼 5개는 서버 시작 시 `_migrate_expense_columns()`로 자동 추가
 
 ---
 
-## 3. `diets`
+## 4. `expense_budgets`
+
+사용자별 카테고리별 예산 설정 테이블.
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+|--------|------|----------|------|
+| `id` | INTEGER | PK, INDEX | 자동 증가 고유 ID |
+| `user_id` | INTEGER | NOT NULL, FK → `users.id` CASCADE, INDEX | 소유 사용자 ID |
+| `category_id` | INTEGER | NULLABLE, FK → `expense_categories.id` CASCADE, INDEX | 예산 적용 카테고리 (`NULL` = 전체 예산) |
+| `year` | INTEGER | NOT NULL | 예산 연도 |
+| `month` | INTEGER | NULLABLE | 예산 월 (`NULL` = 연간 예산, `1~12` = 월별 예산) |
+| `amount` | NUMERIC(14,2) | NOT NULL | 예산 금액 |
+| `currency` | VARCHAR(10) | NOT NULL, DEFAULT `'USD'` | 예산 통화 코드 |
+| `created_at` | DATETIME | DEFAULT `now()` (서버) | 레코드 생성 일시 |
+| `updated_at` | DATETIME | DEFAULT `now()`, ON UPDATE `now()` | 마지막 수정 일시 |
+
+---
+
+## 5. `exchange_rates`
+
+통화 환율 테이블. USD 기준 주요 통화 환율 저장.
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+|--------|------|----------|------|
+| `id` | INTEGER | PK, INDEX | 자동 증가 고유 ID |
+| `base_currency` | VARCHAR(10) | NOT NULL, DEFAULT `'USD'`, INDEX | 기준 통화 코드 |
+| `target_currency` | VARCHAR(10) | NOT NULL, INDEX | 대상 통화 코드 |
+| `rate` | NUMERIC(14,6) | NOT NULL | 환율 (1 base = rate target) |
+| `updated_at` | DATETIME | DEFAULT `now()`, ON UPDATE `now()` | 마지막 수정 일시 |
+
+**UNIQUE 제약:** `(base_currency, target_currency)` — `uq_exchange_rate_pair`
+
+**기본 시드 (서버 시작 시 존재하지 않는 쌍만 자동 삽입):**
+
+| base | target | rate |
+|------|--------|------|
+| USD | KRW | 1350 |
+| USD | EUR | 0.92 |
+| USD | JPY | 149 |
+| USD | GBP | 0.79 |
+| USD | CAD | 1.36 |
+| USD | AUD | 1.53 |
+| USD | CNY | 7.24 |
+| USD | HKD | 7.82 |
+| USD | SGD | 1.34 |
+
+---
+
+## 6. `diets`
 
 식단(끼니) 기록 테이블. **사용자별 데이터 격리 (user_id FK).**
 
@@ -86,7 +171,7 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 
 ---
 
-## 4. `memos`
+## 7. `memos`
 
 일일 메모 테이블. **사용자별 데이터 격리 (user_id FK).**
 
@@ -102,7 +187,7 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 
 ---
 
-## 5. `stocks`
+## 8. `stocks`
 
 보유 종목(포트폴리오) 테이블. **사용자별 데이터 격리 (user_id FK).** 카테고리당 최대 10개.
 
@@ -122,7 +207,7 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 
 ---
 
-## 6. `stock_price_history`
+## 9. `stock_price_history`
 
 종목별 일별 시세 스냅샷 테이블. **stocks.user_id 를 통해 간접적으로 사용자 격리.**
 
@@ -143,7 +228,7 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 
 ---
 
-## 7. `bookmarks`
+## 10. `bookmarks`
 
 북마크(즐겨찾기) 테이블. **사용자별 데이터 격리 (user_id FK).**
 
@@ -159,7 +244,7 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 
 ---
 
-## 8. `youtube_channels`
+## 11. `youtube_channels`
 
 유튜브 채널 구독 목록 테이블. **사용자별 데이터 격리 (user_id FK).**
 
@@ -175,7 +260,7 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 
 ---
 
-## 9. `timezone_config`
+## 12. `timezone_config`
 
 시간대 설정 테이블. **단일 행 구조 폐기 → user_id 당 1행.**
 
@@ -191,7 +276,7 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 
 ---
 
-## 10. `portfolio_groups`
+## 13. `portfolio_groups`
 
 포트폴리오 그룹 전체 데이터 테이블. **단일 행 구조 폐기 → user_id 당 1행.**
 
@@ -207,7 +292,7 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 
 ---
 
-## 11. `permissions`
+## 14. `permissions`
 
 회원 레벨(role)별 권한 매핑 테이블.
 
@@ -246,7 +331,7 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 
 ---
 
-## 12. `daily_portfolio_snapshot`
+## 15. `daily_portfolio_snapshot`
 
 매일 23:59 KST 자동 저장되는 포트폴리오 일별 스냅샷 테이블. **사용자별 데이터 격리 (user_id FK).**
 
@@ -277,18 +362,27 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 
 ```
 users (id)
-  ├─── expenses          (user_id)  ON DELETE CASCADE
-  ├─── diets             (user_id)  ON DELETE CASCADE
-  ├─── memos             (user_id)  ON DELETE CASCADE
-  ├─── stocks            (user_id)  ON DELETE CASCADE
-  │      └─── stock_price_history (stock_id) ON DELETE CASCADE
-  ├─── bookmarks         (user_id)  ON DELETE CASCADE
-  ├─── youtube_channels  (user_id)  ON DELETE CASCADE
-  ├─── timezone_config   (user_id)  ON DELETE CASCADE
-  ├─── portfolio_groups  (user_id)  ON DELETE CASCADE
+  ├─── expense_categories (user_id, nullable)  ON DELETE CASCADE
+  ├─── expenses           (user_id)            ON DELETE CASCADE
+  │      ├─── category_id    → expense_categories.id  ON DELETE SET NULL
+  │      └─── subcategory_id → expense_categories.id  ON DELETE SET NULL
+  ├─── expense_budgets    (user_id)            ON DELETE CASCADE
+  │      └─── category_id → expense_categories.id     ON DELETE CASCADE
+  ├─── diets              (user_id)            ON DELETE CASCADE
+  ├─── memos              (user_id)            ON DELETE CASCADE
+  ├─── stocks             (user_id)            ON DELETE CASCADE
+  │      └─── stock_price_history (stock_id)   ON DELETE CASCADE
+  ├─── bookmarks          (user_id)            ON DELETE CASCADE
+  ├─── youtube_channels   (user_id)            ON DELETE CASCADE
+  ├─── timezone_config    (user_id)            ON DELETE CASCADE
+  ├─── portfolio_groups   (user_id)            ON DELETE CASCADE
   └─── daily_portfolio_snapshot (user_id, nullable) ON DELETE CASCADE
 
-permissions  — 독립 테이블 (FK 없음)
+expense_categories (id)
+  └─── parent_id → expense_categories.id  ON DELETE CASCADE  (자기 참조)
+
+exchange_rates  — 독립 테이블 (FK 없음)
+permissions     — 독립 테이블 (FK 없음)
 ```
 
 ---
@@ -300,6 +394,8 @@ permissions  — 독립 테이블 (FK 없음)
 | 1 | `Base.metadata.create_all()` | 존재하지 않는 테이블 자동 생성 |
 | 2 | `_migrate_user_columns()` | `users` 테이블에 신규 컬럼 누락 시 `ALTER TABLE`로 추가 |
 | 3 | `_migrate_add_user_id()` | 각 데이터 테이블에 `user_id` 컬럼 추가, 기존 rows → `user_id=1`, `daily_portfolio_snapshot` UNIQUE 제약 교체 |
-| 4 | `_migrate_user_roles()` | `users.role = 'Member'` → `'free'` 일괄 변환 |
-| 5 | `_seed_admin_email()` | `jooyounglee321123@gmail.com` 계정의 `role`을 `'admin'`으로 설정 |
-| 6 | `_seed_default_permissions()` | `permissions` 테이블이 비어 있으면 기본 28개 권한 행 삽입 |
+| 4 | `_migrate_expense_columns()` | `expenses` 테이블에 Phase 1 신규 컬럼 5개 추가 (category_id, subcategory_id, currency, converted_amount, exchange_rate) |
+| 5 | `_migrate_user_roles()` | `users.role = 'Member'` → `'free'` 일괄 변환 |
+| 6 | `_seed_admin_email()` | `jooyounglee321123@gmail.com` 계정의 `role`을 `'admin'`으로 설정 |
+| 7 | `_seed_default_permissions()` | `permissions` 테이블이 비어 있으면 기본 28개 권한 행 삽입 |
+| 8 | `_seed_exchange_rates()` | `exchange_rates` 테이블에 USD 기준 기본 환율 9쌍 삽입 (없는 쌍만) |

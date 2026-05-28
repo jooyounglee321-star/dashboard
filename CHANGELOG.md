@@ -4,6 +4,36 @@
 
 ---
 
+## [2026-05-27] — 가계부 Phase 1 DB 설계 (백엔드 전용)
+
+### 신규
+- **`expense_categories` 테이블** — 대분류/소분류 자기참조 구조
+  - `user_id=NULL` = 시스템 기본 카테고리, `user_id=INT` = 사용자 커스텀
+  - `parent_id=NULL` = 대분류, `parent_id=INT` = 소분류 (2단계 계층)
+  - 이중언어 이름 (`name_ko`, `name_en`), 이모지 아이콘, 정렬 순서
+- **`expense_budgets` 테이블** — 사용자별 카테고리별 예산
+  - `month=NULL` = 연간 예산, `month=1~12` = 월별 예산
+  - 통화 코드 지원 (DEFAULT `'USD'`)
+- **`exchange_rates` 테이블** — USD 기준 환율 캐싱
+  - UNIQUE `(base_currency, target_currency)` 제약
+  - 서버 시작 시 USD 기준 9개 통화 기본값 자동 시드
+- **`expenses` 테이블 확장** — Phase 1 신규 컬럼 5개 추가
+  - `category_id`, `subcategory_id` (→ `expense_categories`, SET NULL)
+  - `currency` DEFAULT `'USD'`
+  - `converted_amount` NUMERIC(14,2) (USD 환산액)
+  - `exchange_rate` NUMERIC(14,6) (적용 환율)
+
+### 백엔드 변경
+- **`models.py`** — `ExpenseCategory`, `ExpenseBudget`, `ExchangeRate` 모델 추가 / `Expense` 모델 확장
+- **`main.py`**
+  - 3개 신규 모델 import 추가
+  - `_migrate_expense_columns()` — 기존 `expenses` 테이블에 신규 컬럼 안전 추가
+  - `_seed_exchange_rates()` — USD 기준 환율 9쌍 초기 시드
+  - `lifespan`에 두 함수 호출 추가
+- **`DB_SCHEMA.md`** — 전체 스키마 문서 업데이트 (신규 테이블 4개 + FK 관계도 + 시작 작업 표)
+
+---
+
 ## [2026-05-27] — 히어로 섹션 아날로그 시계 추가 및 동적 그리드 (HeroSection)
 
 ### 신규
