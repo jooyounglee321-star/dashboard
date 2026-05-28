@@ -5,6 +5,7 @@ import SuperadminPage from './pages/SuperadminPage'
 import AdminPage from './pages/AdminPage'
 import IndexPage from './pages/index/IndexPage'
 import ProfilePage from './pages/ProfilePage'
+import BudgetPage from './pages/BudgetPage'
 
 function hasValidToken() {
   const token = localStorage.getItem('token')
@@ -48,6 +49,7 @@ export default function App() {
         <Route path="/admin"      element={<AuthGuard><AdminPage /></AuthGuard>} />
         <Route path="/admin_users" element={<Navigate to="/superadmin" replace />} />
         <Route path="/superadmin"  element={<AdminRoleGuard><SuperadminPage /></AdminRoleGuard>} />
+        <Route path="/budget"      element={<AuthGuard><BudgetPage /></AuthGuard>} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
