@@ -4,6 +4,26 @@
 
 ---
 
+## [2026-05-27] — 가계부 Phase 6 i18n 완전 지원 (BudgetPage + ExpenseCard)
+
+### 변경
+- **`frontend/src/locales/en.json` / `ko.json`** — 중첩 키 섹션 추가
+  - `budget.*` (28개): `budget.daily`, `budget.monthly`, `budget.yearly`, `budget.summary`, `budget.budgetSetting`, `budget.totalExpense`, `budget.actual`, `budget.remaining`, `budget.over`, `budget.exportCSV`, `budget.setBudget`, `budget.saveBudget`, `budget.top5`, `budget.vsLastYear`, `budget.noExpense`, `budget.category`, `budget.subcategory`, `budget.description`, `budget.amount`, `budget.currency`, `budget.date`, `budget.budget`
+  - `category.*` (40개): 식비·교통·주거 등 지출 카테고리 40종 en/ko 번역
+  - `currency.*` (10개+1): USD·KRW·EUR·JPY·GBP·CNY·CAD·AUD·CHF·HKD·SGD 통화명 en/ko
+  - `chart.*` (4개): `chart.pieTitle`, `chart.lineTitle`, `chart.barTitle`, `chart.monthlyTitle`
+- **`frontend/src/pages/BudgetPage.jsx`** — 모든 하드코딩 텍스트를 t() 함수로 교체
+  - 탭명: `budgetTabDaily` → `budget.daily`, 차트제목: `budgetPieTitle` → `chart.pieTitle` 등 ~60개 키 교체
+  - 헤더 통화 드롭다운: `{SYM[c]} {c}` → `{SYM[c]} {t(lang, 'currency.' + c.toLowerCase())}`
+  - 연별 테이블 `<strong>Total</strong>` → `<strong>{t(lang, 'budget.totalExpense')}</strong>`
+  - DailyTab 수정저장: `budgetSave` → `common.save` / SettingTab 예산저장: `budgetSave` → `budget.saveBudget`
+- **`frontend/src/pages/index/ExpenseCard.jsx`** — 통화 드롭다운 레이블 i18n 적용
+  - `{c.label}` (하드코딩 `'$ USD'` 형태) → `{c.symbol} {t(lang, 'currency.' + c.code.toLowerCase())}`
+  - 신규 폼 및 수정 폼 두 곳 모두 적용
+- **`frontend/dist/`** — 빌드 결과물 갱신
+
+---
+
 ## [2026-05-27] — 가계부 Phase 5 BudgetPage(/budget) 전용 페이지
 
 ### 추가

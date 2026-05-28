@@ -75,22 +75,24 @@ export default function BudgetPage() {
   }, [currency, rateMap])
 
   const TABS = [
-    t(lang, 'budgetTabDaily'),
-    t(lang, 'budgetTabMonthly'),
-    t(lang, 'budgetTabYearly'),
-    t(lang, 'budgetTabSummary'),
-    t(lang, 'budgetTabSetting'),
+    t(lang, 'budget.daily'),
+    t(lang, 'budget.monthly'),
+    t(lang, 'budget.yearly'),
+    t(lang, 'budget.summary'),
+    t(lang, 'budget.budgetSetting'),
   ]
 
   return (
     <div className="bp-wrap">
       <header className="bp-header">
         <Link to="/" className="bp-back">← {t(lang, 'budgetBack')}</Link>
-        <h1 className="bp-title">{t(lang, 'budgetTitle')}</h1>
+        <h1 className="bp-title">{t(lang, 'budget.budget')}</h1>
         <div className="bp-header-r">
-          <span className="bp-cur-label">{t(lang, 'budgetCurrency')}</span>
+          <span className="bp-cur-label">{t(lang, 'budget.currency')}</span>
           <select className="bp-cur-sel" value={currency} onChange={e => setCurrency(e.target.value)}>
-            {CURRENCIES.map(c => <option key={c} value={c}>{SYM[c]} {c}</option>)}
+            {CURRENCIES.map(c => (
+              <option key={c} value={c}>{SYM[c]} {t(lang, 'currency.' + c.toLowerCase())}</option>
+            ))}
           </select>
         </div>
       </header>
@@ -183,7 +185,7 @@ function DailyTab({ lang, currency, toDisplay }) {
   }
 
   function doExport() {
-    const headers = [t(lang, 'budgetDate'), t(lang, 'budgetCategory'), t(lang, 'budgetSubcat'), t(lang, 'budgetDesc'), t(lang, 'budgetAmount'), 'Currency', '≈ USD']
+    const headers = [t(lang, 'budget.date'), t(lang, 'budget.category'), t(lang, 'budget.subcategory'), t(lang, 'budget.description'), t(lang, 'budget.amount'), 'Currency', '≈ USD']
     const rows = items.map(it => [it.date, it.category_name || '', it.subcategory_name || '', it.description || '', it.amount, it.currency, it.converted_amount ?? it.amount])
     csvDownload([headers, ...rows], `expenses-${date}.csv`)
   }
@@ -192,13 +194,13 @@ function DailyTab({ lang, currency, toDisplay }) {
     <section className="bp-sec">
       <div className="bp-toolbar">
         <input type="date" className="bp-date-inp" value={date} onChange={e => setDate(e.target.value)} />
-        <button className="bp-btn-sm" onClick={doExport}>📥 {t(lang, 'budgetExport')}</button>
+        <button className="bp-btn-sm" onClick={doExport}>📥 {t(lang, 'budget.exportCSV')}</button>
       </div>
 
       {/* 일별 합계 + 카테고리 칩 */}
       <div className="bp-daily-top">
         <div className="bp-daily-total">
-          <span className="bp-total-label">{t(lang, 'budgetTotal')}</span>
+          <span className="bp-total-label">{t(lang, 'budget.totalExpense')}</span>
           <span className="bp-total-num">{fmtAmt(toDisplay(dayTotal), currency)}</span>
         </div>
         <div className="bp-chips">
@@ -209,9 +211,9 @@ function DailyTab({ lang, currency, toDisplay }) {
       </div>
 
       {loading
-        ? <p className="bp-info">{t(lang, 'budgetLoading')}</p>
+        ? <p className="bp-info">{t(lang, 'common.loading')}</p>
         : items.length === 0
-          ? <p className="bp-info bp-empty">{t(lang, 'budgetNoData')}</p>
+          ? <p className="bp-info bp-empty">{t(lang, 'budget.noExpense')}</p>
           : (
             <ul className="bp-list">
               {items.map(it => (
@@ -242,8 +244,8 @@ function DailyTab({ lang, currency, toDisplay }) {
                           placeholder={t(lang, 'expenseDescPh')} />
                       </div>
                       <div className="bp-edit-btns">
-                        <button className="bp-btn-primary" onClick={saveEdit}>{t(lang, 'budgetSave')}</button>
-                        <button className="bp-btn-ghost" onClick={() => setEditId(null)}>{t(lang, 'budgetCancel')}</button>
+                        <button className="bp-btn-primary" onClick={saveEdit}>{t(lang, 'common.save')}</button>
+                        <button className="bp-btn-ghost" onClick={() => setEditId(null)}>{t(lang, 'common.cancel')}</button>
                       </div>
                     </div>
                   ) : (
@@ -261,8 +263,8 @@ function DailyTab({ lang, currency, toDisplay }) {
                         {it.currency !== currency && (
                           <span className="bp-item-conv">≈ {fmtAmt(toDisplay(it.converted_amount ?? it.amount), currency)}</span>
                         )}
-                        <button className="bp-icon-btn" onClick={() => startEdit(it)} title={t(lang, 'budgetEdit')}>✏️</button>
-                        <button className="bp-icon-btn del" onClick={() => delItem(it.id)} title={t(lang, 'budgetDelete')}>🗑️</button>
+                        <button className="bp-icon-btn" onClick={() => startEdit(it)} title={t(lang, 'common.edit')}>✏️</button>
+                        <button className="bp-icon-btn del" onClick={() => delItem(it.id)} title={t(lang, 'common.delete')}>🗑️</button>
                       </div>
                     </>
                   )}
@@ -348,7 +350,7 @@ function MonthlyTab({ lang, currency, toDisplay }) {
         data: {
           labels: stats.daily_trend.map(d => pad2(d.day)),
           datasets: [{
-            label: t(lang, 'budgetActual'),
+            label: t(lang, 'budget.actual'),
             data: stats.daily_trend.map(d => toDisplay(d.total_usd)),
             borderColor: '#e8a060', backgroundColor: 'rgba(232,160,96,0.12)',
             fill: true, tension: 0.3, pointRadius: 4,
@@ -373,8 +375,8 @@ function MonthlyTab({ lang, currency, toDisplay }) {
         data: {
           labels: budgeted.map(c => c.category_name),
           datasets: [
-            { label: t(lang, 'budgetBudget'), data: budgeted.map(c => toDisplay(c.budget_usd || 0)), backgroundColor: 'rgba(96,180,232,0.7)' },
-            { label: t(lang, 'budgetActual'), data: budgeted.map(c => toDisplay(c.total_usd  || 0)), backgroundColor: 'rgba(232,160,96,0.7)' },
+            { label: t(lang, 'budget.budget'), data: budgeted.map(c => toDisplay(c.budget_usd || 0)), backgroundColor: 'rgba(96,180,232,0.7)' },
+            { label: t(lang, 'budget.actual'), data: budgeted.map(c => toDisplay(c.total_usd  || 0)), backgroundColor: 'rgba(232,160,96,0.7)' },
           ],
         },
         options: {
@@ -393,7 +395,7 @@ function MonthlyTab({ lang, currency, toDisplay }) {
 
   function doExport() {
     if (!monthly?.by_category) return
-    const headers = [t(lang, 'budgetCategory'), t(lang, 'budgetBudget'), t(lang, 'budgetActual'), t(lang, 'budgetRemain'), '%']
+    const headers = [t(lang, 'budget.category'), t(lang, 'budget.budget'), t(lang, 'budget.actual'), t(lang, 'budget.remaining'), '%']
     const rows = monthly.by_category.map(c => {
       const pct = stats?.by_category?.find(s => s.category_id === c.category_id)?.pct
       return [
@@ -404,7 +406,7 @@ function MonthlyTab({ lang, currency, toDisplay }) {
         pct != null ? pct.toFixed(1) + '%' : '–',
       ]
     })
-    csvDownload([headers, ...rows, [t(lang, 'budgetTotal'), '', fmtAmt(toDisplay(monthly.total_usd || 0), currency), '', '']], `monthly-${year}-${pad2(month)}.csv`)
+    csvDownload([headers, ...rows, [t(lang, 'budget.totalExpense'), '', fmtAmt(toDisplay(monthly.total_usd || 0), currency), '', '']], `monthly-${year}-${pad2(month)}.csv`)
   }
 
   const mLabels = ML[lang] || ML.en
@@ -419,13 +421,13 @@ function MonthlyTab({ lang, currency, toDisplay }) {
             <option key={m} value={m}>{mLabels[m - 1]}</option>
           ))}
         </select>
-        <button className="bp-btn-sm" onClick={doExport}>📥 {t(lang, 'budgetExport')}</button>
+        <button className="bp-btn-sm" onClick={doExport}>📥 {t(lang, 'budget.exportCSV')}</button>
       </div>
 
-      {loading ? <p className="bp-info">{t(lang, 'budgetLoading')}</p> : monthly && (
+      {loading ? <p className="bp-info">{t(lang, 'common.loading')}</p> : monthly && (
         <>
           <div className="bp-stat-box">
-            <span className="bp-total-label">{t(lang, 'budgetTotal')}</span>
+            <span className="bp-total-label">{t(lang, 'budget.totalExpense')}</span>
             <span className="bp-total-num">{fmtAmt(toDisplay(monthly.total_usd || 0), currency)}</span>
           </div>
 
@@ -434,10 +436,10 @@ function MonthlyTab({ lang, currency, toDisplay }) {
               <table className="bp-table">
                 <thead>
                   <tr>
-                    <th>{t(lang, 'budgetCategory')}</th>
-                    <th>{t(lang, 'budgetBudget')}</th>
-                    <th>{t(lang, 'budgetActual')}</th>
-                    <th>{t(lang, 'budgetRemain')}</th>
+                    <th>{t(lang, 'budget.category')}</th>
+                    <th>{t(lang, 'budget.budget')}</th>
+                    <th>{t(lang, 'budget.actual')}</th>
+                    <th>{t(lang, 'budget.remaining')}</th>
                     <th>%</th>
                   </tr>
                 </thead>
@@ -458,7 +460,7 @@ function MonthlyTab({ lang, currency, toDisplay }) {
                     )
                   })}
                   <tr className="bp-total-row">
-                    <td><strong>{t(lang, 'budgetTotal')}</strong></td>
+                    <td><strong>{t(lang, 'budget.totalExpense')}</strong></td>
                     <td>–</td>
                     <td><strong>{fmtAmt(toDisplay(monthly.total_usd || 0), currency)}</strong></td>
                     <td>–</td>
@@ -472,19 +474,19 @@ function MonthlyTab({ lang, currency, toDisplay }) {
           <div className="bp-charts">
             {stats?.by_category?.length > 0 && (
               <div className="bp-chart-box">
-                <h3 className="bp-chart-title">{t(lang, 'budgetPieTitle')}</h3>
+                <h3 className="bp-chart-title">{t(lang, 'chart.pieTitle')}</h3>
                 <canvas ref={pieRef} />
               </div>
             )}
             {stats?.daily_trend?.length > 0 && (
               <div className="bp-chart-box">
-                <h3 className="bp-chart-title">{t(lang, 'budgetDailyTrend')}</h3>
+                <h3 className="bp-chart-title">{t(lang, 'chart.lineTitle')}</h3>
                 <canvas ref={lineRef} />
               </div>
             )}
             {monthly.by_category?.some(c => c.budget_usd != null) && (
               <div className="bp-chart-box">
-                <h3 className="bp-chart-title">{t(lang, 'budgetVsActual')}</h3>
+                <h3 className="bp-chart-title">{t(lang, 'chart.barTitle')}</h3>
                 <canvas ref={barRef} />
               </div>
             )}
@@ -558,7 +560,7 @@ function YearlyTab({ lang, currency, toDisplay }) {
   function doExport() {
     if (!data) return
     const mLabels = ML[lang] || ML.en
-    const headers = [t(lang, 'budgetMonth'), String(year), String(year - 1), t(lang, 'budgetYoY')]
+    const headers = [t(lang, 'budgetMonth'), String(year), String(year - 1), t(lang, 'budget.vsLastYear')]
     const rows = (data.monthly || []).map((m, i) => {
       const prev = (data.prev_monthly || [])[i]?.total_usd || 0
       const diff = (m.total_usd || 0) - prev
@@ -575,13 +577,13 @@ function YearlyTab({ lang, currency, toDisplay }) {
       <div className="bp-toolbar">
         <input type="number" className="bp-year-inp" value={year} min="2020" max="2035"
           onChange={e => setYear(Number(e.target.value))} />
-        <button className="bp-btn-sm" onClick={doExport}>📥 {t(lang, 'budgetExport')}</button>
+        <button className="bp-btn-sm" onClick={doExport}>📥 {t(lang, 'budget.exportCSV')}</button>
       </div>
 
-      {loading ? <p className="bp-info">{t(lang, 'budgetLoading')}</p> : data && (
+      {loading ? <p className="bp-info">{t(lang, 'common.loading')}</p> : data && (
         <>
           <div className="bp-stat-box">
-            <span className="bp-total-label">{year} {t(lang, 'budgetTotal')}</span>
+            <span className="bp-total-label">{year} {t(lang, 'budget.totalExpense')}</span>
             <span className="bp-total-num">{fmtAmt(toDisplay(data.total_usd || 0), currency)}</span>
             {data.yoy_change_pct != null && (
               <span className={`bp-yoy${data.yoy_change_pct > 0 ? ' up' : ' dn'}`}>
@@ -592,7 +594,7 @@ function YearlyTab({ lang, currency, toDisplay }) {
 
           {/* 월별 바차트 */}
           <div className="bp-chart-box bp-chart-full">
-            <h3 className="bp-chart-title">{t(lang, 'budgetMonthlyBar')}</h3>
+            <h3 className="bp-chart-title">{t(lang, 'chart.monthlyTitle')}</h3>
             <canvas ref={barRef} />
           </div>
 
@@ -604,7 +606,7 @@ function YearlyTab({ lang, currency, toDisplay }) {
                   <th>{t(lang, 'budgetMonth')}</th>
                   <th>{year}</th>
                   <th>{year - 1}</th>
-                  <th>{t(lang, 'budgetYoY')}</th>
+                  <th>{t(lang, 'budget.vsLastYear')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -624,7 +626,7 @@ function YearlyTab({ lang, currency, toDisplay }) {
                   )
                 })}
                 <tr className="bp-total-row">
-                  <td><strong>Total</strong></td>
+                  <td><strong>{t(lang, 'budget.totalExpense')}</strong></td>
                   <td><strong>{fmtAmt(toDisplay(data.total_usd || 0), currency)}</strong></td>
                   <td><strong>{fmtAmt(toDisplay(data.prev_year_total_usd || 0), currency)}</strong></td>
                   <td></td>
@@ -640,8 +642,8 @@ function YearlyTab({ lang, currency, toDisplay }) {
               <table className="bp-table">
                 <thead>
                   <tr>
-                    <th>{t(lang, 'budgetCategory')}</th>
-                    <th>{t(lang, 'budgetActual')}</th>
+                    <th>{t(lang, 'budget.category')}</th>
+                    <th>{t(lang, 'budget.actual')}</th>
                     <th>{t(lang, 'budgetCount')}</th>
                   </tr>
                 </thead>
@@ -712,14 +714,14 @@ function SummaryTab({ lang, currency, toDisplay }) {
         </select>
       </div>
 
-      {loading ? <p className="bp-info">{t(lang, 'budgetLoading')}</p> : (
+      {loading ? <p className="bp-info">{t(lang, 'common.loading')}</p> : (
         <>
           <div className="bp-sum-grid">
             {/* TOP 5 */}
             <div className="bp-sum-card">
-              <h3 className="bp-sum-card-title">{t(lang, 'budgetTop5')}</h3>
+              <h3 className="bp-sum-card-title">{t(lang, 'budget.top5')}</h3>
               {top5.length === 0
-                ? <p className="bp-empty">{t(lang, 'budgetNoData')}</p>
+                ? <p className="bp-empty">{t(lang, 'budget.noExpense')}</p>
                 : (
                   <ol className="bp-top5">
                     {top5.map((c, i) => (
@@ -738,7 +740,7 @@ function SummaryTab({ lang, currency, toDisplay }) {
 
             {/* 예산 초과 */}
             <div className="bp-sum-card">
-              <h3 className="bp-sum-card-title">{t(lang, 'budgetOverTitle')}</h3>
+              <h3 className="bp-sum-card-title">{t(lang, 'budget.over')}</h3>
               {overList.length === 0
                 ? <p className="bp-all-good">✅ {t(lang, 'budgetAllGood')}</p>
                 : (
@@ -769,7 +771,7 @@ function SummaryTab({ lang, currency, toDisplay }) {
               <thead>
                 <tr>
                   <th>{t(lang, 'budgetMonth')}</th>
-                  <th>{t(lang, 'budgetActual')}</th>
+                  <th>{t(lang, 'budget.actual')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -880,7 +882,7 @@ function SettingTab({ lang, currency, toDisplay }) {
   return (
     <section className="bp-sec">
       {/* ── 예산 설정 ──────────────────────────────────────────── */}
-      <h2 className="bp-section-h2">{t(lang, 'budgetSettingTitle')}</h2>
+      <h2 className="bp-section-h2">{t(lang, 'budget.setBudget')}</h2>
 
       <div className="bp-toolbar">
         <input type="number" className="bp-year-inp" value={year} min="2020" max="2035"
@@ -899,18 +901,18 @@ function SettingTab({ lang, currency, toDisplay }) {
           <option value="">{t(lang, 'budgetTotalBudget')}</option>
           {cats.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
         </select>
-        <input type="number" className="bp-inp" placeholder={t(lang, 'budgetAmount')}
+        <input type="number" className="bp-inp" placeholder={t(lang, 'budget.amount')}
           value={newB.amount} onChange={e => setNewB(f => ({ ...f, amount: e.target.value }))} />
         <select className="bp-sel bp-sel-sm" value={newB.currency}
           onChange={e => setNewB(f => ({ ...f, currency: e.target.value }))}>
           {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
-        <button className="bp-btn-primary" onClick={addBudget}>{t(lang, 'budgetAdd')}</button>
+        <button className="bp-btn-primary" onClick={addBudget}>{t(lang, 'common.add')}</button>
       </div>
 
       {/* 예산 목록 */}
       {loadingB
-        ? <p className="bp-info">{t(lang, 'budgetLoading')}</p>
+        ? <p className="bp-info">{t(lang, 'common.loading')}</p>
         : budgets.length === 0
           ? <p className="bp-info bp-empty">{t(lang, 'budgetNoBudget')}</p>
           : (
@@ -918,10 +920,10 @@ function SettingTab({ lang, currency, toDisplay }) {
               <table className="bp-table">
                 <thead>
                   <tr>
-                    <th>{t(lang, 'budgetCategory')}</th>
-                    <th>{t(lang, 'budgetBudget')}</th>
-                    <th>{t(lang, 'budgetActual')}</th>
-                    <th>{t(lang, 'budgetRemain')}</th>
+                    <th>{t(lang, 'budget.category')}</th>
+                    <th>{t(lang, 'budget.budget')}</th>
+                    <th>{t(lang, 'budget.actual')}</th>
+                    <th>{t(lang, 'budget.remaining')}</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -944,8 +946,8 @@ function SettingTab({ lang, currency, toDisplay }) {
                           <td>{fmtAmt(toDisplay(b.spent_usd || 0), currency)}</td>
                           <td>–</td>
                           <td>
-                            <button className="bp-btn-primary" onClick={saveBudget}>{t(lang, 'budgetSave')}</button>
-                            <button className="bp-btn-ghost" style={{ marginLeft: '0.25rem' }} onClick={() => setEditId(null)}>{t(lang, 'budgetCancel')}</button>
+                            <button className="bp-btn-primary" onClick={saveBudget}>{t(lang, 'budget.saveBudget')}</button>
+                            <button className="bp-btn-ghost" style={{ marginLeft: '0.25rem' }} onClick={() => setEditId(null)}>{t(lang, 'common.cancel')}</button>
                           </td>
                         </>
                       ) : (
@@ -1006,7 +1008,7 @@ function SettingTab({ lang, currency, toDisplay }) {
               onChange={e => setNewParent(f => ({ ...f, name_en: e.target.value }))} />
             <input type="text" className="bp-inp-icon" placeholder="🏷️" value={newParent.icon}
               onChange={e => setNewParent(f => ({ ...f, icon: e.target.value }))} />
-            <button className="bp-btn-primary" onClick={addParentCat}>{t(lang, 'budgetAdd')}</button>
+            <button className="bp-btn-primary" onClick={addParentCat}>{t(lang, 'common.add')}</button>
           </div>
 
           {/* 소분류 추가 */}
@@ -1021,7 +1023,7 @@ function SettingTab({ lang, currency, toDisplay }) {
               onChange={e => setNewSub(f => ({ ...f, name_ko: e.target.value }))} />
             <input type="text" className="bp-inp" placeholder="English" value={newSub.name_en}
               onChange={e => setNewSub(f => ({ ...f, name_en: e.target.value }))} />
-            <button className="bp-btn-primary" onClick={addSubCat}>{t(lang, 'budgetAdd')}</button>
+            <button className="bp-btn-primary" onClick={addSubCat}>{t(lang, 'common.add')}</button>
           </div>
 
           {/* 사용자 카테고리 목록 */}
