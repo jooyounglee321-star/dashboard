@@ -4,6 +4,24 @@
 
 ---
 
+## [2026-05-27] — 가계부 Phase 5 BudgetPage(/budget) 전용 페이지
+
+### 추가
+- **`frontend/src/pages/BudgetPage.jsx`** — `/budget` URL 전용 가계부 분석 페이지
+  - **Tab 1 (일별)**: 날짜 선택, 지출 목록(인라인 수정·삭제), 카테고리 소계 칩, CSV 내보내기
+  - **Tab 2 (월별)**: 카테고리별 예산/실지출/잔여/% 테이블 + 파이차트·일별 추이 라인차트·예산vs실지출 바차트 (Chart.js 4.x raw, react-chartjs-2 미사용)
+  - **Tab 3 (연별)**: 전년 대비 YoY 바차트 + 월별 테이블(▲▼) + 카테고리 연간 집계
+  - **Tab 4 (요약)**: TOP 5 카테고리, 예산초과 목록, 최근 12개월 이력 테이블
+  - **Tab 5 (예산설정)**: 예산 CRUD(카테고리별·전체), 기본/사용자 카테고리 관리(대분류·소분류 추가·삭제)
+  - 헤더 통화 토글(10종), 모든 금액 USD→선택통화 실시간 변환, 모바일 반응형
+- **`frontend/src/pages/BudgetPage.css`** — 다크 테마 전용 스타일 (~300줄)
+- **`frontend/src/App.jsx`** — `/budget` 라우트 추가 (AuthGuard)
+- **`frontend/src/pages/index/IndexPage.jsx`** — 데스크톱 헤더 Budget 링크 + 모바일 하단 네비 링크
+- **`en.json` / `ko.json`** — `budget*` i18n 키 49개 추가
+- **`frontend/dist/`** — 빌드 결과물 갱신
+
+---
+
 ## [2026-05-27] — 가계부 Phase 4 ExpenseCard 위젯 재작성
 
 ### 변경
