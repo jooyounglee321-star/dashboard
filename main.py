@@ -272,6 +272,7 @@ _DEFAULT_EXCHANGE_RATES = [
     ("USD", "CNY", 7.24),
     ("USD", "HKD", 7.82),
     ("USD", "SGD", 1.34),
+    ("USD", "CHF", 0.89),
 ]
 
 

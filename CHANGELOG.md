@@ -4,6 +4,52 @@
 
 ---
 
+## [2026-05-27] — 가계부 Phase 7 최종 점검 및 CHF 환율 추가
+
+### 점검 결과 (전체 OK)
+| 항목 | 결과 |
+|------|------|
+| DB: expense_categories 테이블 | ✅ |
+| DB: expenses 신규 컬럼 (category_id, subcategory_id, description, currency, converted_amount, exchange_rate) | ✅ |
+| DB: expense_budgets 테이블 | ✅ |
+| DB: exchange_rates 테이블 | ✅ |
+| API: GET/POST/PUT/DELETE /api/expense | ✅ |
+| API: GET /api/expense/categories | ✅ |
+| API: GET /api/expense/summary/daily | ✅ |
+| API: GET /api/expense/summary/monthly | ✅ |
+| API: GET /api/expense/summary/yearly | ✅ |
+| API: GET /api/expense/stats | ✅ |
+| API: GET/POST/PUT/DELETE /api/expense/budget | ✅ |
+| API: GET /api/exchange-rates | ✅ |
+| 환율 30분 자동 갱신 스케줄러 | ✅ |
+| ExpenseCard 대분류/소분류 드롭다운 | ✅ |
+| ExpenseCard 통화 선택 | ✅ |
+| BudgetPage.jsx 파일 존재 | ✅ |
+| /budget 라우트 등록 | ✅ |
+| 헤더 Budget 링크 | ✅ |
+| 5개 탭 (Daily/Monthly/Yearly/Summary/Budget Setting) | ✅ |
+| Chart.js 차트 (파이/라인/바) | ✅ |
+| CSV 내보내기 | ✅ |
+| 언어 지원 t() 함수 | ✅ |
+
+### 수정
+- **`main.py`** — `_DEFAULT_EXCHANGE_RATES`에 CHF (0.89) 추가 (BudgetPage 통화 목록에 있었으나 시드 누락)
+- **`routers/expense.py`** — `_RATE_TICKERS`에 `"CHF": "USDCHF=X"` 추가 (Yahoo Finance 30분 갱신 대상)
+- **`frontend/dist/`** — 빌드 결과물 갱신
+
+### 가계부 전체 기능 요약 (Phase 1~7)
+- **가계부 전용 페이지** (`/budget`) — 5탭 구조 (일별/월별/연도별/결산/예산설정)
+- **대분류/소분류 카테고리 시스템** — 10개 기본 대분류 + 42개 소분류, 사용자 커스텀 가능
+- **다중 통화 지원** — USD/KRW/EUR/JPY/GBP/CNY/CAD/AUD/CHF/HKD/SGD
+- **실시간 환율 자동 연동** — Yahoo Finance 30분 갱신, 인메모리 30분 캐시
+- **예산 설정 기능** — 카테고리별/전체 월간 예산 CRUD
+- **일별/월별/연도별 통계** — 카테고리별 합계, 예산 대비 실지출, 전년 대비 비교
+- **차트 시각화** — 파이(도넛)·라인·바 차트 (Chart.js 4.x raw)
+- **CSV 내보내기** — BOM 포함 (Excel 한글 호환)
+- **영어/한국어 완전 지원** — 중첩 t() 키 (budget.*/chart.*/currency.*/category.*)
+
+---
+
 ## [2026-05-27] — 가계부 Phase 6 i18n 완전 지원 (BudgetPage + ExpenseCard)
 
 ### 변경
