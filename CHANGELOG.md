@@ -4,6 +4,32 @@
 
 ---
 
+## [2026-05-27] — 가계부 Phase 4 ExpenseCard 위젯 재작성
+
+### 변경
+- **`ExpenseCard.jsx`** 완전 재작성
+  - **입력 폼**: 대분류/소분류 드롭다운(API), 10개 통화 선택, 메모, 날짜
+  - **대분류 → 소분류 자동 필터**: `category_id` 변경 시 소분류 목록 즉시 갱신
+  - **인라인 수정**: 항목별 ✎ 버튼 → 행 확장 인라인 편집 폼
+  - **지출 목록**: 대분류 아이콘 › 소분류 표시, 원래금액 + USD 환산액
+  - **오늘 합계**: USD 기준, 이번달 예산 대비 % 바 (초과 시 빨간색)
+  - **자정 자동 리셋**: 60초마다 날짜 변경 감지, 목록 재로드 (DB 보존)
+  - **데이터 로드**: localStorage 캐시 폐기 → 모두 API 호출
+    - `GET /api/expense?date=오늘`
+    - `GET /api/expense/categories?lang=`
+    - `GET /api/expense/summary/monthly` + `GET /api/expense/budget` (예산 비교)
+  - **언어 지원**: `lang` prop에 따라 카테고리 이름 en/ko 전환, 전체 UI 반응
+- **`index.css`** — 지출 섹션 전면 교체
+  - `.exp-new-form`, `.exp-sel-pair`, `.exp-cur-row`, `.exp-desc-inp`, `.exp-date-row` 신규
+  - `.exp-item-info`, `.exp-item-path`, `.exp-item-desc`, `.exp-item-right`, `.exp-item-amounts`
+  - `.exp-converted` — USD 환산 표시 (입력통화 ≠ USD일 때)
+  - `.exp-budget-block`, `.exp-budget-bar`, `.exp-budget-fill`, `.exp-budget-pct.over`
+  - `.exp-edit-row`, `.exp-edit-grid`, `.exp-edit-btns`, `.btn-edit`, `.btn-sm--ghost`
+- **`en.json` / `ko.json`** — 5개 키 추가: `expenseCatPh`, `expenseSubcatPh`, `expenseDescPh`, `expenseThisMonth`, `expenseOverBudget`, `expenseEditing`
+- **`frontend/dist/`** — 빌드 결과물 갱신
+
+---
+
 ## [2026-05-27] — 가계부 Phase 3 백엔드 API (백엔드 전용)
 
 ### 신규
