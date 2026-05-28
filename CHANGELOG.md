@@ -4,6 +4,66 @@
 
 ---
 
+## [2026-05-27] — 가계부 Phase 3 백엔드 API (백엔드 전용)
+
+### 신규
+- **`routers/expense.py`** 신규 생성 — 19개 엔드포인트
+
+#### 카테고리 API (`/api/expense/categories`)
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/api/expense/categories?lang=ko` | 기본값+내 카테고리 대분류/소분류 계층 반환 |
+| POST | `/api/expense/categories` | 새 카테고리 추가 |
+| PUT | `/api/expense/categories/{id}` | 내 카테고리 수정 |
+| DELETE | `/api/expense/categories/{id}` | 내 카테고리 삭제 (기본값 불가) |
+
+#### 지출 API (`/api/expense`)
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/api/expense?date=&year=&month=` | 지출 목록 (카테고리 정보 포함) |
+| POST | `/api/expense` | 지출 추가 (자동 USD 환산) |
+| PUT | `/api/expense/{id}` | 지출 수정 (amount/currency 변경 시 환산 재계산) |
+| DELETE | `/api/expense/{id}` | 지출 삭제 |
+
+#### 통계/요약 API
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/api/expense/summary/daily?date=` | 일별 목록+카테고리 합계+총합(USD) |
+| GET | `/api/expense/summary/monthly?year=&month=` | 월별 카테고리 합계+예산대비+일별배열 |
+| GET | `/api/expense/summary/yearly?year=` | 연간 월별합계+카테고리+전년대비 |
+| GET | `/api/expense/stats?year=&month=` | 파이차트용 비율+최다지출+예산초과+일별추이 |
+
+#### 예산 API (`/api/expense/budget`)
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/api/expense/budget?year=&month=` | 예산 목록+실지출+잔여 |
+| POST | `/api/expense/budget` | 예산 설정 |
+| PUT | `/api/expense/budget/{id}` | 예산 수정 |
+| DELETE | `/api/expense/budget/{id}` | 예산 삭제 |
+
+#### 환율 API (`/api/exchange-rates`)
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/api/exchange-rates` | 전체 환율 (30분 인메모리 캐시) |
+| GET | `/api/exchange-rates/{currency}` | 특정 통화 환율 |
+| POST | `/api/exchange-rates/refresh` | Yahoo Finance 강제 갱신 (admin 전용) |
+
+### 백엔드 변경
+- **`routers/expense.py`**
+  - `expense_router` (`/expense`) + `exchange_router` (`/exchange-rates`) 두 라우터
+  - 인라인 Pydantic 스키마: `CategoryIn`, `CategoryPatch`, `ExpenseIn`, `ExpensePatch`, `BudgetIn`, `BudgetPatch`
+  - `_get_rate()` / `_to_usd()` — DB 환율 조회·환산 유틸
+  - `_group_by_category()` — 카테고리별 집계 공용 함수
+  - `do_refresh_rates()` — Yahoo Finance 환율 갱신 (APScheduler + admin API 공유)
+  - 30분 인메모리 캐시 (`_rate_cache`, `_CACHE_TTL=1800`)
+- **`main.py`**
+  - `from routers.expense import expense_router, exchange_router, do_refresh_rates`
+  - `_refresh_rates_job()` — async 래퍼 (SessionLocal 생성 후 do_refresh_rates 호출)
+  - APScheduler `IntervalTrigger(minutes=30)` 환율 갱신 잡 등록
+  - `expense_router`, `exchange_router` 라우터 등록
+
+---
+
 ## [2026-05-27] — 가계부 Phase 2 기본 카테고리 시드 (백엔드 전용)
 
 ### 신규
