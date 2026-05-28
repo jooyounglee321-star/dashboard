@@ -685,6 +685,7 @@ _RATE_TICKERS: dict[str, str] = {
     "CNY": "USDCNY=X",
     "HKD": "USDHKD=X",
     "SGD": "USDSGD=X",
+    "CHF": "USDCHF=X",
 }
 
 _rate_cache: dict[str, Any] = {"data": None, "ts": 0.0}
