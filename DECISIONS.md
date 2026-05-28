@@ -1,6 +1,13 @@
 # 프로젝트 결정 기록
 
 ---
+## 2026-05-27 — BudgetPage: 5탭 단일 페이지 + raw Chart.js 패턴
+**결정:** BudgetPage.jsx를 단일 파일에 5개 탭 컴포넌트(DailyTab·MonthlyTab·YearlyTab·SummaryTab·SettingTab)로 구성하고, 차트는 react-chartjs-2 없이 Chart.js 4.x를 직접 사용하는 패턴을 채택했습니다.
+**이유:** (1) 탭마다 별도 파일 분리보다 단일 파일이 상태 공유(currency, rateMap)와 유지보수에 유리, (2) react-chartjs-2는 이미 설치된 StockStatsOverlay.jsx의 raw Chart.js 패턴과 일관성 유지 및 추가 의존성 배제, (3) chartsRef.current 배열로 차트 인스턴스 추적 → useEffect cleanup에서 일괄 destroy 처리.
+**대안:** (1) 탭별 파일 분리 → import 복잡도 증가, (2) react-chartjs-2 사용 → 패키지 추가 필요, (3) 별도 BudgetPage 폴더 구조 → 오버엔지니어링
+**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\BudgetPage.jsx
+
+---
 ## 2026-05-29 — Phase 3 가계부 API 아키텍처: 인메모리 캐시 + 라우터 분리 + 인라인 스키마
 **결정:** 환율 데이터를 30분 TTL의 인메모리 캐시로 관리하고, `expense_router`와 `exchange_router`를 분리하며, Pydantic 스키마를 `routers/expense.py` 내 인라인으로 정의하는 구조를 채택했습니다.
 **이유:** (1) 인메모리 캐시는 Redis 없이도 빠른 환율 조회를 제공하면서 30분 간격 서버 리소드로 정확한 갱신 주기 보장, (2) 라우터 분리로 관심사 분리 및 향후 비지출 환율 사용처 확장 용이, (3) 인라인 스키마는 FastAPI 엔드포인트와 스키마의 강한 결합을 유지하며 모놀리식 스키마 파일 회피.
