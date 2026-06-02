@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """가계부 Phase 3 — 카테고리·지출·통계·예산·환율 API.
 
 라우터 두 개:

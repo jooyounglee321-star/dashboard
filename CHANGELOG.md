@@ -4,6 +4,14 @@
 
 ---
 
+## [2026-06-02] — Fix: Python 3.13 타입 힌트 런타임 평가 오류 수정
+
+- `routers/expense.py` 맨 위에 `from __future__ import annotations` 추가
+- `schemas.py` 맨 위에 `from __future__ import annotations` 추가
+- Python 3.13에서 타입 힌트를 런타임에 즉시 평가하지 않고 지연 평가(PEP 563)하도록 설정하여 순환 참조 및 런타임 타입 오류 방지
+
+---
+
 ## [2026-06-02] — 가계부 Phase 7 최종 점검 및 CHF 환율 추가
 
 ### 점검 결과 (전체 OK)
