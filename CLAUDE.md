@@ -34,6 +34,13 @@
 - 새 페이지 작성 시: import { t } from '../i18n' 또는 import { t } from '../../i18n' 사용.
 - 로그인 전 페이지(LoginPage, RegisterPage)의 lang: const lang = (() => { try { return localStorage.getItem('dashboard_lang') || 'ko' } catch { return 'ko' } })()
 
+## 폰트 규칙
+- 영문/숫자: Inter (Google Fonts)
+- 한글: Noto Sans KR (Google Fonts)
+- 전역 font-family: 'Inter', 'Noto Sans KR', sans-serif
+- 새 컴포넌트에서 별도 폰트 지정 금지. 전역 설정 상속 사용.
+- 폰트 굵기: 일반 400, 중간 강조 500/600, 제목 700
+
 ## DB 스키마 변경 규칙
 - 새 테이블 추가, 컬럼 추가/변경, 마이그레이션 함수 추가 시 반드시 DB_SCHEMA.md도 동시에 업데이트할 것.
 - DB_SCHEMA.md 업데이트 항목: 테이블 목록, 컬럼 상세, FK 관계 요약, 서버 시작 시 자동 실행 작업 표.

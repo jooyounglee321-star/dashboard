@@ -49,6 +49,16 @@
 
 **이유:** 계층적 네임스페이싱은 i18n 시스템의 확장성과 유지보수성을 크게 향상시킨다. 기능별(budget, chart, common)로 키를 그룹화하면 번역 파일 구조가 명확해지고, 새로운 기능 추가 시 명확한 네임스페이스 규칙을 따를 수 있으며, 중복을 줄일 수 있다(예: `save`, `cancel`, `add`는 `common.*`으로 통일).
 
+---
+## 2026-06-02 — Python 3.13 대응: PEP 563 지연 평가 도입 (from __future__ import annotations)
+
+**결정:** `routers/expense.py`와 `schemas.py`의 맨 위에 `from __future__ import annotations`를 추가하여 Python 3.13에서 타입 힌트의 런타임 즉시 평가를 지연 평가로 변경했습니다.
+
+**이유:** Python 3.13에서는 타입 힌트를 기본적으로 런타임에 즉시 평가하므로, 순환 참조(예: `ExpenseIn` 내에서 자신의 타입 참조)나 미정의 타입 참조 시 `NameError`가 발생합니다. PEP 563 지연 평가를 통해 타입 힌트는 문자열로 저장되어 런타임 에러를 방지하면서도 타입 체커(mypy, pyright)는 정상 작동합니다.
+
+**대안:** (1) 모든 타입 힌트를 문자열 리터럴로 변경 (`"ExpenseIn"` 형태) → 가독성 저하 및 IDE 자동완성 미지원, (2) 순환 참조 타입을 별도 파일로 분리 → 모듈 구조 재설계 필요, (3) Python 3.12 이하로 고정 → 최신 런타임 미지원
+
+**파일:** `routers/expense.py`, `schemas.py`
 **대안:** 기존 평탄한 명명 규칙 유지. 이는 초기에는 간단하지만 프로젝트 규모가 커질수록 키 이름의 충돌과 비일관성이 증가할 위험이 있다.
 
 **파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\BudgetPage.jsx
