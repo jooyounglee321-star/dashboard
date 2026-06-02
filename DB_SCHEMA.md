@@ -50,6 +50,7 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 | `total_payment` | NUMERIC(12,2) | NOT NULL, DEFAULT `0` | 누적 결제 금액 |
 | `primary_device` | VARCHAR(20) | NULLABLE | 주 사용 기기: `desktop` / `mobile` 등 |
 | `admin_memo` | TEXT | NULLABLE | 관리자 메모 |
+| `widget_config` | TEXT | NULLABLE | 위젯 설정 JSON (on/off, 언어, 온도단위, 표시개수 등) |
 
 **비고:**
 - `role` 컬럼 레거시 값 `'Member'`는 서버 시작 시 `'free'`로 자동 마이그레이션
@@ -139,19 +140,22 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 
 **UNIQUE 제약:** `(base_currency, target_currency)` — `uq_exchange_rate_pair`
 
-**기본 시드 (서버 시작 시 존재하지 않는 쌍만 자동 삽입):**
+**기본 시드 (서버 시작 시 존재하지 않는 쌍만 자동 삽입, 총 10쌍):**
 
-| base | target | rate |
-|------|--------|------|
-| USD | KRW | 1350 |
-| USD | EUR | 0.92 |
-| USD | JPY | 149 |
-| USD | GBP | 0.79 |
-| USD | CAD | 1.36 |
-| USD | AUD | 1.53 |
-| USD | CNY | 7.24 |
-| USD | HKD | 7.82 |
-| USD | SGD | 1.34 |
+| base | target | rate | 비고 |
+|------|--------|------|------|
+| USD | KRW | 1350 | 한국 원화 |
+| USD | EUR | 0.92 | 유로 |
+| USD | JPY | 149 | 일본 엔 |
+| USD | GBP | 0.79 | 영국 파운드 |
+| USD | CAD | 1.36 | 캐나다 달러 |
+| USD | AUD | 1.53 | 호주 달러 |
+| USD | CNY | 7.24 | 중국 위안 |
+| USD | HKD | 7.82 | 홍콩 달러 |
+| USD | SGD | 1.34 | 싱가포르 달러 |
+| USD | CHF | 0.89 | 스위스 프랑 (BudgetPage 통화 목록) |
+
+**Yahoo Finance 30분 갱신 티커:** `USDKRW=X`, `USDEUR=X`, `USDJPY=X`, `USDGBP=X`, `USDCAD=X`, `USDAUD=X`, `USDCNY=X`, `USDHKD=X`, `USDSGD=X`, `USDCHF=X`
 
 ---
 
@@ -398,4 +402,5 @@ permissions     — 독립 테이블 (FK 없음)
 | 5 | `_migrate_user_roles()` | `users.role = 'Member'` → `'free'` 일괄 변환 |
 | 6 | `_seed_admin_email()` | `jooyounglee321123@gmail.com` 계정의 `role`을 `'admin'`으로 설정 |
 | 7 | `_seed_default_permissions()` | `permissions` 테이블이 비어 있으면 기본 28개 권한 행 삽입 |
-| 8 | `_seed_exchange_rates()` | `exchange_rates` 테이블에 USD 기준 기본 환율 9쌍 삽입 (없는 쌍만) |
+| 8 | `_seed_exchange_rates()` | `exchange_rates` 테이블에 USD 기준 기본 환율 10쌍 삽입 (없는 쌍만) |
+| 9 | `_seed_expense_categories()` | `expense_categories` 테이블이 비어 있으면 기본 10대분류 44소분류 삽입 (`is_default=True`, `user_id=NULL`) |

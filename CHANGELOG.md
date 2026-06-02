@@ -4,7 +4,7 @@
 
 ---
 
-## [2026-05-27] — 가계부 Phase 7 최종 점검 및 CHF 환율 추가
+## [2026-06-02] — 가계부 Phase 7 최종 점검 및 CHF 환율 추가
 
 ### 점검 결과 (전체 OK)
 | 항목 | 결과 |
@@ -50,7 +50,7 @@
 
 ---
 
-## [2026-05-27] — 가계부 Phase 6 i18n 완전 지원 (BudgetPage + ExpenseCard)
+## [2026-06-02] — 가계부 Phase 6 i18n 완전 지원 (BudgetPage + ExpenseCard)
 
 ### 변경
 - **`frontend/src/locales/en.json` / `ko.json`** — 중첩 키 섹션 추가
@@ -70,7 +70,7 @@
 
 ---
 
-## [2026-05-27] — 가계부 Phase 5 BudgetPage(/budget) 전용 페이지
+## [2026-06-02] — 가계부 Phase 5 BudgetPage(/budget) 전용 페이지
 
 ### 추가
 - **`frontend/src/pages/BudgetPage.jsx`** — `/budget` URL 전용 가계부 분석 페이지
