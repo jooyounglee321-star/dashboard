@@ -4,6 +4,15 @@
 
 ---
 
+## [2026-06-02] — feat: Inter + Noto Sans KR 전역 폰트 적용
+
+- `frontend/index.html`: Google Fonts 링크를 Inter(400/500/600/700) + Noto Sans KR(400/500/700)로 교체
+- `frontend/src/styles/globals.css`: body font-family를 `'Inter', 'Noto Sans KR', sans-serif`로 변경, font-weight 300 → 400 조정
+- `CLAUDE.md`: 폰트 규칙 섹션 추가 (Inter/Noto Sans KR 사용 기준, 굵기 규칙)
+- `frontend/dist/` 빌드 포함
+
+---
+
 ## [2026-06-02] — Fix: Python 3.13 타입 힌트 런타임 평가 오류 수정
 
 - `routers/expense.py` 맨 위에 `from __future__ import annotations` 추가

@@ -22,8 +22,8 @@
 body {
   background: var(--bg);
   color: var(--ink);
-  font-family: 'Noto Sans KR', sans-serif;
-  font-weight: 300;
+  font-family: 'Inter', 'Noto Sans KR', sans-serif;
+  font-weight: 400;
   min-height: 100vh;
 }
 
