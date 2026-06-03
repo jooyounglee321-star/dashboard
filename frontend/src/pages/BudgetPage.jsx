@@ -163,23 +163,26 @@ function DailyTab({ lang, currency, toDisplay }) {
     : []
 
   async function addExpense() {
-    if (!newForm.amount || Number(newForm.amount) <= 0) return
+    // amount를 명시적으로 파싱 — NaN/Infinity/음수 전부 차단
+    const amt = parseFloat(newForm.amount)
+    if (isNaN(amt) || amt <= 0) return
     setSubmitting(true)
     try {
       await apiReq('POST', '/api/expense', {
-        date,
-        amount:         Number(newForm.amount),
-        currency:       newForm.currency,
+        date:           date,
+        amount:         amt,                   // 사전 파싱된 float — NaN이 절대 들어가지 않음
+        currency:       newForm.currency       || 'USD',
         category_id:    newForm.category_id    ? Number(newForm.category_id)    : null,
         subcategory_id: newForm.subcategory_id ? Number(newForm.subcategory_id) : null,
         description:    newForm.description.trim() || null,
         lang,
       })
-      // 날짜는 유지, 입력 필드만 초기화
+      // 날짜는 유지, 금액·메모·소분류만 초기화
       setNewForm(f => ({ ...f, amount: '', description: '', subcategory_id: '' }))
-      load()
-    } catch {
-      // 저장 실패 시 폼 유지
+      load()   // 저장 즉시 해당 날짜 목록 리프레시
+    } catch (err) {
+      console.error('[addExpense] 저장 실패:', err)
+      alert(t(lang, 'common.error') || '저장에 실패했습니다. 다시 시도해 주세요.')
     } finally {
       setSubmitting(false)
     }
@@ -197,14 +200,20 @@ function DailyTab({ lang, currency, toDisplay }) {
   }
 
   async function saveEdit() {
-    await apiReq('PUT', `/api/expense/${editId}`, {
-      amount: Number(editForm.amount),
-      currency: editForm.currency,
-      description: editForm.description || null,
-      category_id: editForm.category_id ? Number(editForm.category_id) : null,
-      subcategory_id: editForm.subcategory_id ? Number(editForm.subcategory_id) : null,
-      lang,
-    }).catch(() => {})
+    const amt = parseFloat(editForm.amount)
+    if (isNaN(amt) || amt <= 0) return
+    try {
+      await apiReq('PUT', `/api/expense/${editId}`, {
+        amount:         amt,
+        currency:       editForm.currency       || 'USD',
+        description:    editForm.description    || null,
+        category_id:    editForm.category_id    ? Number(editForm.category_id)    : null,
+        subcategory_id: editForm.subcategory_id ? Number(editForm.subcategory_id) : null,
+        lang,
+      })
+    } catch (err) {
+      console.error('[saveEdit] 수정 실패:', err)
+    }
     setEditId(null)
     load()
   }
