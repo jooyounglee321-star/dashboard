@@ -119,6 +119,8 @@ export default function BudgetPage() {
 // ══════════════════════════════════════════════════════════════════════════════
 // Tab 1 — 일별
 // ══════════════════════════════════════════════════════════════════════════════
+const INIT_NEW_FORM = { category_id: '', subcategory_id: '', amount: '', currency: 'USD', description: '' }
+
 function DailyTab({ lang, currency, toDisplay }) {
   const [date, setDate]     = useState(todayStr)
   const [items, setItems]   = useState([])
@@ -126,6 +128,8 @@ function DailyTab({ lang, currency, toDisplay }) {
   const [loading, setLoading] = useState(false)
   const [editId, setEditId] = useState(null)
   const [editForm, setEditForm] = useState({})
+  const [newForm, setNewForm] = useState(INIT_NEW_FORM)
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     apiGet(`/api/expense/categories?lang=${lang}`).then(d => setCats(d || [])).catch(() => {})
@@ -150,9 +154,36 @@ function DailyTab({ lang, currency, toDisplay }) {
     catMap[cat] = (catMap[cat] || 0) + usd
   })
 
+  const newFormSubs = newForm.category_id
+    ? (cats.find(c => c.id === Number(newForm.category_id))?.subs ?? [])
+    : []
+
   const editSubs = editForm.category_id
     ? (cats.find(c => c.id === Number(editForm.category_id))?.subs ?? [])
     : []
+
+  async function addExpense() {
+    if (!newForm.amount || Number(newForm.amount) <= 0) return
+    setSubmitting(true)
+    try {
+      await apiReq('POST', '/api/expense', {
+        date,
+        amount:         Number(newForm.amount),
+        currency:       newForm.currency,
+        category_id:    newForm.category_id    ? Number(newForm.category_id)    : null,
+        subcategory_id: newForm.subcategory_id ? Number(newForm.subcategory_id) : null,
+        description:    newForm.description.trim() || null,
+        lang,
+      })
+      // 날짜는 유지, 입력 필드만 초기화
+      setNewForm(f => ({ ...f, amount: '', description: '', subcategory_id: '' }))
+      load()
+    } catch {
+      // 저장 실패 시 폼 유지
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   function startEdit(it) {
     setEditId(it.id)
@@ -195,6 +226,41 @@ function DailyTab({ lang, currency, toDisplay }) {
       <div className="bp-toolbar">
         <input type="date" className="bp-date-inp" value={date} onChange={e => setDate(e.target.value)} />
         <button className="bp-btn-sm" onClick={doExport}>📥 {t(lang, 'budget.exportCSV')}</button>
+      </div>
+
+      {/* 지출 등록 폼 — date는 위 날짜 picker 값 그대로 사용, 저장 후 날짜 유지 */}
+      <div className="bp-add-form">
+        <div className="bp-edit-row">
+          <select className="bp-sel" value={newForm.category_id}
+            onChange={e => setNewForm(f => ({ ...f, category_id: e.target.value, subcategory_id: '' }))}>
+            <option value="">{t(lang, 'expenseCatPh')}</option>
+            {cats.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+          </select>
+          <select className="bp-sel" value={newForm.subcategory_id}
+            onChange={e => setNewForm(f => ({ ...f, subcategory_id: e.target.value }))}
+            disabled={!newFormSubs.length}>
+            <option value="">{t(lang, 'expenseSubcatPh')}</option>
+            {newFormSubs.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </div>
+        <div className="bp-edit-row">
+          <input type="number" className="bp-inp" placeholder={t(lang, 'budget.amount')}
+            value={newForm.amount}
+            onChange={e => setNewForm(f => ({ ...f, amount: e.target.value }))}
+            onKeyDown={e => e.key === 'Enter' && addExpense()} />
+          <select className="bp-sel bp-sel-sm" value={newForm.currency}
+            onChange={e => setNewForm(f => ({ ...f, currency: e.target.value }))}>
+            {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <input type="text" className="bp-inp" placeholder={t(lang, 'expenseDescPh')}
+            value={newForm.description}
+            onChange={e => setNewForm(f => ({ ...f, description: e.target.value }))}
+            onKeyDown={e => e.key === 'Enter' && addExpense()} />
+          <button className="bp-btn-primary" onClick={addExpense}
+            disabled={submitting || !newForm.amount || Number(newForm.amount) <= 0}>
+            {t(lang, 'common.add')}
+          </button>
+        </div>
       </div>
 
       {/* 일별 합계 + 카테고리 칩 */}

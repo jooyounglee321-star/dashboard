@@ -408,6 +408,18 @@
 .bp-over-nums   { display: flex; flex-direction: column; align-items: flex-end; gap: 0.1rem; }
 .bp-over-detail { font-size: 0.74rem; color: #888; }
 
+/* ── Daily Add Form ──────────────────────────────────────────────────────── */
+.bp-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.75rem 0.9rem;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
 /* ── Budget Form ─────────────────────────────────────────────────────────── */
 .bp-form-row {
   display: flex;
