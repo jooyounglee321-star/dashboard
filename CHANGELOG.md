@@ -4,6 +4,15 @@
 
 ---
 
+## [2026-06-03] — fix: 가계부 달력 선택 시 타임존 시차 왜곡 버그 완벽 수정
+
+- `onChange`: `e.target.value.split('-')`으로 연/월/일 분해 후 재조합 — `new Date()` 변환 경로 원천 차단
+- `displayItems` 클라이언트 안전 필터 추가: `items.filter(it => it.date.substring(0,10) === date)` — 서버 응답 date 필드가 "YYYY-MM-DD HH:MM:SS" 형태여도 앞 10자리로 정확히 매칭
+- catMap 집계 및 리스트 렌더링 모두 `displayItems` 기준으로 통일
+- PDT(UTC-7) 등 어느 타임존에서 접속해도 로컬 날짜 기준 100% 일치 보장
+
+---
+
 ## [2026-06-03] — fix: 유저 로컬 타임존 시차 방어 및 날짜 변경 시 실시간 재조회 완공
 
 - `toLocalDateStr()` 헬퍼 신설: `<input type="date">` e.target.value를 `new Date()` 변환 없이 "YYYY-MM-DD" 문자열 그대로 사용 → UTC 파싱으로 인한 타임존 오프셋(하루 어긋남) 완전 차단
