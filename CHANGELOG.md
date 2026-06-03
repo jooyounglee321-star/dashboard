@@ -4,6 +4,15 @@
 
 ---
 
+## [2026-06-03] — fix: 가계부 인풋 필드 글자 입력 시 커서 튕김 버그 수정
+
+- 원인: `ExpenseCard.jsx` 내부에 `ExpForm`, `ExpItem`, `TodayHeader`, `EmptyMsg` 4개 서브컴포넌트가 메인 컴포넌트 함수 내부에 선언되어, state 변경(글자 입력)마다 함수 재생성 → React가 DOM 파괴 후 재마운트 → 포커스 소멸
+- 수정: 4개 서브컴포넌트를 모두 `ExpenseCard` 함수 바깥으로 이동, 필요한 값을 props로 전달하는 구조로 변경
+- 영향 범위: 금액 입력(`exp-amt-inp`), 메모 입력(`exp-desc-inp`), 수정 모드 금액/메모 인풋 — 포커스 안정화
+- 백엔드 API 로직 및 데이터 흐름 변경 없음
+
+---
+
 ## [2026-06-03] — fix: Python 3.14 PEP 649 + Pydantic v2 타입 어노테이션 충돌 수정
 
 - 원인: `routers/expense.py`에서 필드명 `date`와 타입명 `date`(datetime.date)의 이름 충돌
