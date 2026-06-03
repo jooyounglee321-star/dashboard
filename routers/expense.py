@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """가계부 Phase 3 — 카테고리·지출·통계·예산·환율 API.
 
 라우터 두 개:
@@ -9,7 +7,7 @@ from __future__ import annotations
 
 import logging
 import time as _time
-from datetime import date
+from datetime import date as Date
 from typing import Any
 
 import yfinance as yf
@@ -57,7 +55,7 @@ class ExpenseIn(BaseModel):
 
 
 class ExpensePatch(BaseModel):
-    date:           date | None = None
+    date:           Date | None = None
     amount:         float | None = None
     currency:       str | None = None
     category_id:    int | None = None
@@ -266,7 +264,7 @@ def delete_category(
 
 @expense_router.get("/summary/daily")
 def summary_daily(
-    date: date = Query(...),
+    date: Date = Query(...),
     lang: str   = Query("ko", pattern="^(ko|en)$"),
     db:   Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -577,7 +575,7 @@ def delete_budget(
 
 @expense_router.get("")
 def list_expenses(
-    date:  date | None = None,
+    date:  Date | None = None,
     year:  int  | None = None,
     month: int  | None = None,
     lang:  str         = Query("ko", pattern="^(ko|en)$"),

@@ -4,6 +4,15 @@
 
 ---
 
+## [2026-06-03] — fix: Python 3.14 PEP 649 + Pydantic v2 타입 어노테이션 충돌 수정
+
+- 원인: `routers/expense.py`에서 필드명 `date`와 타입명 `date`(datetime.date)의 이름 충돌
+- Python 3.14 PEP 649의 지연 어노테이션 평가 시 클래스 네임스페이스에서 `date`를 필드 기본값 `None`으로 잘못 해석 → `None | None → TypeError`
+- 수정: `from datetime import date as Date` 알리아싱 후 타입 어노테이션 3곳 `date → Date` 교체 (필드명/API 변경 없음)
+- 추가: `from __future__ import annotations` 제거 (expense.py, schemas.py) — Pydantic v2와 충돌 유발
+
+---
+
 ## [2026-06-02] — feat: Inter + Noto Sans KR 전역 폰트 적용
 
 - `frontend/index.html`: Google Fonts 링크를 Inter(400/500/600/700) + Noto Sans KR(400/500/700)로 교체
