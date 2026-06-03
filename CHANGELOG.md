@@ -4,6 +4,14 @@
 
 ---
 
+## [2026-06-03] — fix: 유저 로컬 타임존 시차 방어 및 날짜 변경 시 실시간 재조회 완공
+
+- `toLocalDateStr()` 헬퍼 신설: `<input type="date">` e.target.value를 `new Date()` 변환 없이 "YYYY-MM-DD" 문자열 그대로 사용 → UTC 파싱으로 인한 타임존 오프셋(하루 어긋남) 완전 차단
+- 날짜 picker onChange에 `toLocalDateStr()` 적용: 브라우저가 한국·미국·유럽 등 어느 타임존이든 로컬 날짜 문자열 그대로 상태에 저장
+- `todayStr()` 주석 강화: UTC 기반 toISOString() 사용 금지 이유 명시
+
+---
+
 ## [2026-06-03] — fix: 가계부 날짜 변경 시 해당일 데이터 실시간 재조회 useEffect 연동 완공
 
 - `DailyTab` useEffect 의존성 배열을 `[load]` 간접 참조에서 `[date, lang]` 직접 명시로 변경
