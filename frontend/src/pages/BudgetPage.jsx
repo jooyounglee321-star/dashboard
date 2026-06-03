@@ -17,7 +17,11 @@ const ML = {
 
 // ── 유틸 ─────────────────────────────────────────────────────────────────────
 const pad2 = n => String(n).padStart(2, '0')
-const todayStr = () => new Date().toISOString().slice(0, 10)
+// 로컬(사용자 기기) 날짜 기준 — toISOString()은 UTC라 한국 오전 9시 이전엔 어제 날짜를 반환하는 버그가 있음
+const todayStr = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+}
 
 function fmtAmt(amt, cur) {
   const s = SYM[cur] || '$'
@@ -168,7 +172,11 @@ function DailyTab({ lang, currency, toDisplay }) {
   const load = useCallback(() => {
     setLoading(true)
     apiGet(`/api/expense?date=${date}&lang=${lang}`)
-      .then(d => setItems(d || [])).catch(() => setItems([]))
+      .then(d => setItems(d || []))
+      .catch(err => {
+        // 로드 실패 시 items를 초기화하지 않음 — optimistic update 항목 보존
+        console.error('[DailyTab] 목록 로드 실패:', err)
+      })
       .finally(() => setLoading(false))
   }, [date, lang])
 
