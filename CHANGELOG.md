@@ -4,6 +4,16 @@
 
 ---
 
+## [2026-06-03] — fix: 가계부 API 요청 시 JWT 인증 토큰 헤더 누락 버그 전면 수정
+
+- `BudgetPage.jsx`: `getToken()` 헬퍼 신설 — `localStorage.getItem('token')`이 `null` / `'null'` / `'undefined'` / 빈 문자열이면 `/login`으로 강제 리다이렉트
+- `apiGet` / `apiReq`: `getToken()` 경유로 검증된 토큰만 `Authorization: Bearer ...` 헤더에 주입 (기존: `"Bearer null"` 전송 가능성 있었음)
+- `apiGet` / `apiReq`: HTTP 401 응답 시 즉시 `/login` 리다이렉트 추가 (토큰 만료 처리)
+- `LoginPage.jsx`: `data.access_token || data.token` 폴백으로 서버 응답 키 이름 변동에 대응, jwt 빈값 시 저장 차단
+- `RegisterPage.jsx`: 동일 보강
+
+---
+
 ## [2026-06-03] — fix: 가계부 저장 시 amount 필수값 누락(422) 버그 수정
 
 - 원인: `Number(newForm.amount)` 인라인 변환 시 비정상 입력값이 `NaN`이 되고, `JSON.stringify({amount: NaN})` → `{amount: null}` 으로 직렬화되어 Pydantic이 "field required" 422 반환
