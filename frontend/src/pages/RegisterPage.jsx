@@ -53,7 +53,12 @@ export default function RegisterPage() {
       })
       const data = await res.json()
       if (res.ok) {
-        localStorage.setItem('token', data.access_token)
+        const jwt = data.access_token || data.token || ''
+        if (!jwt) {
+          setMsg({ type: 'error', text: t(lang, 'auth.errRegister') })
+          return
+        }
+        localStorage.setItem('token', jwt)
         if (data.user) localStorage.setItem('user', JSON.stringify(data.user))
         setMsg({ type: 'success', text: t(lang, 'auth.successRegister') })
         setTimeout(() => navigate('/'), 1800)

@@ -46,7 +46,13 @@ export default function LoginPage() {
       })
       const data = await res.json()
       if (res.ok) {
-        localStorage.setItem('token', data.access_token)
+        // access_token 키가 없거나 빈값이면 명시적으로 경고
+        const jwt = data.access_token || data.token || ''
+        if (!jwt) {
+          setMsg({ type: 'error', text: t(lang, 'auth.errLogin') })
+          return
+        }
+        localStorage.setItem('token', jwt)
         if (data.user) localStorage.setItem('user', JSON.stringify(data.user))
         setMsg({ type: 'success', text: t(lang, 'auth.successLogin') })
         setTimeout(() => navigate('/'), 800)
