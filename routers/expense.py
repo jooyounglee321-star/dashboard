@@ -45,7 +45,7 @@ class CategoryPatch(BaseModel):
 
 
 class ExpenseIn(BaseModel):
-    date:           date
+    date:           Date
     amount:         float
     currency:       str = "USD"
     category_id:    int | None = None
