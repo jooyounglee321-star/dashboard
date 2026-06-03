@@ -31,6 +31,227 @@ const INIT_FORM = () => ({
   description: '',
 })
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   서브컴포넌트 — ExpenseCard 함수 바깥에 선언해야 재렌더 시 재마운트되지 않음
+═══════════════════════════════════════════════════════════════════════════ */
+
+function ExpForm({ compact, form, setForm, categories, subs, lang, submitting, addExpense }) {
+  return (
+    <div className="exp-new-form">
+      {/* 대분류 / 소분류 */}
+      <div className={compact ? 'exp-sel-pair-col' : 'exp-sel-pair'}>
+        <select
+          value={form.category_id}
+          onChange={e => setForm(f => ({ ...f, category_id: e.target.value, subcategory_id: '' }))}
+        >
+          <option value="">{t(lang, 'expenseCatPh')}</option>
+          {categories.map(c => (
+            <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+          ))}
+        </select>
+        <select
+          value={form.subcategory_id}
+          onChange={e => setForm(f => ({ ...f, subcategory_id: e.target.value }))}
+          disabled={!subs.length}
+        >
+          <option value="">{t(lang, 'expenseSubcatPh')}</option>
+          {subs.map(s => (
+            <option key={s.id} value={s.id}>{s.icon} {s.name}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* 통화 / 금액 */}
+      <div className="exp-cur-row">
+        <select
+          className="exp-cur-sel"
+          value={form.currency}
+          onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}
+        >
+          {CURRENCIES.map(c => (
+            <option key={c.code} value={c.code}>{c.symbol} {t(lang, 'currency.' + c.code.toLowerCase())}</option>
+          ))}
+        </select>
+        <input
+          className="exp-amt-inp"
+          type="number"
+          min="0"
+          step="any"
+          placeholder={t(lang, 'expenseAmountPlaceholder')}
+          value={form.amount}
+          onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
+          onKeyDown={e => e.key === 'Enter' && addExpense()}
+        />
+      </div>
+
+      {/* 메모 */}
+      <input
+        className="exp-desc-inp"
+        type="text"
+        placeholder={t(lang, 'expenseDescPh')}
+        value={form.description}
+        onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+        onKeyDown={e => e.key === 'Enter' && addExpense()}
+      />
+
+      {/* 날짜 / 추가 */}
+      <div className="exp-date-row">
+        <input
+          type="date"
+          value={form.date}
+          onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+        />
+        <button
+          className="btn-sm"
+          onClick={addExpense}
+          disabled={submitting || !form.amount || Number(form.amount) <= 0}
+        >
+          {t(lang, 'expenseAdd')}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function ExpItem({ e, editId, editForm, setEditForm, categories, lang, saveEdit, setEditId, startEdit, delExpense }) {
+  const isEditing = editId === e.id
+  if (isEditing) {
+    const ec  = categories.find(c => c.id === Number(editForm.category_id))
+    const ess = ec?.subs ?? []
+    return (
+      <li className="exp-item exp-item--editing">
+        <div className="exp-edit-row">
+          <div className="exp-edit-grid">
+            {/* 대분류 */}
+            <select
+              value={editForm.category_id}
+              onChange={ev => setEditForm(f => ({ ...f, category_id: ev.target.value, subcategory_id: '' }))}
+            >
+              <option value="">{t(lang, 'expenseCatPh')}</option>
+              {categories.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+            </select>
+            {/* 소분류 */}
+            <select
+              value={editForm.subcategory_id}
+              onChange={ev => setEditForm(f => ({ ...f, subcategory_id: ev.target.value }))}
+              disabled={!ess.length}
+            >
+              <option value="">{t(lang, 'expenseSubcatPh')}</option>
+              {ess.map(s => <option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}
+            </select>
+            {/* 통화 */}
+            <select
+              value={editForm.currency}
+              onChange={ev => setEditForm(f => ({ ...f, currency: ev.target.value }))}
+            >
+              {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.symbol} {t(lang, 'currency.' + c.code.toLowerCase())}</option>)}
+            </select>
+            {/* 금액 */}
+            <input
+              type="number"
+              min="0"
+              step="any"
+              value={editForm.amount}
+              onChange={ev => setEditForm(f => ({ ...f, amount: ev.target.value }))}
+            />
+          </div>
+          {/* 메모 */}
+          <input
+            type="text"
+            value={editForm.description}
+            onChange={ev => setEditForm(f => ({ ...f, description: ev.target.value }))}
+            placeholder={t(lang, 'expenseDescPh')}
+            style={{ width: '100%', boxSizing: 'border-box' }}
+          />
+          {/* 날짜 + 버튼 */}
+          <div className="exp-edit-btns">
+            <input
+              type="date"
+              value={editForm.date}
+              onChange={ev => setEditForm(f => ({ ...f, date: ev.target.value }))}
+              style={{ flex: 1 }}
+            />
+            <button className="btn-sm" onClick={saveEdit}>{t(lang, 'common.save')}</button>
+            <button className="btn-sm btn-sm--ghost" onClick={() => setEditId(null)}>{t(lang, 'common.cancel')}</button>
+          </div>
+        </div>
+      </li>
+    )
+  }
+
+  return (
+    <li className="exp-item">
+      {/* 왼쪽: 카테고리 경로 + 메모 */}
+      <div className="exp-item-info">
+        <span className="exp-item-path">
+          {e.category_icon ? `${e.category_icon} ` : ''}
+          {e.category_name ?? ''}
+          {e.subcategory_name
+            ? ` › ${e.subcategory_icon ? e.subcategory_icon + ' ' : ''}${e.subcategory_name}`
+            : ''}
+        </span>
+        {e.description && (
+          <span className="exp-item-desc">{e.description}</span>
+        )}
+      </div>
+
+      {/* 오른쪽: 금액 + 환산 + 버튼 */}
+      <div className="exp-item-right">
+        <div className="exp-item-amounts">
+          <span style={{ fontWeight: 500 }}>{fmtAmt(e.amount, e.currency ?? 'USD')}</span>
+          {e.currency !== 'USD' && e.converted_amount != null && (
+            <span className="exp-converted">≈${Number(e.converted_amount).toFixed(2)}</span>
+          )}
+        </div>
+        <div className="exp-item-btns">
+          <button className="btn-edit" title={t(lang, 'common.edit')} onClick={() => startEdit(e)}>✎</button>
+          <button className="btn-del" title={t(lang, 'common.delete')} onClick={() => delExpense(e.id)}>✕</button>
+        </div>
+      </div>
+    </li>
+  )
+}
+
+function TodayHeader({ compact, todayUSD, budgetPct, overBudget, lang }) {
+  return (
+    <div className={compact ? 'm-exp-header' : 'exp-today'}>
+      <div>
+        <span className={compact ? 'm-exp-lbl' : 'exp-label'}>{t(lang, 'expenseTodayTotal')}</span>
+        <div className={compact ? 'm-exp-total' : 'exp-amount'}>
+          ${todayUSD.toFixed(2)}
+        </div>
+      </div>
+      {budgetPct !== null && (
+        <div className="exp-budget-block">
+          <div className={`exp-budget-pct${overBudget ? ' over' : ''}`}>
+            {t(lang, 'expenseThisMonth')} {budgetPct}%
+            {overBudget && <span> · {t(lang, 'expenseOverBudget')}</span>}
+          </div>
+          <div className="exp-budget-bar">
+            <div
+              className={`exp-budget-fill${overBudget ? ' over' : ''}`}
+              style={{ width: `${Math.min(budgetPct, 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function EmptyMsg({ loading, lang, mobile }) {
+  return (
+    <li style={{
+      fontSize: mobile ? '0.88rem' : '0.82rem',
+      color: 'var(--ink3)',
+      fontStyle: 'italic',
+      padding: '0.4rem 0',
+    }}>
+      {loading ? t(lang, 'common.loading') : t(lang, 'expenseEmpty')}
+    </li>
+  )
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
@@ -47,10 +268,8 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
   const [editForm,setEditForm]= useState({})
 
   /* 파생값: 선택된 대분류의 소분류 목록 */
-  const selCat   = categories.find(c => c.id === Number(form.category_id))
-  const subs     = selCat?.subs ?? []
-  const editCat  = categories.find(c => c.id === Number(editForm.category_id))
-  const editSubs = editCat?.subs ?? []
+  const selCat = categories.find(c => c.id === Number(form.category_id))
+  const subs   = selCat?.subs ?? []
 
   const authH = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') })
 
@@ -170,230 +389,9 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
   }
 
   /* ── 집계 ─────────────────────────────────────────────────────────── */
-  const todayUSD  = expenses.reduce((s, e) => s + (e.converted_amount ?? e.amount), 0)
-  const budgetPct = monthlyBudget ? Math.round(monthlyTotal / monthlyBudget * 100) : null
+  const todayUSD   = expenses.reduce((s, e) => s + (e.converted_amount ?? e.amount), 0)
+  const budgetPct  = monthlyBudget ? Math.round(monthlyTotal / monthlyBudget * 100) : null
   const overBudget = budgetPct !== null && budgetPct > 100
-
-  /* ── 공용 서브컴포넌트 ─────────────────────────────────────────────── */
-
-  /* 입력 폼 */
-  function ExpForm({ compact = false }) {
-    return (
-      <div className="exp-new-form">
-        {/* 대분류 / 소분류 */}
-        <div className={compact ? 'exp-sel-pair-col' : 'exp-sel-pair'}>
-          <select
-            value={form.category_id}
-            onChange={e => setForm(f => ({ ...f, category_id: e.target.value, subcategory_id: '' }))}
-          >
-            <option value="">{t(lang, 'expenseCatPh')}</option>
-            {categories.map(c => (
-              <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-            ))}
-          </select>
-          <select
-            value={form.subcategory_id}
-            onChange={e => setForm(f => ({ ...f, subcategory_id: e.target.value }))}
-            disabled={!subs.length}
-          >
-            <option value="">{t(lang, 'expenseSubcatPh')}</option>
-            {subs.map(s => (
-              <option key={s.id} value={s.id}>{s.icon} {s.name}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* 통화 / 금액 */}
-        <div className="exp-cur-row">
-          <select
-            className="exp-cur-sel"
-            value={form.currency}
-            onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}
-          >
-            {CURRENCIES.map(c => (
-              <option key={c.code} value={c.code}>{c.symbol} {t(lang, 'currency.' + c.code.toLowerCase())}</option>
-            ))}
-          </select>
-          <input
-            className="exp-amt-inp"
-            type="number"
-            min="0"
-            step="any"
-            placeholder={t(lang, 'expenseAmountPlaceholder')}
-            value={form.amount}
-            onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
-            onKeyDown={e => e.key === 'Enter' && addExpense()}
-          />
-        </div>
-
-        {/* 메모 */}
-        <input
-          className="exp-desc-inp"
-          type="text"
-          placeholder={t(lang, 'expenseDescPh')}
-          value={form.description}
-          onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-          onKeyDown={e => e.key === 'Enter' && addExpense()}
-        />
-
-        {/* 날짜 / 추가 */}
-        <div className="exp-date-row">
-          <input
-            type="date"
-            value={form.date}
-            onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-          />
-          <button
-            className="btn-sm"
-            onClick={addExpense}
-            disabled={submitting || !form.amount || Number(form.amount) <= 0}
-          >
-            {t(lang, 'expenseAdd')}
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  /* 지출 항목 하나 */
-  function ExpItem({ e }) {
-    const isEditing = editId === e.id
-    if (isEditing) {
-      const ec  = categories.find(c => c.id === Number(editForm.category_id))
-      const ess = ec?.subs ?? []
-      return (
-        <li className="exp-item exp-item--editing">
-          <div className="exp-edit-row">
-            <div className="exp-edit-grid">
-              {/* 대분류 */}
-              <select
-                value={editForm.category_id}
-                onChange={ev => setEditForm(f => ({ ...f, category_id: ev.target.value, subcategory_id: '' }))}
-              >
-                <option value="">{t(lang, 'expenseCatPh')}</option>
-                {categories.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
-              </select>
-              {/* 소분류 */}
-              <select
-                value={editForm.subcategory_id}
-                onChange={ev => setEditForm(f => ({ ...f, subcategory_id: ev.target.value }))}
-                disabled={!ess.length}
-              >
-                <option value="">{t(lang, 'expenseSubcatPh')}</option>
-                {ess.map(s => <option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}
-              </select>
-              {/* 통화 */}
-              <select
-                value={editForm.currency}
-                onChange={ev => setEditForm(f => ({ ...f, currency: ev.target.value }))}
-              >
-                {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.symbol} {t(lang, 'currency.' + c.code.toLowerCase())}</option>)}
-              </select>
-              {/* 금액 */}
-              <input
-                type="number"
-                min="0"
-                step="any"
-                value={editForm.amount}
-                onChange={ev => setEditForm(f => ({ ...f, amount: ev.target.value }))}
-              />
-            </div>
-            {/* 메모 */}
-            <input
-              type="text"
-              value={editForm.description}
-              onChange={ev => setEditForm(f => ({ ...f, description: ev.target.value }))}
-              placeholder={t(lang, 'expenseDescPh')}
-              style={{ width: '100%', boxSizing: 'border-box' }}
-            />
-            {/* 날짜 + 버튼 */}
-            <div className="exp-edit-btns">
-              <input
-                type="date"
-                value={editForm.date}
-                onChange={ev => setEditForm(f => ({ ...f, date: ev.target.value }))}
-                style={{ flex: 1 }}
-              />
-              <button className="btn-sm" onClick={saveEdit}>{t(lang, 'common.save')}</button>
-              <button className="btn-sm btn-sm--ghost" onClick={() => setEditId(null)}>{t(lang, 'common.cancel')}</button>
-            </div>
-          </div>
-        </li>
-      )
-    }
-
-    return (
-      <li className="exp-item">
-        {/* 왼쪽: 카테고리 경로 + 메모 */}
-        <div className="exp-item-info">
-          <span className="exp-item-path">
-            {e.category_icon ? `${e.category_icon} ` : ''}
-            {e.category_name ?? ''}
-            {e.subcategory_name
-              ? ` › ${e.subcategory_icon ? e.subcategory_icon + ' ' : ''}${e.subcategory_name}`
-              : ''}
-          </span>
-          {e.description && (
-            <span className="exp-item-desc">{e.description}</span>
-          )}
-        </div>
-
-        {/* 오른쪽: 금액 + 환산 + 버튼 */}
-        <div className="exp-item-right">
-          <div className="exp-item-amounts">
-            <span style={{ fontWeight: 500 }}>{fmtAmt(e.amount, e.currency ?? 'USD')}</span>
-            {e.currency !== 'USD' && e.converted_amount != null && (
-              <span className="exp-converted">≈${Number(e.converted_amount).toFixed(2)}</span>
-            )}
-          </div>
-          <div className="exp-item-btns">
-            <button className="btn-edit" title={t(lang, 'common.edit')} onClick={() => startEdit(e)}>✎</button>
-            <button className="btn-del" title={t(lang, 'common.delete')} onClick={() => delExpense(e.id)}>✕</button>
-          </div>
-        </div>
-      </li>
-    )
-  }
-
-  /* 오늘 합계 + 예산 바 */
-  function TodayHeader({ compact = false }) {
-    return (
-      <div className={compact ? 'm-exp-header' : 'exp-today'}>
-        <div>
-          <span className={compact ? 'm-exp-lbl' : 'exp-label'}>{t(lang, 'expenseTodayTotal')}</span>
-          <div className={compact ? 'm-exp-total' : 'exp-amount'}>
-            ${todayUSD.toFixed(2)}
-          </div>
-        </div>
-        {budgetPct !== null && (
-          <div className="exp-budget-block">
-            <div className={`exp-budget-pct${overBudget ? ' over' : ''}`}>
-              {t(lang, 'expenseThisMonth')} {budgetPct}%
-              {overBudget && <span> · {t(lang, 'expenseOverBudget')}</span>}
-            </div>
-            <div className="exp-budget-bar">
-              <div
-                className={`exp-budget-fill${overBudget ? ' over' : ''}`}
-                style={{ width: `${Math.min(budgetPct, 100)}%` }}
-              />
-            </div>
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  /* ── 빈 목록 메시지 ─────────────────────────────────────────────────── */
-  const EmptyMsg = ({ mobile }) => (
-    <li style={{
-      fontSize: mobile ? '0.88rem' : '0.82rem',
-      color: 'var(--ink3)',
-      fontStyle: 'italic',
-      padding: '0.4rem 0',
-    }}>
-      {loading ? t(lang, 'common.loading') : t(lang, 'expenseEmpty')}
-    </li>
-  )
 
   /* ════════════════════════════════════════════════════════════════════
      모바일 레이아웃
@@ -406,12 +404,35 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
           <span className="m-card-title">{t(lang, 'expenseTitle')}</span>
         </div>
         <div className="m-card-body">
-          <TodayHeader compact />
-          <ExpForm compact />
+          <TodayHeader compact todayUSD={todayUSD} budgetPct={budgetPct} overBudget={overBudget} lang={lang} />
+          <ExpForm
+            compact
+            form={form}
+            setForm={setForm}
+            categories={categories}
+            subs={subs}
+            lang={lang}
+            submitting={submitting}
+            addExpense={addExpense}
+          />
           <ul className="m-exp-list" style={{ marginTop: '0.6rem' }}>
             {!expenses.length
-              ? <EmptyMsg mobile />
-              : expenses.map(e => <ExpItem key={e.id} e={e} />)
+              ? <EmptyMsg mobile loading={loading} lang={lang} />
+              : expenses.map(e => (
+                  <ExpItem
+                    key={e.id}
+                    e={e}
+                    editId={editId}
+                    editForm={editForm}
+                    setEditForm={setEditForm}
+                    categories={categories}
+                    lang={lang}
+                    saveEdit={saveEdit}
+                    setEditId={setEditId}
+                    startEdit={startEdit}
+                    delExpense={delExpense}
+                  />
+                ))
             }
           </ul>
         </div>
@@ -432,12 +453,34 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
         </span>
       </div>
       <div className="card-body">
-        <TodayHeader />
-        <ExpForm />
+        <TodayHeader todayUSD={todayUSD} budgetPct={budgetPct} overBudget={overBudget} lang={lang} />
+        <ExpForm
+          form={form}
+          setForm={setForm}
+          categories={categories}
+          subs={subs}
+          lang={lang}
+          submitting={submitting}
+          addExpense={addExpense}
+        />
         <ul className="exp-list">
           {!expenses.length
-            ? <EmptyMsg />
-            : expenses.map(e => <ExpItem key={e.id} e={e} />)
+            ? <EmptyMsg loading={loading} lang={lang} />
+            : expenses.map(e => (
+                <ExpItem
+                  key={e.id}
+                  e={e}
+                  editId={editId}
+                  editForm={editForm}
+                  setEditForm={setEditForm}
+                  categories={categories}
+                  lang={lang}
+                  saveEdit={saveEdit}
+                  setEditId={setEditId}
+                  startEdit={startEdit}
+                  delExpense={delExpense}
+                />
+              ))
           }
         </ul>
       </div>
