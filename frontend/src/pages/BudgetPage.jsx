@@ -198,9 +198,10 @@ function DailyTab({ lang, currency, toDisplay }) {
     if (isNaN(amt) || amt <= 0) return
     setSubmitting(true)
     try {
-      await apiReq('POST', '/api/expense', {
+      // POST 응답으로 서버가 반환한 저장 완료 객체(카테고리명·아이콘 포함)를 받음
+      const saved = await apiReq('POST', '/api/expense', {
         date:           date,
-        amount:         amt,                   // 사전 파싱된 float — NaN이 절대 들어가지 않음
+        amount:         amt,
         currency:       newForm.currency       || 'USD',
         category_id:    newForm.category_id    ? Number(newForm.category_id)    : null,
         subcategory_id: newForm.subcategory_id ? Number(newForm.subcategory_id) : null,
@@ -209,7 +210,10 @@ function DailyTab({ lang, currency, toDisplay }) {
       })
       // 날짜는 유지, 금액·메모·소분류만 초기화
       setNewForm(f => ({ ...f, amount: '', description: '', subcategory_id: '' }))
-      load()   // 저장 즉시 해당 날짜 목록 리프레시
+      // ① 즉시 반영: POST 응답 객체를 목록 맨 앞에 바로 추가 → 네트워크 지연 없이 화면에 표시
+      if (saved) setItems(prev => [saved, ...prev])
+      // ② 완전 동기화: 서버에서 해당 날짜 전체 목록을 다시 불러와 정합성 보장
+      load()
     } catch (err) {
       console.error('[addExpense] 저장 실패:', err)
       alert(t(lang, 'common.error') || '저장에 실패했습니다. 다시 시도해 주세요.')
