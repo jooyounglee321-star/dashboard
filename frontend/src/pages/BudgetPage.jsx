@@ -180,7 +180,10 @@ function DailyTab({ lang, currency, toDisplay }) {
       .finally(() => setLoading(false))
   }, [date, lang])
 
-  useEffect(() => { load() }, [load])
+  // date·lang이 바뀌는 순간 즉시 해당일 데이터 재조회
+  // [load] 간접 의존 대신 [date, lang]을 직접 명시 → 날짜 변경 시 누락 없이 트리거
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load() }, [date, lang])
 
   // 카테고리별 합계 & 일별 총합
   const catMap = {}
@@ -275,7 +278,10 @@ function DailyTab({ lang, currency, toDisplay }) {
   return (
     <section className="bp-sec">
       <div className="bp-toolbar">
-        <input type="date" className="bp-date-inp" value={date} onChange={e => setDate(e.target.value)} />
+        <input type="date" className="bp-date-inp" value={date}
+          onChange={e => {
+            setDate(e.target.value)   // 날짜 상태 갱신 → useEffect[date,lang] 자동 트리거
+          }} />
         <button className="bp-btn-sm" onClick={doExport}>📥 {t(lang, 'budget.exportCSV')}</button>
       </div>
 
