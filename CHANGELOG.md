@@ -4,6 +4,16 @@
 
 ---
 
+## [2026-06-03] — fix: 가계부 저장 시 amount 필수값 누락(422) 버그 수정
+
+- 원인: `Number(newForm.amount)` 인라인 변환 시 비정상 입력값이 `NaN`이 되고, `JSON.stringify({amount: NaN})` → `{amount: null}` 으로 직렬화되어 Pydantic이 "field required" 422 반환
+- 수정: `parseFloat()` + `isNaN()` 사전 검증으로 NaN/음수/0 전부 차단 후 검증된 값만 body에 포함
+- `saveEdit`(수정 저장)도 동일한 패턴으로 보강
+- `catch {}` 무음 처리 → `console.error` + `alert` 로 에러 피드백 추가
+- 저장 성공 후 날짜 유지 + `load()` 즉시 호출로 목록 실시간 갱신 재확인
+
+---
+
 ## [2026-06-03] — feat: 가계부 일별탭 등록 폼 추가 및 날짜 고정 실시간 반영
 
 - `BudgetPage.jsx` DailyTab에 지출 등록 폼(카테고리·소분류·금액·통화·메모) 신규 추가
