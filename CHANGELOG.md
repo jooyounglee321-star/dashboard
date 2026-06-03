@@ -4,6 +4,14 @@
 
 ---
 
+## [2026-06-03] — feat: 가계부 저장 성공 시 화면 데이터 실시간 리프레시 연동 완공
+
+- `addExpense()` 내 POST 응답 객체(`saved`)를 즉시 `setItems(prev => [saved, ...prev])`로 목록 맨 앞에 추가 → 네트워크 지연 없이 화면 즉시 반영
+- 이후 `load()` 병렬 호출로 서버 전체 목록 완전 동기화(카테고리·환산금액 정합성 보장)
+- 저장 후 선택 날짜(`date` state) 유지 / 금액·메모·소분류만 초기화 재확인
+
+---
+
 ## [2026-06-03] — fix: 가계부 API 요청 시 JWT 인증 토큰 헤더 누락 버그 전면 수정
 
 - `BudgetPage.jsx`: `getToken()` 헬퍼 신설 — `localStorage.getItem('token')`이 `null` / `'null'` / `'undefined'` / 빈 문자열이면 `/login`으로 강제 리다이렉트
