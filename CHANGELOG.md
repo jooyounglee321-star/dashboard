@@ -4,6 +4,15 @@
 
 ---
 
+## [2026-06-03] — fix: 가계부 저장 후 목록 조회 날짜 싱크 매칭 및 화면 렌더링 버그 수정
+
+- `todayStr()` UTC→로컬 날짜로 수정: `toISOString()` 사용 시 한국 오전 9시 이전에 어제 UTC 날짜 반환하던 버그 제거. `new Date()`의 `.getFullYear()/.getMonth()/.getDate()` 로컬 기준으로 교체
+- `load()` catch 블록에서 `setItems([])` 제거: 네트워크 오류/인증 오류로 GET 실패 시 기존 items(optimistic update 포함)가 지워지던 버그 수정. 실패 시 현재 상태 유지 + `console.error` 로깅으로 대체
+- 백엔드 `_expense_dict`: `e.date.isoformat()` → "YYYY-MM-DD" 문자열 직렬화 정상 확인, 수정 없음
+- `GET /api/expense`: `Expense.user_id == current_user.id` + `date` 필터 정상 확인, 수정 없음
+
+---
+
 ## [2026-06-03] — feat: 가계부 저장 성공 시 화면 데이터 실시간 리프레시 연동 완공
 
 - `addExpense()` 내 POST 응답 객체(`saved`)를 즉시 `setItems(prev => [saved, ...prev])`로 목록 맨 앞에 추가 → 네트워크 지연 없이 화면 즉시 반영
