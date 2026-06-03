@@ -4,6 +4,15 @@
 
 ---
 
+## [2026-06-03] — fix: 가계부 날짜 변경 시 해당일 데이터 실시간 재조회 useEffect 연동 완공
+
+- `DailyTab` useEffect 의존성 배열을 `[load]` 간접 참조에서 `[date, lang]` 직접 명시로 변경
+- `useCallback → useEffect[load]` 2단계 간접 연결의 엣지케이스(React 배치 업데이트 시 load 참조 변경 미감지) 제거
+- 날짜 picker `onChange`에 명시적 코멘트 추가로 의도 명확화
+- 저장/수정/삭제 후 수동 호출되는 `load()` 함수는 그대로 유지
+
+---
+
 ## [2026-06-03] — fix: 가계부 저장 후 목록 조회 날짜 싱크 매칭 및 화면 렌더링 버그 수정
 
 - `todayStr()` UTC→로컬 날짜로 수정: `toISOString()` 사용 시 한국 오전 9시 이전에 어제 UTC 날짜 반환하던 버그 제거. `new Date()`의 `.getFullYear()/.getMonth()/.getDate()` 로컬 기준으로 교체
