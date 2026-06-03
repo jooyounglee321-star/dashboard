@@ -202,10 +202,14 @@ function DailyTab({ lang, currency, toDisplay }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load() }, [date, lang])
 
+  // 클라이언트 안전 필터: 서버 응답 date 필드가 "YYYY-MM-DD HH:MM:SS" 형태여도
+  // 앞 10자리만 잘라 선택된 날짜와 100% 일치하는 항목만 표시 (타임존 왜곡 최종 방어)
+  const displayItems = items.filter(it => (it.date ?? '').substring(0, 10) === date)
+
   // 카테고리별 합계 & 일별 총합
   const catMap = {}
   let dayTotal = 0
-  items.forEach(it => {
+  displayItems.forEach(it => {
     const usd = it.converted_amount ?? it.amount ?? 0
     dayTotal += usd
     const cat = it.category_name || (lang === 'ko' ? '기타' : 'Other')
@@ -297,10 +301,13 @@ function DailyTab({ lang, currency, toDisplay }) {
       <div className="bp-toolbar">
         <input type="date" className="bp-date-inp" value={date}
           onChange={e => {
-            // toLocalDateStr: new Date() 변환 없이 "YYYY-MM-DD" 문자열 그대로 사용
-            // → 타임존 오프셋으로 인한 하루 어긋남 완전 차단
-            const picked = toLocalDateStr(e.target.value)
-            setDate(picked)   // 상태 갱신 → useEffect[date,lang] 즉시 트리거
+            // e.target.value는 항상 로컬 "YYYY-MM-DD" 문자열 — new Date() 변환 절대 금지
+            // split('-')으로 연/월/일을 명시적으로 분해 후 재조합 → UTC 파싱 경로 원천 차단
+            const [yyyy, mm, dd] = e.target.value.split('-')
+            if (yyyy && mm && dd) {
+              const picked = `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`
+              setDate(picked)   // 상태 갱신 → useEffect[date,lang] 즉시 트리거
+            }
           }} />
         <button className="bp-btn-sm" onClick={doExport}>📥 {t(lang, 'budget.exportCSV')}</button>
       </div>
@@ -355,11 +362,11 @@ function DailyTab({ lang, currency, toDisplay }) {
 
       {loading
         ? <p className="bp-info">{t(lang, 'common.loading')}</p>
-        : items.length === 0
+        : displayItems.length === 0
           ? <p className="bp-info bp-empty">{t(lang, 'budget.noExpense')}</p>
           : (
             <ul className="bp-list">
-              {items.map(it => (
+              {displayItems.map(it => (
                 <li key={it.id} className={`bp-item${editId === it.id ? ' editing' : ''}`}>
                   {editId === it.id ? (
                     <div className="bp-edit">
