@@ -4,6 +4,17 @@
 
 ---
 
+## [2026-06-03] — feat: 가계부 일별탭 등록 폼 추가 및 날짜 고정 실시간 반영
+
+- `BudgetPage.jsx` DailyTab에 지출 등록 폼(카테고리·소분류·금액·통화·메모) 신규 추가
+- 저장 성공 후 선택된 날짜(`date` state) 초기화 없이 유지 — 금액·메모·소분류만 리셋
+- 저장 성공 즉시 `load()` 호출 → 해당 날짜 목록 실시간 갱신
+- Enter 키로 등록 트리거 지원
+- 백엔드 POST `/api/expense` 검증: date·amount·currency·category_id·subcategory_id·description 전 필드 정상 INSERT 확인, 수정 없음
+- `BudgetPage.css` `.bp-add-form` 스타일 추가
+
+---
+
 ## [2026-06-03] — fix: 가계부 인풋 필드 글자 입력 시 커서 튕김 버그 수정
 
 - 원인: `ExpenseCard.jsx` 내부에 `ExpForm`, `ExpItem`, `TodayHeader`, `EmptyMsg` 4개 서브컴포넌트가 메인 컴포넌트 함수 내부에 선언되어, state 변경(글자 입력)마다 함수 재생성 → React가 DOM 파괴 후 재마운트 → 포커스 소멸
