@@ -17,8 +17,25 @@ const ML = {
 
 // ── 유틸 ─────────────────────────────────────────────────────────────────────
 const pad2 = n => String(n).padStart(2, '0')
-// 로컬(사용자 기기) 날짜 기준 — toISOString()은 UTC라 한국 오전 9시 이전엔 어제 날짜를 반환하는 버그가 있음
+
+/**
+ * 브라우저 로컬 타임존 기준 오늘 날짜를 "YYYY-MM-DD"로 반환.
+ * new Date().toISOString()은 UTC 기준이라 UTC+9(한국) 오전 9시 이전에
+ * 하루 전 날짜를 반환하는 버그가 있어 로컬 메서드를 직접 사용.
+ */
 const todayStr = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+}
+
+/**
+ * <input type="date">의 e.target.value("YYYY-MM-DD")를 그대로 반환.
+ * new Date(str) 변환을 절대 거치지 않음 — 변환 시 UTC 파싱으로 타임존 오프셋 발생.
+ */
+const toLocalDateStr = (inputValue) => {
+  // "YYYY-MM-DD" 포맷 검증 (브라우저가 항상 이 형식으로 줌)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(inputValue)) return inputValue
+  // 혹시 다른 형식이 들어올 경우 로컬 날짜로 안전하게 폴백
   const d = new Date()
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
 }
@@ -280,7 +297,10 @@ function DailyTab({ lang, currency, toDisplay }) {
       <div className="bp-toolbar">
         <input type="date" className="bp-date-inp" value={date}
           onChange={e => {
-            setDate(e.target.value)   // 날짜 상태 갱신 → useEffect[date,lang] 자동 트리거
+            // toLocalDateStr: new Date() 변환 없이 "YYYY-MM-DD" 문자열 그대로 사용
+            // → 타임존 오프셋으로 인한 하루 어긋남 완전 차단
+            const picked = toLocalDateStr(e.target.value)
+            setDate(picked)   // 상태 갱신 → useEffect[date,lang] 즉시 트리거
           }} />
         <button className="bp-btn-sm" onClick={doExport}>📥 {t(lang, 'budget.exportCSV')}</button>
       </div>
