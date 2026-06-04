@@ -418,6 +418,7 @@ function DailyTab({ lang, currency, toDisplay }) {
                     </div>
                   ) : (
                     <>
+                      {/* 카드 상단: 카테고리 경로 + 메모 */}
                       <div className="bp-item-left">
                         <span className="bp-item-cat">
                           {it.category_icon && <span className="bp-cat-icon">{it.category_icon}</span>}
@@ -426,13 +427,18 @@ function DailyTab({ lang, currency, toDisplay }) {
                         </span>
                         {it.description && <span className="bp-item-desc">{it.description}</span>}
                       </div>
+                      {/* 카드 하단: 금액(왼쪽) + 액션 버튼(오른쪽) */}
                       <div className="bp-item-right">
-                        <span className="bp-item-orig">{fmtAmt(it.amount, it.currency)}</span>
-                        {it.currency !== currency && (
-                          <span className="bp-item-conv">≈ {fmtAmt(toDisplay(it.converted_amount ?? it.amount), currency)}</span>
-                        )}
-                        <button className="bp-icon-btn" onClick={() => startEdit(it)} title={t(lang, 'common.edit')}>✏️</button>
-                        <button className="bp-icon-btn del" onClick={() => delItem(it.id)} title={t(lang, 'common.delete')}>🗑️</button>
+                        <div className="bp-amt-wrap">
+                          <span className="bp-item-orig">{fmtAmt(it.amount, it.currency)}</span>
+                          {it.currency !== currency && (
+                            <span className="bp-item-conv">≈ {fmtAmt(toDisplay(it.converted_amount ?? it.amount), currency)}</span>
+                          )}
+                        </div>
+                        <div className="bp-btn-wrap">
+                          <button className="bp-icon-btn" onClick={() => startEdit(it)} title={t(lang, 'common.edit')}>✏️</button>
+                          <button className="bp-icon-btn del" onClick={() => delItem(it.id)} title={t(lang, 'common.delete')}>🗑️</button>
+                        </div>
                       </div>
                     </>
                   )}
