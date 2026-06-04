@@ -4,6 +4,14 @@
 
 ---
 
+## [2026-06-03] — fix: ExpenseCard 위젯 날짜 UTC 버그 수정 (PDT 오후 5시 이후 내일 날짜 표시)
+
+- `ExpenseCard.jsx` `todayStr()`: `new Date().toISOString().slice(0,10)` (UTC 기준) → `getFullYear/getMonth/getDate` (로컬 기준)으로 교체
+- PDT(UTC-7) 오후 5시 이후 새로고침 시 내일 날짜(예: 6월 4일)로 초기화되던 버그 수정
+- 동일 버그 BudgetPage.jsx는 이전 커밋에서 수정 완료, 이번에 ExpenseCard.jsx 동일 패턴 적용
+
+---
+
 ## [2026-06-03] — fix: 가계부 달력 선택 시 타임존 시차 왜곡 버그 완벽 수정
 
 - `onChange`: `e.target.value.split('-')`으로 연/월/일 분해 후 재조합 — `new Date()` 변환 경로 원천 차단
