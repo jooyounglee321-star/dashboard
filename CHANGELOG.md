@@ -4,6 +4,14 @@
 
 ---
 
+## [2026-06-03] — fix: DailyTab 날짜 변경 시 이전 날짜 데이터가 유지되는 race condition 수정
+
+- `loadGenRef` (`useRef`) 세대 카운터 도입: `load()` 호출마다 세대 번호 증가
+- fetch `.then()` / `.catch()` / `.finally()` 에서 현재 세대와 불일치 시 결과 버림
+- 효과: 날짜 빠르게 변경해도 항상 마지막으로 선택한 날짜의 데이터만 화면에 반영
+
+---
+
 ## [2026-06-03] — fix: ExpenseCard 위젯 날짜 UTC 버그 수정 (PDT 오후 5시 이후 내일 날짜 표시)
 
 - `ExpenseCard.jsx` `todayStr()`: `new Date().toISOString().slice(0,10)` (UTC 기준) → `getFullYear/getMonth/getDate` (로컬 기준)으로 교체
