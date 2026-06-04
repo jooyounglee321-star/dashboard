@@ -271,19 +271,36 @@
 .m-sites-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;}
 .m-site-item{display:flex;flex-direction:column;align-items:center;gap:0.35rem;padding:0.7rem 0.3rem;background:var(--card2);border-radius:10px;border:1px solid var(--border);text-decoration:none;color:var(--ink2);font-size:0.7rem;text-align:center;word-break:break-all;}
 
-/* ── RESPONSIVE ── */
-@media(max-width:960px){
-  .main{grid-template-columns:repeat(2,1fr);}
+/* ══════════════════════════════════════════════════════════════════════════
+   반응형 미디어 쿼리
+   Mobile  : ~ 767px   → 모바일 레이아웃(.mobile-view) 표시
+   Tablet  : 768~1023px → 2-열 그리드
+   Desktop : 1024px~   → 3-열 그리드 (기본값)
+══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 태블릿 (768px ~ 1023px) — 2열 그리드 ── */
+@media(min-width:768px) and (max-width:1023px){
+  .main{grid-template-columns:repeat(2,1fr);padding:1rem;}
   .card-hero,.card-stock{grid-column:span 2;}
-  .card-expense,.card-diet,.card-yt,.card-sites{grid-column:span 1;}
+  .card-yt{grid-column:span 2;}
+  .card-schedule,.card-expense,.card-diet,.card-memo,.card-news,.card-sites{grid-column:span 1;}
   .hero-inner--1,.hero-inner--2,.hero-inner--3{grid-template-columns:1fr 1fr;}
-  .hero-inner .time-zone:nth-child(3){display:none;}
-  .hero-weather{display:none;}
+  .hero-inner .time-zone:nth-child(4){display:none;}
+  .hero-weather{max-width:180px;}
 }
-@media(max-width:640px){
+
+/* ── 모바일 (~ 767px) — 모바일 레이아웃으로 전환 ── */
+@media(max-width:767px){
   .header-date{display:none;}
-  .header{padding:0.75rem 1rem;}
+  .header{padding:0.65rem 1rem;}
+  /* 데스크톱 그리드 숨기고 모바일 뷰 표시 */
   .main{display:none;}
-  .mobile-view{display:block;padding:0.8rem 0.9rem;padding-bottom:calc(var(--nav-h) + 0.8rem);}
+  .mobile-view{
+    display:block;
+    padding:0.75rem;
+    padding-bottom:calc(var(--nav-h) + 0.75rem);
+  }
   .mobile-nav{display:flex;}
+  /* 모바일 사이트 그리드 3열로 축소 */
+  .m-sites-grid{grid-template-columns:repeat(3,1fr);}
 }

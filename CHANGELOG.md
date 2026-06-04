@@ -4,6 +4,15 @@
 
 ---
 
+## [2026-06-03] — feat: 전체 페이지 반응형(Responsive Web) UI 개선
+
+- `globals.css`: 모바일(~767px) / 태블릿(768~1023px) 미디어 쿼리 추가 — 헤더, 인증 카드, 필터바, 테이블, 모달, 칩 반응형 적용
+- `index.css`: 모바일 브레이크포인트 640px → 767px 조정, 태블릿 2열 그리드(768~1023px) 추가. 모바일에서 `.mobile-view` + `.mobile-nav` 자동 표시
+- `BudgetPage.css`: 브레이크포인트 640px → 767px 상향, 탭바 가로 스크롤, 폼 세로 스택, 테이블 가로 스크롤, 그리드 1열 변환 추가
+- Tailwind 미설치 → 기존 Custom CSS + 미디어 쿼리 방식 채택, 인증/API 로직 무변경
+
+---
+
 ## [2026-06-03] — fix: DailyTab 날짜 변경 시 이전 날짜 데이터가 유지되는 race condition 수정
 
 - `loadGenRef` (`useRef`) 세대 카운터 도입: `load()` 호출마다 세대 번호 증가

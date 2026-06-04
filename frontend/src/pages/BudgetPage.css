@@ -505,20 +505,71 @@
 }
 .bp-sub-del:hover { opacity: 1; }
 
-/* ── Mobile ──────────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
-  .bp-header  { padding: 0.7rem 1rem; gap: 0.5rem; }
+/* ══════════════════════════════════════════════════════════════════════════
+   반응형 미디어 쿼리
+   Mobile  : ~ 767px
+   Tablet  : 768px ~ 1023px
+   Desktop : 1024px~ (기본값)
+══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 모바일 (~ 767px) ── */
+@media (max-width: 767px) {
+  /* 헤더 */
+  .bp-header  { padding: 0.65rem 1rem; gap: 0.4rem; flex-wrap: wrap; }
   .bp-title   { font-size: 1rem; }
-  .bp-body    { padding: 1rem; }
+  .bp-cur-label { display: none; }
 
-  .bp-tabs    { padding: 0 0.75rem; }
-  .bp-tab     { padding: 0.5rem 0.65rem; font-size: 0.78rem; }
+  /* 탭바 — 가로 스크롤 */
+  .bp-tabs {
+    padding: 0 0.75rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+  }
+  .bp-tabs::-webkit-scrollbar { display: none; }
+  .bp-tab { padding: 0.5rem 0.65rem; font-size: 0.78rem; white-space: nowrap; }
 
+  /* 본문 */
+  .bp-body  { padding: 0.75rem; }
+  .bp-sec   { padding: 0; }
+
+  /* 툴바 — 세로 스택 */
+  .bp-toolbar { flex-wrap: wrap; gap: 0.4rem; }
+  .bp-date-inp { width: 100%; }
+
+  /* 폼 행 — 세로 스택 */
+  .bp-edit-row  { flex-direction: column; gap: 0.35rem; }
+  .bp-form-row  { flex-direction: column; gap: 0.35rem; }
+  .bp-add-form  { padding: 0.6rem 0.75rem; }
+
+  /* 입력 필드 폭 */
+  .bp-inp, .bp-sel { width: 100%; min-width: 0; }
+  .bp-sel-sm { width: 100%; }
+
+  /* 요약 수치 */
+  .bp-total-num  { font-size: 1.1rem; }
+  .bp-stat-box   { flex-direction: column; align-items: flex-start; gap: 0.4rem; }
+
+  /* 그리드 → 1열 */
   .bp-sum-grid   { grid-template-columns: 1fr; }
   .bp-charts     { grid-template-columns: 1fr; }
   .bp-cat-grid   { grid-template-columns: 1fr 1fr; }
-  .bp-total-num  { font-size: 1.1rem; }
 
-  .bp-cur-label  { display: none; }
-  .bp-stat-box   { flex-direction: column; align-items: flex-start; gap: 0.4rem; }
+  /* 테이블 가로 스크롤 */
+  .bp-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .bp-table      { min-width: 480px; }
+
+  /* 항목 행 — 세로 스택 */
+  .bp-item { flex-direction: column; align-items: flex-start; gap: 0.3rem; }
+  .bp-item-right { width: 100%; justify-content: flex-end; }
+}
+
+/* ── 태블릿 (768px ~ 1023px) ── */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .bp-body  { padding: 0.9rem 1.2rem; }
+  .bp-tabs  { padding: 0 1.2rem; }
+  .bp-charts { grid-template-columns: repeat(2, 1fr); }
+  .bp-sum-grid { grid-template-columns: repeat(2, 1fr); }
+  .bp-edit-row { flex-wrap: wrap; }
 }
