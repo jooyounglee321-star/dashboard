@@ -318,6 +318,11 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
     loadMonthly()
   }, [lang]) // eslint-disable-line
 
+  /* form.date 변경 시 해당 날짜 지출 목록 즉시 재조회 */
+  useEffect(() => {
+    if (form.date) loadExpenses(form.date)
+  }, [form.date]) // eslint-disable-line
+
   /* 자정 자동 리셋 — 매 1분 날짜 변경 감지 */
   useEffect(() => {
     const id = setInterval(() => {
