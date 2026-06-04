@@ -357,7 +357,7 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
         }),
       })
       setForm(f => ({ ...f, amount: '', description: '', subcategory_id: '' }))
-      await loadExpenses(curDate)
+      await loadExpenses(form.date)   // 현재 선택된 날짜 기준으로 리스트 갱신
       await loadMonthly()
     } finally {
       setSubmitting(false)
@@ -366,7 +366,7 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
 
   async function delExpense(id) {
     await fetch('/api/expense/' + id, { method: 'DELETE', headers: authH() })
-    await loadExpenses(curDate)
+    await loadExpenses(form.date)     // 현재 선택된 날짜 기준으로 리스트 갱신
     await loadMonthly()
   }
 
@@ -397,7 +397,7 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
       }),
     })
     setEditId(null)
-    await loadExpenses(curDate)
+    await loadExpenses(form.date)     // 현재 선택된 날짜 기준으로 리스트 갱신
     await loadMonthly()
   }
 
