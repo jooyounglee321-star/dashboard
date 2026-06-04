@@ -278,8 +278,8 @@
    Desktop : 1024px~   → 3-열 그리드 (기본값)
 ══════════════════════════════════════════════════════════════════════════ */
 
-/* ── 태블릿 (768px ~ 1023px) — 2열 그리드 ── */
-@media(min-width:768px) and (max-width:1023px){
+/* ── 태블릿 (768px ~ 959px) — 2열 그리드 ── */
+@media(min-width:768px) and (max-width:959px){
   .main{grid-template-columns:repeat(2,1fr);padding:1rem;}
   .card-hero,.card-stock{grid-column:span 2;}
   .card-yt{grid-column:span 2;}
@@ -287,6 +287,12 @@
   .hero-inner--1,.hero-inner--2,.hero-inner--3{grid-template-columns:1fr 1fr;}
   .hero-inner .time-zone:nth-child(4){display:none;}
   .hero-weather{max-width:180px;}
+}
+/* ── 960px+ — 기존 3열 유지 ── */
+@media(min-width:960px){
+  .main{grid-template-columns:repeat(3,1fr);}
+  .card-hero,.card-stock{grid-column:span 3;}
+  .card-yt{grid-column:span 2;}
 }
 
 /* ── 모바일 (~ 767px) — 모바일 레이아웃으로 전환 ── */
