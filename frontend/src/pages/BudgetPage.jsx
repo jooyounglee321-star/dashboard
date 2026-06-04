@@ -182,23 +182,32 @@ function DailyTab({ lang, currency, toDisplay }) {
   const [newForm, setNewForm] = useState(INIT_NEW_FORM)
   const [submitting, setSubmitting] = useState(false)
 
+  // 세대 카운터: 날짜가 바뀔 때마다 증가 → 이전 fetch 응답을 무시해 race condition 차단
+  const loadGenRef = useRef(0)
+
   useEffect(() => {
     apiGet(`/api/expense/categories?lang=${lang}`).then(d => setCats(d || [])).catch(() => {})
   }, [lang])
 
   const load = useCallback(() => {
+    const gen = ++loadGenRef.current          // 이 요청의 세대 번호를 캡처
     setLoading(true)
     apiGet(`/api/expense?date=${date}&lang=${lang}`)
-      .then(d => setItems(d || []))
+      .then(d => {
+        if (gen !== loadGenRef.current) return // 더 최신 요청이 생겼으면 결과 버림
+        setItems(d || [])
+      })
       .catch(err => {
-        // 로드 실패 시 items를 초기화하지 않음 — optimistic update 항목 보존
+        if (gen !== loadGenRef.current) return
         console.error('[DailyTab] 목록 로드 실패:', err)
       })
-      .finally(() => setLoading(false))
+      .finally(() => {
+        if (gen !== loadGenRef.current) return
+        setLoading(false)
+      })
   }, [date, lang])
 
-  // date·lang이 바뀌는 순간 즉시 해당일 데이터 재조회
-  // [load] 간접 의존 대신 [date, lang]을 직접 명시 → 날짜 변경 시 누락 없이 트리거
+  // date·lang 변경 시 즉시 재조회
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load() }, [date, lang])
 
