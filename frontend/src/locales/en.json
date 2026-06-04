@@ -410,7 +410,10 @@
     "saveBudget":    "Save Budget",
     "top5":          "Top 5 Categories",
     "vsLastMonth":   "vs Last Month",
-    "vsLastYear":    "vs Last Year"
+    "vsLastYear":    "vs Last Year",
+    "catNameKo":     "Korean name",
+    "catNameEn":     "English name",
+    "saveError":     "Failed to save. Please try again."
   },
 
   "category": {
