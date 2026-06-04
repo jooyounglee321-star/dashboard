@@ -12,6 +12,14 @@
 
 ---
 
+## [2026-06-03] — feat: 각 지출 카테고리에 Other/기타 소분류 추가
+
+- `_DEFAULT_CATEGORIES`: Utilities·Food·Housing·Transportation·Health·Education·Activities·Travel·Shopping 9개 카테고리 subs에 `{'name_en': 'Other', 'name_ko': '기타', 'icon': '📌', 'order_num': 99}` 추가
+- `_migrate_add_other_subcategory()` 신설: 이미 배포된 Railway DB에 소분류가 없으면 자동 INSERT (서버 시작 시 1회 실행, 중복 방지)
+- 'Other' 최상위 카테고리는 이미 기타 성격이므로 대상에서 제외
+
+---
+
 ## [2026-06-03] — fix: ExpenseCard 위젯 날짜 UTC 버그 수정 (PDT 오후 5시 이후 내일 날짜 표시)
 
 - `ExpenseCard.jsx` `todayStr()`: `new Date().toISOString().slice(0,10)` (UTC 기준) → `getFullYear/getMonth/getDate` (로컬 기준)으로 교체
