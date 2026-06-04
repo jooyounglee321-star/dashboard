@@ -383,9 +383,37 @@ function DailyTab({ lang, currency, toDisplay }) {
         : displayItems.length === 0
           ? <p className="bp-info bp-empty">{t(lang, 'budget.noExpense')}</p>
           : (
-            <ul className="bp-list">
+            /* ── 반응형 그리드: 인라인 style로 직접 주입 (CSS 캐시 무관) ──
+               auto-fill + minmax로 자동 열 수 계산
+               ~520px → 1열 / 520~820px → 2열 / 820px+ → 3열          */
+            <ul style={{
+              listStyle: 'none', margin: 0, padding: 0,
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+              gap: '1rem',
+              width: '100%',
+            }}>
               {displayItems.map(it => (
-                <li key={it.id} className={`bp-item${editId === it.id ? ' editing' : ''}`}>
+                <li key={it.id} style={editId === it.id ? {
+                  /* 수정 모드 카드 — 전체 너비 차지 */
+                  gridColumn: '1 / -1',
+                  background: 'rgba(232,160,96,0.06)',
+                  border: '1px solid rgba(232,160,96,0.25)',
+                  borderRadius: '1rem',
+                  padding: '1.1rem 1.25rem',
+                  display: 'flex', flexDirection: 'column', gap: '0.5rem',
+                } : {
+                  /* 일반 카드 */
+                  background: 'rgba(255,255,255,0.07)',
+                  border: '1px solid rgba(255,255,255,0.13)',
+                  borderRadius: '1rem',       /* rounded-2xl 상당 */
+                  padding: '1.25rem',          /* p-5 상당 */
+                  display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                  gap: '0.75rem',
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.22)',
+                  transition: 'box-shadow 0.15s',
+                  minHeight: '96px',
+                }}>
                   {editId === it.id ? (
                     <div className="bp-edit">
                       <div className="bp-edit-row">
@@ -419,23 +447,29 @@ function DailyTab({ lang, currency, toDisplay }) {
                   ) : (
                     <>
                       {/* 카드 상단: 카테고리 경로 + 메모 */}
-                      <div className="bp-item-left">
-                        <span className="bp-item-cat">
-                          {it.category_icon && <span className="bp-cat-icon">{it.category_icon}</span>}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', flex: 1, minWidth: 0 }}>
+                        <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#e0e6ef', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {it.category_icon && <span style={{ marginRight: '0.25rem' }}>{it.category_icon}</span>}
                           {it.category_name || '–'}
-                          {it.subcategory_name && <span className="bp-item-sub"> › {it.subcategory_name}</span>}
+                          {it.subcategory_name && <span style={{ color: '#9aacbf', fontWeight: 400 }}> › {it.subcategory_name}</span>}
                         </span>
-                        {it.description && <span className="bp-item-desc">{it.description}</span>}
+                        {it.description && (
+                          <span style={{ fontSize: '0.8rem', color: '#8fa0b4' }}>{it.description}</span>
+                        )}
                       </div>
                       {/* 카드 하단: 금액(왼쪽) + 액션 버튼(오른쪽) */}
-                      <div className="bp-item-right">
-                        <div className="bp-amt-wrap">
-                          <span className="bp-item-orig">{fmtAmt(it.amount, it.currency)}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.6rem', borderTop: '1px solid rgba(255,255,255,0.09)', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.06rem' }}>
+                          <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#e8a060', letterSpacing: '-0.01em' }}>
+                            {fmtAmt(it.amount, it.currency)}
+                          </span>
                           {it.currency !== currency && (
-                            <span className="bp-item-conv">≈ {fmtAmt(toDisplay(it.converted_amount ?? it.amount), currency)}</span>
+                            <span style={{ fontSize: '0.76rem', color: '#7a8fa6' }}>
+                              ≈ {fmtAmt(toDisplay(it.converted_amount ?? it.amount), currency)}
+                            </span>
                           )}
                         </div>
-                        <div className="bp-btn-wrap">
+                        <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
                           <button className="bp-icon-btn" onClick={() => startEdit(it)} title={t(lang, 'common.edit')}>✏️</button>
                           <button className="bp-icon-btn del" onClick={() => delItem(it.id)} title={t(lang, 'common.delete')}>🗑️</button>
                         </div>
