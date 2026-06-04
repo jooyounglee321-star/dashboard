@@ -410,7 +410,10 @@
     "saveBudget":    "예산 저장",
     "top5":          "최다 지출 TOP 5",
     "vsLastMonth":   "전월 대비",
-    "vsLastYear":    "전년 대비"
+    "vsLastYear":    "전년 대비",
+    "catNameKo":     "한국어",
+    "catNameEn":     "English",
+    "saveError":     "저장에 실패했습니다. 다시 시도해 주세요."
   },
 
   "category": {

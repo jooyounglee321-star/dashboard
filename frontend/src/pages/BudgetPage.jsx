@@ -186,7 +186,16 @@ function DailyTab({ lang, currency, toDisplay }) {
   const loadGenRef = useRef(0)
 
   useEffect(() => {
-    apiGet(`/api/expense/categories?lang=${lang}`).then(d => setCats(d || [])).catch(() => {})
+    // 카테고리 로드 실패 시 1회 재시도
+    apiGet(`/api/expense/categories?lang=${lang}`)
+      .then(d => { if (Array.isArray(d) && d.length) setCats(d) })
+      .catch(() => {
+        setTimeout(() => {
+          apiGet(`/api/expense/categories?lang=${lang}`)
+            .then(d => setCats(d || []))
+            .catch(err => console.error('[DailyTab] 카테고리 로드 실패:', err))
+        }, 1500)
+      })
   }, [lang])
 
   const load = useCallback(() => {
@@ -257,7 +266,7 @@ function DailyTab({ lang, currency, toDisplay }) {
       load()
     } catch (err) {
       console.error('[addExpense] 저장 실패:', err)
-      alert(t(lang, 'common.error') || '저장에 실패했습니다. 다시 시도해 주세요.')
+      alert(t(lang, 'budget.saveError'))
     } finally {
       setSubmitting(false)
     }
@@ -1161,9 +1170,9 @@ function SettingTab({ lang, currency, toDisplay }) {
           {/* 대분류 추가 */}
           <p className="bp-form-label">{t(lang, 'budgetAddCat')}</p>
           <div className="bp-form-row">
-            <input type="text" className="bp-inp" placeholder="한국어" value={newParent.name_ko}
+            <input type="text" className="bp-inp" placeholder={t(lang, 'budget.catNameKo')} value={newParent.name_ko}
               onChange={e => setNewParent(f => ({ ...f, name_ko: e.target.value }))} />
-            <input type="text" className="bp-inp" placeholder="English" value={newParent.name_en}
+            <input type="text" className="bp-inp" placeholder={t(lang, 'budget.catNameEn')} value={newParent.name_en}
               onChange={e => setNewParent(f => ({ ...f, name_en: e.target.value }))} />
             <input type="text" className="bp-inp-icon" placeholder="🏷️" value={newParent.icon}
               onChange={e => setNewParent(f => ({ ...f, icon: e.target.value }))} />
@@ -1178,9 +1187,9 @@ function SettingTab({ lang, currency, toDisplay }) {
               <option value="">{t(lang, 'expenseCatPh')}</option>
               {cats.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
             </select>
-            <input type="text" className="bp-inp" placeholder="한국어" value={newSub.name_ko}
+            <input type="text" className="bp-inp" placeholder={t(lang, 'budget.catNameKo')} value={newSub.name_ko}
               onChange={e => setNewSub(f => ({ ...f, name_ko: e.target.value }))} />
-            <input type="text" className="bp-inp" placeholder="English" value={newSub.name_en}
+            <input type="text" className="bp-inp" placeholder={t(lang, 'budget.catNameEn')} value={newSub.name_en}
               onChange={e => setNewSub(f => ({ ...f, name_en: e.target.value }))} />
             <button className="bp-btn-primary" onClick={addSubCat}>{t(lang, 'common.add')}</button>
           </div>
