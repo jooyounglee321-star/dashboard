@@ -126,11 +126,11 @@ export default function BudgetPage() {
   }, [currency, rateMap])
 
   const TABS = [
-    t(lang, 'budget.daily'),
-    t(lang, 'budget.monthly'),
-    t(lang, 'budget.yearly'),
+    t(lang, 'budget.daily_tab'),
+    t(lang, 'budget.monthly_tab'),
+    t(lang, 'budget.yearly_tab'),
     t(lang, 'budget.summary'),
-    t(lang, 'budget.budgetSetting'),
+    t(lang, 'budget.budget_tab'),
   ]
 
   return (
