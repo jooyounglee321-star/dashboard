@@ -56,6 +56,8 @@ class ExpenseCategory(Base):
     name_ko: Mapped[str] = mapped_column(String(100), nullable=False)
     name_en: Mapped[str] = mapped_column(String(100), nullable=False)
     icon: Mapped[str | None] = mapped_column(String(50), nullable=True)       # 이모지 또는 아이콘 코드
+    code: Mapped[str | None] = mapped_column(String(30), nullable=True, index=True)  # 'REGULAR','SALARY' 등
+    category_type: Mapped[str] = mapped_column(String(10), nullable=False, default="expense")  # 'expense'|'income'
     order_num: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
