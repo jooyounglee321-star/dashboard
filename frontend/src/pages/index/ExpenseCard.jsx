@@ -107,6 +107,16 @@ function ExpForm({ compact, form, setForm, categories, subs, incomeCats, lang, s
         )}
       </div>
 
+      {/* 메모 */}
+      <input
+        className="exp-desc-inp"
+        type="text"
+        placeholder={t(lang, 'expenseDescPh')}
+        value={form.description}
+        onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+        onKeyDown={e => e.key === 'Enter' && addExpense()}
+      />
+
       {/* 통화 / 금액 */}
       <div className="exp-cur-row">
         <select
@@ -129,16 +139,6 @@ function ExpForm({ compact, form, setForm, categories, subs, incomeCats, lang, s
           onKeyDown={e => e.key === 'Enter' && addExpense()}
         />
       </div>
-
-      {/* 메모 */}
-      <input
-        className="exp-desc-inp"
-        type="text"
-        placeholder={t(lang, 'expenseDescPh')}
-        value={form.description}
-        onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-        onKeyDown={e => e.key === 'Enter' && addExpense()}
-      />
 
       {/* 날짜 / 추가 */}
       <div className="exp-date-row">
