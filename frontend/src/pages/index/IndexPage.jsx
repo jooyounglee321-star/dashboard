@@ -116,7 +116,15 @@ export default function IndexPage() {
   useEffect(() => {
     fetch('/api/auth/widget-config', { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } })
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.config) setWidgetCfg(d.config) })
+      .then(d => {
+        if (d?.config) {
+          setWidgetCfg(d.config)
+          // BudgetPage 등 다른 페이지가 localStorage에서 언어를 읽으므로 동기화
+          if (d.config.language) {
+            try { localStorage.setItem('dashboard_lang', d.config.language) } catch {}
+          }
+        }
+      })
       .catch(() => {})
   }, [])
 
