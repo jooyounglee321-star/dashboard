@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { t } from './i18n'
+import { INCOME_CATEGORIES, getSubcategories } from '../../data/incomeCategories'
 
 /* ── 통화 목록 ──────────────────────────────────────────────────────────── */
 const CURRENCIES = [
@@ -31,35 +32,31 @@ function fmtAmt(amount, currency) {
 }
 
 const INIT_FORM = () => ({
-  date: todayStr(),
-  category_id: '',
-  subcategory_id: '',
-  amount: '',
-  currency: 'USD',
-  description: '',
-  type: 'expense',   // 'expense' | 'income'
+  date:             todayStr(),
+  category_id:      '',
+  subcategory_id:   '',
+  income_main_code: '',   // income 전용 대분류 code
+  income_sub_code:  '',   // income 전용 소분류 code
+  amount:           '',
+  currency:         'USD',
+  description:      '',
+  type:             'expense',   // 'expense' | 'income'
 })
 
-/* 수입 전용 대분류 옵션 (DB 카테고리 미적재 단계에서 프론트 가상 목록으로 처리) */
-const INCOME_CATS = (lang) => [
-  { id: '__primary__',   name: t(lang, 'budget.primary_income'),   icon: '💰' },
-  { id: '__secondary__', name: t(lang, 'budget.secondary_income'), icon: '💵' },
-  { id: '__other__',     name: t(lang, 'budget.other_income'),     icon: '💫' },
-]
 
 /* ═══════════════════════════════════════════════════════════════════════════
    서브컴포넌트 — ExpenseCard 함수 바깥에 선언해야 재렌더 시 재마운트되지 않음
 ═══════════════════════════════════════════════════════════════════════════ */
 
-function ExpForm({ compact, form, setForm, categories, subs, incomeCats, lang, submitting, addExpense }) {
+function ExpForm({ compact, form, setForm, categories, subs, lang, submitting, addExpense }) {
   const isIncome = form.type === 'income'
 
   /* 수입/지출 토글 클릭 → type 변경 + 카테고리 초기화 */
   const switchType = (type) =>
-    setForm(f => ({ ...f, type, category_id: '', subcategory_id: '' }))
+    setForm(f => ({ ...f, type, category_id: '', subcategory_id: '', income_main_code: '', income_sub_code: '' }))
 
-  /* 대분류 목록: 수입이면 INCOME_CATS, 지출이면 일반 categories */
-  const displayCats = isIncome ? incomeCats : categories
+  /* income: 선택한 대분류의 소분류 목록 */
+  const incomeSubs = getSubcategories(form.income_main_code)
 
   return (
     <div className="exp-new-form">
@@ -83,17 +80,48 @@ function ExpForm({ compact, form, setForm, categories, subs, incomeCats, lang, s
 
       {/* 대분류 / 소분류 */}
       <div className={compact ? 'exp-sel-pair-col' : 'exp-sel-pair'}>
-        <select
-          value={form.category_id}
-          onChange={e => setForm(f => ({ ...f, category_id: e.target.value, subcategory_id: '' }))}
-        >
-          <option value="">{t(lang, 'expenseCatPh')}</option>
-          {displayCats.map(c => (
-            <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-          ))}
-        </select>
-        {/* 소분류: 수입 모드에서는 숨김 (수입 카테고리는 단일 레벨) */}
-        {!isIncome && (
+        {isIncome ? (
+          /* ── 수입: DB 기반 대분류 ── */
+          <select
+            value={form.income_main_code}
+            onChange={e => setForm(f => ({ ...f, income_main_code: e.target.value, income_sub_code: '' }))}
+          >
+            <option value="">{t(lang, 'expenseCatPh')}</option>
+            {INCOME_CATEGORIES.map(c => (
+              <option key={c.code} value={c.code}>
+                {c.icon} {lang === 'ko' ? c.name_ko : c.name_en}
+              </option>
+            ))}
+          </select>
+        ) : (
+          /* ── 지출: 기존 expense 카테고리 ── */
+          <select
+            value={form.category_id}
+            onChange={e => setForm(f => ({ ...f, category_id: e.target.value, subcategory_id: '' }))}
+          >
+            <option value="">{t(lang, 'expenseCatPh')}</option>
+            {categories.map(c => (
+              <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+            ))}
+          </select>
+        )}
+
+        {isIncome ? (
+          /* ── 수입: 소분류 ── */
+          <select
+            value={form.income_sub_code}
+            onChange={e => setForm(f => ({ ...f, income_sub_code: e.target.value }))}
+            disabled={!form.income_main_code}
+          >
+            <option value="">{t(lang, 'expenseSubcatPh')}</option>
+            {incomeSubs.map(s => (
+              <option key={s.code} value={s.code}>
+                {s.icon} {lang === 'ko' ? s.name_ko : s.name_en}
+              </option>
+            ))}
+          </select>
+        ) : (
+          /* ── 지출: 소분류 ── */
           <select
             value={form.subcategory_id}
             onChange={e => setForm(f => ({ ...f, subcategory_id: e.target.value }))}
@@ -107,7 +135,7 @@ function ExpForm({ compact, form, setForm, categories, subs, incomeCats, lang, s
         )}
       </div>
 
-      {/* 메모 */}
+      {/* 메모 — 수입/지출 모두 별도 행 */}
       <input
         className="exp-desc-inp"
         type="text"
@@ -314,9 +342,8 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
   const [editForm,setEditForm]= useState({})
 
   /* 파생값 */
-  const selCat    = categories.find(c => c.id === Number(form.category_id))
-  const subs      = selCat?.subs ?? []
-  const incomeCats = INCOME_CATS(lang)   // 수입 카테고리 (언어 반응형)
+  const selCat = categories.find(c => c.id === Number(form.category_id))
+  const subs   = selCat?.subs ?? []
 
   const authH = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') })
 
@@ -382,29 +409,44 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
     if (!form.amount || Number(form.amount) <= 0) return
     setSubmitting(true)
     const isIncome = form.type === 'income'
-    // 수입 모드: 가상 카테고리 ID는 DB에 없으므로 category_id = null,
-    //           선택한 수입 종류를 description 앞에 붙여 기록
-    const incomeCatName = isIncome && form.category_id
-      ? INCOME_CATS(lang).find(c => c.id === form.category_id)?.name
-      : null
-    const description = form.description.trim() ||
-      (incomeCatName ?? null)
     try {
-      await fetch('/api/expense', {
-        method: 'POST',
-        headers: { ...authH(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          date:           form.date,
-          amount:         Number(form.amount),
-          currency:       form.currency,
-          category_id:    !isIncome && form.category_id    ? Number(form.category_id)    : null,
-          subcategory_id: !isIncome && form.subcategory_id ? Number(form.subcategory_id) : null,
-          description,
-          type:           form.type,
-          lang,
-        }),
-      })
-      setForm(f => ({ ...f, amount: '', description: '', category_id: '', subcategory_id: '' }))
+      if (isIncome) {
+        /* ── 수입: /api/income (code 기반) ── */
+        await fetch('/api/income', {
+          method: 'POST',
+          headers: { ...authH(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            category_code:    form.income_main_code || null,
+            subcategory_code: form.income_sub_code  || null,
+            description:      form.description.trim() || null,
+            currency:         form.currency,
+            amount:           Number(form.amount),
+            date:             form.date,
+          }),
+        })
+      } else {
+        /* ── 지출: /api/expense (id 기반) ── */
+        await fetch('/api/expense', {
+          method: 'POST',
+          headers: { ...authH(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            date:           form.date,
+            amount:         Number(form.amount),
+            currency:       form.currency,
+            category_id:    form.category_id    ? Number(form.category_id)    : null,
+            subcategory_id: form.subcategory_id ? Number(form.subcategory_id) : null,
+            description:    form.description.trim() || null,
+            type:           'expense',
+            lang,
+          }),
+        })
+      }
+      setForm(f => ({
+        ...f,
+        amount: '', description: '',
+        category_id: '', subcategory_id: '',
+        income_main_code: '', income_sub_code: '',
+      }))
       await loadExpenses(form.date)
       await loadMonthly()
     } finally {
@@ -472,7 +514,6 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
             setForm={setForm}
             categories={categories}
             subs={subs}
-            incomeCats={incomeCats}
             lang={lang}
             submitting={submitting}
             addExpense={addExpense}
