@@ -40,6 +40,7 @@ from routers import bookmarks, diets, expenses, memos, stocks, timezone, youtube
 from routers import portfolio as portfolio_router
 from routers import admin as admin_router
 from routers.expense import expense_router, exchange_router, do_refresh_rates
+from routers.income import income_router
 
 logger = logging.getLogger(__name__)
 
@@ -534,6 +535,124 @@ def _migrate_add_other_subcategory():
         db.close()
 
 
+def _migrate_add_category_code_fields():
+    """expense_categories 테이블에 code, category_type 컬럼 추가 — 수입 카테고리 코드 지원."""
+    with engine.connect() as conn:
+        try:
+            existing = {c["name"] for c in inspect(conn).get_columns("expense_categories")}
+        except Exception:
+            return
+        for col_name, col_def in [
+            ("code",          "VARCHAR(30)"),
+            ("category_type", "VARCHAR(10) DEFAULT 'expense'"),
+        ]:
+            if col_name not in existing:
+                try:
+                    conn.execute(text(f"ALTER TABLE expense_categories ADD COLUMN {col_name} {col_def}"))
+                    conn.commit()
+                    logger.info("[MIGRATE] expense_categories.%s 컬럼 추가", col_name)
+                except Exception as e:
+                    logger.warning("[MIGRATE] expense_categories.%s 컬럼 추가 실패: %s", col_name, e)
+            else:
+                logger.info("[MIGRATE] expense_categories.%s — 이미 존재, 건너뜀", col_name)
+
+
+_DEFAULT_INCOME_CATEGORIES = [
+    {
+        'code': 'REGULAR', 'name_en': 'Regular Income', 'name_ko': '주수입 (정기)',
+        'icon': '💰', 'order_num': 1,
+        'subs': [
+            {'code': 'SALARY',   'name_en': 'Base Salary / Paycheck',   'name_ko': '급여 / 월급',     'icon': '🏦', 'order_num': 1},
+            {'code': 'BONUS',    'name_en': 'Bonus / Incentives',       'name_ko': '상여금 / 성과급', 'icon': '🎁', 'order_num': 2},
+            {'code': 'SIDE_JOB', 'name_en': 'Side Hustle / Freelance',  'name_ko': '부업 / 외주 수익','icon': '💼', 'order_num': 3},
+        ],
+    },
+    {
+        'code': 'IRREGULAR', 'name_en': 'Irregular Income', 'name_ko': '부수입 (비정기)',
+        'icon': '📦', 'order_num': 2,
+        'subs': [
+            {'code': 'SUBSIDY',   'name_en': 'Government Subsidy / Tax Refund', 'name_ko': '정부 보조금 / 환급금', 'icon': '🏛️', 'order_num': 1},
+            {'code': 'GIFT',      'name_en': 'Pocket Money / Gift Cash',        'name_ko': '용돈 / 축의금',        'icon': '🎀', 'order_num': 2},
+            {'code': 'USED_SALES','name_en': 'Used Items Sales',                'name_ko': '중고 판매 수익',       'icon': '♻️', 'order_num': 3},
+            {'code': 'OTHER_INC', 'name_en': 'Other Miscellaneous Income',      'name_ko': '기타 부수입',          'icon': '📌', 'order_num': 4},
+        ],
+    },
+    {
+        'code': 'INVESTMENT', 'name_en': 'Investment Income', 'name_ko': '금융 / 투자',
+        'icon': '📈', 'order_num': 3,
+        'subs': [
+            {'code': 'INTEREST',    'name_en': 'Interest Income',          'name_ko': '이자 수익',        'icon': '🏧', 'order_num': 1},
+            {'code': 'DIVIDEND',    'name_en': 'Dividend / Distribution',  'name_ko': '배당금',           'icon': '💹', 'order_num': 2},
+            {'code': 'CAPITAL_GAIN','name_en': 'Investment Capital Gains', 'name_ko': '투자 실현 익절',   'icon': '📊', 'order_num': 3},
+            {'code': 'RENTAL_INC',  'name_en': 'Rental Income',            'name_ko': '부동산 임대료',    'icon': '🏠', 'order_num': 4},
+        ],
+    },
+    {
+        'code': 'TRANSFER', 'name_en': 'Asset Transfer', 'name_ko': '자산 이동',
+        'icon': '🔄', 'order_num': 4,
+        'subs': [
+            {'code': 'INSURANCE', 'name_en': 'Insurance Payout',       'name_ko': '보험금 수령',            'icon': '🛡️', 'order_num': 1},
+            {'code': 'LOAN',      'name_en': 'Borrowed Money / Loan',  'name_ko': '빌린 돈 / 대출금',       'icon': '🏦', 'order_num': 2},
+            {'code': 'REFUND',    'name_en': 'Card Refund',            'name_ko': '카드 대금 환급 / 취소',  'icon': '↩️', 'order_num': 3},
+        ],
+    },
+]
+
+
+def _seed_income_categories():
+    """수입 카테고리 시드 — category_type='income', code 포함.
+
+    이미 income 카테고리가 존재하면 스킵.
+    """
+    db = SessionLocal()
+    try:
+        already = db.query(ExpenseCategory).filter(
+            ExpenseCategory.category_type == "income",
+            ExpenseCategory.is_default == True,   # noqa: E712
+        ).count()
+        if already > 0:
+            logger.info("[SEED] 수입 카테고리 — 이미 존재(%d개), 건너뜀", already)
+            return
+
+        total_subs = 0
+        for cat in _DEFAULT_INCOME_CATEGORIES:
+            parent = ExpenseCategory(
+                user_id=None,
+                parent_id=None,
+                code=cat['code'],
+                category_type="income",
+                name_en=cat['name_en'],
+                name_ko=cat['name_ko'],
+                icon=cat['icon'],
+                order_num=cat['order_num'],
+                is_default=True,
+                is_active=True,
+            )
+            db.add(parent)
+            db.flush()
+            for sub in cat.get('subs', []):
+                db.add(ExpenseCategory(
+                    user_id=None,
+                    parent_id=parent.id,
+                    code=sub['code'],
+                    category_type="income",
+                    name_en=sub['name_en'],
+                    name_ko=sub['name_ko'],
+                    icon=sub['icon'],
+                    order_num=sub['order_num'],
+                    is_default=True,
+                    is_active=True,
+                ))
+                total_subs += 1
+        db.commit()
+        logger.info("[SEED] 수입 카테고리 시드 완료 — 대분류 4개, 소분류 %d개", total_subs)
+    except Exception as e:
+        logger.warning("[SEED] 수입 카테고리 시드 실패: %s", e)
+        db.rollback()
+    finally:
+        db.close()
+
+
 def _seed_default_permissions():
     """permissions 테이블이 비어 있을 때 기본 권한을 시드."""
     db = SessionLocal()
@@ -576,11 +695,13 @@ async def lifespan(app: FastAPI):
     _migrate_expense_columns()
     _migrate_expense_type_column()
     _migrate_user_roles()
+    _migrate_add_category_code_fields()
     _seed_admin_email()
     _seed_default_permissions()
     _seed_exchange_rates()
     _seed_expense_categories()
     _migrate_add_other_subcategory()
+    _seed_income_categories()
     logger.info("[DB] 테이블 생성/확인 완료")
 
     # APScheduler: 매일 23:59:00 KST 포트폴리오 스냅샷
@@ -620,6 +741,7 @@ app.include_router(auth_router.router, prefix="/api")
 app.include_router(expenses.router, prefix="/api")       # 레거시 /api/expenses
 app.include_router(expense_router,   prefix="/api")       # 신규 /api/expense
 app.include_router(exchange_router,  prefix="/api")       # 신규 /api/exchange-rates
+app.include_router(income_router,    prefix="/api")       # 신규 /api/income
 app.include_router(diets.router, prefix="/api")
 app.include_router(memos.router, prefix="/api")
 app.include_router(stocks.router, prefix="/api")

@@ -133,6 +133,22 @@
 
 ---
 
+## [2026-06-05] — feat: 수입(Income) 카테고리 구조 신설 및 API 구현
+
+### DB 변경
+- `expense_categories` 테이블에 `code VARCHAR(30)`, `category_type VARCHAR(10)` 컬럼 추가
+- 수입 대분류 4개(REGULAR/IRREGULAR/INVESTMENT/TRANSFER) + 소분류 14개 시드 데이터 추가
+
+### 백엔드
+- `routers/income.py` 신규 생성 — `GET/POST/PUT/DELETE /api/income` + `/api/income/categories` + `/api/income/summary/monthly`
+- `main.py`: `_migrate_add_category_code_fields()`, `_seed_income_categories()` 추가
+
+### 프론트엔드
+- `frontend/src/data/incomeCategories.js` 생성 — 대분류→소분류 동적 드롭다운 상수 데이터 (ko/en 다국어)
+- `getSubcategories(mainCode)`, `getCategoryName(code, lang)`, `INCOME_CATEGORIES_FLAT` 헬퍼 포함
+
+---
+
 ## [2026-06-03] — fix: Python 3.14 PEP 649 + Pydantic v2 타입 어노테이션 충돌 수정
 
 - 원인: `routers/expense.py`에서 필드명 `date`와 타입명 `date`(datetime.date)의 이름 충돌
