@@ -170,7 +170,14 @@ export default function BudgetPage() {
 // ══════════════════════════════════════════════════════════════════════════════
 // Tab 1 — 일별
 // ══════════════════════════════════════════════════════════════════════════════
-const INIT_NEW_FORM = { category_id: '', subcategory_id: '', amount: '', currency: 'USD', description: '' }
+const INIT_NEW_FORM = { category_id: '', subcategory_id: '', amount: '', currency: 'USD', description: '', type: 'expense' }
+
+/* 수입 전용 가상 카테고리 (ExpenseCard와 동일 패턴) */
+const BP_INCOME_CATS = (lang) => [
+  { id: '__primary__',   name: t(lang, 'budget.primary_income'),   icon: '💰' },
+  { id: '__secondary__', name: t(lang, 'budget.secondary_income'), icon: '💵' },
+  { id: '__other__',     name: t(lang, 'budget.other_income'),     icon: '💫' },
+]
 
 function DailyTab({ lang, currency, toDisplay }) {
   const [date, setDate]     = useState(todayStr)
@@ -234,35 +241,41 @@ function DailyTab({ lang, currency, toDisplay }) {
     catMap[cat] = (catMap[cat] || 0) + usd
   })
 
-  const newFormSubs = newForm.category_id
+  const isNewIncome  = newForm.type === 'income'
+  const isEditIncome = editForm.type === 'income'
+  const newIncomeCats = BP_INCOME_CATS(lang)
+
+  // 신규 폼: 수입이면 가상 카테고리, 지출이면 일반 cats
+  const newDisplayCats = isNewIncome ? newIncomeCats : cats
+  const newFormSubs = (!isNewIncome && newForm.category_id)
     ? (cats.find(c => c.id === Number(newForm.category_id))?.subs ?? [])
     : []
 
-  const editSubs = editForm.category_id
+  // 수정 폼: 수입이면 가상 카테고리, 지출이면 일반 cats
+  const editDisplayCats = isEditIncome ? newIncomeCats : cats
+  const editSubs = (!isEditIncome && editForm.category_id)
     ? (cats.find(c => c.id === Number(editForm.category_id))?.subs ?? [])
     : []
 
   async function addExpense() {
-    // amount를 명시적으로 파싱 — NaN/Infinity/음수 전부 차단
     const amt = parseFloat(newForm.amount)
     if (isNaN(amt) || amt <= 0) return
     setSubmitting(true)
+    const incomeCatName = isNewIncome && newForm.category_id
+      ? newIncomeCats.find(c => c.id === newForm.category_id)?.name : null
     try {
-      // POST 응답으로 서버가 반환한 저장 완료 객체(카테고리명·아이콘 포함)를 받음
       const saved = await apiReq('POST', '/api/expense', {
         date:           date,
         amount:         amt,
-        currency:       newForm.currency       || 'USD',
-        category_id:    newForm.category_id    ? Number(newForm.category_id)    : null,
-        subcategory_id: newForm.subcategory_id ? Number(newForm.subcategory_id) : null,
-        description:    newForm.description.trim() || null,
+        currency:       newForm.currency || 'USD',
+        category_id:    !isNewIncome && newForm.category_id    ? Number(newForm.category_id)    : null,
+        subcategory_id: !isNewIncome && newForm.subcategory_id ? Number(newForm.subcategory_id) : null,
+        description:    newForm.description.trim() || incomeCatName || null,
+        type:           newForm.type,
         lang,
       })
-      // 날짜는 유지, 금액·메모·소분류만 초기화
-      setNewForm(f => ({ ...f, amount: '', description: '', subcategory_id: '' }))
-      // ① 즉시 반영: POST 응답 객체를 목록 맨 앞에 바로 추가 → 네트워크 지연 없이 화면에 표시
+      setNewForm(f => ({ ...f, amount: '', description: '', subcategory_id: '', category_id: '' }))
       if (saved) setItems(prev => [saved, ...prev])
-      // ② 완전 동기화: 서버에서 해당 날짜 전체 목록을 다시 불러와 정합성 보장
       load()
     } catch (err) {
       console.error('[addExpense] 저장 실패:', err)
@@ -275,11 +288,12 @@ function DailyTab({ lang, currency, toDisplay }) {
   function startEdit(it) {
     setEditId(it.id)
     setEditForm({
-      amount: it.amount,
-      currency: it.currency || 'USD',
-      description: it.description || '',
-      category_id: it.category_id || '',
+      amount:         it.amount,
+      currency:       it.currency || 'USD',
+      description:    it.description || '',
+      category_id:    it.category_id || '',
       subcategory_id: it.subcategory_id || '',
+      type:           it.type || 'expense',
     })
   }
 
@@ -289,10 +303,11 @@ function DailyTab({ lang, currency, toDisplay }) {
     try {
       await apiReq('PUT', `/api/expense/${editId}`, {
         amount:         amt,
-        currency:       editForm.currency       || 'USD',
-        description:    editForm.description    || null,
-        category_id:    editForm.category_id    ? Number(editForm.category_id)    : null,
-        subcategory_id: editForm.subcategory_id ? Number(editForm.subcategory_id) : null,
+        currency:       editForm.currency    || 'USD',
+        description:    editForm.description || null,
+        category_id:    !isEditIncome && editForm.category_id    ? Number(editForm.category_id)    : null,
+        subcategory_id: !isEditIncome && editForm.subcategory_id ? Number(editForm.subcategory_id) : null,
+        type:           editForm.type || 'expense',
         lang,
       })
     } catch (err) {
@@ -330,20 +345,35 @@ function DailyTab({ lang, currency, toDisplay }) {
         <button className="bp-btn-sm" onClick={doExport}>📥 {t(lang, 'budget.exportCSV')}</button>
       </div>
 
-      {/* 지출 등록 폼 — date는 위 날짜 picker 값 그대로 사용, 저장 후 날짜 유지 */}
+      {/* 등록 폼 */}
       <div className="bp-add-form">
+        {/* 지출 / 수입 토글 */}
+        <div className="bp-type-toggle">
+          <button type="button"
+            className={`bp-type-btn${!isNewIncome ? ' active expense' : ''}`}
+            onClick={() => setNewForm(f => ({ ...f, type: 'expense', category_id: '', subcategory_id: '' }))}>
+            💸 {t(lang, 'budget.expense')}
+          </button>
+          <button type="button"
+            className={`bp-type-btn${isNewIncome ? ' active income' : ''}`}
+            onClick={() => setNewForm(f => ({ ...f, type: 'income', category_id: '', subcategory_id: '' }))}>
+            💰 {t(lang, 'budget.income')}
+          </button>
+        </div>
         <div className="bp-edit-row">
           <select className="bp-sel" value={newForm.category_id}
             onChange={e => setNewForm(f => ({ ...f, category_id: e.target.value, subcategory_id: '' }))}>
             <option value="">{t(lang, 'expenseCatPh')}</option>
-            {cats.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+            {newDisplayCats.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
           </select>
-          <select className="bp-sel" value={newForm.subcategory_id}
-            onChange={e => setNewForm(f => ({ ...f, subcategory_id: e.target.value }))}
-            disabled={!newFormSubs.length}>
-            <option value="">{t(lang, 'expenseSubcatPh')}</option>
-            {newFormSubs.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
+          {!isNewIncome && (
+            <select className="bp-sel" value={newForm.subcategory_id}
+              onChange={e => setNewForm(f => ({ ...f, subcategory_id: e.target.value }))}
+              disabled={!newFormSubs.length}>
+              <option value="">{t(lang, 'expenseSubcatPh')}</option>
+              {newFormSubs.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          )}
         </div>
         <div className="bp-edit-row">
           <input type="number" className="bp-inp" placeholder={t(lang, 'budget.amount')}
@@ -416,17 +446,32 @@ function DailyTab({ lang, currency, toDisplay }) {
                 }}>
                   {editId === it.id ? (
                     <div className="bp-edit">
+                      {/* 수정 모달 — 지출/수입 토글 */}
+                      <div className="bp-type-toggle" style={{ marginBottom: '0.4rem' }}>
+                        <button type="button"
+                          className={`bp-type-btn${!isEditIncome ? ' active expense' : ''}`}
+                          onClick={() => setEditForm(f => ({ ...f, type: 'expense', category_id: '', subcategory_id: '' }))}>
+                          💸 {t(lang, 'budget.expense')}
+                        </button>
+                        <button type="button"
+                          className={`bp-type-btn${isEditIncome ? ' active income' : ''}`}
+                          onClick={() => setEditForm(f => ({ ...f, type: 'income', category_id: '', subcategory_id: '' }))}>
+                          💰 {t(lang, 'budget.income')}
+                        </button>
+                      </div>
                       <div className="bp-edit-row">
                         <select className="bp-sel" value={editForm.category_id}
                           onChange={e => setEditForm(f => ({ ...f, category_id: e.target.value, subcategory_id: '' }))}>
                           <option value="">{t(lang, 'expenseCatPh')}</option>
-                          {cats.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+                          {editDisplayCats.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
                         </select>
-                        <select className="bp-sel" value={editForm.subcategory_id}
-                          onChange={e => setEditForm(f => ({ ...f, subcategory_id: e.target.value }))}>
-                          <option value="">{t(lang, 'expenseSubcatPh')}</option>
-                          {editSubs.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                        </select>
+                        {!isEditIncome && (
+                          <select className="bp-sel" value={editForm.subcategory_id}
+                            onChange={e => setEditForm(f => ({ ...f, subcategory_id: e.target.value }))}>
+                            <option value="">{t(lang, 'expenseSubcatPh')}</option>
+                            {editSubs.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                          </select>
+                        )}
                       </div>
                       <div className="bp-edit-row">
                         <input type="number" className="bp-inp" value={editForm.amount}
@@ -446,8 +491,16 @@ function DailyTab({ lang, currency, toDisplay }) {
                     </div>
                   ) : (
                     <>
-                      {/* 카드 상단: 카테고리 경로 + 메모 */}
+                      {/* 카드 상단: 수입/지출 배지 + 카테고리 경로 + 메모 */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', flex: 1, minWidth: 0 }}>
+                        {/* 수입 배지 */}
+                        {it.type === 'income' && (
+                          <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#60c080',
+                            background: 'rgba(96,192,128,0.12)', borderRadius: '4px',
+                            padding: '0.1rem 0.4rem', display: 'inline-block', width: 'fit-content' }}>
+                            💰 {t(lang, 'budget.income')}
+                          </span>
+                        )}
                         <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#e0e6ef', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {it.category_icon && <span style={{ marginRight: '0.25rem' }}>{it.category_icon}</span>}
                           {it.category_name || '–'}
@@ -460,12 +513,16 @@ function DailyTab({ lang, currency, toDisplay }) {
                       {/* 카드 하단: 금액(왼쪽) + 액션 버튼(오른쪽) */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.6rem', borderTop: '1px solid rgba(255,255,255,0.09)', gap: '0.5rem' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.06rem' }}>
-                          <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#e8a060', letterSpacing: '-0.01em' }}>
-                            {fmtAmt(it.amount, it.currency)}
+                          {/* 수입: 초록 + 기호 / 지출: 주황 */}
+                          <span style={{
+                            fontSize: '1.05rem', fontWeight: 700, letterSpacing: '-0.01em',
+                            color: it.type === 'income' ? '#60c080' : '#e8a060',
+                          }}>
+                            {it.type === 'income' ? '+' : ''}{fmtAmt(it.amount, it.currency)}
                           </span>
                           {it.currency !== currency && (
                             <span style={{ fontSize: '0.76rem', color: '#7a8fa6' }}>
-                              ≈ {fmtAmt(toDisplay(it.converted_amount ?? it.amount), currency)}
+                              ≈ {it.type === 'income' ? '+' : ''}{fmtAmt(toDisplay(it.converted_amount ?? it.amount), currency)}
                             </span>
                           )}
                         </div>

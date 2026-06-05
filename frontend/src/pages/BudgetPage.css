@@ -449,6 +449,30 @@
 .bp-over-nums   { display: flex; flex-direction: column; align-items: flex-end; gap: 0.1rem; }
 .bp-over-detail { font-size: 0.74rem; color: #888; }
 
+/* ── 지출/수입 세그먼트 토글 ─────────────────────────────────────────────── */
+.bp-type-toggle {
+  display: flex;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.12);
+  margin-bottom: 0.35rem;
+}
+.bp-type-btn {
+  flex: 1;
+  padding: 0.38rem 0;
+  border: none;
+  background: rgba(255,255,255,0.04);
+  color: #888;
+  font-size: 0.82rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 400;
+}
+.bp-type-btn:hover { color: #ccc; background: rgba(255,255,255,0.08); }
+.bp-type-btn.active.expense { background: #c4662a; color: #fff; font-weight: 600; }
+.bp-type-btn.active.income  { background: #3a7a50; color: #fff; font-weight: 600; }
+
 /* ── Daily Add Form ──────────────────────────────────────────────────────── */
 .bp-add-form {
   display: flex;
