@@ -52,6 +52,7 @@ class ExpenseIn(BaseModel):
     subcategory_id: int | None = None
     description:    str | None = None
     lang:           str = "ko"
+    type:           str = "expense"   # 'expense' | 'income'
 
 
 class ExpensePatch(BaseModel):
@@ -62,6 +63,7 @@ class ExpensePatch(BaseModel):
     subcategory_id: int | None = None
     description:    str | None = None
     lang:           str = "ko"
+    type:           str | None = None  # 'expense' | 'income'
 
 
 class BudgetIn(BaseModel):
@@ -136,6 +138,7 @@ def _expense_dict(e: Expense, db: Session, lang: str = "ko") -> dict:
         "subcategory_icon": sub.icon if sub else None,
         "description":      e.description,
         "created_at":       e.created_at.isoformat(),
+        "type":             getattr(e, "type", "expense") or "expense",
     }
 
 
@@ -578,11 +581,12 @@ def list_expenses(
     date:  Date | None = None,
     year:  int  | None = None,
     month: int  | None = None,
+    type:  str  | None = Query(None, pattern="^(expense|income)$"),
     lang:  str         = Query("ko", pattern="^(ko|en)$"),
     db:    Session     = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """지출 목록 (date / year+month / year 필터, 카테고리 정보 포함)."""
+    """지출/수입 목록 (date / year+month / year / type 필터, 카테고리 정보 포함)."""
     q = db.query(Expense).filter(Expense.user_id == current_user.id)
     if date:
         q = q.filter(Expense.date == date)
@@ -593,6 +597,9 @@ def list_expenses(
         )
     elif year:
         q = q.filter(sqlfunc.extract("year", Expense.date) == year)
+    # type 필터: expense | income (미지정 시 전체 반환)
+    if type:
+        q = q.filter(Expense.type == type)
     rows = q.order_by(Expense.date.desc(), Expense.created_at.desc()).all()
     return [_expense_dict(e, db, lang) for e in rows]
 
@@ -603,7 +610,7 @@ def create_expense(
     db:   Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """지출 추가. 현재 DB 환율로 converted_amount 자동 계산."""
+    """지출/수입 추가. 현재 DB 환율로 converted_amount 자동 계산."""
     converted, rate = _to_usd(body.amount, body.currency, db)
     e = Expense(
         user_id          = current_user.id,
@@ -615,6 +622,7 @@ def create_expense(
         category_id      = body.category_id,
         subcategory_id   = body.subcategory_id,
         description      = body.description,
+        type             = body.type if body.type in ("expense", "income") else "expense",
     )
     db.add(e)
     db.commit()
@@ -650,7 +658,12 @@ def update_expense(
         e.exchange_rate    = rate
 
     for field, val in updates.items():
-        setattr(e, field, val)
+        if field == "type":
+            # type 값 검증: expense | income 만 허용
+            if val in ("expense", "income"):
+                e.type = val
+        else:
+            setattr(e, field, val)
 
     db.commit()
     db.refresh(e)
