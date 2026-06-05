@@ -262,6 +262,28 @@ def _migrate_expense_columns():
                     logger.warning("[MIGRATE] expenses.%s 컬럼 추가 실패: %s", col_name, e)
 
 
+def _migrate_expense_type_column():
+    """expenses 테이블에 type 컬럼 추가 — Phase 2 수입/지출 구분.
+
+    'expense' | 'income' 값을 가지며, 기존 레코드는 모두 'expense'로 초기화.
+    SQLite / PostgreSQL 모두 지원.
+    """
+    with engine.connect() as conn:
+        try:
+            existing = {c["name"] for c in inspect(conn).get_columns("expenses")}
+        except Exception:
+            return
+        if "type" not in existing:
+            try:
+                conn.execute(text("ALTER TABLE expenses ADD COLUMN type VARCHAR(10) DEFAULT 'expense'"))
+                conn.commit()
+                logger.info("[MIGRATE] expenses.type 컬럼 추가 완료 (Phase 2 수입/지출 구분)")
+            except Exception as e:
+                logger.warning("[MIGRATE] expenses.type 컬럼 추가 실패: %s", e)
+        else:
+            logger.info("[MIGRATE] expenses.type 컬럼 — 이미 존재, 건너뜀")
+
+
 _DEFAULT_EXCHANGE_RATES = [
     ("USD", "KRW", 1350),
     ("USD", "EUR", 0.92),
@@ -552,6 +574,7 @@ async def lifespan(app: FastAPI):
     _migrate_user_columns()
     _migrate_add_user_id()
     _migrate_expense_columns()
+    _migrate_expense_type_column()
     _migrate_user_roles()
     _seed_admin_email()
     _seed_default_permissions()

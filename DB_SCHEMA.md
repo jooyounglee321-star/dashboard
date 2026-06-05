@@ -100,11 +100,13 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 | `currency` | VARCHAR(10) | NOT NULL, DEFAULT `'USD'` | 지출 통화 코드 (예: KRW, USD, EUR) |
 | `converted_amount` | NUMERIC(14,2) | NULLABLE | USD 환산 금액 |
 | `exchange_rate` | NUMERIC(14,6) | NULLABLE | 적용 환율 (원래통화 → USD) |
+| `type` | VARCHAR(10) | NOT NULL, DEFAULT `'expense'` | 레코드 종류: `'expense'`(지출) \| `'income'`(수입) — Phase 2 신규 |
 
 **비고:**
 - `category` 컬럼은 Phase 1 이전 레거시 데이터 보존용 (신규 입력 시 `category_id` 사용 권장)
 - `category_id` 카테고리 삭제 시 `SET NULL` (지출 내역 보존)
 - Phase 1 신규 컬럼 5개는 서버 시작 시 `_migrate_expense_columns()`로 자동 추가
+- Phase 2 `type` 컬럼은 서버 시작 시 `_migrate_expense_type_column()`으로 자동 추가; 기존 레코드는 `DEFAULT 'expense'`로 초기화
 
 ---
 

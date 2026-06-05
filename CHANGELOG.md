@@ -13,6 +13,19 @@
 
 ---
 
+## [2026-06-05] — feat: 가계부 수입(Income) 기능 도입 — Phase 2 백엔드 스키마 및 API 확장
+
+- `models.py` `Expense`: `type VARCHAR(10) DEFAULT 'expense'` 컬럼 추가 (`'expense'`|`'income'`)
+- `main.py` `_migrate_expense_type_column()`: 기존 배포 DB에 `type` 컬럼 자동 ALTER TABLE, 시작 시퀀스에 등록
+- `routers/expense.py` `ExpenseIn` / `ExpensePatch`: `type` 필드 추가 (기본값 `'expense'`)
+- `routers/expense.py` `_expense_dict()`: 응답에 `type` 포함
+- `routers/expense.py` `list_expenses()`: `?type=expense|income` 쿼리 필터 지원
+- `routers/expense.py` `create_expense()`: `type` DB 저장
+- `routers/expense.py` `update_expense()`: `type` 수정 지원 (값 검증 포함)
+- `DB_SCHEMA.md` 업데이트
+
+---
+
 ## [2026-06-03] — fix: DailyTab 날짜 변경 시 이전 날짜 데이터가 유지되는 race condition 수정
 
 - `loadGenRef` (`useRef`) 세대 카운터 도입: `load()` 호출마다 세대 번호 증가

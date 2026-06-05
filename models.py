@@ -82,6 +82,8 @@ class Expense(Base):
     currency: Mapped[str] = mapped_column(String(10), nullable=False, default="USD")
     converted_amount: Mapped[float | None] = mapped_column(Numeric(14, 2), nullable=True)  # USD 환산액
     exchange_rate: Mapped[float | None] = mapped_column(Numeric(14, 6), nullable=True)     # 적용 환율
+    # ── 가계부 Phase 2 — 수입/지출 구분 ─────────────────────────────────────
+    type: Mapped[str] = mapped_column(String(10), nullable=False, default="expense")       # 'expense' | 'income'
 
 
 class ExpenseBudget(Base):
