@@ -37,15 +37,50 @@ const INIT_FORM = () => ({
   amount: '',
   currency: 'USD',
   description: '',
+  type: 'expense',   // 'expense' | 'income'
 })
+
+/* 수입 전용 대분류 옵션 (DB 카테고리 미적재 단계에서 프론트 가상 목록으로 처리) */
+const INCOME_CATS = (lang) => [
+  { id: '__primary__',   name: t(lang, 'budget.primary_income'),   icon: '💰' },
+  { id: '__secondary__', name: t(lang, 'budget.secondary_income'), icon: '💵' },
+  { id: '__other__',     name: t(lang, 'budget.other_income'),     icon: '💫' },
+]
 
 /* ═══════════════════════════════════════════════════════════════════════════
    서브컴포넌트 — ExpenseCard 함수 바깥에 선언해야 재렌더 시 재마운트되지 않음
 ═══════════════════════════════════════════════════════════════════════════ */
 
-function ExpForm({ compact, form, setForm, categories, subs, lang, submitting, addExpense }) {
+function ExpForm({ compact, form, setForm, categories, subs, incomeCats, lang, submitting, addExpense }) {
+  const isIncome = form.type === 'income'
+
+  /* 수입/지출 토글 클릭 → type 변경 + 카테고리 초기화 */
+  const switchType = (type) =>
+    setForm(f => ({ ...f, type, category_id: '', subcategory_id: '' }))
+
+  /* 대분류 목록: 수입이면 INCOME_CATS, 지출이면 일반 categories */
+  const displayCats = isIncome ? incomeCats : categories
+
   return (
     <div className="exp-new-form">
+      {/* 지출 / 수입 세그먼트 토글 */}
+      <div className="exp-type-toggle">
+        <button
+          type="button"
+          className={`exp-type-btn${!isIncome ? ' active expense' : ''}`}
+          onClick={() => switchType('expense')}
+        >
+          💸 {t(lang, 'budget.expense')}
+        </button>
+        <button
+          type="button"
+          className={`exp-type-btn${isIncome ? ' active income' : ''}`}
+          onClick={() => switchType('income')}
+        >
+          💰 {t(lang, 'budget.income')}
+        </button>
+      </div>
+
       {/* 대분류 / 소분류 */}
       <div className={compact ? 'exp-sel-pair-col' : 'exp-sel-pair'}>
         <select
@@ -53,20 +88,23 @@ function ExpForm({ compact, form, setForm, categories, subs, lang, submitting, a
           onChange={e => setForm(f => ({ ...f, category_id: e.target.value, subcategory_id: '' }))}
         >
           <option value="">{t(lang, 'expenseCatPh')}</option>
-          {categories.map(c => (
+          {displayCats.map(c => (
             <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
           ))}
         </select>
-        <select
-          value={form.subcategory_id}
-          onChange={e => setForm(f => ({ ...f, subcategory_id: e.target.value }))}
-          disabled={!subs.length}
-        >
-          <option value="">{t(lang, 'expenseSubcatPh')}</option>
-          {subs.map(s => (
-            <option key={s.id} value={s.id}>{s.icon} {s.name}</option>
-          ))}
-        </select>
+        {/* 소분류: 수입 모드에서는 숨김 (수입 카테고리는 단일 레벨) */}
+        {!isIncome && (
+          <select
+            value={form.subcategory_id}
+            onChange={e => setForm(f => ({ ...f, subcategory_id: e.target.value }))}
+            disabled={!subs.length}
+          >
+            <option value="">{t(lang, 'expenseSubcatPh')}</option>
+            {subs.map(s => (
+              <option key={s.id} value={s.id}>{s.icon} {s.name}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* 통화 / 금액 */}
@@ -275,9 +313,10 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
   const [editId,  setEditId]  = useState(null)
   const [editForm,setEditForm]= useState({})
 
-  /* 파생값: 선택된 대분류의 소분류 목록 */
-  const selCat = categories.find(c => c.id === Number(form.category_id))
-  const subs   = selCat?.subs ?? []
+  /* 파생값 */
+  const selCat    = categories.find(c => c.id === Number(form.category_id))
+  const subs      = selCat?.subs ?? []
+  const incomeCats = INCOME_CATS(lang)   // 수입 카테고리 (언어 반응형)
 
   const authH = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') })
 
@@ -342,6 +381,14 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
   async function addExpense() {
     if (!form.amount || Number(form.amount) <= 0) return
     setSubmitting(true)
+    const isIncome = form.type === 'income'
+    // 수입 모드: 가상 카테고리 ID는 DB에 없으므로 category_id = null,
+    //           선택한 수입 종류를 description 앞에 붙여 기록
+    const incomeCatName = isIncome && form.category_id
+      ? INCOME_CATS(lang).find(c => c.id === form.category_id)?.name
+      : null
+    const description = form.description.trim() ||
+      (incomeCatName ?? null)
     try {
       await fetch('/api/expense', {
         method: 'POST',
@@ -350,14 +397,15 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
           date:           form.date,
           amount:         Number(form.amount),
           currency:       form.currency,
-          category_id:    form.category_id    ? Number(form.category_id)    : null,
-          subcategory_id: form.subcategory_id ? Number(form.subcategory_id) : null,
-          description:    form.description.trim() || null,
+          category_id:    !isIncome && form.category_id    ? Number(form.category_id)    : null,
+          subcategory_id: !isIncome && form.subcategory_id ? Number(form.subcategory_id) : null,
+          description,
+          type:           form.type,
           lang,
         }),
       })
-      setForm(f => ({ ...f, amount: '', description: '', subcategory_id: '' }))
-      await loadExpenses(form.date)   // 현재 선택된 날짜 기준으로 리스트 갱신
+      setForm(f => ({ ...f, amount: '', description: '', category_id: '', subcategory_id: '' }))
+      await loadExpenses(form.date)
       await loadMonthly()
     } finally {
       setSubmitting(false)
@@ -414,7 +462,7 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
       <div className="m-card">
         <div className="m-card-header">
           <span className="card-icon">💳</span>
-          <span className="m-card-title">{t(lang, 'expenseTitle')}</span>
+          <span className="m-card-title">{t(lang, 'budget.cashflow_title')}</span>
         </div>
         <div className="m-card-body">
           <TodayHeader compact todayUSD={todayUSD} budgetPct={budgetPct} overBudget={overBudget} lang={lang} />
@@ -424,6 +472,7 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
             setForm={setForm}
             categories={categories}
             subs={subs}
+            incomeCats={incomeCats}
             lang={lang}
             submitting={submitting}
             addExpense={addExpense}
@@ -460,7 +509,7 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
     <div className="card card-expense">
       <div className="card-header">
         <span className="card-icon">💳</span>
-        <span className="card-title">{t(lang, 'expenseTitle')}</span>
+        <span className="card-title">{t(lang, 'budget.cashflow_title')}</span>
         <span className="exp-db-badge" style={{ marginLeft: 'auto' }}>
           {t(lang, 'expenseDbBadge')}
         </span>
@@ -472,6 +521,7 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
           setForm={setForm}
           categories={categories}
           subs={subs}
+          incomeCats={incomeCats}
           lang={lang}
           submitting={submitting}
           addExpense={addExpense}

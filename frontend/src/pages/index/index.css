@@ -104,6 +104,13 @@
 .exp-budget-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden;}
 .exp-budget-fill{height:100%;background:var(--green);border-radius:3px;transition:width 0.4s;}
 .exp-budget-fill.over{background:#e05c3a;}
+/* ── 지출/수입 세그먼트 토글 ── */
+.exp-type-toggle{display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--border);margin-bottom:0.35rem;}
+.exp-type-btn{flex:1;padding:0.38rem 0;border:none;background:var(--card2);color:var(--ink3);font-size:0.8rem;font-family:inherit;cursor:pointer;transition:all 0.15s;font-weight:400;}
+.exp-type-btn:hover{color:var(--ink);}
+.exp-type-btn.active.expense{background:var(--accent);color:#fff;font-weight:600;}
+.exp-type-btn.active.income{background:var(--green);color:#fff;font-weight:600;}
+
 /* 입력 폼 */
 .exp-new-form{display:flex;flex-direction:column;gap:0.32rem;margin-bottom:0.75rem;}
 .exp-new-form input,.exp-new-form select{padding:0.38rem 0.55rem;font-size:0.8rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--ink);font-family:inherit;}
