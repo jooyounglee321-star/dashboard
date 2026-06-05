@@ -384,11 +384,17 @@
 
   "budget": {
     "budget":        "Budget",
+    "title":         "Budget Dashboard",
     "daily":         "Daily",
     "monthly":       "Monthly",
     "yearly":        "Yearly",
     "summary":       "Summary",
     "budgetSetting": "Budget Setting",
+    "daily_tab":     "Daily Breakdown",
+    "monthly_tab":   "Monthly Summary",
+    "yearly_tab":    "Yearly Stats",
+    "budget_tab":    "Budget Settings",
+    "no_data":       "No expense records found.",
     "totalExpense":  "Total Expense",
     "todayTotal":    "Today's Total",
     "thisMonth":     "This Month",

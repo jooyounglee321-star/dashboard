@@ -384,11 +384,17 @@
 
   "budget": {
     "budget":        "가계부",
+    "title":         "가계부 대시보드",
     "daily":         "일별",
     "monthly":       "월별",
     "yearly":        "연도별",
     "summary":       "결산",
     "budgetSetting": "예산 설정",
+    "daily_tab":     "일별 내역",
+    "monthly_tab":   "월별 요약",
+    "yearly_tab":    "연도별 통계",
+    "budget_tab":    "예산 설정",
+    "no_data":       "기록된 지출 내역이 없습니다.",
     "totalExpense":  "총 지출",
     "todayTotal":    "오늘 합계",
     "thisMonth":     "이번달",
