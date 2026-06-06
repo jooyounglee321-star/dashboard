@@ -4,6 +4,21 @@
 
 ---
 
+## [2026-06-06] — fix: 수입/지출 토글에 따른 대분류 드롭다운 항목 동적 필터링 버그 수정
+
+### 버그 원인
+- `GET /api/expense/categories` 엔드포인트에 `category_type` 필터가 없어 수입 카테고리(`category_type='income'`)가 지출 드롭다운에 혼재 노출
+- `BudgetPage.jsx` DailyTab 수정 모달에서 `editDisplayCats` 변수 미정의 → 런타임 에러
+
+### 수정 내용
+- **`routers/expense.py`** `list_categories()`: 쿼리 필터에 `category_type = 'expense' OR NULL` 조건 추가 — income 카테고리 완전 격리
+- **`BudgetPage.jsx`** 수정 모달: `editDisplayCats` (undefined) 제거 → income/expense 조건 분기로 교체
+  - income 모드: `INCOME_CATEGORIES` 대분류 + `editIncomeSubs` 소분류 드롭다운 표시
+  - expense 모드: `cats` (지출 전용) 대분류 + `editSubs` 소분류 드롭다운 표시
+- **`BudgetPage.jsx`** 수정 모달 토글 핸들러: expense↔income 전환 시 `income_main_code` / `income_sub_code` / `category_id` / `subcategory_id` 동시 초기화 → 상태 꼬임 방지
+
+---
+
 ## [2026-06-03] — feat: 전체 페이지 반응형(Responsive Web) UI 개선
 
 - `globals.css`: 모바일(~767px) / 태블릿(768~1023px) 미디어 쿼리 추가 — 헤더, 인증 카드, 필터바, 테이블, 모달, 칩 반응형 적용

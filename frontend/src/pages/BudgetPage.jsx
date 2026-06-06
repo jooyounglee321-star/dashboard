@@ -489,27 +489,59 @@ function DailyTab({ lang, currency, toDisplay }) {
                       <div className="bp-type-toggle" style={{ marginBottom: '0.4rem' }}>
                         <button type="button"
                           className={`bp-type-btn${!isEditIncome ? ' active expense' : ''}`}
-                          onClick={() => setEditForm(f => ({ ...f, type: 'expense', category_id: '', subcategory_id: '' }))}>
+                          onClick={() => setEditForm(f => ({
+                            ...f, type: 'expense',
+                            category_id: '', subcategory_id: '',
+                            income_main_code: '', income_sub_code: '',
+                          }))}>
                           💸 {t(lang, 'budget.expense')}
                         </button>
                         <button type="button"
                           className={`bp-type-btn${isEditIncome ? ' active income' : ''}`}
-                          onClick={() => setEditForm(f => ({ ...f, type: 'income', category_id: '', subcategory_id: '' }))}>
+                          onClick={() => setEditForm(f => ({
+                            ...f, type: 'income',
+                            category_id: '', subcategory_id: '',
+                            income_main_code: INCOME_CATEGORIES[0]?.code ?? '',
+                            income_sub_code: '',
+                          }))}>
                           💰 {t(lang, 'budget.income')}
                         </button>
                       </div>
                       <div className="bp-edit-row">
-                        <select className="bp-sel" value={editForm.category_id}
-                          onChange={e => setEditForm(f => ({ ...f, category_id: e.target.value, subcategory_id: '' }))}>
-                          <option value="">{t(lang, 'expenseCatPh')}</option>
-                          {editDisplayCats.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
-                        </select>
-                        {!isEditIncome && (
-                          <select className="bp-sel" value={editForm.subcategory_id}
-                            onChange={e => setEditForm(f => ({ ...f, subcategory_id: e.target.value }))}>
-                            <option value="">{t(lang, 'expenseSubcatPh')}</option>
-                            {editSubs.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                          </select>
+                        {isEditIncome ? (
+                          /* ── 수입 모드: INCOME_CATEGORIES 기반 대분류 / 소분류 ── */
+                          <>
+                            <select className="bp-sel" value={editForm.income_main_code || ''}
+                              onChange={e => setEditForm(f => ({ ...f, income_main_code: e.target.value, income_sub_code: '' }))}>
+                              <option value="">{t(lang, 'expenseCatPh')}</option>
+                              {INCOME_CATEGORIES.map(c => (
+                                <option key={c.code} value={c.code}>{c.icon} {lang === 'ko' ? c.name_ko : c.name_en}</option>
+                              ))}
+                            </select>
+                            <select className="bp-sel" value={editForm.income_sub_code || ''}
+                              onChange={e => setEditForm(f => ({ ...f, income_sub_code: e.target.value }))}
+                              disabled={!editForm.income_main_code}>
+                              <option value="">{t(lang, 'expenseSubcatPh')}</option>
+                              {editIncomeSubs.map(s => (
+                                <option key={s.code} value={s.code}>{s.icon} {lang === 'ko' ? s.name_ko : s.name_en}</option>
+                              ))}
+                            </select>
+                          </>
+                        ) : (
+                          /* ── 지출 모드: expense 카테고리만 (income 완전 격리) ── */
+                          <>
+                            <select className="bp-sel" value={editForm.category_id}
+                              onChange={e => setEditForm(f => ({ ...f, category_id: e.target.value, subcategory_id: '' }))}>
+                              <option value="">{t(lang, 'expenseCatPh')}</option>
+                              {cats.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+                            </select>
+                            <select className="bp-sel" value={editForm.subcategory_id}
+                              onChange={e => setEditForm(f => ({ ...f, subcategory_id: e.target.value }))}
+                              disabled={!editSubs.length}>
+                              <option value="">{t(lang, 'expenseSubcatPh')}</option>
+                              {editSubs.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            </select>
+                          </>
                         )}
                       </div>
                       <div className="bp-edit-row">
