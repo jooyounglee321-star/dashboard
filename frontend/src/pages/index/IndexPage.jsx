@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './index.css'
 
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { SortableContext, arrayMove, rectSortingStrategy } from '@dnd-kit/sortable'
+import { SortableCard, DEFAULT_LAYOUT_ITEMS } from './LayoutEditor'
+
 import HeroSection from './HeroSection'
 import ScheduleCard from './ScheduleCard'
 import YoutubeCard from './YoutubeCard'
@@ -59,6 +63,13 @@ export default function IndexPage() {
   })
   // widgetCfg가 null(로딩 중)이면 모두 보여줌, 이후 설정대로 표시
   const w = (key) => !widgetCfg || widgetCfg[key]?.enabled !== false
+
+  // ── 레이아웃 편집 상태 ────────────────────────────────────────────────────
+  const [editMode,     setEditMode]     = useState(false)
+  const [layoutItems,  setLayoutItems]  = useState(DEFAULT_LAYOUT_ITEMS)
+  const [draftItems,   setDraftItems]   = useState([])
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+  const activeItems = editMode ? draftItems : layoutItems
 
   // Header date tick (localStorage 캐시 언어로 초기화)
   const cachedLang = (() => { try { return localStorage.getItem('dashboard_lang') || 'ko' } catch { return 'ko' } })()
@@ -133,6 +144,12 @@ export default function IndexPage() {
     const newLang = widgetCfg?.language ?? 'ko'
     headerLangRef.current = newLang
     setHeaderDate(getHeaderDate(newLang))
+  }, [widgetCfg])
+
+  // 저장된 레이아웃 복원
+  useEffect(() => {
+    const saved = widgetCfg?.layout?.items
+    if (Array.isArray(saved) && saved.length) setLayoutItems(saved)
   }, [widgetCfg])
 
   // ProfilePage에서 언어 저장 시 실시간 반영 (같은 탭 내)
@@ -301,6 +318,58 @@ export default function IndexPage() {
   const stockData = stockError ? null : { groups: stockGroups, priceMap, fxRate }
   const lang = widgetCfg?.language ?? 'ko'
 
+  // ── 레이아웃 편집 함수 ──────────────────────────────────────────────────
+  function enterEditMode() { setDraftItems([...layoutItems]); setEditMode(true) }
+  function cancelEdit()    { setEditMode(false); setDraftItems([]) }
+
+  async function saveEdit() {
+    const token  = localStorage.getItem('token')
+    const newCfg = { ...(widgetCfg || {}), layout: { items: draftItems } }
+    try {
+      await fetch('/api/auth/widget-config', {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body:    JSON.stringify({ config: newCfg }),
+      })
+      setLayoutItems(draftItems)
+      setWidgetCfg(newCfg)
+      setEditMode(false)
+      setDraftItems([])
+    } catch (e) { console.error('[Layout] 저장 실패:', e) }
+  }
+
+  function handleDragEnd({ active, over }) {
+    if (!over || active.id === over.id) return
+    setDraftItems(prev => {
+      const from = prev.findIndex(i => i.id === active.id)
+      const to   = prev.findIndex(i => i.id === over.id)
+      return arrayMove(prev, from, to)
+    })
+  }
+
+  function handleSizeChange(id, span) {
+    setDraftItems(prev => prev.map(item => item.id === id ? { ...item, span } : item))
+  }
+
+  function renderWidget(item) {
+    if (!w(item.id)) return null
+    switch (item.id) {
+      case 'hero':     return <HeroSection zones={zones} clockCount={widgetCfg?.hero?.clock_count ?? 3} tempUnit={widgetCfg?.hero?.temp_unit ?? 'C'} lang={lang} />
+      case 'schedule': return <ScheduleCard lang={lang} />
+      case 'youtube':  return <YoutubeCard maxCount={widgetCfg?.youtube?.max_count ?? 10} lang={lang} />
+      case 'stock':    return <StockCard groups={stockGroups} priceMap={priceMap} fxRate={fxRate} loading={stockLoading} onOpenStats={() => setStatsOpen(true)} currencyDisplay={widgetCfg?.stock?.currency_display} lang={lang} />
+      case 'expense':  return <ExpenseCard lang={lang} />
+      case 'diet':     return <DietCard mealConfig={widgetCfg?.diet?.meals} lang={lang} />
+      case 'memo':     return <MemoCard lang={lang} />
+      case 'news':     return <NewsCard defaultTab={widgetCfg?.news?.default_tab ?? 'kr'} lang={lang} />
+      case 'sites':    return <SitesCard lang={lang} />
+      default:         return null
+    }
+  }
+
+  // 보이는 항목만 SortableContext에 전달
+  const visibleItems = activeItems.map(item => ({ ...item, el: renderWidget(item) })).filter(i => i.el !== null)
+
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
       {/* 서버 오프라인 배너 */}
@@ -373,54 +442,49 @@ export default function IndexPage() {
               ? <img src={avatarSrc} alt="프로필" style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: '50%' }} />
               : '👤'}
           </Link>
+          {/* ── 레이아웃 편집 버튼 (모바일 숨김) ── */}
+          {!editMode && (
+            <button className="layout-edit-btn" onClick={enterEditMode} title="레이아웃 편집">
+              ⊞ {lang === 'ko' ? '레이아웃 편집' : 'Edit Layout'}
+            </button>
+          )}
         </div>
       </header>
 
+      {/* ── 편집모드 툴바 (sticky) ── */}
+      {editMode && (
+        <div className="layout-toolbar">
+          <span className="layout-toolbar-tip">
+            ⠿ {lang === 'ko' ? '드래그로 순서 변경  ·  S / M / L 버튼으로 크기 조정' : 'Drag to reorder  ·  S / M / L to resize'}
+          </span>
+          <div className="layout-toolbar-actions">
+            <button className="layout-btn-cancel" onClick={cancelEdit}>
+              {lang === 'ko' ? '취소' : 'Cancel'}
+            </button>
+            <button className="layout-btn-save" onClick={saveEdit}>
+              {lang === 'ko' ? '저장' : 'Save'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ═══ PC 레이아웃 ═══ */}
       <main className="main">
-        {/* ① 시간 + 날씨 */}
-        {w('hero') && (
-          <HeroSection
-            zones={zones}
-            clockCount={widgetCfg?.hero?.clock_count ?? 3}
-            tempUnit={widgetCfg?.hero?.temp_unit ?? 'C'}
-            lang={lang}
-          />
-        )}
-
-        {/* ② 일정 */}
-        {w('schedule') && <ScheduleCard lang={lang} />}
-
-        {/* ③ 유튜브 */}
-        {w('youtube') && <YoutubeCard maxCount={widgetCfg?.youtube?.max_count ?? 10} lang={lang} />}
-
-        {/* ④ 주식 */}
-        {w('stock') && (
-          <StockCard
-            groups={stockGroups}
-            priceMap={priceMap}
-            fxRate={fxRate}
-            loading={stockLoading}
-            onOpenStats={() => setStatsOpen(true)}
-            currencyDisplay={widgetCfg?.stock?.currency_display}
-            lang={lang}
-          />
-        )}
-
-        {/* ⑤ 지출 */}
-        {w('expense') && <ExpenseCard lang={lang} />}
-
-        {/* ⑥ 식단 */}
-        {w('diet') && <DietCard mealConfig={widgetCfg?.diet?.meals} lang={lang} />}
-
-        {/* ⑦ 메모 */}
-        {w('memo') && <MemoCard lang={lang} />}
-
-        {/* ⑧ 뉴스 */}
-        {w('news') && <NewsCard defaultTab={widgetCfg?.news?.default_tab ?? 'kr'} lang={lang} />}
-
-        {/* ⑨ 즐겨찾기 */}
-        {w('sites') && <SitesCard lang={lang} />}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={visibleItems.map(i => i.id)} strategy={rectSortingStrategy}>
+            {visibleItems.map(({ id, span, el }) => (
+              <SortableCard
+                key={id}
+                id={id}
+                span={span}
+                editMode={editMode}
+                onSizeChange={handleSizeChange}
+              >
+                {el}
+              </SortableCard>
+            ))}
+          </SortableContext>
+        </DndContext>
       </main>
 
       {/* ═══ 모바일 레이아웃 ═══ */}
