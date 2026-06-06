@@ -1025,19 +1025,29 @@ function SummaryTab({ lang, currency, toDisplay }) {
     Promise.all([
       apiGet(`/api/expense/stats?year=${year}&month=${month}&lang=${lang}`),
       ...months.map(({ y, m }) =>
-        apiGet(`/api/expense/summary/monthly?year=${y}&month=${m}&lang=${lang}`).catch(() => ({ total_usd: 0 }))
+        apiGet(`/api/expense/summary/monthly?year=${y}&month=${m}&lang=${lang}`)
+          .catch(() => ({ total_income: 0, total_expense: 0, net: 0 }))
       ),
     ]).then(([s, ...hist]) => {
       setStats(s)
-      setHistory(months.map((ym, i) => ({ ...ym, total_usd: hist[i]?.total_usd || 0 })))
+      setHistory(months.map((ym, i) => ({
+        ...ym,
+        total_income:  hist[i]?.total_income  ?? 0,
+        total_expense: hist[i]?.total_expense ?? 0,
+        net:           hist[i]?.net           ?? 0,
+      })))
     }).catch(() => {}).finally(() => setLoading(false))
   }, [year, month, lang])
 
   useEffect(() => { load() }, [load])
 
-  const top5    = (stats?.by_category || []).slice(0, 5)
+  const top5     = (stats?.by_category || []).slice(0, 5)
   const overList = stats?.over_budget || []
   const mLabels  = ML[lang] || ML.en
+
+  const totalIncome  = stats?.total_income  ?? 0
+  const totalExpense = stats?.total_expense ?? 0
+  const net          = stats?.net           ?? 0
 
   return (
     <section className="bp-sec">
@@ -1053,8 +1063,24 @@ function SummaryTab({ lang, currency, toDisplay }) {
 
       {loading ? <p className="bp-info">{t(lang, 'common.loading')}</p> : (
         <>
+          {/* ── 수입 / 지출 / 순수지 요약 3카드 ── */}
+          <div className="bp-summary-cards">
+            <div className="bp-summary-card bp-summary-income">
+              <span className="bp-summary-label">{t(lang, 'budget.totalIncome')}</span>
+              <span className="bp-summary-value">{fmtAmt(toDisplay(totalIncome), currency)}</span>
+            </div>
+            <div className="bp-summary-card bp-summary-expense">
+              <span className="bp-summary-label">{t(lang, 'budget.totalExpense')}</span>
+              <span className="bp-summary-value">{fmtAmt(toDisplay(totalExpense), currency)}</span>
+            </div>
+            <div className={`bp-summary-card ${net >= 0 ? 'bp-summary-net-pos' : 'bp-summary-net-neg'}`}>
+              <span className="bp-summary-label">{t(lang, 'budget.net')}</span>
+              <span className="bp-summary-value">{fmtAmt(toDisplay(net), currency)}</span>
+            </div>
+          </div>
+
           <div className="bp-sum-grid">
-            {/* TOP 5 */}
+            {/* TOP 5 지출 카테고리 */}
             <div className="bp-sum-card">
               <h3 className="bp-sum-card-title">{t(lang, 'budget.top5')}</h3>
               {top5.length === 0
@@ -1075,7 +1101,7 @@ function SummaryTab({ lang, currency, toDisplay }) {
               }
             </div>
 
-            {/* 예산 초과 */}
+            {/* 예산 초과 (지출만) */}
             <div className="bp-sum-card">
               <h3 className="bp-sum-card-title">{t(lang, 'budget.over')}</h3>
               {overList.length === 0
@@ -1101,21 +1127,27 @@ function SummaryTab({ lang, currency, toDisplay }) {
             </div>
           </div>
 
-          {/* 최근 12개월 */}
+          {/* ── 최근 12개월 — 수입 / 지출 / 순수지 ── */}
           <div className="bp-table-wrap" style={{ marginTop: '1.5rem' }}>
             <h3 className="bp-section-h3" style={{ padding: '0.75rem 0.9rem 0' }}>{t(lang, 'budgetRecent12')}</h3>
             <table className="bp-table">
               <thead>
                 <tr>
                   <th>{t(lang, 'budgetMonth')}</th>
-                  <th>{t(lang, 'budget.actual')}</th>
+                  <th style={{ color: '#4ade80' }}>{t(lang, 'budget.totalIncome')}</th>
+                  <th style={{ color: '#f87171' }}>{t(lang, 'budget.totalExpense')}</th>
+                  <th>{t(lang, 'budget.net')}</th>
                 </tr>
               </thead>
               <tbody>
                 {history.map((h, i) => (
                   <tr key={i}>
                     <td>{h.y}-{pad2(h.m)}</td>
-                    <td>{fmtAmt(toDisplay(h.total_usd), currency)}</td>
+                    <td style={{ color: '#4ade80' }}>{fmtAmt(toDisplay(h.total_income), currency)}</td>
+                    <td style={{ color: '#f87171' }}>{fmtAmt(toDisplay(h.total_expense), currency)}</td>
+                    <td style={{ color: h.net >= 0 ? '#60a5fa' : '#f87171' }}>
+                      {fmtAmt(toDisplay(h.net), currency)}
+                    </td>
                   </tr>
                 ))}
               </tbody>

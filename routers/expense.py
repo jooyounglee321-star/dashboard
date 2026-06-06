@@ -142,10 +142,30 @@ def _expense_dict(e: Expense, db: Session, lang: str = "ko") -> dict:
     }
 
 
-def _group_by_category(rows: list[Expense], db: Session, lang: str) -> list[dict]:
-    """지출 목록을 카테고리별로 집계. total_usd 내림차순."""
+def _split_income_expense(rows: list) -> tuple:
+    """rows 를 수입/지출로 분리해 (total_income, total_expense, net) 반환."""
+    inc = exp = 0.0
+    for e in rows:
+        usd = float(e.converted_amount) if e.converted_amount is not None else float(e.amount)
+        if getattr(e, "type", "expense") == "income":
+            inc += usd
+        else:
+            exp += usd
+    return round(inc, 2), round(exp, 2), round(inc - exp, 2)
+
+
+def _group_by_category(
+    rows: list[Expense], db: Session, lang: str, expense_type: str | None = None
+) -> list[dict]:
+    """지출 목록을 카테고리별로 집계. total_usd 내림차순.
+
+    expense_type='expense' 이면 지출 행만, 'income' 이면 수입 행만 집계.
+    None 이면 전체(하위 호환).
+    """
     totals: dict[int | None, dict[str, Any]] = {}
     for e in rows:
+        if expense_type is not None and getattr(e, "type", "expense") != expense_type:
+            continue
         cat = db.get(ExpenseCategory, e.category_id) if e.category_id else None
         key  = e.category_id
         name = _cat_name(cat, lang) if cat else (e.category or ("Other" if lang == "en" else "기타"))
@@ -284,15 +304,15 @@ def summary_daily(
         .order_by(Expense.created_at.desc())
         .all()
     )
-    total_usd = sum(
-        float(e.converted_amount) if e.converted_amount is not None else float(e.amount)
-        for e in rows
-    )
+    total_income, total_expense, net = _split_income_expense(rows)
     return {
-        "date":        date.isoformat(),
-        "total_usd":   round(total_usd, 2),
-        "items":       [_expense_dict(e, db, lang) for e in rows],
-        "by_category": _group_by_category(rows, db, lang),
+        "date":           date.isoformat(),
+        "total_usd":      total_expense,           # 하위 호환: 지출 합계
+        "total_income":   total_income,
+        "total_expense":  total_expense,
+        "net":            net,
+        "items":          [_expense_dict(e, db, lang) for e in rows],
+        "by_category":    _group_by_category(rows, db, lang, expense_type="expense"),
     }
 
 
@@ -315,16 +335,20 @@ def summary_monthly(
         .all()
     )
 
-    # 일별 합계
+    total_income, total_expense, net = _split_income_expense(rows)
+
+    # 일별 합계 (지출만 — 차트용)
     daily_map: dict[int, float] = {}
     for e in rows:
+        if getattr(e, "type", "expense") == "income":
+            continue
         d = e.date.day
         usd = float(e.converted_amount) if e.converted_amount is not None else float(e.amount)
         daily_map[d] = round(daily_map.get(d, 0.0) + usd, 2)
     daily_list = [{"day": d, "total_usd": daily_map[d]} for d in sorted(daily_map)]
 
-    # 카테고리 합계 + 예산 매핑
-    by_cat = _group_by_category(rows, db, lang)
+    # 카테고리 합계 + 예산 매핑 (지출만)
+    by_cat = _group_by_category(rows, db, lang, expense_type="expense")
     budgets = (
         db.query(ExpenseBudget)
         .filter(
@@ -346,12 +370,14 @@ def summary_monthly(
             c["budget_usd"]    = None
             c["remaining_usd"] = None
 
-    total_usd = sum(c["total_usd"] for c in by_cat)
     return {
         "year": year, "month": month,
-        "total_usd":   round(total_usd, 2),
-        "by_category": by_cat,
-        "daily":       daily_list,
+        "total_usd":      total_expense,           # 하위 호환: 지출 합계
+        "total_income":   total_income,
+        "total_expense":  total_expense,
+        "net":            net,
+        "by_category":    by_cat,
+        "daily":          daily_list,
     }
 
 
@@ -377,25 +403,40 @@ def summary_yearly(
     prev_rows = _fetch(year - 1)
 
     def _monthly_totals(expense_rows: list[Expense]) -> list[dict]:
-        m_map: dict[int, float] = {}
+        inc_map: dict[int, float] = {}
+        exp_map: dict[int, float] = {}
         for e in expense_rows:
             usd = float(e.converted_amount) if e.converted_amount is not None else float(e.amount)
             m   = e.date.month
-            m_map[m] = round(m_map.get(m, 0.0) + usd, 2)
-        return [{"month": m, "total_usd": m_map.get(m, 0.0)} for m in range(1, 13)]
+            if getattr(e, "type", "expense") == "income":
+                inc_map[m] = round(inc_map.get(m, 0.0) + usd, 2)
+            else:
+                exp_map[m] = round(exp_map.get(m, 0.0) + usd, 2)
+        return [{
+            "month":         m,
+            "total_usd":     exp_map.get(m, 0.0),    # 하위 호환
+            "total_income":  inc_map.get(m, 0.0),
+            "total_expense": exp_map.get(m, 0.0),
+            "net":           round(inc_map.get(m, 0.0) - exp_map.get(m, 0.0), 2),
+        } for m in range(1, 13)]
 
-    total      = round(sum(float(e.converted_amount or e.amount) for e in rows),      2)
-    prev_total = round(sum(float(e.converted_amount or e.amount) for e in prev_rows), 2)
-    yoy_pct    = round((total - prev_total) / prev_total * 100, 1) if prev_total else None
+    total_income, total_expense, net         = _split_income_expense(rows)
+    prev_income,  prev_expense,  prev_net    = _split_income_expense(prev_rows)
+    yoy_pct = round((total_expense - prev_expense) / prev_expense * 100, 1) if prev_expense else None
 
     return {
-        "year":               year,
-        "total_usd":          total,
-        "prev_year_total_usd": prev_total,
-        "yoy_change_pct":     yoy_pct,
-        "monthly":            _monthly_totals(rows),
-        "prev_monthly":       _monthly_totals(prev_rows),
-        "by_category":        _group_by_category(rows, db, lang),
+        "year":                year,
+        "total_usd":           total_expense,         # 하위 호환: 지출 합계
+        "total_income":        total_income,
+        "total_expense":       total_expense,
+        "net":                 net,
+        "prev_year_total_usd": prev_expense,
+        "prev_year_income":    prev_income,
+        "prev_year_expense":   prev_expense,
+        "yoy_change_pct":      yoy_pct,
+        "monthly":             _monthly_totals(rows),
+        "prev_monthly":        _monthly_totals(prev_rows),
+        "by_category":         _group_by_category(rows, db, lang, expense_type="expense"),
     }
 
 
@@ -417,13 +458,16 @@ def expense_stats(
         )
         .all()
     )
-    by_cat    = _group_by_category(rows, db, lang)
-    total_usd = sum(c["total_usd"] for c in by_cat)
+    total_income, total_expense, net = _split_income_expense(rows)
+
+    # 카테고리별 집계 — 지출만
+    by_cat    = _group_by_category(rows, db, lang, expense_type="expense")
+    total_cat = sum(c["total_usd"] for c in by_cat)
 
     for c in by_cat:
-        c["pct"] = round(c["total_usd"] / total_usd * 100, 1) if total_usd else 0.0
+        c["pct"] = round(c["total_usd"] / total_cat * 100, 1) if total_cat else 0.0
 
-    # 예산 초과
+    # 예산 초과 (지출만 비교)
     budgets = (
         db.query(ExpenseBudget)
         .filter(
@@ -447,9 +491,11 @@ def expense_stats(
                     "over_by_usd": round(c["total_usd"] - budget_usd, 2),
                 })
 
-    # 일별 추이
+    # 일별 추이 (지출만 — 차트용)
     daily_map: dict[int, float] = {}
     for e in rows:
+        if getattr(e, "type", "expense") == "income":
+            continue
         d   = e.date.day
         usd = float(e.converted_amount) if e.converted_amount is not None else float(e.amount)
         daily_map[d] = round(daily_map.get(d, 0.0) + usd, 2)
@@ -457,11 +503,14 @@ def expense_stats(
 
     return {
         "year": year, "month": month,
-        "total_usd":   round(total_usd, 2),
-        "by_category": by_cat,
-        "top_category": by_cat[0] if by_cat else None,
-        "over_budget":  over_budget,
-        "daily_trend":  daily_trend,
+        "total_usd":      total_expense,           # 하위 호환: 지출 합계
+        "total_income":   total_income,
+        "total_expense":  total_expense,
+        "net":            net,
+        "by_category":    by_cat,
+        "top_category":   by_cat[0] if by_cat else None,
+        "over_budget":    over_budget,
+        "daily_trend":    daily_trend,
     }
 
 

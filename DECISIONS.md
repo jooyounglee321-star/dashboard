@@ -1,6 +1,20 @@
 # 프로젝트 결정 기록
 
 ---
+## 2026-06-06 — 가계부 summary/stats API 수입/지출 분리 집계 — 하위 호환 유지 전략
+**결정:** `summary/daily`, `summary/monthly`, `summary/yearly`, `stats` 4개 엔드포인트 응답에 `total_income`, `total_expense`, `net` 필드를 추가하고, 기존 `total_usd`는 지출 합계(`total_expense`)로 재정의해 하위 호환성 유지.
+**이유:** 수입 행이 지출 합계에 합산되는 버그를 수정하면서, 기존 monthly/yearly 탭 차트가 `total_usd`를 참조하므로 필드 삭제 없이 의미만 변경(지출 합계로 통일)해 다른 탭 동작을 보장.
+**대안:** `total_usd` 삭제 후 신규 필드만 사용 — 다른 탭(MonthlyTab, YearlyTab) 수정 필요 범위 과다. 별도 엔드포인트 신설 — API 수 증가.
+**파일:** `routers/expense.py`
+
+---
+## 2026-06-06 13:50 — /summary/yearly 엔드포인트: 수입/지출 분리 추적 + 하위 호환성 유지
+**결정:** `/summary/yearly` 엔드포인트의 응답 스키마를 수입과 지출을 별도로 추적하도록 재설계. (1) 월별 `_monthly_totals()` 함수를 `inc_map`과 `exp_map` 두 개의 딕셔너리로 분리하여 소득/지출 유형 구분, (2) 월별 응답에 새로운 필드 추가: `total_income`, `total_expense`, `net` (기존 `total_usd`는 지출 합계로 유지), (3) 연간 합계는 `_split_income_expense()` 유틸리티 함수 호출로 수입/지출/순계산, (4) 전년 대비 YoY 변화율은 지출(`total_expense`)만 비교하도록 변경, (5) 응답에 `prev_year_income`, `prev_year_expense` 필드 신규 추가, (6) 카테고리 집계 시 `expense_type="expense"` 파라미터 전달으로 지출만 포함.
+**이유:** (1) 기존 단순 총액 추적으로는 사용자가 수입 vs 지출을 분리해서 보기 어려움 — 특히 연간 비교(YoY)에서 혼합된 총액은 의미 부족, (2) 월별 `net`(순이익) 계산으로 월별 수익성 추이 시각화 가능, (3) 하위 호환성(`total_usd` 유지)으로 기존 클라이언트 동작 보장, (4) `_split_income_expense()` 유틸을 재사용하여 일관된 로직 적용.
+**대안:** (1) 별도 엔드포인트 신설(`/summary/yearly-income`, `/summary/yearly-expense`) — API 수 증가로 유지보수 복잡도 증가, (2) 응답에 `breakdown` 중첩 객체 추가 — 하위 호환성 약화, (3) 기존 로직 유지 + 프론트엔드에서 분리 계산 — 서버에서 데이터 제공하는 것이 더 효율적.
+**파일:** `routers/expense.py` (`summary_yearly()` 함수, `_monthly_totals()` 내부 함수)
+
+---
 ## 2026-06-06 — APScheduler 이중 타임존 스냅샷: 시장별 독립 CronTrigger + ET 기준 날짜 통일
 **결정:** 포트폴리오 스냅샷 수집을 위해 단일 23:59 KST 스케줄에서 이중 타임존 스케줄로 변경. (1) KR 그룹용 `_daily_snapshot_kr_job()` — 23:59 KST(Asia/Seoul), (2) US 그룹용 `_daily_snapshot_us_job()` — 23:59 ET(America/New_York), (3) 양쪽 job 모두 `datetime.now(ZoneInfo("America/New_York")).date()`를 기준으로 통일하여 ET 자정을 daily boundary로 설정, (4) 신규 함수들: `_KR_CATS` / `_US_CATS`(시장별 카테고리 상수), `_fetch_usd_krw()`(환율 조회 헬퍼), `_snapshot_user_partial()`(MERGE-UPSERT 핵심 로직), `_run_snapshot_job()`(사용자 순회 공통 로직), (5) MERGE 전략: 같은 날짜 행 존재 시 상대 시장 그룹은 보존하고 담당 그룹만 갱신.
 **이유:** (1) 한국 장(KST 15:30 마감) vs 미국 장(ET 16:00 마감)의 종가 확정 시간이 다르므로, 단일 KST 스케줄로는 미국 장이 아직 거래 중일 때(KST 23:59 ≈ ET 09:59) 미 종가 조회 불가 — 두 스케줄로 각 시장의 종가 후 시간에 맞춰 수집, (2) ET 기준 날짜 통일로 KR/US 그룹 데이터가 동일 스냅샷 행에 이날짜 오류 없음 — Railroad/UTC 서버 환경에서 각 TZ별 독립 시간 사용하되 날짜는 하나로 통일하는 hybrid 접근, (3) MERGE 전략은 사용자가 여러 시장 그룹 보유 시 KR 스냅샷과 US 스냅샷이 순차적으로 같은 행에 누적 가능 — 어느 job이 먼저 실행되든 상호 간섭 없음.
@@ -302,3 +316,25 @@
 - 같은 행 UPSERT 대신 미국장 결과를 새 행(다른 snapshot_date)에 저장: 사용자 일일 포트폴리오가 2개 행으로 분산 저장 → 조회 시 두 행을 UNION 해야 하고, 통합 손익 계산 복잡화, 프론트엔드 렌더링 로직 분산.
 - 캐시(Redis) 사용: 전 시장 스냅샷 완료 후 커밋: 두 job 간 동기화 필요 (분산 lock, TTL 관리), 장애 시 복구 어려움.
 **파일:** C:\Users\Jason\Desktop\dashboard\main.py
+
+---
+## 2026-06-06 — `/expense/stats` 엔드포인트: 월별 통계에서 지출만 집계 + 수입/지출 분리 응답
+**결정:** `/expense/stats` 엔드포인트(카테고리별 파이차트/최다지출/예산초과/일별추이 통계)를 리팩토링하여 (1) 함수 시작 시 `_split_income_expense(rows)` 호출로 수입/지출/순계 계산, (2) 카테고리 집계 시 `_group_by_category(rows, db, lang, expense_type="expense")` 파라미터 추가하여 **지출만** 포함, (3) 일별 추이 계산 루프에 `if getattr(e, "type", "expense") == "income": continue` 필터 추가로 수입 제외, (4) 응답 스키마 확장: 기존 `total_usd`(하위 호환)에 덧붙여 `total_income`, `total_expense`, `net` 필드 신규 추가, 정렬 간격(들여쓰기) 통일로 코드 가독성 향상.
+**이유:** (1) 파이차트의 카테고리별 비율(%)과 일별 추이(라인차트)는 **지출만** 대상이어야 하는데, 기존에는 수입까지 혼합 계산되어 통계 정확성 부족. (2) 예산 대비 실지출 비교(over_budget) 로직은 본래 지출 기반이므로, 지출만 필터링하는 것이 의도 명확화. (3) 응답에 `total_income`, `total_expense`, `net` 추가로 프론트엔드가 월별 총수입·총지출·순이익을 대시보드에 표시 가능 → 사용자 재무 현황 한눈에 파악. (4) `total_usd: total_expense` 매핑으로 기존 클라이언트(이전 버전) 호환성 보장 → 무중단 배포 가능.
+**대안:**
+- 기존 로직 유지 (수입/지출 혼합): 파이차트 비율 왜곡, 일별 추이가 실제 지출 패턴 반영 부정확 → 통계 의미 상실
+- 수입도 별도 통계 응답 (`total_income_by_category` 등): 응답 스키마 과도하게 복잡화, 프론트엔드 렌더링 로직 분산
+- 별도 엔드포인트 신설 (`/expense/stats/detailed`): API 엔드포인트 증가, 기존 클라이언트 이원화 유지보수 부담 증가
+- `total_usd` 필드 제거하고 `total_expense`만 제공: 기존 클라이언트 즉시 중단
+**파일:** C:\Users\Jason\Desktop\dashboard\routers\expense.py
+
+---
+## 2026-06-06 — 일일 요약 API 응답 스키마 확장: 수입/지출 분리 + 하위 호환성
+**결정:** `/expense/summary/daily` 엔드포인트의 응답 스키마를 확장하여 (1) 기존 `total_usd = sum(converted_amount)` 계산 로직을 `_split_income_expense(rows)` 함수로 대체하여 수입/지출 분리, (2) 응답에 `total_income`, `total_expense`, `net` 필드 추가, (3) 기존 `total_usd` 필드를 `total_expense` 값으로 유지하여 하위 호환성 보장, (4) `_group_by_category()` 호출 시 `expense_type="expense"` 파라미터 추가하여 지출만 그룹화.
+**이유:** (1) 사용자가 같은 날짜에 지출과 수입을 함께 기록할 때, 둘을 명확히 구분하여 순수입(net) 계산 가능 → 재무 분석 정확성 향상. (2) 프론트엔드에서 일일 수입·지출·순입을 개별 표시할 수 있어 사용자 경험 개선. (3) `total_usd` 필드를 지출 합계로 유지하여 기존 클라이언트(이전 버전의 앱)가 여전히 작동 → 무중단 배포 가능.  (4) `expense_type="expense"` 필터로 카테고리별 집계가 순수 지출만 대상 → 수입 카테고리가 합계에 포함되지 않음.
+**대안:**
+- `total_usd` 필드를 제거하고 `total_expense`만 제공: 기존 클라이언트 즉시 중단, 마이그레이션 강제
+- 수입과 지출을 구분하지 않고 통합 표시: 순입 계산 불가능, 일일 재무 상황 파악 어려움
+- 별도 엔드포인트 `/expense/summary/daily/income` 신설: API 엔드포인트 증가, 클라이언트 호출 로직 복잡화
+- `_group_by_category(rows, db, lang)`에 필터 미적용 (전체 그룹화): 수입 카테고리도 합계에 포함되어 데이터 혼재
+**파일:** C:\Users\Jason\Desktop\dashboard\routers\expense.py
