@@ -98,7 +98,7 @@
 .card-title{font-size:0.72rem;font-weight:600;letter-spacing:0.08em;color:var(--ink2);text-transform:uppercase;}
 
 /* ── 지출 ── */
-.card-expense{grid-column:span 2;}
+.card-expense{grid-column:span 3;}
 .exp-today{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:0.85rem;}
 .exp-label{font-size:0.78rem;color:var(--ink3);}
 .exp-amount{font-size:1.5rem;font-weight:700;line-height:1.2;}
@@ -310,9 +310,9 @@
 /* ── 태블릿 (768px ~ 959px) — 2열 그리드 ── */
 @media(min-width:768px) and (max-width:959px){
   .main{grid-template-columns:repeat(2,1fr);padding:1rem;}
-  .card-hero,.card-stock{grid-column:span 2;}
+  .card-hero,.card-stock,.card-expense{grid-column:span 2;}
   .card-yt{grid-column:span 2;}
-  .card-schedule,.card-expense,.card-diet,.card-memo,.card-news,.card-sites{grid-column:span 1;}
+  .card-schedule,.card-diet,.card-memo,.card-news,.card-sites{grid-column:span 1;}
   .hero-inner--1,.hero-inner--2,.hero-inner--3{grid-template-columns:1fr 1fr;}
   .hero-inner .time-zone:nth-child(4){display:none;}
   .hero-weather{max-width:180px;}
@@ -320,7 +320,7 @@
 /* ── 960px+ — 기존 3열 유지 ── */
 @media(min-width:960px){
   .main{grid-template-columns:repeat(3,1fr);}
-  .card-hero,.card-stock{grid-column:span 3;}
+  .card-hero,.card-stock,.card-expense{grid-column:span 3;}
   .card-yt{grid-column:span 2;}
 }
 

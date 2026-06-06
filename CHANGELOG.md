@@ -133,6 +133,15 @@
 
 ---
 
+## [2026-06-05] — fix: 메인 대시보드 카드 너비 통일 및 동적 레이아웃 개선
+
+- `index.css`: `.card-expense` 기본값 `span 2` → `span 3` (StockCard와 동일 전체 너비)
+- 태블릿(768~959px): `.card-expense` span 1 목록에서 제거 → span 2 그룹으로 이동 (full width)
+- 960px+: `.card-hero,.card-stock,.card-expense` 모두 span 3으로 통일
+- `grid-auto-flow: row dense` 기존 유지로 카드 토글 시 빈 공간 자동 채움
+
+---
+
 ## [2026-06-05] — design: ExpenseCard 입력 필드 여백 및 반응형 레이아웃 개선
 
 - `index.css`: `.card-header` / `.card-body` CSS 정의 추가 (기존 미정의로 padding=0 문제 해결)
