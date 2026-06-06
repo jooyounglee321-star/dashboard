@@ -51,9 +51,15 @@ const INIT_FORM = () => ({
 function ExpForm({ compact, form, setForm, categories, subs, lang, submitting, addExpense }) {
   const isIncome = form.type === 'income'
 
-  /* 수입/지출 토글 클릭 → type 변경 + 카테고리 초기화 */
+  /* 수입/지출 토글 클릭 → type 변경 + 카테고리 초기화
+     income 전환 시 대분류를 첫 번째 항목으로 선설정 → 소분류 즉시 활성화 */
   const switchType = (type) =>
-    setForm(f => ({ ...f, type, category_id: '', subcategory_id: '', income_main_code: '', income_sub_code: '' }))
+    setForm(f => ({
+      ...f, type,
+      category_id: '', subcategory_id: '',
+      income_main_code: type === 'income' ? (INCOME_CATEGORIES[0]?.code ?? '') : '',
+      income_sub_code:  '',
+    }))
 
   /* income: 선택한 대분류의 소분류 목록 */
   const incomeSubs = getSubcategories(form.income_main_code)
@@ -492,7 +498,7 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
   }
 
   /* ── 집계 ─────────────────────────────────────────────────────────── */
-  const todayUSD   = expenses.reduce((s, e) => s + (e.converted_amount ?? e.amount), 0)
+  const todayUSD   = expenses.reduce((s, e) => s + (parseFloat(e.converted_amount ?? e.amount) || 0), 0)
   const budgetPct  = monthlyBudget ? Math.round(monthlyTotal / monthlyBudget * 100) : null
   const overBudget = budgetPct !== null && budgetPct > 100
 

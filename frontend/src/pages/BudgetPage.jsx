@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { t } from '../i18n'
 import { Chart, registerables } from 'chart.js'
+import { INCOME_CATEGORIES, getSubcategories } from '../data/incomeCategories'
 import './BudgetPage.css'
 
 Chart.register(...registerables)
@@ -170,14 +171,12 @@ export default function BudgetPage() {
 // ══════════════════════════════════════════════════════════════════════════════
 // Tab 1 — 일별
 // ══════════════════════════════════════════════════════════════════════════════
-const INIT_NEW_FORM = { category_id: '', subcategory_id: '', amount: '', currency: 'USD', description: '', type: 'expense' }
-
-/* 수입 전용 가상 카테고리 (ExpenseCard와 동일 패턴) */
-const BP_INCOME_CATS = (lang) => [
-  { id: '__primary__',   name: t(lang, 'budget.primary_income'),   icon: '💰' },
-  { id: '__secondary__', name: t(lang, 'budget.secondary_income'), icon: '💵' },
-  { id: '__other__',     name: t(lang, 'budget.other_income'),     icon: '💫' },
-]
+const INIT_NEW_FORM = {
+  category_id: '', subcategory_id: '',
+  income_main_code: '',   // income 전용 대분류 code
+  income_sub_code:  '',   // income 전용 소분류 code
+  amount: '', currency: 'USD', description: '', type: 'expense',
+}
 
 function DailyTab({ lang, currency, toDisplay }) {
   const [date, setDate]     = useState(todayStr)
@@ -241,18 +240,17 @@ function DailyTab({ lang, currency, toDisplay }) {
     catMap[cat] = (catMap[cat] || 0) + usd
   })
 
-  const isNewIncome  = newForm.type === 'income'
-  const isEditIncome = editForm.type === 'income'
-  const newIncomeCats = BP_INCOME_CATS(lang)
+  const isNewIncome  = (newForm.type  || 'expense') === 'income'
+  const isEditIncome = (editForm.type || 'expense') === 'income'
 
-  // 신규 폼: 수입이면 가상 카테고리, 지출이면 일반 cats
-  const newDisplayCats = isNewIncome ? newIncomeCats : cats
+  // income: 선택한 대분류의 소분류 목록
+  const newIncomeSubs  = getSubcategories(newForm.income_main_code  || '')
+  const editIncomeSubs = getSubcategories(editForm.income_main_code || '')
+
+  // 지출 소분류 목록
   const newFormSubs = (!isNewIncome && newForm.category_id)
     ? (cats.find(c => c.id === Number(newForm.category_id))?.subs ?? [])
     : []
-
-  // 수정 폼: 수입이면 가상 카테고리, 지출이면 일반 cats
-  const editDisplayCats = isEditIncome ? newIncomeCats : cats
   const editSubs = (!isEditIncome && editForm.category_id)
     ? (cats.find(c => c.id === Number(editForm.category_id))?.subs ?? [])
     : []
@@ -261,21 +259,37 @@ function DailyTab({ lang, currency, toDisplay }) {
     const amt = parseFloat(newForm.amount)
     if (isNaN(amt) || amt <= 0) return
     setSubmitting(true)
-    const incomeCatName = isNewIncome && newForm.category_id
-      ? newIncomeCats.find(c => c.id === newForm.category_id)?.name : null
     try {
-      const saved = await apiReq('POST', '/api/expense', {
-        date:           date,
-        amount:         amt,
-        currency:       newForm.currency || 'USD',
-        category_id:    !isNewIncome && newForm.category_id    ? Number(newForm.category_id)    : null,
-        subcategory_id: !isNewIncome && newForm.subcategory_id ? Number(newForm.subcategory_id) : null,
-        description:    newForm.description.trim() || incomeCatName || null,
-        type:           newForm.type,
-        lang,
-      })
-      setNewForm(f => ({ ...f, amount: '', description: '', subcategory_id: '', category_id: '' }))
-      if (saved) setItems(prev => [saved, ...prev])
+      if (isNewIncome) {
+        /* ── 수입: /api/income (code 기반) ── */
+        await apiReq('POST', '/api/income', {
+          category_code:    newForm.income_main_code || null,
+          subcategory_code: newForm.income_sub_code  || null,
+          description:      newForm.description.trim() || null,
+          currency:         newForm.currency || 'USD',
+          amount:           amt,
+          date,
+        })
+      } else {
+        /* ── 지출: /api/expense (id 기반) ── */
+        const saved = await apiReq('POST', '/api/expense', {
+          date,
+          amount:         amt,
+          currency:       newForm.currency || 'USD',
+          category_id:    newForm.category_id    ? Number(newForm.category_id)    : null,
+          subcategory_id: newForm.subcategory_id ? Number(newForm.subcategory_id) : null,
+          description:    newForm.description.trim() || null,
+          type:           'expense',
+          lang,
+        })
+        if (saved) setItems(prev => [saved, ...prev])
+      }
+      setNewForm(f => ({
+        ...f, amount: '', description: '',
+        category_id: '', subcategory_id: '',
+        income_main_code: isNewIncome ? (INCOME_CATEGORIES[0]?.code ?? '') : '',
+        income_sub_code: '',
+      }))
       load()
     } catch (err) {
       console.error('[addExpense] 저장 실패:', err)
@@ -287,13 +301,16 @@ function DailyTab({ lang, currency, toDisplay }) {
 
   function startEdit(it) {
     setEditId(it.id)
+    const itemType = it.type || 'expense'
     setEditForm({
-      amount:         it.amount,
-      currency:       it.currency || 'USD',
-      description:    it.description || '',
-      category_id:    it.category_id || '',
-      subcategory_id: it.subcategory_id || '',
-      type:           it.type || 'expense',
+      amount:           it.amount,
+      currency:         it.currency || 'USD',
+      description:      it.description || '',
+      category_id:      it.category_id    || '',
+      subcategory_id:   it.subcategory_id || '',
+      income_main_code: itemType === 'income' ? (it.category_code    || INCOME_CATEGORIES[0]?.code || '') : '',
+      income_sub_code:  itemType === 'income' ? (it.subcategory_code || '') : '',
+      type:             itemType,
     })
   }
 
@@ -351,28 +368,50 @@ function DailyTab({ lang, currency, toDisplay }) {
         <div className="bp-type-toggle">
           <button type="button"
             className={`bp-type-btn${!isNewIncome ? ' active expense' : ''}`}
-            onClick={() => setNewForm(f => ({ ...f, type: 'expense', category_id: '', subcategory_id: '' }))}>
+            onClick={() => setNewForm(f => ({ ...f, type: 'expense', category_id: '', subcategory_id: '', income_main_code: '', income_sub_code: '' }))}>
             💸 {t(lang, 'budget.expense')}
           </button>
           <button type="button"
             className={`bp-type-btn${isNewIncome ? ' active income' : ''}`}
-            onClick={() => setNewForm(f => ({ ...f, type: 'income', category_id: '', subcategory_id: '' }))}>
+            onClick={() => setNewForm(f => ({ ...f, type: 'income', category_id: '', subcategory_id: '', income_main_code: INCOME_CATEGORIES[0]?.code ?? '', income_sub_code: '' }))}>
             💰 {t(lang, 'budget.income')}
           </button>
         </div>
         <div className="bp-edit-row">
-          <select className="bp-sel" value={newForm.category_id}
-            onChange={e => setNewForm(f => ({ ...f, category_id: e.target.value, subcategory_id: '' }))}>
-            <option value="">{t(lang, 'expenseCatPh')}</option>
-            {newDisplayCats.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
-          </select>
-          {!isNewIncome && (
-            <select className="bp-sel" value={newForm.subcategory_id}
-              onChange={e => setNewForm(f => ({ ...f, subcategory_id: e.target.value }))}
-              disabled={!newFormSubs.length}>
-              <option value="">{t(lang, 'expenseSubcatPh')}</option>
-              {newFormSubs.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
+          {isNewIncome ? (
+            /* ── 수입: DB 기반 대분류 ── */
+            <>
+              <select className="bp-sel" value={newForm.income_main_code}
+                onChange={e => setNewForm(f => ({ ...f, income_main_code: e.target.value, income_sub_code: '' }))}>
+                <option value="">{t(lang, 'expenseCatPh')}</option>
+                {INCOME_CATEGORIES.map(c => (
+                  <option key={c.code} value={c.code}>{c.icon} {lang === 'ko' ? c.name_ko : c.name_en}</option>
+                ))}
+              </select>
+              <select className="bp-sel" value={newForm.income_sub_code}
+                onChange={e => setNewForm(f => ({ ...f, income_sub_code: e.target.value }))}
+                disabled={!newForm.income_main_code}>
+                <option value="">{t(lang, 'expenseSubcatPh')}</option>
+                {newIncomeSubs.map(s => (
+                  <option key={s.code} value={s.code}>{s.icon} {lang === 'ko' ? s.name_ko : s.name_en}</option>
+                ))}
+              </select>
+            </>
+          ) : (
+            /* ── 지출: 기존 expense 카테고리 ── */
+            <>
+              <select className="bp-sel" value={newForm.category_id}
+                onChange={e => setNewForm(f => ({ ...f, category_id: e.target.value, subcategory_id: '' }))}>
+                <option value="">{t(lang, 'expenseCatPh')}</option>
+                {cats.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+              </select>
+              <select className="bp-sel" value={newForm.subcategory_id}
+                onChange={e => setNewForm(f => ({ ...f, subcategory_id: e.target.value }))}
+                disabled={!newFormSubs.length}>
+                <option value="">{t(lang, 'expenseSubcatPh')}</option>
+                {newFormSubs.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </>
           )}
         </div>
         <div className="bp-edit-row">
@@ -494,7 +533,7 @@ function DailyTab({ lang, currency, toDisplay }) {
                       {/* 카드 상단: 수입/지출 배지 + 카테고리 경로 + 메모 */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', flex: 1, minWidth: 0 }}>
                         {/* 수입 배지 */}
-                        {it.type === 'income' && (
+                        {(it.type || 'expense') === 'income' && (
                           <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#60c080',
                             background: 'rgba(96,192,128,0.12)', borderRadius: '4px',
                             padding: '0.1rem 0.4rem', display: 'inline-block', width: 'fit-content' }}>
@@ -516,13 +555,13 @@ function DailyTab({ lang, currency, toDisplay }) {
                           {/* 수입: 초록 + 기호 / 지출: 주황 */}
                           <span style={{
                             fontSize: '1.05rem', fontWeight: 700, letterSpacing: '-0.01em',
-                            color: it.type === 'income' ? '#60c080' : '#e8a060',
+                            color: (it.type || 'expense') === 'income' ? '#60c080' : '#e8a060',
                           }}>
-                            {it.type === 'income' ? '+' : ''}{fmtAmt(it.amount, it.currency)}
+                            {(it.type || 'expense') === 'income' ? '+' : ''}{fmtAmt(it.amount, it.currency)}
                           </span>
                           {it.currency !== currency && (
                             <span style={{ fontSize: '0.76rem', color: '#7a8fa6' }}>
-                              ≈ {it.type === 'income' ? '+' : ''}{fmtAmt(toDisplay(it.converted_amount ?? it.amount), currency)}
+                              ≈ {(it.type || 'expense') === 'income' ? '+' : ''}{fmtAmt(toDisplay(it.converted_amount ?? it.amount), currency)}
                             </span>
                           )}
                         </div>
