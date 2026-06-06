@@ -562,7 +562,6 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
           setForm={setForm}
           categories={categories}
           subs={subs}
-          incomeCats={incomeCats}
           lang={lang}
           submitting={submitting}
           addExpense={addExpense}
