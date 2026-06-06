@@ -1,6 +1,20 @@
 # 프로젝트 결정 기록
 
 ---
+## 2026-06-06 — APScheduler 이중 타임존 스냅샷: 시장별 독립 CronTrigger + ET 기준 날짜 통일
+**결정:** 포트폴리오 스냅샷 수집을 위해 단일 23:59 KST 스케줄에서 이중 타임존 스케줄로 변경. (1) KR 그룹용 `_daily_snapshot_kr_job()` — 23:59 KST(Asia/Seoul), (2) US 그룹용 `_daily_snapshot_us_job()` — 23:59 ET(America/New_York), (3) 양쪽 job 모두 `datetime.now(ZoneInfo("America/New_York")).date()`를 기준으로 통일하여 ET 자정을 daily boundary로 설정, (4) 신규 함수들: `_KR_CATS` / `_US_CATS`(시장별 카테고리 상수), `_fetch_usd_krw()`(환율 조회 헬퍼), `_snapshot_user_partial()`(MERGE-UPSERT 핵심 로직), `_run_snapshot_job()`(사용자 순회 공통 로직), (5) MERGE 전략: 같은 날짜 행 존재 시 상대 시장 그룹은 보존하고 담당 그룹만 갱신.
+**이유:** (1) 한국 장(KST 15:30 마감) vs 미국 장(ET 16:00 마감)의 종가 확정 시간이 다르므로, 단일 KST 스케줄로는 미국 장이 아직 거래 중일 때(KST 23:59 ≈ ET 09:59) 미 종가 조회 불가 — 두 스케줄로 각 시장의 종가 후 시간에 맞춰 수집, (2) ET 기준 날짜 통일로 KR/US 그룹 데이터가 동일 스냅샷 행에 이날짜 오류 없음 — Railroad/UTC 서버 환경에서 각 TZ별 독립 시간 사용하되 날짜는 하나로 통일하는 hybrid 접근, (3) MERGE 전략은 사용자가 여러 시장 그룹 보유 시 KR 스냅샷과 US 스냅샷이 순차적으로 같은 행에 누적 가능 — 어느 job이 먼저 실행되든 상호 간섭 없음.
+**대안:** (1) UTC 기준 단일 스케줄 — KST/ET 두 시장 모두 장 마감 후를 정하기 어려움, (2) 수동 트리거(클라이언트 23:59 시 서버 호출) — 사용자 기기 시간에 의존하여 부정확, (3) 별도 `snapshot_kr` / `snapshot_us` 테이블 신설 — 쿼리 복잡도 증가, JSON `data` 필드에 시장별 상세 저장으로 충분, (4) KST 단일 스케줄 유지 + US 추가 조회 폴백 — 불필요한 재조회 발생, MERGE 로직 필요 없음.
+**파일:** `main.py` (_daily_snapshot_kr_job, _daily_snapshot_us_job, _fetch_usd_krw, _snapshot_user_partial, _run_snapshot_job 함수), `routers/expense.py` (스냅샷 저장 로직)
+
+---
+## 2026-06-06 — APScheduler 데일리 스냅샷: asyncio 동시 조회 + 폴백 전략 + 사용자별 UPSERT
+**결정:** 포트폴리오 스냅샷 저장 기능을 완전 재작성. (1) `asyncio` + `asyncio.gather`를 사용하여 모든 종목의 현재가를 **동시 조회** (기존 순차 처리), (2) USD/KRW 환율은 Yahoo Finance 우선 조회 후 DB 폴백, (3) 개별 종목 시세 조회 실패 시 `avg_price` 폴백으로 부분 저장 보장, (4) 모든 사용자(`stock` 테이블에서 distinct user_id`)를 순회하여 1인당 1행 UPSERT, (5) 저장 필드를 확대(`usd_krw`, `total_usd`, `total_krw`, `total_krw_equiv`, `data` JSON), (6) `_CAT_META` 상수 추가로 카테고리↔통화 매핑, (7) `_snapshot_user()` 헬퍼 함수 분리.
+**이유:** (1) asyncio 동시 조회는 N개 종목 조회 시간을 O(N) → O(1)로 단축(네트워크 지연 병렬화), (2) 폴백 체인으로 Yahoo Finance 장애 시에도 부분 저장 가능 → 데이터 무손실 우선, (3) 기존 코드는 `user_id=NULL` 플레이스홀더만 저장했으므로 모든 사용자 데이터 완전 누락 — 다중 사용자 환경에서 필수, (4) UPSERT 패턴으로 날짜 중복 시 덮어쓰기 — 재실행 안전성 확보, (5) JSON `data` 필드에 그룹명·통화·종목별 상세 저장으로 이력 재생성 및 디버깅 용이.
+**대안:** (1) 순차 조회 유지 — 느림, (2) 하나 실패 시 전체 스냅샷 버림 — 부분 데이터 손실, (3) user_id=NULL 단일 행만 저장 — 기존 문제점 재현, (4) 별도 `_daily_snapshot_history` 테이블 신설 — 스키마 복잡도 증가, JSON 충분함.
+**파일:** `main.py` (_daily_snapshot_job 함수 + _snapshot_user 헬퍼), `models.py` (DailyPortfolioSnapshot 스키마)
+
+---
 ## 2026-06-05 — 드래그 앤 드롭: @dnd-kit 채택
 **결정:** 대시보드 레이아웃 편집에 `@dnd-kit/core` + `@dnd-kit/sortable`을 사용. 위젯 순서와 크기(S/M/L)를 `widget_config.layout.items` 배열로 저장.
 **이유:** React 18 완전 호환, 접근성(ARIA) 기본 지원, 추가 의존성 최소(5개 패키지), 기존 코드 수정 없이 SortableCard 래퍼로 비침투적 통합 가능.
@@ -231,6 +245,17 @@
 **파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\index\IndexPage.jsx
 
 ---
+## 2026-06-06 — 편집 모달 카테고리 UI: 지출/수입 완전 격리 (조건부 렌더링 선택)
+**결정:** BudgetPage DailyTab의 편집 카드(`editId === it.id`) 내 카테고리 선택 UI를 `isEditIncome` 상태에 따라 완전히 분리. 수입 모드에서는 `INCOME_CATEGORIES` 기반 code 드롭다운 표시, 지출 모드에서는 `cats` 배열 기반 ID 드롭다운 표시. 타입 전환 버튼(💸 지출, 💰 수입) 클릭 시 토글하면서 **관련된 모든 필드를 초기화** (`category_id`, `subcategory_id`, `income_main_code`, `income_sub_code` 동시 클리어).
+**이유:** (1) 수입과 지출이 완전히 다른 카테고리 구조(수입: code 기반 정적 계층, 지출: DB ID 기반 동적)를 가지므로, UI 조건부 렌더링으로 각 모드에 맞는 드롭다운만 표시하여 사용자 혼동 방지. (2) 둘 다 표시하고 disable 처리하는 방식보다 완전 격리가 UX 명확성과 코드 가독성 향상. (3) 타입 전환 시 **양쪽 필드를 모두 초기화**함으로써 이전 모드의 카테고리 선택이 우발적으로 유지되는 버그 방지 (예: 지출→수입 전환 후도 `category_id` 값이 남아있으면 나중에 지출로 다시 전환할 때 잘못된 선택 유지 가능).
+**대안:**
+- 단일 드롭다운으로 통합 + disable 조건부: 레이아웃 안정화되지만 비활성 필드가 시각적으로 영역 차지, UI 혼동 가능
+- 모드 전환 시 해당 필드만 초기화: 불완전한 리셋으로 이전 모드 데이터 일부 남음, 예측 불가능한 버그 유발 가능성
+- 별도 컴포넌트로 분리: 중복 코드 증가, 유지보수 어려움
+- 타입 전환 시 폼 전체 리셋: UX 저하 (사용자가 입력한 금액, 설명 등도 함께 손실)
+**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\BudgetPage.jsx
+
+---
 ## 2026-06-06 — CSS Grid 컬럼 아키텍처: 3열 → 12열로 마이그레이션
 **결정:** PC 레이아웃의 CSS Grid 구조를 `grid-template-columns:repeat(3,1fr)`에서 `repeat(12,1fr)`로 변경하고, `.card-hero`의 스팬을 `span 3`에서 `span 12`로 업데이트. 동시에 레이아웃 편집 기능을 위한 28개 새로운 CSS 클래스를 추가:
 - 편집 버튼: `.layout-edit-btn`
@@ -255,3 +280,25 @@
 - CSS Grid 행(row) 기반 높이 제어: 현 요구사항은 가로 크기 조절이므로 부적합, 불필요한 CSS 복잡화
 - 각 해상도별 완전히 다른 컬럼 수 사용: 반응형 설계 원칙 위반, 미디어 쿼리 관리 복잡화
 **파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\index\index.css
+
+---
+## 2026-06-06 16:xx — 포트폴리오 스냅샷 스케줄러: 플레이스홀더 방식에서 실시간 계산 및 사용자별 UPSERT로 전환
+**결정:** `_daily_snapshot_job()` 함수를 완전히 리팩토링하여 (1) 플레이스홀더 저장 방식 폐기, (2) Yahoo Finance API로 USD/KRW 환율을 실시간 조회 (실패 시 DB 폴백), (3) stocks 테이블의 모든 사용자를 순회하며 (4) `asyncio.gather()`로 각 종목 현재가를 병렬 조회, (5) 종목별 평가금액·평가손익 계산 후 카테고리별 그룹화, (6) `DailyPortfolioSnapshot` UPSERT (user_id + snapshot_date 기준). `_CAT_META` 딕셔너리로 카테고리→그룹명/통화 매핑 저장. 새 helper 함수 `_snapshot_user()`로 단일 사용자 포트폴리오 계산 로직 분리.
+**이유:** (1) 기존 플레이스홀더 방식은 실제 포트폴리오 가치를 저장하지 않아 시계열 분석 불가능. (2) 실시간 Yahoo Finance 조회로 정확한 평가금액 추적 가능하고, 조회 실패 시 DB 환율/avg_price로 우아한 폴백. (3) `asyncio.gather()` 병렬 조회로 여러 종목의 시세를 동시에 가져와 스케줄러 실행 시간 단축. (4) 종목별 eval_amount, eval_pl 계산으로 손익 분석 지원. (5) 카테고리별 그룹화 및 JSON 저장으로 프론트엔드에서 포트폴리오 breakdown 시각화 가능. (6) user_id별 UPSERT로 다중 사용자 포트폴리오 동시 지원, 향후 다사용자 시스템 확장성 확보.
+**대안:**
+- 플레이스홀더 방식 유지: 실제 포트폴리오 가치 미추적, 대시보드 스냅샷 기능 의미 상실
+- 프론트엔드에서만 시세 조회: 스냅샷 저장 시점에 정확한 환율·가격 반영 불가능, 나중 조회 시 시장 변동 반영
+- 동기 API 호출(requests): 여러 종목 조회 시 직렬 처리로 인한 스케줄러 지연 (예: 10종목 × 500ms = 5초), asyncio 병렬화 미활용
+- 통합 JSON 저장 대신 정규화 테이블 확장: 종목별 행 추가로 스냅샷 테이블 비대화, 계층 데이터 표현 복잡화
+**파일:** C:\Users\Jason\Desktop\dashboard\main.py
+
+---
+## 2026-06-06 — 포트폴리오 스냅샷: 단일 집계 → 시장별 분리 스케줄러 + MERGE-UPSERT 전환
+**결정:** 기존 `_daily_snapshot_job()` 단일 함수를 완전 리팩토링하여 시장별(한국장 KST 15:30+8h, 미국장 ET 16:00+8h) 독립 실행 스케줄러로 분할. (1) 시장별 카테고리 집합 `_KR_CATS`, `_US_CATS` 상수 추가, (2) 환율 조회 로직을 `_fetch_usd_krw()` 헬퍼 함수로 추출, (3) 기존 `_snapshot_user()` 함수명을 `_snapshot_user_partial()`로 변경하고 `categories: set` 파라미터 추가하여 특정 카테고리만 계산하도록 제한, (4) 새로운 `_run_snapshot_job(today, categories, label)` 공통 실행 함수로 환율 조회→사용자 순회→부분 UPSERT 로직 통합, (5) 시장별 진입점 함수 `_daily_snapshot_kr_job()`, `_daily_snapshot_us_job()` 추가로 ZoneInfo 기반 날짜 계산 및 로그 레이블 분리, (6) **MERGE-UPSERT 도입**: 같은 날짜 행 존재 시 기존 행의 반대 시장 데이터(그룹)는 보존하고 현재 job 담당 시장의 그룹만 갱신 → 두 시장의 스냅샷이 같은 행에 통합.
+**이유:** (1) 한국 장과 미국 장의 마감 시간이 다르므로 (KST 15:30 vs ET 16:00), 하나의 시간대로 통일된 스케줄에서 두 시장을 동시 처리하면 미국 장은 22시간 뒤 스냅샷이 되는 부정확성 발생 → 시장별 독립 스케줄로 각각 마감 후 8시간 뒤 정확한 타이밍 확보. (2) MERGE-UPSERT 패턴으로 같은 날짜 행에 한국과 미국 포트폴리오를 통합 저장 → 사용자 일일 포트폴리오 스냅샷이 단일 행(user_id, snapshot_date)에 모든 시장 데이터 포함 가능. (3) 반대 시장 데이터 보존으로 먼저 실행된 job(예: 한국)의 결과를 나중 job(미국)이 덮어쓰지 않음. (4) 함수 분할로 관심사 분리: 환율 조회, 부분 계산, 공통 실행 로직이 명확히 구분되어 유지보수성 향상. (5) ZoneInfo("America/New_York")를 명시하여 서버 타임존(Railway = UTC) 무관하게 일관된 ET 기준 날짜 사용.
+**대안:**
+- 기존 단일 job 유지하되 시간만 조정: ET 기준 23:59에 모든 업데이트 → 한국 장은 2일 뒤 결과가 되거나, KST 기준으로 하면 미국 장이 전날 데이터가 됨. 시간대 불일치 근본 해결 불가.
+- 하나의 job에서 카테고리별 조건부 처리: `if category in KR_CATS: ... elif category in US_CATS: ...` 코드 분기 → 단일 함수가 두 시장 로직 혼합되어 복잡화, 향후 시장별 특화 로직 추가 어려움.
+- 같은 행 UPSERT 대신 미국장 결과를 새 행(다른 snapshot_date)에 저장: 사용자 일일 포트폴리오가 2개 행으로 분산 저장 → 조회 시 두 행을 UNION 해야 하고, 통합 손익 계산 복잡화, 프론트엔드 렌더링 로직 분산.
+- 캐시(Redis) 사용: 전 시장 스냅샷 완료 후 커밋: 두 job 간 동기화 필요 (분산 lock, TTL 관리), 장애 시 복구 어려움.
+**파일:** C:\Users\Jason\Desktop\dashboard\main.py
