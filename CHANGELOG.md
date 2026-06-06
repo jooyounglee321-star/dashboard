@@ -4,6 +4,30 @@
 
 ---
 
+## [2026-06-06] — feat: APScheduler 이중 타임존 스냅샷 (한국 23:59 KST / 미국 23:59 ET)
+
+### 배경
+- 서버(Railway)는 UTC로 동작하므로 단일 23:59 KST 스케줄로는 미국 주식 종가 확정 전 조회
+- 한국 장: KST 15:30 마감 → 23:59 KST 조회 시 종가 확정 ✓
+- 미국 장: ET 16:00 마감 → 23:59 KST(≈09:59 ET)는 장 중 → 종가 미확정 ✗
+
+### 변경 내용
+- `_daily_snapshot_job` + `_snapshot_user` 제거
+- 신규 함수 5개 도입:
+  - `_KR_CATS` / `_US_CATS` — 시장별 카테고리 집합 상수
+  - `_fetch_usd_krw(db, loop)` — 환율 조회 공통 헬퍼
+  - `_snapshot_user_partial(db, loop, uid, today, categories, usd_krw)` — MERGE-UPSERT 핵심 로직
+  - `_run_snapshot_job(today, categories, label)` — 사용자 순회 공통 로직
+  - `_daily_snapshot_kr_job()` — 23:59 KST 진입점 (KR 그룹)
+  - `_daily_snapshot_us_job()` — 23:59 ET 진입점 (US 그룹)
+- APScheduler `add_job` 2개로 분리:
+  - `id="daily_snapshot_kr"` — `CronTrigger(timezone="Asia/Seoul")`
+  - `id="daily_snapshot_us"` — `CronTrigger(timezone="America/New_York")`
+- MERGE 전략: 같은 날짜 행이 있으면 상대 시장 그룹은 보존, 이 job 담당 그룹만 갱신
+- 날짜 기준: `datetime.now(ZoneInfo("America/New_York")).date()` — 양쪽 job 모두 ET 날짜 통일
+
+---
+
 ## [2026-06-06] — fix: APScheduler daily_portfolio_snapshot 실제 데이터 저장으로 전면 개선
 
 ### 변경 전
