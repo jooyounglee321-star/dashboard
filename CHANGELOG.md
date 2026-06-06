@@ -4,6 +4,29 @@
 
 ---
 
+## [2026-06-06] — feat: 가계부 결산 수입/지출 분리 집계 및 UI 개편
+
+### 백엔드 (routers/expense.py)
+- `_split_income_expense(rows)` 헬퍼 추가 — `(total_income, total_expense, net)` 반환
+- `_group_by_category()` — `expense_type` 파라미터 추가, 지출/수입 단독 집계 가능
+- `GET /summary/daily` — `total_income`, `total_expense`, `net` 필드 추가; `by_category`·`total_usd` 지출만
+- `GET /summary/monthly` — 동일 분리; 일별 집계(`daily`)·카테고리도 지출만
+- `GET /summary/yearly` — 월별 객체에 `total_income`/`total_expense`/`net` 추가; YoY 비교도 지출 기준
+- `GET /stats` — `by_category`·`over_budget`·`daily_trend` 지출만; 수입/지출/순수지 응답 추가
+- 기존 `total_usd` 필드는 지출 합계로 재정의해 다른 탭 하위 호환 유지
+
+### 프론트엔드 (BudgetPage.jsx + BudgetPage.css)
+- `SummaryTab` 상단에 **수입(녹색) / 지출(빨간색) / 순수지(파란색·조건부)** 3카드 추가
+- 최근 12개월 표: 1열(지출 합계) → 3열(수입 / 지출 / 순수지)로 개편
+- `history` 상태에 `total_income`, `total_expense`, `net` 포함
+- 예산 초과·TOP 5 는 지출 전용(백엔드에서 보장)
+- `.bp-summary-cards` / `.bp-summary-card` 등 3카드 전용 CSS 추가
+
+### i18n
+- `budget.totalIncome` / `budget.net` 키 추가 (ko.json, en.json)
+
+---
+
 ## [2026-06-06] — feat: APScheduler 이중 타임존 스냅샷 (한국 23:59 KST / 미국 23:59 ET)
 
 ### 배경

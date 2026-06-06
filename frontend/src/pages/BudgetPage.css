@@ -400,6 +400,52 @@
   margin: 0 0 0.75rem;
 }
 
+/* ── Summary 상단 3카드 (수입/지출/순수지) ──────────────────────────────── */
+.bp-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.bp-summary-card {
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  border: 1px solid transparent;
+}
+.bp-summary-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  opacity: 0.75;
+  letter-spacing: 0.02em;
+}
+.bp-summary-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+.bp-summary-income {
+  background: rgba(22, 163, 74, 0.1);
+  border-color: rgba(22, 163, 74, 0.25);
+  color: #4ade80;
+}
+.bp-summary-expense {
+  background: rgba(220, 38, 38, 0.1);
+  border-color: rgba(220, 38, 38, 0.25);
+  color: #f87171;
+}
+.bp-summary-net-pos {
+  background: rgba(37, 99, 235, 0.1);
+  border-color: rgba(37, 99, 235, 0.25);
+  color: #60a5fa;
+}
+.bp-summary-net-neg {
+  background: rgba(220, 38, 38, 0.08);
+  border-color: rgba(220, 38, 38, 0.2);
+  color: #f87171;
+}
+
 /* ── Summary Grid ────────────────────────────────────────────────────────── */
 .bp-sum-grid {
   display: grid;
