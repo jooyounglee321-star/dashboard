@@ -133,6 +133,18 @@
 
 ---
 
+## [2026-06-05] — design: ExpenseCard 입력 필드 여백 및 반응형 레이아웃 개선
+
+- `index.css`: `.card-header` / `.card-body` CSS 정의 추가 (기존 미정의로 padding=0 문제 해결)
+- `.exp-new-form`: `gap` 0.32rem → 0.55rem으로 확대
+- 모든 input/select: `padding` py-2 px-3(0.5rem 0.75rem), `border-radius` rounded-lg(0.5rem) 통일
+- `.exp-sel-pair`: grid → flex + gap-0.65rem, 각 자식 flex:1 (대/소분류 나란히)
+- `.exp-cur-sel`: 고정 너비 130px (통화 선택), 금액 flex-1
+- `.exp-date-row`: gap 확대, 날짜 flex-1 유지
+- focus 상태: accent 색상 + box-shadow 추가
+
+---
+
 ## [2026-06-05] — feat: 수입(Income) 카테고리 구조 신설 및 API 구현
 
 ### DB 변경
