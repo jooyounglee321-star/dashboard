@@ -133,6 +133,20 @@
 
 ---
 
+## [2026-06-05] — feat: 드래그 앤 드롭 레이아웃 편집 기능 추가 (순서 변경 + 카드 크기 선택)
+
+- `frontend/src/pages/index/LayoutEditor.jsx` 신규 생성
+  - `SortableCard` 컴포넌트: @dnd-kit/sortable 기반 드래그 핸들(⠿) + S/M/L 크기 버튼
+  - `DEFAULT_LAYOUT_ITEMS`: 기본 레이아웃 (12컬럼 기준, hero·stock·expense=100%, 나머지=50%)
+- `IndexPage.jsx`: 레이아웃 편집 상태·함수 추가
+  - 헤더 우상단 "⊞ 레이아웃 편집" 버튼 (모바일 숨김)
+  - 편집 모드 진입 시 sticky 툴바 (저장/취소)
+  - DndContext + SortableContext로 드래그 순서 변경
+  - 크기 저장: PUT /api/auth/widget-config (widget_config.layout.items)
+- `index.css`: PC 그리드 3컬럼 → 12컬럼으로 변경, 레이아웃 편집 스타일 추가
+
+---
+
 ## [2026-06-05] — fix: 메인 대시보드 카드 너비 통일 및 동적 레이아웃 개선
 
 - `index.css`: `.card-expense` 기본값 `span 2` → `span 3` (StockCard와 동일 전체 너비)
