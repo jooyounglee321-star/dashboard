@@ -4,6 +4,23 @@
 
 ---
 
+## [2026-06-06] — fix: APScheduler daily_portfolio_snapshot 실제 데이터 저장으로 전면 개선
+
+### 변경 전
+- `_daily_snapshot_job`이 `user_id=NULL` 빈 플레이스홀더만 저장 (모든 값 NULL)
+- Yahoo Finance 호출 없음, 사용자 루프 없음
+
+### 변경 후
+- `asyncio` + `asyncio.gather`로 종목별 현재가 **동시 조회** (Yahoo Finance `_fetch_price` 재사용)
+- USD/KRW 환율: Yahoo Finance → DB 폴백 순으로 안전하게 처리
+- 종목별 시세 조회 실패 시 `avg_price` 폴백 → 부분 저장 보장
+- 모든 사용자(`stock` 테이블 `user_id distinct`)를 순회하여 1인당 1행 UPSERT
+- 저장 필드: `usd_krw`, `total_usd`, `total_krw`, `total_krw_equiv`, `data`(JSON 그룹/종목 상세)
+- `_CAT_META` 상수 추가 (카테고리 → 그룹명·통화 매핑)
+- `_snapshot_user()` 헬퍼 분리
+
+---
+
 ## [2026-06-06] — fix: 가계부 및 식단 입력 폼에 미래 날짜 선택 제한(max) 적용
 
 - `ExpenseCard.jsx` 추가 폼 날짜 입력: `max={todayStr()}` 추가 → 오늘 이후 미래 날짜 선택 불가

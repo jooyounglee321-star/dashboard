@@ -1,3 +1,5 @@
+import asyncio
+import json
 import logging
 from contextlib import asynccontextmanager
 from datetime import date as dt_date
@@ -58,32 +60,174 @@ async def _refresh_rates_job():
         db.close()
 
 
+# ── 카테고리 → 그룹명/통화 매핑 (routers/stocks.py CATEGORIES 와 동기화) ──────
+_CAT_META: dict[str, tuple[str, str]] = {
+    "robinhood": ("Robinhood", "USD"),
+    "us":        ("US",        "USD"),
+    "kor-stock": ("KOR Stock", "KRW"),
+    "kor-etf":   ("KOR ETF",   "KRW"),
+}
+
+
 async def _daily_snapshot_job():
-    """매일 23:59:00 KST 실행 — 당일 scheduler 플레이스홀더(user_id=NULL)가 없으면 저장."""
+    """매일 23:59:00 KST — 전체 사용자 포트폴리오 실제 가치 스냅샷 저장.
+
+    1. USD/KRW 환율을 Yahoo Finance에서 조회 (실패 시 DB 환율로 폴백)
+    2. stocks 테이블에 주식이 있는 모든 사용자를 순회
+    3. 각 종목 현재가를 Yahoo Finance(_fetch_price)로 동시 조회
+       (개별 종목 조회 실패 시 avg_price로 폴백)
+    4. 평가금액·평가손익 계산 후 DailyPortfolioSnapshot UPSERT
+    """
+    from routers.stocks import _fetch_price   # 지연 import — 순환 import 방지
+
     today = dt_date.today()
-    db = SessionLocal()
+    loop  = asyncio.get_running_loop()
+    db    = SessionLocal()
+
     try:
-        # user_id IS NULL 인 scheduler 전용 플레이스홀더만 확인
-        existing = db.query(DailyPortfolioSnapshot).filter(
-            DailyPortfolioSnapshot.snapshot_date == today,
-            DailyPortfolioSnapshot.user_id == None,  # noqa: E711
-        ).first()
-        if existing:
-            logger.info("[SCHEDULER] %s 스냅샷 이미 존재 (saved_by=%s)", today, existing.saved_by)
+        # ── 1. USD/KRW 환율 ─────────────────────────────────────────────────
+        usd_krw: float | None = None
+        try:
+            krw_data = await loop.run_in_executor(None, _fetch_price, "KRW=X", None)
+            usd_krw  = float(krw_data["current_price"])
+            logger.info("[SCHEDULER SNAP] USD/KRW 환율: %.2f", usd_krw)
+        except Exception as e:
+            logger.warning("[SCHEDULER SNAP] Yahoo 환율 실패 → DB 폴백: %s", e)
+            krw_row = db.query(ExchangeRate).filter_by(
+                base_currency="USD", target_currency="KRW"
+            ).first()
+            if krw_row:
+                usd_krw = float(krw_row.rate)
+                logger.info("[SCHEDULER SNAP] DB 환율 사용: %.2f", usd_krw)
+
+        # ── 2. 주식 보유 사용자 목록 ─────────────────────────────────────────
+        user_ids = [uid for (uid,) in db.query(Stock.user_id).distinct().all()]
+        if not user_ids:
+            logger.info("[SCHEDULER SNAP] 등록된 주식 없음 — 종료")
             return
-        # 프런트엔드 스냅샷 미수신 → 빈 플레이스홀더 저장 (user_id=NULL)
-        row = DailyPortfolioSnapshot(
-            snapshot_date=today,
-            saved_by="scheduler",
-            user_id=None,
-        )
-        db.add(row)
-        db.commit()
-        logger.info("[SCHEDULER] %s 플레이스홀더 스냅샷 저장 (프런트 미수신)", today)
+        logger.info("[SCHEDULER SNAP] %s 스냅샷 대상 %d명", today, len(user_ids))
+
+        # ── 3. 사용자별 스냅샷 저장 ─────────────────────────────────────────
+        for uid in user_ids:
+            try:
+                await _snapshot_user(db, loop, uid, today, usd_krw)
+            except Exception as e:
+                logger.error("[SCHEDULER SNAP] user=%d 오류: %s", uid, e)
+
+        logger.info("[SCHEDULER SNAP] %s 전체 완료", today)
+
     except Exception as e:
-        logger.error("[SCHEDULER] 스냅샷 저장 오류: %s", e)
+        logger.error("[SCHEDULER SNAP] 작업 오류: %s", e)
     finally:
         db.close()
+
+
+async def _snapshot_user(db, loop, user_id: int, today, usd_krw: float | None):
+    """단일 사용자 포트폴리오 계산 및 DailyPortfolioSnapshot UPSERT."""
+    from routers.stocks import _fetch_price
+
+    stocks = db.query(Stock).filter(Stock.user_id == user_id).all()
+    if not stocks:
+        return
+
+    # 종목별 현재가 동시 조회
+    async def _price_of(s: Stock) -> tuple[Stock, float | None]:
+        try:
+            data  = await loop.run_in_executor(None, _fetch_price, s.ticker, s.category)
+            return s, float(data["current_price"])
+        except Exception as e:
+            logger.warning(
+                "[SCHEDULER SNAP] user=%d %s 시세 실패 → avg_price 폴백: %s",
+                user_id, s.ticker, e,
+            )
+            return s, float(s.avg_price) if s.avg_price else None
+
+    results = await asyncio.gather(*[_price_of(s) for s in stocks])
+
+    groups:    dict[str, dict] = {}
+    total_usd  = 0.0
+    total_krw  = 0.0
+
+    for s, price in results:
+        if price is None:
+            continue
+        meta = _CAT_META.get(s.category)
+        if not meta:
+            continue
+        qty = float(s.quantity or 0)
+        if qty <= 0:
+            continue
+
+        grp_name, currency = meta
+        avg       = float(s.avg_price) if s.avg_price else None
+        eval_amt  = round(qty * price,                2)
+        eval_pl   = round((price - avg) * qty,        2) if avg else None
+
+        if s.category not in groups:
+            groups[s.category] = {
+                "name":     grp_name,
+                "currency": currency,
+                "total":    0.0,
+                "stocks":   [],
+            }
+        groups[s.category]["stocks"].append({
+            "ticker":        s.ticker,
+            "name":          s.name,
+            "current_price": price,
+            "hold_qty":      qty,
+            "eval_amount":   eval_amt,
+            "avg_buy_price": avg,
+            "eval_pl":       eval_pl,
+            "realized_pl":   0,
+        })
+        groups[s.category]["total"] = round(groups[s.category]["total"] + eval_amt, 2)
+
+        if currency == "USD":
+            total_usd += eval_amt
+        else:
+            total_krw += eval_amt
+
+    if not groups:
+        logger.info("[SCHEDULER SNAP] user=%d 유효 종목 없음 — 스킵", user_id)
+        return
+
+    total_krw_equiv = (
+        round(total_usd * usd_krw + total_krw, 2) if usd_krw else None
+    )
+    data_json = json.dumps(list(groups.values()), ensure_ascii=False)
+
+    # UPSERT (user_id + 날짜 기준)
+    row = db.query(DailyPortfolioSnapshot).filter(
+        DailyPortfolioSnapshot.user_id        == user_id,
+        DailyPortfolioSnapshot.snapshot_date  == today,
+    ).first()
+
+    if row:
+        row.usd_krw         = usd_krw
+        row.total_usd       = round(total_usd, 2)
+        row.total_krw       = round(total_krw, 2)
+        row.total_krw_equiv = total_krw_equiv
+        row.data            = data_json
+        row.saved_by        = "scheduler"
+    else:
+        row = DailyPortfolioSnapshot(
+            user_id         = user_id,
+            snapshot_date   = today,
+            usd_krw         = usd_krw,
+            total_usd       = round(total_usd, 2),
+            total_krw       = round(total_krw, 2),
+            total_krw_equiv = total_krw_equiv,
+            data            = data_json,
+            saved_by        = "scheduler",
+        )
+        db.add(row)
+
+    db.commit()
+    logger.info(
+        "[SCHEDULER SNAP] user=%d 저장 완료 — USD %.2f / KRW %.0f / 원화환산 %s",
+        user_id, total_usd, total_krw,
+        f"{total_krw_equiv:,.0f}" if total_krw_equiv else "N/A",
+    )
 
 
 def _migrate_user_columns():
