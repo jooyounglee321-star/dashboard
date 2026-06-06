@@ -179,6 +179,7 @@ function ExpForm({ compact, form, setForm, categories, subs, lang, submitting, a
         <input
           type="date"
           value={form.date}
+          max={todayStr()}
           onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
         />
         <button
@@ -248,6 +249,7 @@ function ExpItem({ e, editId, editForm, setEditForm, categories, lang, saveEdit,
             <input
               type="date"
               value={editForm.date}
+              max={todayStr()}
               onChange={ev => setEditForm(f => ({ ...f, date: ev.target.value }))}
               style={{ flex: 1 }}
             />

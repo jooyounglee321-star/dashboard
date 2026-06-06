@@ -4,6 +4,16 @@
 
 ---
 
+## [2026-06-06] — fix: 가계부 및 식단 입력 폼에 미래 날짜 선택 제한(max) 적용
+
+- `ExpenseCard.jsx` 추가 폼 날짜 입력: `max={todayStr()}` 추가 → 오늘 이후 미래 날짜 선택 불가
+- `ExpenseCard.jsx` 수정 모달 날짜 입력: 동일하게 `max={todayStr()}` 추가
+- `BudgetPage.jsx` DailyTab 날짜 선택기: `max={todayStr()}` 추가
+- 단, SettingTab(예산 설정) · 일정(Schedule) 등 미래 계획용 입력은 제한 없이 유지
+- `todayStr()` 함수(로컬 타임존 기준) 재사용 → UTC 파싱 오프셋 문제 없음
+
+---
+
 ## [2026-06-06] — fix: 수입/지출 토글에 따른 대분류 드롭다운 항목 동적 필터링 버그 수정
 
 ### 버그 원인

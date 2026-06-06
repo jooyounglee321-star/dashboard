@@ -350,6 +350,7 @@ function DailyTab({ lang, currency, toDisplay }) {
     <section className="bp-sec">
       <div className="bp-toolbar">
         <input type="date" className="bp-date-inp" value={date}
+          max={todayStr()}
           onChange={e => {
             // e.target.value는 항상 로컬 "YYYY-MM-DD" 문자열 — new Date() 변환 절대 금지
             // split('-')으로 연/월/일을 명시적으로 분해 후 재조합 → UTC 파싱 경로 원천 차단
