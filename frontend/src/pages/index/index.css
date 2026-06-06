@@ -91,9 +91,15 @@
 .stock-total-value{font-size:1.05rem;font-weight:700;color:var(--accent2);}
 .stock-divider{height:0.5px;background:var(--border);margin:0.6rem 0;}
 
+/* ── 카드 공통 헤더/바디 (데스크톱) ── */
+.card-header{display:flex;align-items:center;padding:0.85rem 1.2rem;border-bottom:1px solid var(--border);background:var(--card2);gap:0.5rem;}
+.card-body{padding:1.1rem 1.25rem;}
+.card-icon{font-size:1rem;}
+.card-title{font-size:0.72rem;font-weight:600;letter-spacing:0.08em;color:var(--ink2);text-transform:uppercase;}
+
 /* ── 지출 ── */
 .card-expense{grid-column:span 2;}
-.exp-today{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:0.75rem;}
+.exp-today{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:0.85rem;}
 .exp-label{font-size:0.78rem;color:var(--ink3);}
 .exp-amount{font-size:1.5rem;font-weight:700;line-height:1.2;}
 .exp-db-badge{font-size:0.68rem;color:var(--green);border:1px solid var(--green);padding:0.1rem 0.5rem;border-radius:10px;}
@@ -105,23 +111,39 @@
 .exp-budget-fill{height:100%;background:var(--green);border-radius:3px;transition:width 0.4s;}
 .exp-budget-fill.over{background:#e05c3a;}
 /* ── 지출/수입 세그먼트 토글 ── */
-.exp-type-toggle{display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--border);margin-bottom:0.35rem;}
-.exp-type-btn{flex:1;padding:0.38rem 0;border:none;background:var(--card2);color:var(--ink3);font-size:0.8rem;font-family:inherit;cursor:pointer;transition:all 0.15s;font-weight:400;}
+.exp-type-toggle{display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--border);margin-bottom:0.6rem;}
+.exp-type-btn{flex:1;padding:0.44rem 0;border:none;background:var(--card2);color:var(--ink3);font-size:0.8rem;font-family:inherit;cursor:pointer;transition:all 0.15s;font-weight:400;}
 .exp-type-btn:hover{color:var(--ink);}
 .exp-type-btn.active.expense{background:var(--accent);color:#fff;font-weight:600;}
 .exp-type-btn.active.income{background:var(--green);color:#fff;font-weight:600;}
 
-/* 입력 폼 */
-.exp-new-form{display:flex;flex-direction:column;gap:0.32rem;margin-bottom:0.75rem;}
-.exp-new-form input,.exp-new-form select{padding:0.38rem 0.55rem;font-size:0.8rem;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--ink);font-family:inherit;}
-.exp-new-form input:focus,.exp-new-form select:focus{outline:none;border-color:var(--accent);}
-.exp-sel-pair{display:grid;grid-template-columns:1fr 1fr;gap:0.32rem;}
-.exp-sel-pair-col{display:flex;flex-direction:column;gap:0.32rem;}
-.exp-cur-row{display:flex;gap:0.32rem;}
-.exp-cur-sel{flex:0 0 100px;}
+/* ── 입력 폼 ── */
+.exp-new-form{display:flex;flex-direction:column;gap:0.55rem;margin-bottom:0.85rem;}
+/* 모든 input/select 통일 스타일: rounded-lg, py-2 px-3 */
+.exp-new-form input,.exp-new-form select{
+  padding:0.5rem 0.75rem;
+  font-size:0.82rem;
+  border:1px solid var(--border);
+  border-radius:0.5rem;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:inherit;
+  width:100%;
+  box-sizing:border-box;
+}
+.exp-new-form input:focus,.exp-new-form select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(196,102,42,0.12);}
+/* 대/소분류 행: flex gap-3, 각 flex-1 */
+.exp-sel-pair{display:flex;gap:0.65rem;}
+.exp-sel-pair > *{flex:1;min-width:0;}
+.exp-sel-pair-col{display:flex;flex-direction:column;gap:0.55rem;}
+/* 통화+금액 행: 통화 고정(130px), 금액 flex-1 */
+.exp-cur-row{display:flex;gap:0.65rem;align-items:stretch;}
+.exp-cur-sel{flex:0 0 130px !important;width:130px !important;}
 .exp-amt-inp{flex:1;}
+/* 메모 */
 .exp-desc-inp{width:100%;box-sizing:border-box;}
-.exp-date-row{display:flex;gap:0.32rem;}
+/* 날짜+버튼 행: 날짜 flex-1, 버튼 고정 */
+.exp-date-row{display:flex;gap:0.65rem;align-items:center;}
 .exp-date-row input[type=date]{flex:1;}
 /* 목록 */
 .exp-list{list-style:none;display:flex;flex-direction:column;gap:0.2rem;max-height:200px;overflow-y:auto;}
