@@ -180,13 +180,18 @@ def list_categories(
     db:   Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """기본값(user_id=NULL) + 내 카테고리를 대분류/소분류 계층으로 반환."""
+    """기본값(user_id=NULL) + 내 카테고리를 대분류/소분류 계층으로 반환.
+    category_type = 'expense' (또는 NULL, 구버전 호환) 인 카테고리만 반환.
+    income 카테고리(category_type='income')는 완전히 제외."""
     cats = (
         db.query(ExpenseCategory)
         .filter(
             (ExpenseCategory.user_id == None) |  # noqa: E711
             (ExpenseCategory.user_id == current_user.id),
             ExpenseCategory.is_active == True,   # noqa: E712
+            # ── 지출 카테고리만 반환 — income 카테고리 완전 격리 ──
+            (ExpenseCategory.category_type == None) |         # noqa: E711  NULL = 구버전 expense
+            (ExpenseCategory.category_type == 'expense'),
         )
         .order_by(ExpenseCategory.order_num, ExpenseCategory.id)
         .all()
