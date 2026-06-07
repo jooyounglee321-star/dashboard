@@ -515,6 +515,50 @@ def expense_stats(
 
 
 # ════════════════════════════════════════════════════════════════════════════
+# 일별 수입/지출 비교 API  (Grouped Bar Chart용)
+# ════════════════════════════════════════════════════════════════════════════
+
+@expense_router.get("/daily-compare")
+def daily_compare(
+    year:  int = Query(...),
+    month: int = Query(...),
+    db:    Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """날짜별 수입 합계 / 지출 합계 반환 — Grouped Bar Chart 전용."""
+    rows = (
+        db.query(Expense)
+        .filter(
+            Expense.user_id == current_user.id,
+            sqlfunc.extract("year",  Expense.date) == year,
+            sqlfunc.extract("month", Expense.date) == month,
+        )
+        .all()
+    )
+
+    income_map:  dict[str, float] = {}
+    expense_map: dict[str, float] = {}
+
+    for e in rows:
+        date_str = e.date.isoformat()
+        usd = float(e.converted_amount) if e.converted_amount is not None else float(e.amount)
+        if getattr(e, "type", "expense") == "income":
+            income_map[date_str]  = round(income_map.get(date_str,  0.0) + usd, 2)
+        else:
+            expense_map[date_str] = round(expense_map.get(date_str, 0.0) + usd, 2)
+
+    all_dates = sorted(set(income_map.keys()) | set(expense_map.keys()))
+    return [
+        {
+            "date":    d,
+            "income":  income_map.get(d,  0.0),
+            "expense": expense_map.get(d, 0.0),
+        }
+        for d in all_dates
+    ]
+
+
+# ════════════════════════════════════════════════════════════════════════════
 # 예산 API
 # ════════════════════════════════════════════════════════════════════════════
 

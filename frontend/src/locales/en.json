@@ -488,9 +488,11 @@
   },
 
   "chart": {
-    "pieTitle":     "Expense by Category",
-    "lineTitle":    "Daily Expense Trend",
-    "barTitle":     "Budget vs Actual",
-    "monthlyTitle": "Monthly Expense"
+    "pieTitle":            "Expense by Category",
+    "lineTitle":           "Daily Expense Trend",
+    "barTitle":            "Budget vs Actual",
+    "monthlyTitle":        "Monthly Expense",
+    "dailyCompareTitle":   "Daily Income vs Expense",
+    "monthlyCompareTitle": "Monthly Income vs Expense"
   }
 }
