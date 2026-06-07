@@ -16,6 +16,19 @@ const ML = {
   en: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
 }
 
+// ── 이모지 피커 데이터 ────────────────────────────────────────────────────────
+const EMOJI_TABS = [
+  { label: '😊', name: '얼굴/감정', emojis: ['😊','😂','🥰','😍','🤩','😎','😄','😁','😆','😜','🥳','😏','🤗','😇','🥹','😭','😱','🤔','🙄','😴','🤯','😤','🙃','😋','🤪','🥺','😬','🤭','😶','😐'] },
+  { label: '🍔', name: '음식/음료', emojis: ['🍕','🍔','🌮','🍜','🍣','🍱','🥗','🍰','☕','🧋','🍺','🥤','🍎','🍓','🥑','🍗','🍖','🍝','🥘','🍲','🍛','🍞','🥐','🧁','🍦','🥞','🍷','🥂','🍹','🧃'] },
+  { label: '🚗', name: '교통/여행', emojis: ['🚗','🚕','🚙','🚌','🏎️','🚑','🚒','🚓','🛻','🚐','🚚','🚛','🚜','🏍️','🛵','🚲','🛴','🚁','✈️','🚀','🛸','🚢','🛥️','🚤','🚂','🚆','🚇','🚉','🛫','🛬'] },
+  { label: '🏠', name: '집/생활',  emojis: ['🏠','🏡','🏢','🏥','🏦','🏨','🏪','🏫','🏬','🏗️','🛖','🏘️','🏯','🏰','⛩️','⛪','🛏️','🛁','🚿','🪑','🛋️','🪞','🚪','🪟','🔑','🗝️','🔒','🔓','🪣','🧹'] },
+  { label: '💰', name: '돈/쇼핑',  emojis: ['💰','💵','💴','💶','💷','💸','💳','💹','📈','📉','💎','👛','👜','🛍️','🎁','🏷️','🛒','🪙','💼','🤑','💻','📱','⌚','👓','🕶️','💄','👔','👗','👠','👟'] },
+  { label: '🎮', name: '취미/엔터', emojis: ['🎮','🎯','🎲','🎳','🎰','🃏','🎭','🎨','🖼️','🎪','🎤','🎧','🎵','🎶','🎸','🎹','🎺','🎻','🥁','🎬','📺','📻','📸','📷','🎙️','🕹️','🎠','🎡','🎢','🎑'] },
+  { label: '💪', name: '건강/운동', emojis: ['💪','🏃','🚴','🏊','⚽','🏀','🏈','⚾','🎾','🏐','🥏','🎱','🏓','🏸','🥊','🥋','🤸','🏋️','🧘','🧗','🏄','🏌️','🤽','🏆','🥇','🥈','🥉','🏅','🎖️','🩺'] },
+  { label: '📚', name: '교육/업무', emojis: ['📚','📖','📝','📓','📔','📒','📃','📄','📊','📋','📁','📂','🗂️','📌','📍','🖊️','✏️','📏','📐','📦','🗃️','💻','🖥️','🖨️','⌨️','🖱️','📡','🔬','🔭','🧪'] },
+  { label: '🌟', name: '기타',      emojis: ['🌟','⭐','🌙','☀️','🌈','🌸','🌺','🌻','🌹','🍀','🌿','🌱','🌲','🌳','🍁','🍂','💫','✨','🔥','💧','🌊','❄️','⛄','⚡','🌍','🎃','🎄','🎆','🎇','🎐'] },
+]
+
 // ── 유틸 ─────────────────────────────────────────────────────────────────────
 const pad2 = n => String(n).padStart(2, '0')
 
@@ -1276,6 +1289,77 @@ function SummaryTab({ lang, currency, toDisplay }) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// EmojiPicker — 이모지 선택 팝업 (외부 라이브러리 없음)
+// ══════════════════════════════════════════════════════════════════════════════
+function EmojiPicker({ value, onChange }) {
+  const [open, setOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState(0)
+  const wrapRef = useRef(null)
+
+  // 팝업 외부 클릭 시 닫힘
+  useEffect(() => {
+    if (!open) return
+    function onOutsideClick(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onOutsideClick)
+    return () => document.removeEventListener('mousedown', onOutsideClick)
+  }, [open])
+
+  return (
+    <div className="ep-wrap" ref={wrapRef}>
+      {/* 트리거 버튼 — 현재 이모지 표시 */}
+      <button
+        type="button"
+        className="ep-trigger"
+        onClick={() => setOpen(o => !o)}
+        title="이모지 선택"
+      >
+        {value || '🏷️'}
+      </button>
+
+      {open && (
+        <div className="ep-popup">
+          {/* 카테고리 탭 */}
+          <div className="ep-tabs" role="tablist">
+            {EMOJI_TABS.map((tab, i) => (
+              <button
+                key={i}
+                type="button"
+                role="tab"
+                className={`ep-tab${activeTab === i ? ' active' : ''}`}
+                onClick={() => setActiveTab(i)}
+                title={tab.name}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* 탭 이름 */}
+          <div className="ep-tab-name">{EMOJI_TABS[activeTab].name}</div>
+
+          {/* 이모지 그리드 */}
+          <div className="ep-grid">
+            {EMOJI_TABS[activeTab].emojis.map((em, i) => (
+              <button
+                key={i}
+                type="button"
+                className={`ep-emoji${value === em ? ' selected' : ''}`}
+                onClick={() => { onChange(em); setOpen(false) }}
+                title={em}
+              >
+                {em}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // Tab 5 — 예산 설정 + 카테고리 관리
 // ══════════════════════════════════════════════════════════════════════════════
 function SettingTab({ lang, currency, toDisplay }) {
@@ -1495,8 +1579,7 @@ function SettingTab({ lang, currency, toDisplay }) {
               onChange={e => setNewParent(f => ({ ...f, name_ko: e.target.value }))} />
             <input type="text" className="bp-inp" placeholder={t(lang, 'budget.catNameEn')} value={newParent.name_en}
               onChange={e => setNewParent(f => ({ ...f, name_en: e.target.value }))} />
-            <input type="text" className="bp-inp-icon" placeholder="🏷️" value={newParent.icon}
-              onChange={e => setNewParent(f => ({ ...f, icon: e.target.value }))} />
+            <EmojiPicker value={newParent.icon} onChange={em => setNewParent(f => ({ ...f, icon: em }))} />
             <button className="bp-btn-primary" onClick={addParentCat}>{t(lang, 'common.add')}</button>
           </div>
 
@@ -1512,8 +1595,7 @@ function SettingTab({ lang, currency, toDisplay }) {
               onChange={e => setNewSub(f => ({ ...f, name_ko: e.target.value }))} />
             <input type="text" className="bp-inp" placeholder={t(lang, 'budget.catNameEn')} value={newSub.name_en}
               onChange={e => setNewSub(f => ({ ...f, name_en: e.target.value }))} />
-            <input type="text" className="bp-inp-icon" placeholder="🏷️" value={newSub.icon}
-              onChange={e => setNewSub(f => ({ ...f, icon: e.target.value }))} />
+            <EmojiPicker value={newSub.icon} onChange={em => setNewSub(f => ({ ...f, icon: em }))} />
             <button className="bp-btn-primary" onClick={addSubCat}>{t(lang, 'common.add')}</button>
           </div>
 
