@@ -734,6 +734,28 @@ def _migrate_add_other_subcategory():
         db.close()
 
 
+def _migrate_add_category_icon():
+    """expense_categories 테이블에 icon 컬럼이 없으면 추가.
+
+    create_all()은 기존 테이블을 변경하지 않으므로, 구버전 DB에는
+    icon 컬럼이 누락될 수 있음. 이 마이그레이션으로 안전하게 추가.
+    """
+    with engine.connect() as conn:
+        try:
+            existing = {c["name"] for c in inspect(conn).get_columns("expense_categories")}
+        except Exception:
+            return
+        if "icon" not in existing:
+            try:
+                conn.execute(text("ALTER TABLE expense_categories ADD COLUMN icon VARCHAR(100)"))
+                conn.commit()
+                logger.info("[MIGRATE] expense_categories.icon 컬럼 추가 완료")
+            except Exception as e:
+                logger.warning("[MIGRATE] expense_categories.icon 추가 실패: %s", e)
+        else:
+            logger.info("[MIGRATE] expense_categories.icon — 이미 존재, 건너뜀")
+
+
 def _migrate_add_category_code_fields():
     """expense_categories 테이블에 code, category_type 컬럼 추가 — 수입 카테고리 코드 지원."""
     with engine.connect() as conn:
@@ -894,6 +916,7 @@ async def lifespan(app: FastAPI):
     _migrate_expense_columns()
     _migrate_expense_type_column()
     _migrate_user_roles()
+    _migrate_add_category_icon()           # expense_categories.icon 누락 컬럼 추가
     _migrate_add_category_code_fields()
     _seed_admin_email()
     _seed_default_permissions()
