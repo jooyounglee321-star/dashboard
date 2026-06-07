@@ -488,9 +488,11 @@
   },
 
   "chart": {
-    "pieTitle":     "카테고리별 지출",
-    "lineTitle":    "일별 지출 추이",
-    "barTitle":     "예산 vs 실지출",
-    "monthlyTitle": "월별 지출"
+    "pieTitle":            "카테고리별 지출",
+    "lineTitle":           "일별 지출 추이",
+    "barTitle":            "예산 vs 실지출",
+    "monthlyTitle":        "월별 지출",
+    "dailyCompareTitle":   "일별 수입 / 지출 비교",
+    "monthlyCompareTitle": "월별 수입 / 지출 비교"
   }
 }

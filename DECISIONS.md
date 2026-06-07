@@ -338,3 +338,14 @@
 - 별도 엔드포인트 `/expense/summary/daily/income` 신설: API 엔드포인트 증가, 클라이언트 호출 로직 복잡화
 - `_group_by_category(rows, db, lang)`에 필터 미적용 (전체 그룹화): 수입 카테고리도 합계에 포함되어 데이터 혼재
 **파일:** C:\Users\Jason\Desktop\dashboard\routers\expense.py
+
+---
+## 2026-06-06 16:45 — 월별 대시보드: 그룹 바차트 추가 (일별 수입/지출 비교) + 새 API 엔드포인트 추가
+**결정:** MonthlyTab의 useEffect 내 Chart 렌더링 로직을 확장하여 새로운 "그룹 바차트" 시각화 추가. (1) `/api/expense/daily-compare?year=Y&month=M` 새 엔드포인트에서 `dailyCompare` 데이터 조회, (2) 구조: 각 항목이 `{date: "YYYY-MM-DD", income: number, expense: number}` (3) Chart.js grouped bar 타입으로 일별 income(초록, rgba(74,197,110))과 expense(주황, rgba(232,160,96))를 나란히 표시, (4) Y축 포맷을 `fmtAmt()` 콜백으로 통화 기호 붙임, (5) 기존 예산 vs 실지출 바차트의 datasets에 `borderRadius: 4` 스타일 추가로 시각적 일관성, (6) useEffect 의존성 배열에 `dailyCompare` 추가.
+**이유:** (1) 기존 charts(파이, 라인, 바차트)는 주로 **지출** 또는 **예산** 기반 통계여서 수입 정보 미포함 → 일별 수입/지출 비교 차트로 사용자 일일 현금흐름(cash flow) 시각화 가능. (2) grouped bar 형식으로 매일의 수입과 지출을 쉽게 비교 가능 → "얼마를 벌었고 얼마를 썼는가" 직관적 이해. (3) `borderRadius: 4`로 모든 차트의 바에 일관된 둥근 모서리 스타일 적용 → 대시보드 UI 통일감 향상. (4) Y축 포맷 콜백으로 시간대 환율이 반영된 통화 표시 → 사용자 선택 통화(USD, KRW, EUR 등)에 따른 자동 변환 표시.
+**대안:**
+- 스택 바차트(stacked bar): 수입과 지출을 누적 표시 → 개별 값 비교 어려움, 순계산 표시만 가능
+- 별도 라인 차트: 일별 수입/지출 추이 추적 가능하나 grouped bar보다 수치 비교 직관성 낮음
+- 테이블 형식 렌더링: 정확한 숫자 표시 가능하나 시각적 추이 파악 어려움
+- 기존 라인 차트에 수입 dataset 추가: 지출(주황)과 수입(초록)이 혼합되어 시각적 혼동, 목적 모호
+**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\BudgetPage.jsx

@@ -621,14 +621,16 @@ function MonthlyTab({ lang, currency, toDisplay }) {
   const now = new Date()
   const [year, setYear]   = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
-  const [monthly, setMonthly] = useState(null)
-  const [stats, setStats]     = useState(null)
+  const [monthly, setMonthly]         = useState(null)
+  const [stats, setStats]             = useState(null)
+  const [dailyCompare, setDailyCompare] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  const pieRef  = useRef(null)
-  const lineRef = useRef(null)
-  const barRef  = useRef(null)
-  const chartsRef = useRef([])
+  const pieRef      = useRef(null)
+  const lineRef     = useRef(null)
+  const barRef      = useRef(null)
+  const groupBarRef = useRef(null)
+  const chartsRef   = useRef([])
 
   function destroyCharts() {
     chartsRef.current.forEach(c => c.destroy())
@@ -640,7 +642,8 @@ function MonthlyTab({ lang, currency, toDisplay }) {
     Promise.all([
       apiGet(`/api/expense/summary/monthly?year=${year}&month=${month}&lang=${lang}`),
       apiGet(`/api/expense/stats?year=${year}&month=${month}&lang=${lang}`),
-    ]).then(([m, s]) => { setMonthly(m); setStats(s) })
+      apiGet(`/api/expense/daily-compare?year=${year}&month=${month}`),
+    ]).then(([m, s, dc]) => { setMonthly(m); setStats(s); setDailyCompare(dc) })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [year, month, lang])
@@ -680,7 +683,7 @@ function MonthlyTab({ lang, currency, toDisplay }) {
       }))
     }
 
-    // 라인차트 — 일별 추이
+    // 라인차트 — 일별 추이 (지출만)
     if (lineRef.current && stats.daily_trend?.length) {
       chartsRef.current.push(new Chart(lineRef.current, {
         type: 'line',
@@ -704,6 +707,62 @@ function MonthlyTab({ lang, currency, toDisplay }) {
       }))
     }
 
+    // 그룹 바차트 — 일별 수입/지출 비교
+    if (groupBarRef.current && dailyCompare?.length) {
+      chartsRef.current.push(new Chart(groupBarRef.current, {
+        type: 'bar',
+        data: {
+          labels: dailyCompare.map(d => d.date.slice(8)),  // "DD" 부분만
+          datasets: [
+            {
+              label: t(lang, 'budget.income'),
+              data: dailyCompare.map(d => toDisplay(d.income)),
+              backgroundColor: 'rgba(74,197,110,0.75)',
+              borderColor:     'rgba(74,197,110,1)',
+              borderWidth: 1,
+              borderRadius: 4,
+            },
+            {
+              label: t(lang, 'budget.expense'),
+              data: dailyCompare.map(d => toDisplay(d.expense)),
+              backgroundColor: 'rgba(232,160,96,0.75)',
+              borderColor:     'rgba(232,160,96,1)',
+              borderWidth: 1,
+              borderRadius: 4,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              labels: { color: '#ccc', font: { size: 12 }, padding: 16 },
+            },
+            tooltip: {
+              callbacks: {
+                title: ctx => `${year}.${pad2(month)}.${ctx[0].label}`,
+                label: ctx => ` ${ctx.dataset.label}: ${fmtAmt(ctx.raw, currency)}`,
+              },
+            },
+          },
+          scales: {
+            x: {
+              ticks: { color: '#999' },
+              grid:  { color: 'rgba(255,255,255,0.05)' },
+            },
+            y: {
+              beginAtZero: true,
+              ticks: {
+                color: '#999',
+                callback: v => fmtAmt(v, currency),
+              },
+              grid: { color: 'rgba(255,255,255,0.05)' },
+            },
+          },
+        },
+      }))
+    }
+
     // 바차트 — 예산 vs 실지출
     const budgeted = monthly.by_category?.filter(c => c.budget_usd != null) ?? []
     if (barRef.current && budgeted.length) {
@@ -712,8 +771,8 @@ function MonthlyTab({ lang, currency, toDisplay }) {
         data: {
           labels: budgeted.map(c => c.category_name),
           datasets: [
-            { label: t(lang, 'budget.budget'), data: budgeted.map(c => toDisplay(c.budget_usd || 0)), backgroundColor: 'rgba(96,180,232,0.7)' },
-            { label: t(lang, 'budget.actual'), data: budgeted.map(c => toDisplay(c.total_usd  || 0)), backgroundColor: 'rgba(232,160,96,0.7)' },
+            { label: t(lang, 'budget.budget'), data: budgeted.map(c => toDisplay(c.budget_usd || 0)), backgroundColor: 'rgba(96,180,232,0.7)', borderRadius: 4 },
+            { label: t(lang, 'budget.actual'), data: budgeted.map(c => toDisplay(c.total_usd  || 0)), backgroundColor: 'rgba(232,160,96,0.7)', borderRadius: 4 },
           ],
         },
         options: {
@@ -728,7 +787,7 @@ function MonthlyTab({ lang, currency, toDisplay }) {
     }
 
     return () => destroyCharts()
-  }, [monthly, stats, toDisplay])
+  }, [monthly, stats, dailyCompare, toDisplay])
 
   function doExport() {
     if (!monthly?.by_category) return
@@ -809,6 +868,14 @@ function MonthlyTab({ lang, currency, toDisplay }) {
           )}
 
           <div className="bp-charts">
+            {/* 일별 수입/지출 비교 — Grouped Bar Chart (전체 너비) */}
+            {dailyCompare?.length > 0 && (
+              <div className="bp-chart-box bp-chart-full">
+                <h3 className="bp-chart-title">{t(lang, 'chart.dailyCompareTitle')}</h3>
+                <canvas ref={groupBarRef} />
+              </div>
+            )}
+
             {stats?.by_category?.length > 0 && (
               <div className="bp-chart-box">
                 <h3 className="bp-chart-title">{t(lang, 'chart.pieTitle')}</h3>
@@ -870,23 +937,42 @@ function YearlyTab({ lang, currency, toDisplay }) {
           labels: mLabels,
           datasets: [
             {
-              label: String(year),
-              data: data.monthly.map(m => toDisplay(m.total_usd || 0)),
-              backgroundColor: 'rgba(232,160,96,0.75)',
+              label: t(lang, 'budget.income'),
+              data: data.monthly.map(m => toDisplay(m.total_income || 0)),
+              backgroundColor: 'rgba(74,197,110,0.75)',
+              borderColor:     'rgba(74,197,110,1)',
+              borderWidth: 1,
+              borderRadius: 4,
             },
             {
-              label: String(year - 1),
-              data: (data.prev_monthly || []).map(m => toDisplay(m.total_usd || 0)),
-              backgroundColor: 'rgba(96,180,232,0.45)',
+              label: t(lang, 'budget.expense'),
+              data: data.monthly.map(m => toDisplay(m.total_expense || 0)),
+              backgroundColor: 'rgba(232,160,96,0.75)',
+              borderColor:     'rgba(232,160,96,1)',
+              borderWidth: 1,
+              borderRadius: 4,
             },
           ],
         },
         options: {
           responsive: true,
-          plugins: { legend: { labels: { color: '#ccc' } } },
+          plugins: {
+            legend: {
+              labels: { color: '#ccc', font: { size: 12 }, padding: 16 },
+            },
+            tooltip: {
+              callbacks: {
+                label: ctx => ` ${ctx.dataset.label}: ${fmtAmt(ctx.raw, currency)}`,
+              },
+            },
+          },
           scales: {
             x: { ticks: { color: '#999' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-            y: { ticks: { color: '#999' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: {
+              beginAtZero: true,
+              ticks: { color: '#999', callback: v => fmtAmt(v, currency) },
+              grid: { color: 'rgba(255,255,255,0.05)' },
+            },
           },
         },
       }))
@@ -929,9 +1015,9 @@ function YearlyTab({ lang, currency, toDisplay }) {
             )}
           </div>
 
-          {/* 월별 바차트 */}
+          {/* 월별 수입/지출 비교 바차트 */}
           <div className="bp-chart-box bp-chart-full">
-            <h3 className="bp-chart-title">{t(lang, 'chart.monthlyTitle')}</h3>
+            <h3 className="bp-chart-title">{t(lang, 'chart.monthlyCompareTitle')}</h3>
             <canvas ref={barRef} />
           </div>
 
