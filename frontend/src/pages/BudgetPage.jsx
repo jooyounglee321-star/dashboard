@@ -1291,7 +1291,7 @@ function SettingTab({ lang, currency, toDisplay }) {
   // 카테고리 관리
   const [catMode, setCatMode]   = useState('default')
   const [newParent, setNewParent] = useState({ name_ko: '', name_en: '', icon: '' })
-  const [newSub, setNewSub]     = useState({ parent_id: '', name_ko: '', name_en: '' })
+  const [newSub, setNewSub]     = useState({ parent_id: '', name_ko: '', name_en: '', icon: '' })
 
   const loadBudgets = useCallback(() => {
     setLoadingB(true)
@@ -1334,10 +1334,12 @@ function SettingTab({ lang, currency, toDisplay }) {
   }
 
   async function addParentCat() {
-    const ko = newParent.name_ko.trim(), en = newParent.name_en.trim()
+    const ko   = newParent.name_ko.trim()
+    const en   = newParent.name_en.trim()
+    const icon = newParent.icon.trim() || null   // 빈 문자열·공백 → null
     if (!ko && !en) return
     await apiReq('POST', '/api/expense/categories', {
-      name_ko: ko || en, name_en: en || ko, icon: newParent.icon || null, parent_id: null,
+      name_ko: ko || en, name_en: en || ko, icon, parent_id: null,
     }).catch(() => {})
     setNewParent({ name_ko: '', name_en: '', icon: '' })
     loadCats()
@@ -1345,12 +1347,14 @@ function SettingTab({ lang, currency, toDisplay }) {
 
   async function addSubCat() {
     if (!newSub.parent_id) return
-    const ko = newSub.name_ko.trim(), en = newSub.name_en.trim()
+    const ko   = newSub.name_ko.trim()
+    const en   = newSub.name_en.trim()
+    const icon = newSub.icon.trim() || null      // state에서 읽도록 수정 (기존: 하드코딩 null)
     if (!ko && !en) return
     await apiReq('POST', '/api/expense/categories', {
-      name_ko: ko || en, name_en: en || ko, icon: null, parent_id: Number(newSub.parent_id),
+      name_ko: ko || en, name_en: en || ko, icon, parent_id: Number(newSub.parent_id),
     }).catch(() => {})
-    setNewSub(f => ({ ...f, name_ko: '', name_en: '' }))
+    setNewSub(f => ({ ...f, name_ko: '', name_en: '', icon: '' }))
     loadCats()
   }
 
@@ -1508,6 +1512,8 @@ function SettingTab({ lang, currency, toDisplay }) {
               onChange={e => setNewSub(f => ({ ...f, name_ko: e.target.value }))} />
             <input type="text" className="bp-inp" placeholder={t(lang, 'budget.catNameEn')} value={newSub.name_en}
               onChange={e => setNewSub(f => ({ ...f, name_en: e.target.value }))} />
+            <input type="text" className="bp-inp-icon" placeholder="🏷️" value={newSub.icon}
+              onChange={e => setNewSub(f => ({ ...f, icon: e.target.value }))} />
             <button className="bp-btn-primary" onClick={addSubCat}>{t(lang, 'common.add')}</button>
           </div>
 
