@@ -4,6 +4,17 @@
 
 ---
 
+## [2026-06-07] — fix: 커스텀 카테고리 추가 시 이모지 아이콘 누락 버그 수정
+
+### 프론트엔드 (BudgetPage.jsx — SettingTab)
+- **소분류(addSubCat) icon state 누락 수정**: `newSub` 초기 state에 `icon: ''` 필드 추가
+- **소분류 POST body icon 하드코딩 수정**: 기존 `icon: null` 고정값 → `newSub.icon` state 값 사용
+- **소분류 폼 icon 입력 필드 추가**: 대분류와 동일하게 `bp-inp-icon` 입력 필드 렌더링
+- **소분류 리셋 시 icon 초기화**: `setNewSub` 리셋에 `icon: ''` 포함
+- **대분류 icon `.trim()` 추가**: 공백만 입력된 경우 null로 처리하는 방어 로직 적용
+
+---
+
 ## [2026-06-06] — feat: 가계부 결산 수입/지출 분리 집계 및 UI 개편
 
 ### 백엔드 (routers/expense.py)
