@@ -4,6 +4,15 @@
 
 ---
 
+## [2026-06-07] — fix: 커스텀 카테고리 아이콘 DB 컬럼 누락 마이그레이션 추가
+
+### 백엔드 (main.py)
+- **근본 원인 수정**: `expense_categories.icon` 컬럼이 구버전 DB에 존재하지 않아 아이콘이 항상 NULL로 저장되던 문제
+- `_migrate_add_category_icon()` 마이그레이션 함수 추가 — icon 컬럼 없으면 `VARCHAR(100)`으로 자동 추가
+- 서버 시작 시 `_migrate_add_category_icon()` 자동 실행되도록 등록
+
+---
+
 ## [2026-06-07] — fix: 커스텀 카테고리 추가 시 이모지 아이콘 누락 버그 수정
 
 ### 프론트엔드 (BudgetPage.jsx — SettingTab)
