@@ -639,13 +639,18 @@ function MonthlyTab({ lang, currency, toDisplay }) {
 
   const load = useCallback(() => {
     setLoading(true)
+    // 기존 차트 데이터와 daily-compare를 독립적으로 호출.
+    // daily-compare 실패 시에도 기존 차트는 정상 렌더링되도록 분리.
     Promise.all([
       apiGet(`/api/expense/summary/monthly?year=${year}&month=${month}&lang=${lang}`),
       apiGet(`/api/expense/stats?year=${year}&month=${month}&lang=${lang}`),
-      apiGet(`/api/expense/daily-compare?year=${year}&month=${month}`),
-    ]).then(([m, s, dc]) => { setMonthly(m); setStats(s); setDailyCompare(dc) })
+    ]).then(([m, s]) => { setMonthly(m); setStats(s) })
       .catch(() => {})
       .finally(() => setLoading(false))
+
+    apiGet(`/api/expense/daily-compare?year=${year}&month=${month}`)
+      .then(dc => setDailyCompare(dc))
+      .catch(() => setDailyCompare([]))
   }, [year, month, lang])
 
   useEffect(() => { load() }, [load])
@@ -822,9 +827,20 @@ function MonthlyTab({ lang, currency, toDisplay }) {
 
       {loading ? <p className="bp-info">{t(lang, 'common.loading')}</p> : monthly && (
         <>
-          <div className="bp-stat-box">
-            <span className="bp-total-label">{t(lang, 'budget.totalExpense')}</span>
-            <span className="bp-total-num">{fmtAmt(toDisplay(monthly.total_usd || 0), currency)}</span>
+          {/* 수입/지출/순수지 요약 카드 */}
+          <div className="bp-cashflow-row">
+            <div className="bp-cashflow-card income">
+              <span className="bp-cf-label">{t(lang, 'budget.totalIncome')}</span>
+              <span className="bp-cf-num">{fmtAmt(toDisplay(monthly.total_income || 0), currency)}</span>
+            </div>
+            <div className="bp-cashflow-card expense">
+              <span className="bp-cf-label">{t(lang, 'budget.totalExpense')}</span>
+              <span className="bp-cf-num">{fmtAmt(toDisplay(monthly.total_usd || 0), currency)}</span>
+            </div>
+            <div className={`bp-cashflow-card net ${(monthly.net || 0) >= 0 ? 'positive' : 'negative'}`}>
+              <span className="bp-cf-label">{t(lang, 'budget.net')}</span>
+              <span className="bp-cf-num">{fmtAmt(toDisplay(monthly.net || 0), currency)}</span>
+            </div>
           </div>
 
           {monthly.by_category?.length > 0 && (
@@ -983,12 +999,15 @@ function YearlyTab({ lang, currency, toDisplay }) {
   function doExport() {
     if (!data) return
     const mLabels = ML[lang] || ML.en
-    const headers = [t(lang, 'budgetMonth'), String(year), String(year - 1), t(lang, 'budget.vsLastYear')]
+    const headers = [t(lang, 'budgetMonth'), t(lang, 'budget.totalIncome'), t(lang, 'budget.totalExpense'), t(lang, 'budget.net')]
     const rows = (data.monthly || []).map((m, i) => {
-      const prev = (data.prev_monthly || [])[i]?.total_usd || 0
-      const diff = (m.total_usd || 0) - prev
-      return [mLabels[i], fmtAmt(toDisplay(m.total_usd || 0), currency), fmtAmt(toDisplay(prev), currency),
-        (diff > 0 ? '▲ ' : diff < 0 ? '▼ ' : '') + fmtAmt(Math.abs(toDisplay(diff)), currency)]
+      const net = m.net ?? (m.total_income || 0) - (m.total_expense || 0)
+      return [
+        mLabels[i],
+        fmtAmt(toDisplay(m.total_income  || 0), currency),
+        fmtAmt(toDisplay(m.total_expense || 0), currency),
+        (net > 0 ? '+' : '') + fmtAmt(toDisplay(net), currency),
+      ]
     })
     csvDownload([headers, ...rows], `yearly-${year}.csv`)
   }
@@ -1005,14 +1024,25 @@ function YearlyTab({ lang, currency, toDisplay }) {
 
       {loading ? <p className="bp-info">{t(lang, 'common.loading')}</p> : data && (
         <>
-          <div className="bp-stat-box">
-            <span className="bp-total-label">{year} {t(lang, 'budget.totalExpense')}</span>
-            <span className="bp-total-num">{fmtAmt(toDisplay(data.total_usd || 0), currency)}</span>
-            {data.yoy_change_pct != null && (
-              <span className={`bp-yoy${data.yoy_change_pct > 0 ? ' up' : ' dn'}`}>
-                {data.yoy_change_pct > 0 ? '▲' : '▼'} {Math.abs(data.yoy_change_pct)}% YoY
-              </span>
-            )}
+          {/* 수입/지출/순수지 연간 요약 카드 */}
+          <div className="bp-cashflow-row">
+            <div className="bp-cashflow-card income">
+              <span className="bp-cf-label">{year} {t(lang, 'budget.totalIncome')}</span>
+              <span className="bp-cf-num">{fmtAmt(toDisplay(data.total_income || 0), currency)}</span>
+            </div>
+            <div className="bp-cashflow-card expense">
+              <span className="bp-cf-label">{year} {t(lang, 'budget.totalExpense')}</span>
+              <span className="bp-cf-num">{fmtAmt(toDisplay(data.total_expense || 0), currency)}</span>
+              {data.yoy_change_pct != null && (
+                <span className={`bp-yoy${data.yoy_change_pct > 0 ? ' up' : ' dn'}`}>
+                  {data.yoy_change_pct > 0 ? '▲' : '▼'} {Math.abs(data.yoy_change_pct)}% YoY
+                </span>
+              )}
+            </div>
+            <div className={`bp-cashflow-card net ${(data.net || 0) >= 0 ? 'positive' : 'negative'}`}>
+              <span className="bp-cf-label">{year} {t(lang, 'budget.net')}</span>
+              <span className="bp-cf-num">{fmtAmt(toDisplay(data.net || 0), currency)}</span>
+            </div>
           </div>
 
           {/* 월별 수입/지출 비교 바차트 */}
@@ -1021,38 +1051,38 @@ function YearlyTab({ lang, currency, toDisplay }) {
             <canvas ref={barRef} />
           </div>
 
-          {/* 월별 테이블 */}
+          {/* 월별 테이블 — 수입/지출/순수지 */}
           <div className="bp-table-wrap" style={{ marginTop: '1.5rem' }}>
             <table className="bp-table">
               <thead>
                 <tr>
                   <th>{t(lang, 'budgetMonth')}</th>
-                  <th>{year}</th>
-                  <th>{year - 1}</th>
-                  <th>{t(lang, 'budget.vsLastYear')}</th>
+                  <th style={{ color: '#4ac56e' }}>{t(lang, 'budget.totalIncome')}</th>
+                  <th style={{ color: '#e8a060' }}>{t(lang, 'budget.totalExpense')}</th>
+                  <th>{t(lang, 'budget.net')}</th>
                 </tr>
               </thead>
               <tbody>
                 {(data.monthly || []).map((m, i) => {
-                  const prev = (data.prev_monthly || [])[i]?.total_usd || 0
-                  const diff = (m.total_usd || 0) - prev
+                  const net = m.net ?? (m.total_income || 0) - (m.total_expense || 0)
                   return (
                     <tr key={i}>
                       <td>{mLabels[i]}</td>
-                      <td>{fmtAmt(toDisplay(m.total_usd || 0), currency)}</td>
-                      <td>{fmtAmt(toDisplay(prev), currency)}</td>
-                      <td className={diff > 0 ? 'txt-red' : diff < 0 ? 'txt-green' : ''}>
-                        {diff !== 0 && (diff > 0 ? '▲ ' : '▼ ')}
-                        {diff !== 0 ? fmtAmt(toDisplay(Math.abs(diff)), currency) : '–'}
+                      <td className="txt-green">{fmtAmt(toDisplay(m.total_income || 0), currency)}</td>
+                      <td>{fmtAmt(toDisplay(m.total_expense || 0), currency)}</td>
+                      <td className={net > 0 ? 'txt-green' : net < 0 ? 'txt-red' : ''}>
+                        {net > 0 ? '+' : ''}{fmtAmt(toDisplay(net), currency)}
                       </td>
                     </tr>
                   )
                 })}
                 <tr className="bp-total-row">
-                  <td><strong>{t(lang, 'budget.totalExpense')}</strong></td>
-                  <td><strong>{fmtAmt(toDisplay(data.total_usd || 0), currency)}</strong></td>
-                  <td><strong>{fmtAmt(toDisplay(data.prev_year_total_usd || 0), currency)}</strong></td>
-                  <td></td>
+                  <td><strong>{t(lang, 'budget.totalExpense').replace('총 ', '연간 ')}</strong></td>
+                  <td className="txt-green"><strong>{fmtAmt(toDisplay(data.total_income || 0), currency)}</strong></td>
+                  <td><strong>{fmtAmt(toDisplay(data.total_expense || 0), currency)}</strong></td>
+                  <td className={(data.net || 0) >= 0 ? 'txt-green' : 'txt-red'}>
+                    <strong>{(data.net || 0) > 0 ? '+' : ''}{fmtAmt(toDisplay(data.net || 0), currency)}</strong>
+                  </td>
                 </tr>
               </tbody>
             </table>

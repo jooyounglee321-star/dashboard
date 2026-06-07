@@ -164,6 +164,37 @@
 .bp-total-label { font-size: 0.8rem; color: #888; }
 .bp-total-num   { font-size: 1.3rem; font-weight: 700; color: #e8a060; }
 
+/* ── 수입/지출/순수지 요약 카드 행 ────────────────────────────────────────── */
+.bp-cashflow-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.bp-cashflow-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.9rem 1.1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+}
+.bp-cashflow-card.income  { border-color: rgba(74,197,110,0.3);  background: rgba(74,197,110,0.07); }
+.bp-cashflow-card.expense { border-color: rgba(232,160,96,0.3);  background: rgba(232,160,96,0.07); }
+.bp-cashflow-card.net.positive { border-color: rgba(74,197,110,0.25); background: rgba(74,197,110,0.05); }
+.bp-cashflow-card.net.negative { border-color: rgba(232,80,80,0.3);   background: rgba(232,80,80,0.06); }
+
+.bp-cf-label { font-size: 0.75rem; color: #888; font-weight: 500; }
+.bp-cashflow-card.income  .bp-cf-num { color: #4ac56e; font-size: 1.2rem; font-weight: 700; }
+.bp-cashflow-card.expense .bp-cf-num { color: #e8a060; font-size: 1.2rem; font-weight: 700; }
+.bp-cashflow-card.net.positive .bp-cf-num { color: #4ac56e; font-size: 1.2rem; font-weight: 700; }
+.bp-cashflow-card.net.negative .bp-cf-num { color: #e85050; font-size: 1.2rem; font-weight: 700; }
+
+@media (max-width: 600px) {
+  .bp-cashflow-row { grid-template-columns: 1fr; }
+}
+
 .bp-yoy {
   font-size: 0.78rem;
   padding: 0.15rem 0.45rem;
