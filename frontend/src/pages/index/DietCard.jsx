@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { t, T } from './i18n'
+import { useToast } from '../../components/Toast'
+import Toast from '../../components/Toast'
 
 const todayKey = () => new Date().toISOString().slice(0, 10)
 const MORD = ['아침', '점심', '저녁', '간식']
@@ -11,6 +13,7 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
   const [dietList, setDietList] = useState([])
   const [mtime, setMtime] = useState('아침')
   const [mtext, setMtext] = useState('')
+  const { toast, showToast } = useToast()
 
   useEffect(() => {
     if (visibleMeals.length > 0 && !visibleMeals.includes(mtime)) {
@@ -41,10 +44,17 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
     await loadMeal()
   }
 
-  async function delMeal(mealType) {
+  async function delMeal(e, mealType) {
+    if (e && e.preventDefault) e.preventDefault()
     const toDelete = dietList.filter(d => d.meal_type === mealType)
-    await Promise.all(toDelete.map(d => fetch('/api/diets/' + d.id, { method: 'DELETE', headers: authHeader() })))
-    await loadMeal()
+    // 즉시 클라이언트 상태에서 제거 (optimistic update)
+    setDietList(prev => prev.filter(d => d.meal_type !== mealType))
+    try {
+      await Promise.all(toDelete.map(d => fetch('/api/diets/' + d.id, { method: 'DELETE', headers: authHeader() })))
+      showToast(t(lang, 'common.deleteSuccess'), 'ok')
+    } catch {
+      await loadMeal()
+    }
   }
 
   const meals = {}
@@ -61,6 +71,7 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
 
   return (
     <div className={wrapper}>
+      <Toast toast={toast} />
       <div className={hdr}>
         <span className="card-icon">🥗</span>
         <span className={titleCls}>{t(lang, 'dietTitle')}</span>
@@ -74,7 +85,7 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
               <div key={m} className={isMobile ? 'm-meal-row' : 'meal-row'}>
                 <span className={isMobile ? 'm-meal-label' : 'meal-label'}>{mealLabel(m)}</span>
                 <div className={isMobile ? 'm-meal-content' : 'meal-content'}>{meals[m].join(', ')}</div>
-                <button className="btn-del" onClick={() => delMeal(m)}>✕</button>
+                <button type="button" className="btn-del" onClick={(ev) => delMeal(ev, m)}>✕</button>
               </div>
             ))
           )}

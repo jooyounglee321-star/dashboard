@@ -9,7 +9,8 @@
     "loading": "로딩 중...",
     "error": "오류",
     "success": "성공",
-    "processing": "처리 중…"
+    "processing": "처리 중…",
+    "deleteSuccess": "삭제되었습니다"
   },
   "auth": {
     "siteTitle": "나의 하루 대시보드",

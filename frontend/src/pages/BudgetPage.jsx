@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { t } from '../i18n'
 import { Chart, registerables } from 'chart.js'
 import { INCOME_CATEGORIES, getSubcategories } from '../data/incomeCategories'
+import { useToast } from '../components/Toast'
+import Toast from '../components/Toast'
 import './BudgetPage.css'
 
 Chart.register(...registerables)
@@ -200,6 +202,7 @@ function DailyTab({ lang, currency, toDisplay }) {
   const [editForm, setEditForm] = useState({})
   const [newForm, setNewForm] = useState(INIT_NEW_FORM)
   const [submitting, setSubmitting] = useState(false)
+  const { toast, showToast } = useToast()
 
   // 세대 카운터: 날짜가 바뀔 때마다 증가 → 이전 fetch 응답을 무시해 race condition 차단
   const loadGenRef = useRef(0)
@@ -347,10 +350,13 @@ function DailyTab({ lang, currency, toDisplay }) {
     load()
   }
 
-  async function delItem(id) {
+  async function delItem(e, id) {
+    if (e && e.preventDefault) e.preventDefault()
     if (!window.confirm(t(lang, 'budgetConfirmDel'))) return
-    await apiReq('DELETE', `/api/expense/${id}`).catch(() => {})
-    load()
+    // 즉시 클라이언트 상태에서 제거 (optimistic update)
+    setItems(prev => prev.filter(it => it.id !== id))
+    await apiReq('DELETE', `/api/expense/${id}`).catch(() => { load() })
+    showToast(t(lang, 'common.deleteSuccess'), 'ok')
   }
 
   function doExport() {
@@ -361,6 +367,7 @@ function DailyTab({ lang, currency, toDisplay }) {
 
   return (
     <section className="bp-sec">
+      <Toast toast={toast} />
       <div className="bp-toolbar">
         <input type="date" className="bp-date-inp" value={date}
           max={todayStr()}
@@ -613,7 +620,7 @@ function DailyTab({ lang, currency, toDisplay }) {
                         </div>
                         <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
                           <button className="bp-icon-btn" onClick={() => startEdit(it)} title={t(lang, 'common.edit')}>✏️</button>
-                          <button className="bp-icon-btn del" onClick={() => delItem(it.id)} title={t(lang, 'common.delete')}>🗑️</button>
+                          <button type="button" className="bp-icon-btn del" onClick={(ev) => delItem(ev, it.id)} title={t(lang, 'common.delete')}>🗑️</button>
                         </div>
                       </div>
                     </>
@@ -1376,6 +1383,7 @@ function SettingTab({ lang, currency, toDisplay }) {
   const [catMode, setCatMode]   = useState('default')
   const [newParent, setNewParent] = useState({ name_ko: '', name_en: '', icon: '' })
   const [newSub, setNewSub]     = useState({ parent_id: '', name_ko: '', name_en: '', icon: '' })
+  const { toast, showToast } = useToast()
 
   const loadBudgets = useCallback(() => {
     setLoadingB(true)
@@ -1411,10 +1419,12 @@ function SettingTab({ lang, currency, toDisplay }) {
     loadBudgets()
   }
 
-  async function delBudget(id) {
+  async function delBudget(e, id) {
+    if (e && e.preventDefault) e.preventDefault()
     if (!window.confirm(t(lang, 'budgetConfirmDel'))) return
-    await apiReq('DELETE', `/api/expense/budget/${id}`).catch(() => {})
-    loadBudgets()
+    setBudgets(prev => prev.filter(b => b.id !== id))
+    await apiReq('DELETE', `/api/expense/budget/${id}`).catch(() => { loadBudgets() })
+    showToast(t(lang, 'common.deleteSuccess'), 'ok')
   }
 
   async function addParentCat() {
@@ -1442,10 +1452,15 @@ function SettingTab({ lang, currency, toDisplay }) {
     loadCats()
   }
 
-  async function delCat(id) {
+  async function delCat(e, id) {
+    if (e && e.preventDefault) e.preventDefault()
     if (!window.confirm(t(lang, 'budgetConfirmDel'))) return
-    await apiReq('DELETE', `/api/expense/categories/${id}`).catch(() => {})
-    loadCats()
+    setCats(prev => prev.filter(c => c.id !== id).map(c => ({
+      ...c,
+      subs: c.subs ? c.subs.filter(s => s.id !== id) : c.subs,
+    })))
+    await apiReq('DELETE', `/api/expense/categories/${id}`).catch(() => { loadCats() })
+    showToast(t(lang, 'common.deleteSuccess'), 'ok')
   }
 
   const defaultCats = cats.filter(c => c.is_default)
@@ -1454,6 +1469,7 @@ function SettingTab({ lang, currency, toDisplay }) {
 
   return (
     <section className="bp-sec">
+      <Toast toast={toast} />
       {/* ── 예산 설정 ──────────────────────────────────────────── */}
       <h2 className="bp-section-h2">{t(lang, 'budget.setBudget')}</h2>
 
@@ -1533,7 +1549,7 @@ function SettingTab({ lang, currency, toDisplay }) {
                           </td>
                           <td>
                             <button className="bp-icon-btn" onClick={() => { setEditId(b.id); setEditForm({ amount: b.amount, currency: b.currency }) }}>✏️</button>
-                            <button className="bp-icon-btn del" onClick={() => delBudget(b.id)}>🗑️</button>
+                            <button type="button" className="bp-icon-btn del" onClick={(ev) => delBudget(ev, b.id)}>🗑️</button>
                           </td>
                         </>
                       )}
@@ -1608,13 +1624,13 @@ function SettingTab({ lang, currency, toDisplay }) {
                   <div key={cat.id} className="bp-cat-card">
                     <div className="bp-cat-head">
                       {cat.icon} <strong>{cat.name}</strong>
-                      <button className="bp-icon-btn del" style={{ marginLeft: 'auto' }} onClick={() => delCat(cat.id)}>🗑️</button>
+                      <button type="button" className="bp-icon-btn del" style={{ marginLeft: 'auto' }} onClick={(ev) => delCat(ev, cat.id)}>🗑️</button>
                     </div>
                     <div className="bp-cat-subs">
                       {cat.subs?.map(s => (
                         <span key={s.id} className="bp-sub-chip editable">
                           {s.name}
-                          <button className="bp-sub-del" onClick={() => delCat(s.id)}>×</button>
+                          <button type="button" className="bp-sub-del" onClick={(ev) => delCat(ev, s.id)}>×</button>
                         </span>
                       ))}
                     </div>
