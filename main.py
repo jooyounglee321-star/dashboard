@@ -298,6 +298,10 @@ def _migrate_user_columns():
         ("primary_device",  "VARCHAR(20)"),
         ("admin_memo",      "TEXT"),
         ("widget_config",   "TEXT"),
+        ("birth_year",      "INTEGER"),
+        ("gender",          "VARCHAR(10)"),
+        ("height_cm",       "FLOAT"),
+        ("weight_kg",       "FLOAT"),
     ]
     with engine.connect() as conn:
         try:

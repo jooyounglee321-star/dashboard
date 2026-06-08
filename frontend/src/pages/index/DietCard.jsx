@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { t, T } from './i18n'
 import { useToast } from '../../components/Toast'
 import Toast from '../../components/Toast'
@@ -21,6 +22,7 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
   const [mtext, setMtext] = useState('')
   const [mcal, setMcal]   = useState('')          // 칼로리 (선택)
   const [date, setDate]   = useState(localToday)  // 선택 날짜
+  const [profileComplete, setProfileComplete] = useState(true)  // 신체정보 완성 여부
   const { toast, showToast } = useToast()
 
   // mealConfig 변경 시 visible 끼니 동기화 (기존 로직 유지)
@@ -42,6 +44,18 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
   }
 
   useEffect(() => { loadMeal(date) }, [date]) // eslint-disable-line
+
+  // 신체정보 미입력 여부 체크 (마운트 시 1회)
+  useEffect(() => {
+    fetch('/api/auth/me', { headers: authHeader() })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (!d) return
+        const complete = !!(d.birth_year && d.gender && d.height_cm && d.weight_kg)
+        setProfileComplete(complete)
+      })
+      .catch(() => {})
+  }, []) // eslint-disable-line
 
   async function addMeal() {
     if (!mtext.trim()) return
@@ -211,6 +225,26 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
 
         {/* ── 입력 폼 ──────────────────────────────────────────────── */}
         {formSection}
+
+        {/* ── 신체정보 미입력 안내 배너 ───────────────────────────── */}
+        {!profileComplete && (
+          <div
+            onClick={() => navigate('/profile')}
+            style={{
+              marginTop: '0.85rem', padding: '0.65rem 0.9rem',
+              background: 'rgba(59,130,246,0.07)',
+              border: '1px solid rgba(59,130,246,0.25)',
+              borderRadius: 9, cursor: 'pointer',
+              fontSize: isMobile ? '0.78rem' : '0.74rem',
+              color: '#2563eb', lineHeight: 1.5,
+              transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(59,130,246,0.13)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(59,130,246,0.07)'}
+          >
+            {t(lang, 'profile.dietAIPrompt')}
+          </div>
+        )}
       </div>
     </div>
   )

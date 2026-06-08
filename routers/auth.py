@@ -166,6 +166,16 @@ def update_me(
     if body.name is not None:
         current_user.name = body.name.strip() or None
 
+    # 식단 분석용 신체정보 수정
+    if body.birth_year is not None:
+        current_user.birth_year = body.birth_year
+    if body.gender is not None:
+        current_user.gender = body.gender
+    if body.height_cm is not None:
+        current_user.height_cm = body.height_cm
+    if body.weight_kg is not None:
+        current_user.weight_kg = body.weight_kg
+
     # 비밀번호 변경 (new_password 입력 시)
     if body.new_password is not None:
         if len(body.new_password) < 8:

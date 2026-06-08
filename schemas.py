@@ -283,6 +283,11 @@ class ProfileOut(BaseModel):
     role: str
     plan: str
     created_at: datetime
+    # 식단 분석용 신체정보
+    birth_year: int | None = None
+    gender:     str | None = None
+    height_cm:  float | None = None
+    weight_kg:  float | None = None
 
     model_config = {"from_attributes": True}
 
@@ -292,6 +297,11 @@ class ProfileUpdate(BaseModel):
     name: str | None = None
     current_password: str | None = None   # 비밀번호 변경 시 필수
     new_password: str | None = None
+    # 식단 분석용 신체정보
+    birth_year: int | None = None
+    gender:     str | None = None
+    height_cm:  float | None = None
+    weight_kg:  float | None = None
 
 
 # ── Widget Config ─────────────────────────────────────────────────────────────

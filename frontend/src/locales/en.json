@@ -91,7 +91,17 @@
     "successSave": "Profile saved.",
     "successAvatar": "Profile photo updated. (Saved on this device only)",
     "langSaved": "Language setting saved.",
-    "langSavingMsg": "Saving…"
+    "langSavingMsg": "Saving…",
+    "dietSectionTitle": "Diet Info",
+    "dietSectionDesc": "This info is used for AI diet analysis. Optional.",
+    "birthYear": "Birth Year",
+    "gender": "Gender",
+    "male": "Male",
+    "female": "Female",
+    "other": "Other",
+    "height": "Height",
+    "weight": "Weight",
+    "dietAIPrompt": "Add your birth year, gender, height & weight in your profile to get AI diet analysis →"
   },
   "admin": {
     "title": "Admin Settings",

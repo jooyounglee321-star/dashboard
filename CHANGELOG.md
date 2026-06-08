@@ -4,6 +4,20 @@
 
 ---
 
+## [2026-06-08] — feat: 유저 프로필 식단 분석용 신체정보(출생년도/성별/키/몸무게) 추가
+
+### 변경 내용
+- **models.py**: User 테이블에 `birth_year`, `gender`, `height_cm`, `weight_kg` 컬럼 추가
+- **schemas.py**: `ProfileOut`, `ProfileUpdate`에 4개 필드 추가
+- **routers/auth.py**: `PUT /api/auth/me`에 신체정보 필드 저장 로직 추가
+- **main.py**: `_migrate_user_columns()`에 4개 컬럼 마이그레이션 포함
+- **ProfilePage.jsx**: 식단 관리 정보 섹션 추가 (출생년도/성별/키/몸무게 + cm↔ft, kg↔lb 토글)
+- **DietCard.jsx**: 신체정보 미입력 시 `/profile`로 이동하는 안내 배너 표시
+- **i18n**: `profile.dietSectionTitle/Desc/birthYear/gender/male/female/other/height/weight/dietAIPrompt` 추가
+- **DB_SCHEMA.md**: users 테이블 컬럼 4개 추가 문서화
+
+---
+
 ## [2026-06-08] — feat: DietCard 날짜 선택 및 식단 조회 기능 추가
 
 ### 변경 내용

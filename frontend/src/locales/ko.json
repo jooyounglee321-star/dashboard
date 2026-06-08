@@ -91,7 +91,17 @@
     "successSave": "프로필이 저장되었습니다.",
     "successAvatar": "프로필 사진이 변경되었습니다. (기기에만 저장)",
     "langSaved": "언어 설정이 저장되었습니다.",
-    "langSavingMsg": "저장 중…"
+    "langSavingMsg": "저장 중…",
+    "dietSectionTitle": "식단 관리 정보",
+    "dietSectionDesc": "아래 정보는 AI 식단 분석에 사용됩니다. 입력하지 않아도 됩니다.",
+    "birthYear": "출생년도",
+    "gender": "성별",
+    "male": "남성",
+    "female": "여성",
+    "other": "기타",
+    "height": "키",
+    "weight": "몸무게",
+    "dietAIPrompt": "프로필에 출생년도/성별/키/몸무게를 입력하면 AI 식단 분석을 받을 수 있어요 →"
   },
   "admin": {
     "title": "관리자 설정",

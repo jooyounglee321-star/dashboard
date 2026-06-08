@@ -24,6 +24,13 @@ export default function ProfilePage() {
   const [widgetCfg, setWidgetCfg] = useState(null)
   const [langSaving, setLangSaving] = useState(false)
   const fileRef = useRef(null)
+  // 신체정보 상태
+  const [birthYear,   setBirthYear]   = useState('')
+  const [gender,      setGender]      = useState('')
+  const [heightVal,   setHeightVal]   = useState('')
+  const [heightUnit,  setHeightUnit]  = useState('cm')   // 'cm' | 'ft'
+  const [weightVal,   setWeightVal]   = useState('')
+  const [weightUnit,  setWeightUnit]  = useState('kg')   // 'kg' | 'lb'
 
   const token = localStorage.getItem('token')
   const lang = widgetCfg?.language ?? 'ko'
@@ -45,6 +52,11 @@ export default function ProfilePage() {
           const dt = new Date(d.created_at)
           setJoinedAt(`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`)
         }
+        // 신체정보 로드 (항상 cm/kg로 DB 저장되어 있음)
+        setBirthYear(d.birth_year ? String(d.birth_year) : '')
+        setGender(d.gender || '')
+        setHeightVal(d.height_cm ? String(d.height_cm) : '')
+        setWeightVal(d.weight_kg ? String(d.weight_kg) : '')
       })
       .catch(() => {})
   }, [token, navigate])
@@ -113,8 +125,20 @@ export default function ProfilePage() {
       if (!curPw)            { setMsg({ type: 'error', text: t(lang, 'profile.errNoCurPw') }); return }
     }
 
+    // 단위 변환: 항상 cm/kg로 변환 후 저장
+    const heightCm = heightVal
+      ? (heightUnit === 'ft' ? Math.round(parseFloat(heightVal) * 30.48 * 10) / 10 : parseFloat(heightVal))
+      : null
+    const weightKg = weightVal
+      ? (weightUnit === 'lb' ? Math.round(parseFloat(weightVal) * 0.4536 * 10) / 10 : parseFloat(weightVal))
+      : null
+
     const body = { name: name.trim() || null }
     if (newPw) { body.current_password = curPw; body.new_password = newPw }
+    if (birthYear)  body.birth_year = parseInt(birthYear, 10)
+    if (gender)     body.gender     = gender
+    if (heightCm)   body.height_cm  = heightCm
+    if (weightKg)   body.weight_kg  = weightKg
 
     setSaving(true)
     try {
@@ -272,6 +296,78 @@ export default function ProfilePage() {
               <PwField value={confPw} onChange={setConfPw} show={showConf} toggleShow={() => togglePw(setShowConf)} placeholder={t(lang, 'profile.confirmPasswordPlaceholder')} />
             </Field>
 
+            {/* 식단 관리 정보 */}
+            <SectionLabel>🥗 {t(lang, 'profile.dietSectionTitle')}</SectionLabel>
+            <div style={{ fontSize: '0.75rem', color: 'var(--ink3)', marginBottom: '1rem', lineHeight: 1.6 }}>
+              {t(lang, 'profile.dietSectionDesc')}
+            </div>
+
+            <Field label={t(lang, 'profile.birthYear')}>
+              <input
+                type="number" value={birthYear} onChange={e => setBirthYear(e.target.value)}
+                min="1900" max={new Date().getFullYear()}
+                placeholder={lang === 'ko' ? '예: 1990' : 'e.g. 1990'}
+                style={inputStyle}
+              />
+            </Field>
+
+            <Field label={t(lang, 'profile.gender')}>
+              <select value={gender} onChange={e => setGender(e.target.value)} style={inputStyle}>
+                <option value="">{lang === 'ko' ? '선택하세요' : 'Select'}</option>
+                <option value="male">{t(lang, 'profile.male')}</option>
+                <option value="female">{t(lang, 'profile.female')}</option>
+                <option value="other">{t(lang, 'profile.other')}</option>
+              </select>
+            </Field>
+
+            <Field label={t(lang, 'profile.height')}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                  type="number" value={heightVal} onChange={e => setHeightVal(e.target.value)}
+                  min="0" step="0.1"
+                  placeholder={heightUnit === 'cm' ? '예: 170' : 'e.g. 5.7'}
+                  style={{ ...inputStyle, flex: 1 }}
+                />
+                <UnitToggle
+                  options={['cm', 'ft']}
+                  value={heightUnit}
+                  onChange={u => {
+                    if (!heightVal) { setHeightUnit(u); return }
+                    const v = parseFloat(heightVal)
+                    if (u === 'ft' && heightUnit === 'cm')
+                      setHeightVal(String(Math.round(v / 30.48 * 10) / 10))
+                    else if (u === 'cm' && heightUnit === 'ft')
+                      setHeightVal(String(Math.round(v * 30.48 * 10) / 10))
+                    setHeightUnit(u)
+                  }}
+                />
+              </div>
+            </Field>
+
+            <Field label={t(lang, 'profile.weight')}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                  type="number" value={weightVal} onChange={e => setWeightVal(e.target.value)}
+                  min="0" step="0.1"
+                  placeholder={weightUnit === 'kg' ? '예: 65' : 'e.g. 143'}
+                  style={{ ...inputStyle, flex: 1 }}
+                />
+                <UnitToggle
+                  options={['kg', 'lb']}
+                  value={weightUnit}
+                  onChange={u => {
+                    if (!weightVal) { setWeightUnit(u); return }
+                    const v = parseFloat(weightVal)
+                    if (u === 'lb' && weightUnit === 'kg')
+                      setWeightVal(String(Math.round(v / 0.4536 * 10) / 10))
+                    else if (u === 'kg' && weightUnit === 'lb')
+                      setWeightVal(String(Math.round(v * 0.4536 * 10) / 10))
+                    setWeightUnit(u)
+                  }}
+                />
+              </div>
+            </Field>
+
             <button
               type="submit" disabled={saving}
               style={{
@@ -356,6 +452,27 @@ function PwField({ value, onChange, show, toggleShow, placeholder }) {
       >
         {show ? '🙈' : '👁️'}
       </button>
+    </div>
+  )
+}
+
+function UnitToggle({ options, value, onChange }) {
+  return (
+    <div style={{ display: 'flex', borderRadius: 9, border: '1.5px solid var(--border)', overflow: 'hidden', flexShrink: 0 }}>
+      {options.map(opt => (
+        <button
+          key={opt}
+          type="button"
+          onClick={() => onChange(opt)}
+          style={{
+            padding: '0 0.75rem', fontSize: '0.8rem', fontWeight: 500,
+            background: value === opt ? 'var(--accent)' : 'var(--card2)',
+            color: value === opt ? '#fff' : 'var(--ink2)',
+            border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+            borderRight: opt === options[0] ? '1px solid var(--border)' : 'none',
+          }}
+        >{opt}</button>
+      ))}
     </div>
   )
 }
