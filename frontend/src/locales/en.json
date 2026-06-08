@@ -302,7 +302,15 @@
     "analyzing": "Analyzing...",
     "nutritionAnalysis": "Nutrition Analysis",
     "menuRecommendation": "Menu Recommendation",
-    "warning": "Caution"
+    "warning": "Caution",
+    "saveAnalysis": "Save Analysis",
+    "savedAnalysis": "Saved Analysis",
+    "saveSuccess": "Analysis saved",
+    "statsTitle": "Diet Statistics",
+    "noAnalysis": "No Analysis",
+    "viewStats": "📈 View Diet Stats",
+    "mealsOfDay": "Meals",
+    "analysisOfDay": "Analysis Result"
   },
   "dietTitle": "Today's Diet",
   "dietEmpty": "Log your meals",
