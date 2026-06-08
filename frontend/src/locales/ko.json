@@ -290,6 +290,7 @@
   "dietTitle": "오늘의 식단",
   "dietEmpty": "식단을 입력해보세요",
   "dietAdd": "추가",
+  "dietCaloriesPlaceholder": "kcal (선택)",
   "dietAddMobile": "식단 추가",
   "dietPlaceholder": "예: 현미밥, 된장국",
   "dietMeals": { "아침": "아침", "점심": "점심", "저녁": "저녁", "간식": "간식" },

@@ -209,6 +209,20 @@
 .meal-form select,.meal-form input{padding:0.35rem 0.55rem;font-size:0.8rem;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--ink);font-family:inherit;}
 .meal-form select{flex:0 0 58px;}
 .meal-form input{flex:1;}
+.diet-cal-inp{flex:0 0 110px !important;}
+
+/* ── DietCard 개선: 날짜 선택 + 그룹 카드 ── */
+.diet-date-row{margin-bottom:0.65rem;}
+.diet-date-inp{padding:0.32rem 0.6rem;font-size:0.8rem;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--ink);font-family:inherit;width:100%;box-sizing:border-box;}
+.diet-list-wrap{margin-bottom:0.5rem;display:flex;flex-direction:column;gap:0.55rem;}
+.diet-group{display:flex;flex-direction:column;gap:0.28rem;}
+.diet-group-header{display:flex;align-items:center;gap:0.35rem;margin-bottom:0.1rem;}
+.diet-group-emoji{font-size:0.95rem;}
+.diet-group-label{font-size:0.72rem;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:0.03em;}
+.diet-item-card{display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.65rem;border-radius:8px;background:var(--bg);border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+.diet-item-info{display:flex;flex:1;align-items:center;gap:0.55rem;min-width:0;}
+.diet-item-content{font-size:0.83rem;color:var(--ink2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.diet-item-cal{font-size:0.72rem;color:var(--ink3);white-space:nowrap;background:rgba(128,128,128,0.1);padding:0.1rem 0.4rem;border-radius:10px;}
 
 /* ── 메모 ── */
 .card-memo{grid-column:span 1;}

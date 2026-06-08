@@ -290,6 +290,7 @@
   "dietTitle": "Today's Diet",
   "dietEmpty": "Log your meals",
   "dietAdd": "Add",
+  "dietCaloriesPlaceholder": "kcal (optional)",
   "dietAddMobile": "Add Meal",
   "dietPlaceholder": "e.g. Brown rice, Miso soup",
   "dietMeals": { "아침": "Breakfast", "점심": "Lunch", "저녁": "Dinner", "간식": "Snack" },
