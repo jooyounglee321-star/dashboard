@@ -51,6 +51,10 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 | `primary_device` | VARCHAR(20) | NULLABLE | 주 사용 기기: `desktop` / `mobile` 등 |
 | `admin_memo` | TEXT | NULLABLE | 관리자 메모 |
 | `widget_config` | TEXT | NULLABLE | 위젯 설정 JSON (on/off, 언어, 온도단위, 표시개수 등) |
+| `birth_year` | INTEGER | NULLABLE | 출생년도 (AI 식단 분석용) |
+| `gender` | VARCHAR(10) | NULLABLE | 성별: `male` / `female` / `other` |
+| `height_cm` | FLOAT | NULLABLE | 키 (항상 cm 단위로 저장, 단위 변환은 프론트에서 처리) |
+| `weight_kg` | FLOAT | NULLABLE | 몸무게 (항상 kg 단위로 저장, 단위 변환은 프론트에서 처리) |
 
 **비고:**
 - `role` 컬럼 레거시 값 `'Member'`는 서버 시작 시 `'free'`로 자동 마이그레이션

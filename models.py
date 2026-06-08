@@ -34,6 +34,11 @@ class User(Base):
     primary_device: Mapped[str | None] = mapped_column(String(20), nullable=True)
     admin_memo: Mapped[str | None] = mapped_column(Text, nullable=True)
     widget_config: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON
+    # 식단 분석용 신체정보
+    birth_year: Mapped[int | None]   = mapped_column(Integer, nullable=True)
+    gender:     Mapped[str | None]   = mapped_column(String(10), nullable=True)   # 'male'|'female'|'other'
+    height_cm:  Mapped[float | None] = mapped_column(Float, nullable=True)        # 항상 cm 저장
+    weight_kg:  Mapped[float | None] = mapped_column(Float, nullable=True)        # 항상 kg 저장
 
 
 class ExpenseCategory(Base):
