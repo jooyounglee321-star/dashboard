@@ -259,6 +259,17 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
       <div className={hdr}>
         <span className="card-icon">🥗</span>
         <span className={titleCls}>{t(lang, 'dietTitle')}</span>
+        <Link
+          to="/diet-stats"
+          style={{
+            fontSize: isMobile ? '0.6rem' : '0.65rem',
+            color: 'var(--ink3)',
+            marginLeft: isMobile ? '0.25rem' : '0.3rem',
+            textDecoration: 'none',
+          }}
+        >
+          {isMobile ? '↗' : t(lang, 'diet.statsLink')}
+        </Link>
       </div>
       <div className={body}>
 
@@ -452,22 +463,6 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
             {t(lang, 'profile.dietAIPrompt')}
           </div>
         )}
-
-        {/* ── 식단 통계 보기 링크 ──────────────────────────────────── */}
-        <div style={{ marginTop: '0.75rem', textAlign: 'center' }}>
-          <Link
-            to="/diet-stats"
-            style={{
-              fontSize: isMobile ? '0.78rem' : '0.74rem',
-              color: '#7c3aed', textDecoration: 'none', fontWeight: 500,
-              opacity: 0.85,
-            }}
-            onMouseEnter={e => e.currentTarget.style.opacity = '1'}
-            onMouseLeave={e => e.currentTarget.style.opacity = '0.85'}
-          >
-            {t(lang, 'diet.viewStats')}
-          </Link>
-        </div>
 
       </div>
     </div>

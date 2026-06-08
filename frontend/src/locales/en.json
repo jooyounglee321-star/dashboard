@@ -297,7 +297,11 @@
   "expenseThisMonth": "This month",
   "expenseOverBudget": "Over budget!",
   "expenseEditing": "Editing",
+  "expense": {
+    "budgetLink": "↗ Budget"
+  },
   "diet": {
+    "statsLink": "↗ Diet Stats",
     "analyzeBtn": "🤖 AI Diet Analysis",
     "analyzing": "Analyzing...",
     "nutritionAnalysis": "Nutrition Analysis",

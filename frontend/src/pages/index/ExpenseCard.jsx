@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { t } from './i18n'
 import { INCOME_CATEGORIES, getSubcategories } from '../../data/incomeCategories'
 import { useToast } from '../../components/Toast'
@@ -545,6 +546,7 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
         <div className="m-card-header">
           <span className="card-icon">💳</span>
           <span className="m-card-title">{t(lang, 'budget.cashflow_title')}</span>
+          <Link to="/budget" style={{ fontSize: '0.6rem', color: 'var(--ink3)', marginLeft: '0.25rem', textDecoration: 'none' }}>↗</Link>
         </div>
         <div className="m-card-body">
           <TodayHeader
@@ -601,6 +603,9 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
       <div className="card-header">
         <span className="card-icon">💳</span>
         <span className="card-title">{t(lang, 'budget.cashflow_title')}</span>
+        <Link to="/budget" style={{ fontSize: '0.65rem', color: 'var(--ink3)', marginLeft: '0.3rem', textDecoration: 'none' }}>
+          {t(lang, 'expense.budgetLink')}
+        </Link>
         <span className="exp-db-badge" style={{ marginLeft: 'auto' }}>
           {t(lang, 'expenseDbBadge')}
         </span>
