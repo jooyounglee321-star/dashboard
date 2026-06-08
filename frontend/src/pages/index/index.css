@@ -221,6 +221,7 @@
 .diet-group-label{font-size:0.72rem;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:0.03em;}
 .diet-item-card{display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.65rem;border-radius:8px;background:var(--bg);border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,0.05);}
 .diet-item-info{display:flex;flex:1;align-items:center;gap:0.55rem;min-width:0;}
+@keyframes diet-spin{to{transform:rotate(360deg);}}
 .diet-item-content{font-size:0.83rem;color:var(--ink2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .diet-item-cal{font-size:0.72rem;color:var(--ink3);white-space:nowrap;background:rgba(128,128,128,0.1);padding:0.1rem 0.4rem;border-radius:10px;}
 

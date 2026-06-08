@@ -297,6 +297,13 @@
   "expenseThisMonth": "이번달",
   "expenseOverBudget": "예산 초과!",
   "expenseEditing": "수정 중",
+  "diet": {
+    "analyzeBtn": "🤖 AI 식단 분석",
+    "analyzing": "분석 중...",
+    "nutritionAnalysis": "영양 균형 분석",
+    "menuRecommendation": "메뉴 추천",
+    "warning": "주의사항"
+  },
   "dietTitle": "오늘의 식단",
   "dietEmpty": "식단을 입력해보세요",
   "dietAdd": "추가",

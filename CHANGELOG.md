@@ -4,6 +4,17 @@
 
 ---
 
+## [2026-06-08] — feat: DietCard AI 식단 분석 UI 추가 (API 연동 전 더미 데이터)
+
+### 변경 내용
+- 식단 1개 이상 입력 시 "🤖 AI 식단 분석" 버튼 표시 (보라색)
+- 버튼 클릭 → 2초 로딩(스피너) 후 더미 결과 카드 토글 표시
+- 결과 카드 3섹션: 📊 영양 균형 분석 / 🍽️ 메뉴 추천 / ⚠️ 주의사항(노란 배경)
+- 상태 관리: `isAnalyzing`, `analysisResult`, `showAnalysis`
+- i18n: `diet.analyzeBtn`, `diet.analyzing`, `diet.nutritionAnalysis`, `diet.menuRecommendation`, `diet.warning` 추가
+
+---
+
 ## [2026-06-08] — feat: 유저 프로필 식단 분석용 신체정보(출생년도/성별/키/몸무게) 추가
 
 ### 변경 내용
