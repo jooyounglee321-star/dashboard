@@ -4,6 +4,16 @@
 
 ---
 
+## [2026-06-08] — design: ExpenseCard 날짜 선택 및 Add 버튼 레이아웃 개선
+
+### 변경 내용
+- **TodayHeader**: "Today's Total" 레이블+금액(좌) / 날짜 input(우) flex justify-between 구조로 변경
+- **ExpForm**: 통화 드롭다운 + 금액 입력 + Add 버튼을 한 줄(`exp-cur-row`)로 통합, 기존 `exp-date-row` 제거
+- 통화 드롭다운 `width: 9rem` 고정 / 금액 입력 `flex: 1` / Add 버튼 `width: 5rem` 고정
+- 데스크톱·모바일 레이아웃 모두 동일하게 적용
+
+---
+
 ## [2026-06-08] — feat: 식단 분석 저장 기능 + 식단 통계 페이지 추가
 
 ### 변경 내용
