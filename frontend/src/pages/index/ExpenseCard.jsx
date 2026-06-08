@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { t } from './i18n'
 import { INCOME_CATEGORIES, getSubcategories } from '../../data/incomeCategories'
+import { useToast } from '../../components/Toast'
+import Toast from '../../components/Toast'
 
 /* ── 통화 목록 ──────────────────────────────────────────────────────────── */
 const CURRENCIES = [
@@ -287,7 +289,7 @@ function ExpItem({ e, editId, editForm, setEditForm, categories, lang, saveEdit,
         </div>
         <div className="exp-item-btns">
           <button className="btn-edit" title={t(lang, 'common.edit')} onClick={() => startEdit(e)}>✎</button>
-          <button className="btn-del" title={t(lang, 'common.delete')} onClick={() => delExpense(e.id)}>✕</button>
+          <button type="button" className="btn-del" title={t(lang, 'common.delete')} onClick={(ev) => delExpense(ev, e.id)}>✕</button>
         </div>
       </div>
     </li>
@@ -344,6 +346,7 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
   const [loading,       setLoading]       = useState(false)
   const [submitting,    setSubmitting]    = useState(false)
   const [curDate,       setCurDate]       = useState(todayStr())
+  const { toast, showToast } = useToast()
 
   const [form,    setForm]    = useState(INIT_FORM)
   const [editId,  setEditId]  = useState(null)
@@ -462,10 +465,18 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
     }
   }
 
-  async function delExpense(id) {
-    await fetch('/api/expense/' + id, { method: 'DELETE', headers: authH() })
-    await loadExpenses(form.date)     // 현재 선택된 날짜 기준으로 리스트 갱신
-    await loadMonthly()
+  async function delExpense(e, id) {
+    if (e && e.preventDefault) e.preventDefault()
+    // 즉시 클라이언트 상태에서 제거 (optimistic update)
+    setExpenses(prev => prev.filter(item => item.id !== id))
+    try {
+      await fetch('/api/expense/' + id, { method: 'DELETE', headers: authH() })
+      showToast(t(lang, 'common.deleteSuccess'), 'ok')
+      await loadMonthly()
+    } catch {
+      // 실패 시 원상 복구
+      await loadExpenses(form.date)
+    }
   }
 
   function startEdit(e) {
@@ -510,6 +521,7 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
   if (isMobile) {
     return (
       <div className="m-card">
+        <Toast toast={toast} />
         <div className="m-card-header">
           <span className="card-icon">💳</span>
           <span className="m-card-title">{t(lang, 'budget.cashflow_title')}</span>
@@ -556,6 +568,7 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
   ════════════════════════════════════════════════════════════════════ */
   return (
     <div className="card card-expense">
+      <Toast toast={toast} />
       <div className="card-header">
         <span className="card-icon">💳</span>
         <span className="card-title">{t(lang, 'budget.cashflow_title')}</span>

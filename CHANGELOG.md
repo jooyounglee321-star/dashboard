@@ -4,6 +4,18 @@
 
 ---
 
+## [2026-06-07] — fix: 삭제 버튼 버그 수정 (페이지 이동 방지, 토스트 알림, 낙관적 업데이트)
+
+### 변경 내용
+- **ExpenseCard.jsx**: `delExpense`에 `e.preventDefault()` 추가, 낙관적 삭제(즉시 목록에서 제거), 성공 시 토스트 알림, `type="button"` 명시
+- **DietCard.jsx**: `delMeal`에 동일 패턴 적용 (낙관적 업데이트 + 토스트)
+- **BudgetPage.jsx DailyTab**: `delItem`에 동일 패턴 적용
+- **BudgetPage.jsx SettingTab**: `delBudget`, `delCat`에 동일 패턴 적용
+- **공통**: `useToast` / `<Toast>` 컴포넌트 연결, 모든 삭제 버튼에 `type="button"` 명시
+- **i18n**: `common.deleteSuccess` 키 추가 (ko: "삭제되었습니다", en: "Deleted successfully")
+
+---
+
 ## [2026-06-07] — feat: 카테고리 추가 이모지 피커 구현 (카테고리별 탭, 외부라이브러리 없음)
 
 ### 프론트엔드 (BudgetPage.jsx, BudgetPage.css)
