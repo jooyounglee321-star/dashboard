@@ -153,12 +153,13 @@ function ExpForm({ compact, form, setForm, categories, subs, lang, submitting, a
         onKeyDown={e => e.key === 'Enter' && addExpense()}
       />
 
-      {/* 통화 / 금액 */}
+      {/* 통화 / 금액 / 추가 버튼 — 한 줄 */}
       <div className="exp-cur-row">
         <select
           className="exp-cur-sel"
           value={form.currency}
           onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}
+          style={{ width: '9rem', flexShrink: 0 }}
         >
           {CURRENCIES.map(c => (
             <option key={c.code} value={c.code}>{c.symbol} {t(lang, 'currency.' + c.code.toLowerCase())}</option>
@@ -173,21 +174,13 @@ function ExpForm({ compact, form, setForm, categories, subs, lang, submitting, a
           value={form.amount}
           onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
           onKeyDown={e => e.key === 'Enter' && addExpense()}
-        />
-      </div>
-
-      {/* 날짜 / 추가 */}
-      <div className="exp-date-row">
-        <input
-          type="date"
-          value={form.date}
-          max={todayStr()}
-          onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+          style={{ flex: 1 }}
         />
         <button
           className="btn-sm"
           onClick={addExpense}
           disabled={submitting || !form.amount || Number(form.amount) <= 0}
+          style={{ width: '5rem', flexShrink: 0 }}
         >
           {t(lang, 'expenseAdd')}
         </button>
@@ -296,17 +289,37 @@ function ExpItem({ e, editId, editForm, setEditForm, categories, lang, saveEdit,
   )
 }
 
-function TodayHeader({ compact, todayUSD, budgetPct, overBudget, lang }) {
+function TodayHeader({ compact, todayUSD, budgetPct, overBudget, lang, date, maxDate, onDateChange }) {
   return (
     <div className={compact ? 'm-exp-header' : 'exp-today'}>
-      <div>
-        <span className={compact ? 'm-exp-lbl' : 'exp-label'}>{t(lang, 'expenseTodayTotal')}</span>
-        <div
-          className={compact ? 'm-exp-total' : 'exp-amount'}
-          style={{ color: todayUSD >= 0 ? undefined : '#e8a060' }}
-        >
-          {todayUSD < 0 ? '-' : ''}${Math.abs(todayUSD).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+      {/* Today's Total 레이블+금액(좌) + 날짜 input(우) */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <span className={compact ? 'm-exp-lbl' : 'exp-label'}>{t(lang, 'expenseTodayTotal')}</span>
+          <div
+            className={compact ? 'm-exp-total' : 'exp-amount'}
+            style={{ color: todayUSD >= 0 ? undefined : '#e8a060' }}
+          >
+            {todayUSD < 0 ? '-' : ''}${Math.abs(todayUSD).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          </div>
         </div>
+        {date !== undefined && onDateChange && (
+          <input
+            type="date"
+            value={date}
+            max={maxDate}
+            onChange={onDateChange}
+            style={{
+              fontSize: '0.8rem',
+              borderRadius: 6,
+              border: '1px solid var(--border, #e5e7eb)',
+              padding: '0.28rem 0.45rem',
+              background: 'var(--card-bg, #fff)',
+              color: 'var(--ink, #374151)',
+              outline: 'none',
+            }}
+          />
+        )}
       </div>
       {budgetPct !== null && (
         <div className="exp-budget-block">
@@ -534,7 +547,16 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
           <span className="m-card-title">{t(lang, 'budget.cashflow_title')}</span>
         </div>
         <div className="m-card-body">
-          <TodayHeader compact todayUSD={todayUSD} budgetPct={budgetPct} overBudget={overBudget} lang={lang} />
+          <TodayHeader
+            compact
+            todayUSD={todayUSD}
+            budgetPct={budgetPct}
+            overBudget={overBudget}
+            lang={lang}
+            date={form.date}
+            maxDate={todayStr()}
+            onDateChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+          />
           <ExpForm
             compact
             form={form}
@@ -584,7 +606,15 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
         </span>
       </div>
       <div className="card-body">
-        <TodayHeader todayUSD={todayUSD} budgetPct={budgetPct} overBudget={overBudget} lang={lang} />
+        <TodayHeader
+          todayUSD={todayUSD}
+          budgetPct={budgetPct}
+          overBudget={overBudget}
+          lang={lang}
+          date={form.date}
+          maxDate={todayStr()}
+          onDateChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+        />
         <ExpForm
           form={form}
           setForm={setForm}
