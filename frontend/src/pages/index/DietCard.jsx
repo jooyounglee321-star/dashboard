@@ -23,6 +23,10 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
   const [mcal, setMcal]   = useState('')          // 칼로리 (선택)
   const [date, setDate]   = useState(localToday)  // 선택 날짜
   const [profileComplete, setProfileComplete] = useState(true)  // 신체정보 완성 여부
+  // AI 분석 상태
+  const [showAnalysis,   setShowAnalysis]   = useState(false)
+  const [isAnalyzing,    setIsAnalyzing]    = useState(false)
+  const [analysisResult, setAnalysisResult] = useState(null)
   const { toast, showToast } = useToast()
 
   // mealConfig 변경 시 visible 끼니 동기화 (기존 로직 유지)
@@ -84,6 +88,27 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
     } catch {
       await loadMeal(date)
     }
+  }
+
+  // AI 식단 분석 (API 연동 전 더미 데이터 2초 딜레이)
+  async function runAnalysis() {
+    if (showAnalysis && analysisResult) { setShowAnalysis(false); return }
+    setShowAnalysis(true)
+    setIsAnalyzing(true)
+    setAnalysisResult(null)
+    await new Promise(r => setTimeout(r, 2000))
+    setAnalysisResult({
+      nutrition: lang === 'en'
+        ? 'Based on today\'s meals, your protein intake looks good.'
+        : '오늘 식단을 분석한 결과, 단백질 섭취가 양호합니다.',
+      recommendations: lang === 'en'
+        ? ['Consider adding a handful of nuts as a snack', 'Try to increase vegetable intake at dinner']
+        : ['견과류 간식 추가 권장', '저녁에 채소 섭취 늘리기'],
+      caution: lang === 'en'
+        ? 'Sodium intake is slightly high. Try to reduce soup and broth dishes.'
+        : '나트륨 섭취가 다소 높습니다. 국물 음식을 줄여보세요.',
+    })
+    setIsAnalyzing(false)
   }
 
   // 기존 끼니 타입 전체 삭제 (하위 호환 유지)
@@ -222,6 +247,97 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
             ))
           )}
         </div>
+
+        {/* ── AI 분석 버튼 (식단 1개 이상일 때만 표시) ─────────── */}
+        {hasMeals && (
+          <div style={{ marginTop: '0.7rem' }}>
+            <button
+              type="button"
+              onClick={runAnalysis}
+              disabled={isAnalyzing}
+              style={{
+                width: '100%', padding: '0.55rem 1rem',
+                fontSize: isMobile ? '0.85rem' : '0.82rem', fontWeight: 600,
+                background: isAnalyzing ? '#7c3aed99' : '#7c3aed',
+                color: '#fff', border: 'none', borderRadius: 9,
+                cursor: isAnalyzing ? 'not-allowed' : 'pointer',
+                fontFamily: 'inherit', transition: 'background 0.15s',
+                letterSpacing: '0.01em',
+              }}
+              onMouseEnter={e => { if (!isAnalyzing) e.currentTarget.style.background = '#6d28d9' }}
+              onMouseLeave={e => { if (!isAnalyzing) e.currentTarget.style.background = '#7c3aed' }}
+            >
+              {isAnalyzing ? t(lang, 'diet.analyzing') : t(lang, 'diet.analyzeBtn')}
+            </button>
+
+            {/* ── 분석 결과 카드 ─────────────────────────────────── */}
+            {showAnalysis && (
+              <div style={{
+                marginTop: '0.65rem', padding: '1rem',
+                background: 'rgba(124,58,237,0.06)',
+                border: '1px solid rgba(124,58,237,0.22)',
+                borderRadius: 12,
+              }}>
+                {isAnalyzing ? (
+                  /* 로딩 스피너 */
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', justifyContent: 'center', padding: '0.5rem 0' }}>
+                    <span style={{
+                      display: 'inline-block', width: 18, height: 18,
+                      border: '2.5px solid rgba(124,58,237,0.25)',
+                      borderTop: '2.5px solid #7c3aed',
+                      borderRadius: '50%',
+                      animation: 'diet-spin 0.7s linear infinite',
+                    }} />
+                    <span style={{ fontSize: '0.82rem', color: '#6d28d9', fontWeight: 500 }}>
+                      {t(lang, 'diet.analyzing')}
+                    </span>
+                  </div>
+                ) : analysisResult && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+
+                    {/* ① 영양 균형 분석 */}
+                    <div>
+                      <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#5b21b6', marginBottom: '0.35rem' }}>
+                        📊 {t(lang, 'diet.nutritionAnalysis')}
+                      </div>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--ink2)', margin: 0, lineHeight: 1.6 }}>
+                        {analysisResult.nutrition}
+                      </p>
+                    </div>
+
+                    {/* ② 메뉴 추천 */}
+                    <div>
+                      <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#5b21b6', marginBottom: '0.35rem' }}>
+                        🍽️ {t(lang, 'diet.menuRecommendation')}
+                      </div>
+                      <ul style={{ margin: 0, paddingLeft: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                        {analysisResult.recommendations.map((rec, i) => (
+                          <li key={i} style={{ fontSize: '0.8rem', color: 'var(--ink2)', lineHeight: 1.5 }}>{rec}</li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* ③ 주의사항 */}
+                    <div style={{
+                      padding: '0.55rem 0.75rem',
+                      background: 'rgba(234,179,8,0.08)',
+                      border: '1px solid rgba(234,179,8,0.35)',
+                      borderRadius: 8,
+                    }}>
+                      <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#92400e', marginBottom: '0.25rem' }}>
+                        ⚠️ {t(lang, 'diet.warning')}
+                      </div>
+                      <p style={{ fontSize: '0.8rem', color: '#78350f', margin: 0, lineHeight: 1.5 }}>
+                        {analysisResult.caution}
+                      </p>
+                    </div>
+
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── 입력 폼 ──────────────────────────────────────────────── */}
         {formSection}

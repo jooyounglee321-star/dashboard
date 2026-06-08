@@ -297,6 +297,13 @@
   "expenseThisMonth": "This month",
   "expenseOverBudget": "Over budget!",
   "expenseEditing": "Editing",
+  "diet": {
+    "analyzeBtn": "🤖 AI Diet Analysis",
+    "analyzing": "Analyzing...",
+    "nutritionAnalysis": "Nutrition Analysis",
+    "menuRecommendation": "Menu Recommendation",
+    "warning": "Caution"
+  },
   "dietTitle": "Today's Diet",
   "dietEmpty": "Log your meals",
   "dietAdd": "Add",
