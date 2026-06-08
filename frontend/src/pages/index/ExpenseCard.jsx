@@ -301,8 +301,11 @@ function TodayHeader({ compact, todayUSD, budgetPct, overBudget, lang }) {
     <div className={compact ? 'm-exp-header' : 'exp-today'}>
       <div>
         <span className={compact ? 'm-exp-lbl' : 'exp-label'}>{t(lang, 'expenseTodayTotal')}</span>
-        <div className={compact ? 'm-exp-total' : 'exp-amount'}>
-          ${todayUSD.toFixed(2)}
+        <div
+          className={compact ? 'm-exp-total' : 'exp-amount'}
+          style={{ color: todayUSD >= 0 ? undefined : '#e8a060' }}
+        >
+          {todayUSD >= 0 ? '+' : ''}${todayUSD.toFixed(2)}
         </div>
       </div>
       {budgetPct !== null && (
@@ -511,7 +514,11 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
   }
 
   /* ── 집계 ─────────────────────────────────────────────────────────── */
-  const todayUSD   = expenses.reduce((s, e) => s + (parseFloat(e.converted_amount ?? e.amount) || 0), 0)
+  // Today's Total = 수입 합계 - 지출 합계 (순 현금흐름)
+  const todayUSD = expenses.reduce((s, e) => {
+    const amt = parseFloat(e.converted_amount ?? e.amount) || 0
+    return (e.type || 'expense') === 'income' ? s + amt : s - amt
+  }, 0)
   const budgetPct  = monthlyBudget ? Math.round(monthlyTotal / monthlyBudget * 100) : null
   const overBudget = budgetPct !== null && budgetPct > 100
 
