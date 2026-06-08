@@ -36,6 +36,22 @@ class DietOut(DietCreate):
     model_config = {"from_attributes": True}
 
 
+class DietAnalysisCreate(BaseModel):
+    date: date
+    nutrition_analysis: str | None = None
+    recommendations: str | None = None   # JSON 배열 문자열
+    warnings: str | None = None
+    raw_meals: str | None = None          # 분석 당시 식단 스냅샷 JSON
+
+
+class DietAnalysisOut(DietAnalysisCreate):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 # ── Memo ─────────────────────────────────────────────────────────────────────
 
 class MemoCreate(BaseModel):

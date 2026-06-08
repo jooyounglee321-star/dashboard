@@ -27,6 +27,7 @@ from models import (  # noqa: F401  (import side-effect 목적)
     ExpenseBudget,
     ExchangeRate,
     Diet,
+    DietAnalysis,
     Memo,
     Stock,
     StockPriceHistory,
@@ -440,6 +441,34 @@ _DEFAULT_ALLOWED: dict[str, list[str]] = {
     "free":    ["dashboard_basic", "dashboard_view_only", "own_settings"],
     "guest":   ["dashboard_view_only"],
 }
+
+
+def _migrate_create_diet_analyses():
+    """diet_analyses 테이블이 없으면 생성 (CREATE TABLE IF NOT EXISTS).
+
+    Base.metadata.create_all()이 이미 처리하지만, 기존 DB에서 모델 임포트
+    타이밍 문제 방어용으로 명시적 DDL 도 추가한다.
+    """
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS diet_analyses (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    date DATE NOT NULL,
+                    nutrition_analysis TEXT,
+                    recommendations TEXT,
+                    warnings TEXT,
+                    raw_meals TEXT,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW(),
+                    CONSTRAINT uq_diet_analysis_user_date UNIQUE (user_id, date)
+                )
+            """))
+            conn.commit()
+            logger.info("[MIGRATE] diet_analyses 테이블 확인/생성 완료")
+        except Exception as e:
+            logger.warning("[MIGRATE] diet_analyses 생성 실패(이미 존재할 수 있음): %s", e)
 
 
 def _migrate_expense_columns():
@@ -917,6 +946,7 @@ async def lifespan(app: FastAPI):
 
     _migrate_user_columns()
     _migrate_add_user_id()
+    _migrate_create_diet_analyses()
     _migrate_expense_columns()
     _migrate_expense_type_column()
     _migrate_user_roles()

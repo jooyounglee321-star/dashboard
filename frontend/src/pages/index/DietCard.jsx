@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { t, T } from './i18n'
 import { useToast } from '../../components/Toast'
 import Toast from '../../components/Toast'
+import { Link } from 'react-router-dom'
 
 // 로컬 날짜 (UTC 파싱 금지)
 const localToday = () => {
@@ -27,6 +28,8 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
   const [showAnalysis,   setShowAnalysis]   = useState(false)
   const [isAnalyzing,    setIsAnalyzing]    = useState(false)
   const [analysisResult, setAnalysisResult] = useState(null)
+  const [isSavedResult,  setIsSavedResult]  = useState(false)   // 저장된 분석 결과인지 여부
+  const [isSaving,       setIsSaving]       = useState(false)
   const { toast, showToast } = useToast()
 
   // mealConfig 변경 시 visible 끼니 동기화 (기존 로직 유지)
@@ -47,7 +50,34 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
     setDietList(list)
   }
 
-  useEffect(() => { loadMeal(date) }, [date]) // eslint-disable-line
+  useEffect(() => {
+    loadMeal(date)
+    loadSavedAnalysis(date)
+  }, [date]) // eslint-disable-line
+
+  // 저장된 분석 자동 로드
+  async function loadSavedAnalysis(d = date) {
+    try {
+      const res = await fetch('/api/diets/analysis?date=' + d, { headers: authHeader() })
+      if (!res.ok) { setAnalysisResult(null); setIsSavedResult(false); setShowAnalysis(false); return }
+      const data = await res.json()
+      if (data && data.id) {
+        setAnalysisResult({
+          nutrition: data.nutrition_analysis || '',
+          recommendations: (() => { try { return JSON.parse(data.recommendations || '[]') } catch { return [data.recommendations || ''] } })(),
+          caution: data.warnings || '',
+        })
+        setIsSavedResult(true)
+        setShowAnalysis(true)
+      } else {
+        setAnalysisResult(null)
+        setIsSavedResult(false)
+        setShowAnalysis(false)
+      }
+    } catch {
+      setAnalysisResult(null); setIsSavedResult(false); setShowAnalysis(false)
+    }
+  }
 
   // 신체정보 미입력 여부 체크 (마운트 시 1회)
   useEffect(() => {
@@ -92,10 +122,11 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
 
   // AI 식단 분석 (API 연동 전 더미 데이터 2초 딜레이)
   async function runAnalysis() {
-    if (showAnalysis && analysisResult) { setShowAnalysis(false); return }
+    if (showAnalysis && analysisResult && !isSavedResult) { setShowAnalysis(false); return }
     setShowAnalysis(true)
     setIsAnalyzing(true)
     setAnalysisResult(null)
+    setIsSavedResult(false)
     await new Promise(r => setTimeout(r, 2000))
     setAnalysisResult({
       nutrition: lang === 'en'
@@ -109,6 +140,31 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
         : '나트륨 섭취가 다소 높습니다. 국물 음식을 줄여보세요.',
     })
     setIsAnalyzing(false)
+  }
+
+  // 분석 결과 저장
+  async function saveAnalysis() {
+    if (!analysisResult || isSaving) return
+    setIsSaving(true)
+    try {
+      const body = {
+        date,
+        nutrition_analysis: analysisResult.nutrition,
+        recommendations: JSON.stringify(Array.isArray(analysisResult.recommendations) ? analysisResult.recommendations : [analysisResult.recommendations]),
+        warnings: analysisResult.caution,
+        raw_meals: JSON.stringify(dietList),
+      }
+      const res = await fetch('/api/diets/analysis', {
+        method: 'POST',
+        headers: { ...authHeader(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (res.ok) {
+        setIsSavedResult(true)
+        showToast(t(lang, 'diet.saveSuccess'), 'ok')
+      }
+    } catch { /* silent */ }
+    setIsSaving(false)
   }
 
   // 기존 끼니 타입 전체 삭제 (하위 호환 유지)
@@ -295,6 +351,19 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
                 ) : analysisResult && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
 
+                    {/* 저장된 결과 배지 */}
+                    {isSavedResult && (
+                      <div style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                        fontSize: '0.72rem', fontWeight: 600,
+                        color: '#5b21b6', background: 'rgba(124,58,237,0.1)',
+                        border: '1px solid rgba(124,58,237,0.25)',
+                        borderRadius: 20, padding: '0.2rem 0.6rem', alignSelf: 'flex-start',
+                      }}>
+                        📋 {t(lang, 'diet.savedAnalysis')}
+                      </div>
+                    )}
+
                     {/* ① 영양 균형 분석 */}
                     <div>
                       <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#5b21b6', marginBottom: '0.35rem' }}>
@@ -311,7 +380,7 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
                         🍽️ {t(lang, 'diet.menuRecommendation')}
                       </div>
                       <ul style={{ margin: 0, paddingLeft: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                        {analysisResult.recommendations.map((rec, i) => (
+                        {(Array.isArray(analysisResult.recommendations) ? analysisResult.recommendations : [analysisResult.recommendations]).map((rec, i) => (
                           <li key={i} style={{ fontSize: '0.8rem', color: 'var(--ink2)', lineHeight: 1.5 }}>{rec}</li>
                         ))}
                       </ul>
@@ -331,6 +400,28 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
                         {analysisResult.caution}
                       </p>
                     </div>
+
+                    {/* ④ 분석 저장 버튼 (미저장 상태일 때만) */}
+                    {!isSavedResult && (
+                      <button
+                        type="button"
+                        onClick={saveAnalysis}
+                        disabled={isSaving}
+                        style={{
+                          alignSelf: 'flex-end',
+                          padding: '0.4rem 0.9rem',
+                          fontSize: '0.78rem', fontWeight: 600,
+                          background: isSaving ? '#16a34a99' : '#16a34a',
+                          color: '#fff', border: 'none', borderRadius: 8,
+                          cursor: isSaving ? 'not-allowed' : 'pointer',
+                          fontFamily: 'inherit', transition: 'background 0.15s',
+                        }}
+                        onMouseEnter={e => { if (!isSaving) e.currentTarget.style.background = '#15803d' }}
+                        onMouseLeave={e => { if (!isSaving) e.currentTarget.style.background = '#16a34a' }}
+                      >
+                        {isSaving ? t(lang, 'common.processing') : `✅ ${t(lang, 'diet.saveAnalysis')}`}
+                      </button>
+                    )}
 
                   </div>
                 )}
@@ -361,6 +452,23 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
             {t(lang, 'profile.dietAIPrompt')}
           </div>
         )}
+
+        {/* ── 식단 통계 보기 링크 ──────────────────────────────────── */}
+        <div style={{ marginTop: '0.75rem', textAlign: 'center' }}>
+          <Link
+            to="/diet-stats"
+            style={{
+              fontSize: isMobile ? '0.78rem' : '0.74rem',
+              color: '#7c3aed', textDecoration: 'none', fontWeight: 500,
+              opacity: 0.85,
+            }}
+            onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+            onMouseLeave={e => e.currentTarget.style.opacity = '0.85'}
+          >
+            {t(lang, 'diet.viewStats')}
+          </Link>
+        </div>
+
       </div>
     </div>
   )

@@ -144,6 +144,22 @@ class Diet(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
+class DietAnalysis(Base):
+    """날짜별 AI 식단 분석 결과. (user_id, date) 당 1건 UPSERT."""
+    __tablename__ = "diet_analyses"
+    __table_args__ = (UniqueConstraint("user_id", "date", name="uq_diet_analysis_user_date"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    nutrition_analysis: Mapped[str | None] = mapped_column(Text, nullable=True)
+    recommendations: Mapped[str | None] = mapped_column(Text, nullable=True)   # JSON 배열 문자열
+    warnings: Mapped[str | None] = mapped_column(Text, nullable=True)
+    raw_meals: Mapped[str | None] = mapped_column(Text, nullable=True)         # 분석 당시 식단 스냅샷 JSON
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
 class Memo(Base):
     __tablename__ = "memos"
 

@@ -4,6 +4,32 @@
 
 ---
 
+## [2026-06-08] — feat: 식단 분석 저장 기능 + 식단 통계 페이지 추가
+
+### 변경 내용
+- **models.py**: `diet_analyses` 테이블 추가 (id, user_id FK, date, nutrition_analysis, recommendations, warnings, raw_meals, created_at, updated_at, UNIQUE(user_id, date))
+- **schemas.py**: `DietAnalysisCreate`, `DietAnalysisOut` 스키마 추가
+- **routers/diets.py**: 3개 분석 엔드포인트 추가
+  - `POST /api/diets/analysis` — 분석 결과 UPSERT 저장
+  - `GET /api/diets/analysis?date=YYYY-MM-DD` — 특정 날짜 분석 조회
+  - `GET /api/diets/analysis/history?year=YYYY&month=MM` — 월별 분석 이력 조회
+- **main.py**: `DietAnalysis` 모델 import + `_migrate_create_diet_analyses()` 마이그레이션 함수 추가
+- **DietCard.jsx**: 저장 기능 및 UI 개선
+  - 날짜 변경 시 저장된 분석 자동 로드 (`loadSavedAnalysis`)
+  - 저장된 결과에 "📋 저장된 분석 결과" 배지 표시
+  - 분석 완료 후 "✅ 분석 저장" 초록 버튼 표시 (저장 후 숨김)
+  - "📈 식단 통계 보기" 링크 하단 추가
+- **DietStatsPage.jsx**: 신규 식단 통계 페이지 (`/diet-stats`)
+  - 년/월 내비게이터 (← YYYY년 MM월 →)
+  - 날짜별 그룹화: 날짜 헤더 + 끼니별 식단 목록
+  - 분석 결과 펼치기/접기 토글 (영양 분석, 메뉴 추천, 주의사항)
+  - 분석 없는 날에 "분석 없음" 배지
+- **App.jsx**: `/diet-stats` 라우트 추가 (AuthGuard 적용)
+- **i18n**: `diet.saveAnalysis`, `diet.savedAnalysis`, `diet.saveSuccess`, `diet.statsTitle`, `diet.noAnalysis`, `diet.viewStats`, `diet.mealsOfDay`, `diet.analysisOfDay` 8개 키 추가 (ko/en)
+- **DB_SCHEMA.md**: `diet_analyses` 테이블 문서화
+
+---
+
 ## [2026-06-08] — feat: DietCard AI 식단 분석 UI 추가 (API 연동 전 더미 데이터)
 
 ### 변경 내용

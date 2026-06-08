@@ -1,6 +1,6 @@
 # DB Schema Documentation
 
-> 최종 업데이트: 2026-05-27  
+> 최종 업데이트: 2026-06-08  
 > 데이터베이스: PostgreSQL (Railway) / SQLite (로컬 개발)  
 > ORM: SQLAlchemy 2.x (`Mapped` / `mapped_column`)
 
@@ -16,15 +16,16 @@
 | 4 | `expense_budgets` | 사용자별 카테고리별 예산 설정 |
 | 5 | `exchange_rates` | 통화 환율 (USD 기준 9개 시드) |
 | 6 | `diets` | 식단 기록 (user_id 기준 격리) |
-| 7 | `memos` | 일일 메모 (user_id 기준 격리) |
-| 8 | `stocks` | 보유 종목 (user_id 기준 격리) |
-| 9 | `stock_price_history` | 종목별 일별 시세 스냅샷 |
-| 10 | `bookmarks` | 북마크 (user_id 기준 격리) |
-| 11 | `youtube_channels` | 유튜브 채널 목록 (user_id 기준 격리) |
-| 12 | `timezone_config` | 시간대 설정 (user_id 당 1행) |
-| 13 | `portfolio_groups` | 포트폴리오 그룹 데이터 (user_id 당 1행) |
-| 14 | `permissions` | 레벨별 권한 매핑 |
-| 15 | `daily_portfolio_snapshot` | 일별 포트폴리오 스냅샷 (user_id 기준 격리) |
+| 7 | `diet_analyses` | 날짜별 AI 식단 분석 결과 (user_id+date 당 1건 UPSERT) |
+| 8 | `memos` | 일일 메모 (user_id 기준 격리) |
+| 9 | `stocks` | 보유 종목 (user_id 기준 격리) |
+| 10 | `stock_price_history` | 종목별 일별 시세 스냅샷 |
+| 11 | `bookmarks` | 북마크 (user_id 기준 격리) |
+| 12 | `youtube_channels` | 유튜브 채널 목록 (user_id 기준 격리) |
+| 13 | `timezone_config` | 시간대 설정 (user_id 당 1행) |
+| 14 | `portfolio_groups` | 포트폴리오 그룹 데이터 (user_id 당 1행) |
+| 15 | `permissions` | 레벨별 권한 매핑 |
+| 16 | `daily_portfolio_snapshot` | 일별 포트폴리오 스냅샷 (user_id 기준 격리) |
 
 ---
 
@@ -181,7 +182,32 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 
 ---
 
-## 7. `memos`
+## 7. `diet_analyses`
+
+날짜별 AI 식단 분석 결과 테이블. **(user_id, date) 당 1건 UPSERT.**
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+|--------|------|----------|------|
+| `id` | INTEGER | PK, INDEX | 자동 증가 고유 ID |
+| `user_id` | INTEGER | NOT NULL, FK → `users.id` CASCADE, INDEX | 소유 사용자 ID |
+| `date` | DATE | NOT NULL, INDEX | 분석 대상 날짜 |
+| `nutrition_analysis` | TEXT | NULLABLE | 영양 균형 분석 결과 (자유 텍스트) |
+| `recommendations` | TEXT | NULLABLE | 메뉴 추천 목록 (JSON 배열 문자열) |
+| `warnings` | TEXT | NULLABLE | 주의사항 텍스트 |
+| `raw_meals` | TEXT | NULLABLE | 분석 당시 식단 스냅샷 (JSON 배열 문자열) |
+| `created_at` | DATETIME | DEFAULT `now()` (서버) | 최초 저장 일시 |
+| `updated_at` | DATETIME | DEFAULT `now()`, ON UPDATE `now()` | 마지막 수정 일시 |
+
+**UNIQUE 제약:** `(user_id, date)` — `uq_diet_analysis_user_date`
+
+**비고:**
+- 날짜당 1건만 허용 — 재분석 시 기존 행 UPDATE (upsert)
+- `recommendations`, `raw_meals` 는 JSON 배열 문자열로 저장, 프론트에서 `JSON.parse()` 처리
+- 서버 시작 시 `_migrate_create_diet_analyses()`로 `CREATE TABLE IF NOT EXISTS` 실행
+
+---
+
+## 8. `memos`
 
 일일 메모 테이블. **사용자별 데이터 격리 (user_id FK).**
 

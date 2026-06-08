@@ -302,7 +302,15 @@
     "analyzing": "분석 중...",
     "nutritionAnalysis": "영양 균형 분석",
     "menuRecommendation": "메뉴 추천",
-    "warning": "주의사항"
+    "warning": "주의사항",
+    "saveAnalysis": "분석 저장",
+    "savedAnalysis": "저장된 분석 결과",
+    "saveSuccess": "분석이 저장되었습니다",
+    "statsTitle": "식단 통계",
+    "noAnalysis": "분석 없음",
+    "viewStats": "📈 식단 통계 보기",
+    "mealsOfDay": "식단 기록",
+    "analysisOfDay": "분석 결과"
   },
   "dietTitle": "오늘의 식단",
   "dietEmpty": "식단을 입력해보세요",
