@@ -297,7 +297,11 @@
   "expenseThisMonth": "이번달",
   "expenseOverBudget": "예산 초과!",
   "expenseEditing": "수정 중",
+  "expense": {
+    "budgetLink": "↗ Budget"
+  },
   "diet": {
+    "statsLink": "↗ Diet Stats",
     "analyzeBtn": "🤖 AI 식단 분석",
     "analyzing": "분석 중...",
     "nutritionAnalysis": "영양 균형 분석",

@@ -4,6 +4,20 @@
 
 ---
 
+## [2026-06-08] — design: 가계부/식단 카드 헤더 주식 카드 패턴으로 통일, 네비게이션 Budget 버튼 제거
+
+### 변경 내용
+- **IndexPage.jsx**: 상단 헤더에서 `📒 가계부(Budget)` 링크 버튼 제거
+- **ExpenseCard.jsx**: 카드 헤더에 `↗ Budget` 링크 추가 (주식 `↗ Stats` 와 동일 스타일)
+  - 데스크톱: 타이틀 옆 `fontSize: 0.65rem, color: var(--ink3)`, `/budget` 이동
+  - 모바일: `↗` 기호만 표시 (`0.6rem`)
+- **DietCard.jsx**: 카드 헤더에 `↗ Diet Stats` 링크 추가, 기존 하단 "식단 통계 보기" 링크 제거
+  - 데스크톱: 타이틀 옆 `fontSize: 0.65rem, color: var(--ink3)`, `/diet-stats` 이동
+  - 모바일: `↗` 기호만 표시 (`0.6rem`)
+- **i18n**: `expense.budgetLink`, `diet.statsLink` 키 추가 (ko/en)
+
+---
+
 ## [2026-06-08] — design: ExpenseCard 날짜 선택 및 Add 버튼 레이아웃 개선
 
 ### 변경 내용

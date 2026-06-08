@@ -404,11 +404,6 @@ export default function IndexPage() {
         <div className="header-right">
           <span className="header-date">{headerDate}</span>
           <Link to="/admin" className="admin-link">{t(lang, 'adminLink')}</Link>
-          <Link to="/budget" style={{
-            fontSize: '0.78rem', color: '#60b4e8', textDecoration: 'none',
-            border: '1px solid rgba(96,180,232,0.4)', padding: '0.28rem 0.7rem',
-            borderRadius: 20, fontFamily: 'inherit', fontWeight: 500,
-          }}>{t(lang, 'budgetNavLink')}</Link>
           {userRole === 'admin' && (
             <Link to="/superadmin" style={{
               fontSize: '0.78rem', color: '#c0392b', textDecoration: 'none',
