@@ -86,22 +86,42 @@ def _get_historical_prices_batch(
 def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
     """누락된 날짜의 포트폴리오 스냅샷을 해당일 종가로 백필.
 
-    - 최근 스냅샷 다음 날부터 오늘(KST) 하루 전까지 조회
-    - 최대 30일치만 처리 (오래된 날짜 제외)
-    - stocks 테이블 기준으로 보유 종목 조회 (스케줄러와 동일 소스)
+    신규 유저 (스냅샷 0건):
+      - stocks.created_at 최솟값 날짜부터 오늘(KST) 하루 전까지
+      - 최대 365일 제한
 
-    Returns: {"backfilled": N, "dates": [...ISO strings...]}
+    기존 유저 (스냅샷 1건 이상):
+      - 마지막 snapshot_date 다음 날부터 오늘(KST) 하루 전까지
+      - 최대 30일 제한
+
+    Returns: {"backfilled": N, "dates": [...ISO strings...], "is_new_user": bool}
     """
     today_kst = datetime.now(ZoneInfo("Asia/Seoul")).date()
 
-    # ① 최신 스냅샷 날짜
+    # ① 스냅샷 존재 여부 확인
     latest = (
         db.query(DailyPortfolioSnapshot.snapshot_date)
         .filter(DailyPortfolioSnapshot.user_id == user_id)
         .order_by(DailyPortfolioSnapshot.snapshot_date.desc())
         .first()
     )
-    start_date = (latest.snapshot_date + timedelta(days=1)) if latest else (today_kst - timedelta(days=30))
+    is_new_user = latest is None
+
+    if is_new_user:
+        # 신규 유저: stocks 테이블의 가장 오래된 created_at 날짜부터
+        from sqlalchemy import func as sa_func
+        oldest = (
+            db.query(sa_func.min(Stock.created_at))
+            .filter(Stock.user_id == user_id)
+            .scalar()
+        )
+        if oldest is None:
+            return {"backfilled": 0, "dates": [], "is_new_user": True}
+        start_date = oldest.date() if hasattr(oldest, "date") else oldest
+        max_days = 365
+    else:
+        start_date = latest.snapshot_date + timedelta(days=1)
+        max_days = 30
 
     # ② 이미 존재하는 날짜 집합 (범위 내 한 번에 조회)
     existing = {
@@ -115,7 +135,7 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
         .all()
     }
 
-    # ③ 누락 날짜 목록 (오늘 제외, 최대 30일)
+    # ③ 누락 날짜 목록 (오늘 제외)
     missing: list[date] = []
     d = start_date
     while d < today_kst:
@@ -124,10 +144,10 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
         d += timedelta(days=1)
 
     if not missing:
-        return {"backfilled": 0, "dates": []}
+        return {"backfilled": 0, "dates": [], "is_new_user": is_new_user}
 
-    if len(missing) > 30:
-        missing = missing[-30:]  # 최근 30일만
+    if len(missing) > max_days:
+        missing = missing[-max_days:]  # 가장 최근 N일만
 
     # ④ 보유 종목 조회 (stocks 테이블 — 스케줄러와 동일 소스)
     stocks = db.query(Stock).filter(
@@ -244,7 +264,7 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
             db.rollback()
             continue
 
-    return {"backfilled": len(backfilled_dates), "dates": backfilled_dates}
+    return {"backfilled": len(backfilled_dates), "dates": backfilled_dates, "is_new_user": is_new_user}
 
 
 # ── POST /api/portfolio/backfill ────────────────────────────────────────────
