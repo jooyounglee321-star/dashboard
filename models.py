@@ -294,6 +294,7 @@ class DailyPortfolioSnapshot(Base):
     total_krw: Mapped[float | None] = mapped_column(Float)        # KRW 그룹 합계
     total_krw_equiv: Mapped[float | None] = mapped_column(Float)  # 원화환산 전체 합계
     data: Mapped[str | None] = mapped_column(Text)                # JSON — 그룹/종목 상세
+    realized_pl: Mapped[float | None] = mapped_column(Float, nullable=True)  # 실현 손익 합계
     saved_by: Mapped[str] = mapped_column(String(20), default="frontend")  # 'frontend' | 'scheduler'
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())

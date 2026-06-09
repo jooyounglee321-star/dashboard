@@ -199,6 +199,7 @@ class PortfolioSnapshotOut(BaseModel):
     total_usd: float | None
     total_krw: float | None
     total_krw_equiv: float | None
+    realized_pl: float | None = None  # 실현 손익 합계
     data: str | None          # raw JSON
     saved_by: str
     created_at: datetime

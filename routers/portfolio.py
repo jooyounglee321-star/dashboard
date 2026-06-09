@@ -212,6 +212,7 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
     for target_date in missing:
         try:
             groups: dict[str, dict] = {}
+            total_realized_pl: float = 0.0  # 이 날짜의 전체 실현 손익 누계
 
             for ticker, hist in ticker_history.items():
                 category = hist["category"]
@@ -224,15 +225,14 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
                 ]
                 buy_qty = sum(float(p.get("qty", 0)) for p in valid_pp)
                 # sells: date 없으면 항상 차감(하위호환), date 있으면 target_date 이하만
-                sell_qty = sum(
-                    float(sv.get("qty", 0)) for sv in hist["sells"]
+                valid_sells = [
+                    sv for sv in hist["sells"]
                     if not sv.get("date") or sv["date"] <= str(target_date)
-                )
+                ]
+                sell_qty = sum(float(sv.get("qty", 0)) for sv in valid_sells)
                 qty = max(0.0, buy_qty - sell_qty)
-                if qty <= 0:
-                    continue  # 해당 날짜에 보유 없음 → 제외
 
-                # 날짜 기준 가중평균 매수가
+                # 날짜 기준 가중평균 매수가 (qty 체크 전에 계산 — realized_pl에도 필요)
                 priced = [p for p in valid_pp if (p.get("price") or 0) > 0]
                 ws  = sum(float(p["price"]) * float(p.get("qty", 0)) for p in priced)
                 vqt = sum(float(p.get("qty", 0)) for p in priced)
@@ -241,6 +241,18 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
                     round(ws / vqt, 4) if vqt > 0
                     else (float(s_row.avg_price) if s_row and s_row.avg_price else None)
                 )
+
+                # 실현 손익: target_date 이전 매도 기준 (전량 매도 종목도 포함)
+                ticker_real_pl = 0.0
+                if avg:
+                    ticker_real_pl = sum(
+                        (float(sv.get("price", 0)) - avg) * float(sv.get("qty", 0))
+                        for sv in valid_sells
+                    )
+                total_realized_pl = round(total_realized_pl + ticker_real_pl, 2)
+
+                if qty <= 0:
+                    continue  # 해당 날짜에 보유 없음 → 평가액 그룹에서 제외
 
                 key = f"{ticker}_{category}"
                 price = price_cache.get(key, {}).get(target_date)
@@ -272,7 +284,7 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
                     "eval_amount":   eval_amt,
                     "avg_buy_price": avg,
                     "eval_pl":       eval_pl,
-                    "realized_pl":   0,
+                    "realized_pl":   round(ticker_real_pl, 2),
                 })
                 groups[category]["total"] = round(
                     groups[category]["total"] + eval_amt, 2
@@ -300,6 +312,7 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
                 row.total_usd       = round(total_usd, 2)
                 row.total_krw       = round(total_krw, 2)
                 row.total_krw_equiv = total_krw_equiv
+                row.realized_pl     = total_realized_pl
                 row.data            = data_json
                 row.saved_by        = "backfill"
             else:
@@ -310,6 +323,7 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
                     total_usd       = round(total_usd, 2),
                     total_krw       = round(total_krw, 2),
                     total_krw_equiv = total_krw_equiv,
+                    realized_pl     = total_realized_pl,
                     data            = data_json,
                     saved_by        = "backfill",
                 )
