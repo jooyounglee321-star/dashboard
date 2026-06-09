@@ -165,6 +165,26 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
     if not stocks:
         return {"backfilled": 0, "dates": []}
 
+    # ④-b portfolio_groups에서 매도 내역(날짜 포함) 로드 → ticker별 매핑
+    pg_row = db.query(PortfolioGroups).filter(PortfolioGroups.user_id == user_id).first()
+    pg_data: list = []
+    if pg_row and pg_row.data:
+        try:
+            pg_data = json.loads(pg_row.data)
+        except Exception:
+            pg_data = []
+
+    # ticker → {purchases: [...], sells: [...]} 매핑
+    ticker_history: dict[str, dict] = {}
+    for grp in pg_data:
+        for st in grp.get("stocks", []):
+            t = st.get("ticker", "")
+            if t:
+                ticker_history[t] = {
+                    "purchases": st.get("purchases") or [],
+                    "sells":     st.get("sells")     or [],
+                }
+
     # ⑤ USD/KRW 환율
     fx_row = db.query(ExchangeRate).filter_by(
         base_currency="USD", target_currency="KRW"
@@ -185,7 +205,19 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
             groups: dict[str, dict] = {}
 
             for s in stocks:
-                qty = float(s.quantity or 0)
+                # 날짜 기준 보유량: portfolio_groups의 sells.date 활용
+                if s.ticker in ticker_history:
+                    hist = ticker_history[s.ticker]
+                    buy_qty = sum(float(p.get("qty", 0)) for p in hist["purchases"])
+                    sell_qty = sum(
+                        float(sv.get("qty", 0)) for sv in hist["sells"]
+                        # date 없으면 항상 차감(하위호환), date 있으면 target_date 이하만
+                        if not sv.get("date") or sv["date"] <= str(target_date)
+                    )
+                    qty = max(0.0, buy_qty - sell_qty)
+                else:
+                    # portfolio_groups에 없으면 stocks.quantity 폴백
+                    qty = float(s.quantity or 0)
                 if qty <= 0:
                     continue
                 meta = _CAT_META.get(s.category)

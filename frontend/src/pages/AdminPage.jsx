@@ -246,7 +246,7 @@ function StockDetailPanel({ g, s, onUpdate }) {
       if (close != null) { price = close; showToast(`✓ ${sellDate} 종가: ${sym}${close}`, 'ok') }
       else showToast('⚠ 시세 조회 실패', 'err')
     }
-    const newSell = { id: genId(), date: sellDate || null, qty, price: price || 0 }
+    const newSell = { id: genId(), date: sellDate || new Date().toISOString().split('T')[0], qty, price: price || 0 }
     onUpdate(g.id, s.id, 'addSell', newSell)
     setSellDate(''); setSellQty(''); setSellPrice('')
     showToast('✓ 매도 내역 등록', 'ok')

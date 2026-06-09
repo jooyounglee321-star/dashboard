@@ -4,6 +4,20 @@
 
 ---
 
+## [2026-06-08] — feat: 매도 내역에 date 필드 추가, 백필 시 날짜 기준 정확한 보유량 계산 구현
+
+### 변경 내용
+- **AdminPage.jsx** `submitSell()`: 매도 항목 저장 시 `date` 필드 자동 보장
+  - 기존: `date: sellDate || null` (날짜 미입력 시 null)
+  - 변경: `date: sellDate || new Date().toISOString().split('T')[0]` (미입력 시 오늘 날짜 자동 삽입)
+- **routers/portfolio.py** `backfill_portfolio_snapshots()`: 날짜 기준 보유량 계산 추가
+  - `portfolio_groups.data` JSON 로드 → ticker별 `{purchases[], sells[]}` 매핑 구성
+  - 각 target_date마다 `buy_qty - sell_qty(date <= target_date)` 로 보유량 계산
+  - `sells[].date` 없는 기존 항목은 항상 차감 (하위호환 유지)
+  - portfolio_groups에 없는 종목은 `stocks.quantity` 폴백
+
+---
+
 ## [2026-06-08] — fix: 포트폴리오 백필 시작일을 가입일 기준으로 수정 (가입일 이전 결산 방지)
 
 ### 변경 내용
