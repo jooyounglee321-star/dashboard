@@ -452,6 +452,10 @@ export default function AdminPage() {
     const g = groups.find(g => g.id === gid)
     if (!g) return
     if (g.stocks.filter(s => !s.is_deleted).length >= 10) { showToast('그룹당 최대 10개까지 가능합니다', 'err'); return }
+    const upper = ticker.toUpperCase()
+    if (g.stocks.some(s => !s.is_deleted && s.ticker.toUpperCase() === upper)) {
+      showToast(`${upper} 은(는) 이미 이 그룹에 있습니다`, 'err'); return
+    }
     saveGroupsToDB(groups.map(gr => gr.id === gid
       ? { ...gr, stocks: [...gr.stocks, { id: genId(), ticker: ticker.toUpperCase(), name, purchases: [], sells: [] }] }
       : gr))
