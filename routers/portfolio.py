@@ -108,24 +108,62 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
     is_new_user = latest is None
 
     if is_new_user:
-        # 신규 유저: MAX(최초 종목 등록일, 회원가입일) — 가입 전 이력은 결산 대상 제외
+        # 신규 유저: portfolio_groups.data에 종목이 1개 이상 있어야 백필 진행
+        # stocks 테이블이 비어있어도 portfolio_groups에 데이터 있으면 계속 진행
+        pg_check = db.query(PortfolioGroups).filter(PortfolioGroups.user_id == user_id).first()
+        pg_has_stocks = False
+        if pg_check and pg_check.data:
+            try:
+                pg_check_data = json.loads(pg_check.data)
+                pg_has_stocks = any(
+                    len(grp.get("stocks") or []) > 0
+                    for grp in pg_check_data
+                )
+            except Exception:
+                pg_has_stocks = False
+
+        if not pg_has_stocks:
+            return {"backfilled": 0, "dates": [], "is_new_user": True}
+
+        # 시작일: MIN(portfolio_groups.updated_at, users.created_at) 중 이른 날짜
+        # 단, 회원가입일(users.created_at)보다는 이전일 수 없음 (하한선 유지)
+        user_row = db.query(User).filter(User.id == user_id).first()
+        user_created = user_row.created_at if user_row and user_row.created_at else None
+        user_date = (
+            (user_created.date() if hasattr(user_created, "date") else user_created)
+            if user_created else None
+        )
+
+        pg_updated = pg_check.updated_at if pg_check and pg_check.updated_at else None
+        pg_date = (
+            (pg_updated.date() if hasattr(pg_updated, "date") else pg_updated)
+            if pg_updated else None
+        )
+
+        # 가장 이른 날짜 선택, 단 회원가입일 하한선 적용
+        if pg_date and user_date:
+            raw_start = min(pg_date, user_date)   # 더 이른 날짜
+            start_date = max(raw_start, user_date) # 가입일보다 이전 불가
+        elif user_date:
+            start_date = user_date
+        else:
+            start_date = today_kst - timedelta(days=365)  # 최후 폴백
+
+        # stocks 테이블은 보조 확인용 (없어도 진행)
         from sqlalchemy import func as sa_func
         oldest_stock = (
             db.query(sa_func.min(Stock.created_at))
             .filter(Stock.user_id == user_id)
             .scalar()
         )
-        if oldest_stock is None:
-            return {"backfilled": 0, "dates": [], "is_new_user": True}
-        user_row = db.query(User).filter(User.id == user_id).first()
-        user_created = user_row.created_at if user_row and user_row.created_at else None
+        if oldest_stock is not None:
+            stock_date = oldest_stock.date() if hasattr(oldest_stock, "date") else oldest_stock
+            # stocks 등록일이 더 이르면 반영 (단 가입일 하한선 유지)
+            if user_date:
+                start_date = max(min(start_date, stock_date), user_date)
+            else:
+                start_date = min(start_date, stock_date)
 
-        stock_date = oldest_stock.date() if hasattr(oldest_stock, "date") else oldest_stock
-        if user_created:
-            user_date = user_created.date() if hasattr(user_created, "date") else user_created
-            start_date = max(stock_date, user_date)
-        else:
-            start_date = stock_date
         max_days = 365
     else:
         start_date = latest.snapshot_date + timedelta(days=1)
