@@ -4,6 +4,25 @@
 
 ---
 
+## [2026-06-08] — fix: 주식 결산 프로세스 개선 — realized_pl 정확 계산 및 DB 컬럼 추가
+
+### 변경 내용
+- **models.py** `DailyPortfolioSnapshot`: `realized_pl FLOAT NULLABLE` 컬럼 추가
+- **schemas.py** `PortfolioSnapshotOut`: `realized_pl: float | None = None` 필드 추가
+- **main.py** `_migrate_add_realized_pl()`: 서버 시작 시 기존 DB에 컬럼 자동 추가 마이그레이션
+- **routers/portfolio.py** `backfill_portfolio_snapshots()`:
+  - `realized_pl` 계산을 `qty <= 0` 체크 이전으로 이동 → 전량 매도 종목도 실현손익 집계 반영
+  - `total_realized_pl` 누계 변수로 날짜별 전체 실현 손익 합산
+  - 종목별 `ticker_real_pl = sum((sell.price - avg) × sell.qty)` 계산 후 스냅샷 stocks 배열에 저장
+  - UPSERT 시 `row.realized_pl = total_realized_pl` 저장
+- **DB_SCHEMA.md**: `daily_portfolio_snapshot` 테이블 `realized_pl` 컬럼 문서화
+
+### 수정된 문제
+- **문제 2**: `is_new_user` 키 누락 — Task 7 리팩터링 시 이미 모든 반환 경로에 포함됨을 확인
+- **문제 4**: `realized_pl: 0` 하드코딩 → 날짜 기준 매도 내역 기반 실제 값 계산으로 수정
+
+---
+
 ## [2026-06-08] — fix: 주식 결산 프로세스 개선 — 프론트 hold_qty 날짜 기준 통일, 전량 매도 종목 과거 백필 포함
 
 ### 변경 내용

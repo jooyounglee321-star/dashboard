@@ -380,8 +380,9 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 | `total_usd` | FLOAT | NULLABLE | USD 그룹 합계 (달러) |
 | `total_krw` | FLOAT | NULLABLE | KRW 그룹 합계 (원화) |
 | `total_krw_equiv` | FLOAT | NULLABLE | 원화 환산 전체 합계 |
+| `realized_pl` | FLOAT | NULLABLE | 해당 날짜까지 누적 실현 손익 합계 |
 | `data` | TEXT | NULLABLE | JSON — 그룹·종목 상세 데이터 |
-| `saved_by` | VARCHAR(20) | DEFAULT `'frontend'` | 저장 주체: `frontend` / `scheduler` |
+| `saved_by` | VARCHAR(20) | DEFAULT `'frontend'` | 저장 주체: `frontend` / `backfill` / `scheduler` |
 | `created_at` | DATETIME | DEFAULT `now()` (서버) | 레코드 생성 일시 |
 | `updated_at` | DATETIME | DEFAULT `now()`, ON UPDATE `now()` | 마지막 수정 일시 |
 

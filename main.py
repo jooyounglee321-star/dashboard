@@ -170,6 +170,26 @@ def _migrate_add_user_id():
                 logger.warning("[MIGRATE] uq_user_snapshot_date 추가 실패: %s", e)
 
 
+def _migrate_add_realized_pl():
+    """daily_portfolio_snapshot 테이블에 realized_pl 컬럼 추가 (없을 경우에만)."""
+    with engine.connect() as conn:
+        try:
+            existing = {c["name"] for c in inspect(conn).get_columns("daily_portfolio_snapshot")}
+        except Exception:
+            return
+        if "realized_pl" not in existing:
+            try:
+                conn.execute(text(
+                    "ALTER TABLE daily_portfolio_snapshot ADD COLUMN realized_pl FLOAT"
+                ))
+                conn.commit()
+                logger.info("[MIGRATE] daily_portfolio_snapshot.realized_pl 컬럼 추가")
+            except Exception as e:
+                logger.warning("[MIGRATE] realized_pl 컬럼 추가 실패: %s", e)
+        else:
+            logger.info("[MIGRATE] daily_portfolio_snapshot.realized_pl — 이미 존재, 건너뜀")
+
+
 _ADMIN_EMAIL = "jooyounglee321123@gmail.com"
 
 
@@ -728,6 +748,7 @@ async def lifespan(app: FastAPI):
     _seed_exchange_rates()
     _seed_expense_categories()
     _migrate_add_other_subcategory()
+    _migrate_add_realized_pl()
     _seed_income_categories()
     logger.info("[DB] 테이블 생성/확인 완료")
 
