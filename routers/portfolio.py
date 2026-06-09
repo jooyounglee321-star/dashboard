@@ -243,8 +243,9 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
                 )
 
                 # 실현 손익: target_date 이전 매도 기준 (전량 매도 종목도 포함)
+                # avg is not None 체크 — avg=0.0 이어도 계산 수행 (if avg: 는 0.0을 False로 평가)
                 ticker_real_pl = 0.0
-                if avg:
+                if avg is not None:
                     ticker_real_pl = sum(
                         (float(sv.get("price", 0)) - avg) * float(sv.get("qty", 0))
                         for sv in valid_sells
@@ -290,7 +291,9 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
                     groups[category]["total"] + eval_amt, 2
                 )
 
-            if not groups:
+            # 보유 종목 없어도 realized_pl이 있으면 빈 스냅샷 저장
+            # (전량 매도 완료일 이후 날짜가 차트에서 공백으로 빠지는 버그 방지)
+            if not groups and total_realized_pl == 0.0:
                 continue
 
             groups_list = list(groups.values())
