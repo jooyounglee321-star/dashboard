@@ -214,6 +214,8 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
         currency = grp.get("currency", "USD")
         cat = _name_to_cat.get(grp_name, "us" if currency == "USD" else "kor-stock")
         for st in grp.get("stocks", []):
+            if st.get("is_deleted"):  # 소프트 딜리트 종목 제외
+                continue
             t = st.get("ticker", "")
             if t:
                 ticker_history[t] = {

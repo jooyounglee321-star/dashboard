@@ -4,6 +4,14 @@
 
 ---
 
+## [2026-06-09] — fix: 백필 시 소프트 딜리트 종목 제외
+
+### 변경 내용
+- **routers/portfolio.py** `backfill_portfolio_snapshots()`: `ticker_history` 구성 시 `is_deleted: true` 종목 건너뜀
+- 소프트 딜리트된 종목이 백필 결산에 포함되는 버그 수정
+
+---
+
 ## [2026-06-09] — feat: 종목 삭제 시 매수 이력 경고 추가
 
 ### 변경 내용
