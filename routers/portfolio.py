@@ -204,15 +204,18 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
         except Exception:
             pg_data = []
 
-    # 그룹명 → 카테고리 역방향 맵 (portfolio_groups.name → _CAT_META 키)
+    # 그룹명 → 카테고리 역방향 맵 (기존 _CAT_META 그룹명 하위호환용)
     _name_to_cat = {v[0]: k for k, v in _CAT_META.items()}
 
     # ticker → {purchases, sells, category, currency} 매핑
+    # 카테고리 판단 기준: currency 필드 우선 ("USD" → "us", "KRW" → "kor-stock")
+    # 단, 기존 _CAT_META 그룹명("Robinhood", "KOR Stock" 등)이 있으면 그걸 우선 사용 (하위호환)
     ticker_history: dict[str, dict] = {}
     for grp in pg_data:
         grp_name = grp.get("name", "")
         currency = grp.get("currency", "USD")
-        cat = _name_to_cat.get(grp_name, "us" if currency == "USD" else "kor-stock")
+        cat_by_currency = "us" if currency == "USD" else "kor-stock"
+        cat = _name_to_cat.get(grp_name, cat_by_currency)
         for st in grp.get("stocks", []):
             if st.get("is_deleted"):  # 소프트 딜리트 종목 제외
                 continue

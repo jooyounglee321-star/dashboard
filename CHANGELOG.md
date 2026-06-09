@@ -4,6 +4,17 @@
 
 ---
 
+## [2026-06-09] — fix: 주식 통계 차트 USD/KRW 판단을 그룹명 대신 currency 필드 기반으로 수정
+
+### 변경 내용
+- **StockStatsOverlay.jsx**: 파이차트·라인차트 USD/KRW 판단 로직이 이미 `g.currency` 필드 기반으로 구현되어 있음을 확인 (이전 커밋에서 완료)
+- **routers/portfolio.py** `backfill_portfolio_snapshots()`: `ticker_history` 카테고리 결정 로직 명확화
+  - `cat_by_currency = "us" if currency == "USD" else "kor-stock"` 변수로 currency 기반 판단을 명시적으로 분리
+  - 기존 `_CAT_META` 그룹명("Robinhood", "KOR Stock" 등)이 있으면 우선 사용 (하위호환)
+  - 사용자가 그룹명을 임의로 변경해도 currency 폴백으로 정확한 카테고리 결정 보장
+
+---
+
 ## [2026-06-09] — fix: 주식 통계 차트 USD→KRW 환산 버그 수정
 
 ### 변경 내용
