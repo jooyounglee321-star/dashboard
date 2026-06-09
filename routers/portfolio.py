@@ -1,19 +1,264 @@
 """포트폴리오 데일리 스냅샷 API."""
 import json
 import logging
-from datetime import date
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
+import yfinance as yf
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import DailyPortfolioSnapshot, PortfolioGroups, User
+from models import DailyPortfolioSnapshot, ExchangeRate, PortfolioGroups, Stock, User
 from routers.auth import get_current_user
 from schemas import PortfolioSnapshotCreate, PortfolioSnapshotOut
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
+
+# 카테고리 → (그룹명, 통화)
+_CAT_META: dict[str, tuple[str, str]] = {
+    "robinhood": ("Robinhood", "USD"),
+    "us":        ("US",        "USD"),
+    "kor-stock": ("KOR Stock", "KRW"),
+    "kor-etf":   ("KOR ETF",   "KRW"),
+}
+
+
+def _backfill_resolve_ticker(ticker: str, category: str | None) -> str:
+    """백필용 Yahoo Finance 티커 변환 (.KS 자동 추가)."""
+    if category in ("kor-stock", "kor-etf") and "." not in ticker:
+        return ticker + ".KS"
+    return ticker
+
+
+def _get_historical_prices_batch(
+    ticker: str, category: str | None, dates: list[date]
+) -> dict[date, float]:
+    """여러 날짜의 종가를 한 번의 yfinance 호출로 조회.
+    주말·공휴일은 해당일 이전의 가장 최근 거래일 종가를 사용.
+    """
+    if not dates:
+        return {}
+
+    yf_ticker = _backfill_resolve_ticker(ticker, category)
+    start = min(dates) - timedelta(days=7)  # 주말/공휴일 여유
+    end   = max(dates) + timedelta(days=1)
+
+    try:
+        hist = yf.Ticker(yf_ticker).history(
+            start=start.strftime("%Y-%m-%d"),
+            end=end.strftime("%Y-%m-%d"),
+        )
+        # .KS 실패 → .KQ 재시도 (kor-stock)
+        if hist.empty and category == "kor-stock" and yf_ticker.endswith(".KS"):
+            kq = ticker + ".KQ"
+            hist = yf.Ticker(kq).history(
+                start=start.strftime("%Y-%m-%d"),
+                end=end.strftime("%Y-%m-%d"),
+            )
+        if hist.empty:
+            return {}
+
+        # timestamp index → date: close price 매핑
+        price_map: dict[date, float] = {}
+        for ts, row in hist.iterrows():
+            d = ts.date() if hasattr(ts, "date") else ts
+            price_map[d] = float(row["Close"])
+
+        sorted_trading = sorted(price_map.keys())
+
+        result: dict[date, float] = {}
+        for target in dates:
+            # target 이전 가장 최근 거래일
+            candidates = [d for d in sorted_trading if d <= target]
+            if candidates:
+                result[target] = price_map[max(candidates)]
+
+        return result
+
+    except Exception as exc:
+        logger.warning("[BACKFILL] %s 배치 시세 조회 실패: %s", ticker, exc)
+        return {}
+
+
+def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
+    """누락된 날짜의 포트폴리오 스냅샷을 해당일 종가로 백필.
+
+    - 최근 스냅샷 다음 날부터 오늘(KST) 하루 전까지 조회
+    - 최대 30일치만 처리 (오래된 날짜 제외)
+    - stocks 테이블 기준으로 보유 종목 조회 (스케줄러와 동일 소스)
+
+    Returns: {"backfilled": N, "dates": [...ISO strings...]}
+    """
+    today_kst = datetime.now(ZoneInfo("Asia/Seoul")).date()
+
+    # ① 최신 스냅샷 날짜
+    latest = (
+        db.query(DailyPortfolioSnapshot.snapshot_date)
+        .filter(DailyPortfolioSnapshot.user_id == user_id)
+        .order_by(DailyPortfolioSnapshot.snapshot_date.desc())
+        .first()
+    )
+    start_date = (latest.snapshot_date + timedelta(days=1)) if latest else (today_kst - timedelta(days=30))
+
+    # ② 이미 존재하는 날짜 집합 (범위 내 한 번에 조회)
+    existing = {
+        r.snapshot_date
+        for r in db.query(DailyPortfolioSnapshot.snapshot_date)
+        .filter(
+            DailyPortfolioSnapshot.user_id == user_id,
+            DailyPortfolioSnapshot.snapshot_date >= start_date,
+            DailyPortfolioSnapshot.snapshot_date < today_kst,
+        )
+        .all()
+    }
+
+    # ③ 누락 날짜 목록 (오늘 제외, 최대 30일)
+    missing: list[date] = []
+    d = start_date
+    while d < today_kst:
+        if d not in existing:
+            missing.append(d)
+        d += timedelta(days=1)
+
+    if not missing:
+        return {"backfilled": 0, "dates": []}
+
+    if len(missing) > 30:
+        missing = missing[-30:]  # 최근 30일만
+
+    # ④ 보유 종목 조회 (stocks 테이블 — 스케줄러와 동일 소스)
+    stocks = db.query(Stock).filter(
+        Stock.user_id == user_id,
+        Stock.quantity > 0,
+    ).all()
+    if not stocks:
+        return {"backfilled": 0, "dates": []}
+
+    # ⑤ USD/KRW 환율
+    fx_row = db.query(ExchangeRate).filter_by(
+        base_currency="USD", target_currency="KRW"
+    ).first()
+    usd_krw = float(fx_row.rate) if fx_row else None
+
+    # ⑥ 티커별 배치 시세 조회 (yfinance 호출 최소화)
+    price_cache: dict[str, dict[date, float]] = {}
+    for s in stocks:
+        key = f"{s.ticker}_{s.category}"
+        if key not in price_cache:
+            price_cache[key] = _get_historical_prices_batch(s.ticker, s.category, missing)
+
+    backfilled_dates: list[str] = []
+
+    for target_date in missing:
+        try:
+            groups: dict[str, dict] = {}
+
+            for s in stocks:
+                qty = float(s.quantity or 0)
+                if qty <= 0:
+                    continue
+                meta = _CAT_META.get(s.category)
+                if not meta:
+                    continue
+                grp_name, currency = meta
+
+                key = f"{s.ticker}_{s.category}"
+                price = price_cache[key].get(target_date)
+                if price is None:
+                    # 시세 없으면 avg_price 폴백
+                    price = float(s.avg_price) if s.avg_price else None
+                if price is None:
+                    continue
+
+                avg = float(s.avg_price) if s.avg_price else None
+                eval_amt = round(qty * price, 2)
+                eval_pl  = round((price - avg) * qty, 2) if avg else None
+
+                if s.category not in groups:
+                    groups[s.category] = {
+                        "name":     grp_name,
+                        "currency": currency,
+                        "total":    0.0,
+                        "stocks":   [],
+                    }
+                groups[s.category]["stocks"].append({
+                    "ticker":        s.ticker,
+                    "name":          s.name,
+                    "current_price": price,
+                    "hold_qty":      qty,
+                    "eval_amount":   eval_amt,
+                    "avg_buy_price": avg,
+                    "eval_pl":       eval_pl,
+                    "realized_pl":   0,
+                })
+                groups[s.category]["total"] = round(
+                    groups[s.category]["total"] + eval_amt, 2
+                )
+
+            if not groups:
+                continue
+
+            groups_list = list(groups.values())
+            total_usd = sum(g["total"] for g in groups_list if g["currency"] == "USD")
+            total_krw = sum(g["total"] for g in groups_list if g["currency"] == "KRW")
+            total_krw_equiv = (
+                round(total_usd * usd_krw + total_krw, 2) if usd_krw else None
+            )
+            data_json = json.dumps(groups_list, ensure_ascii=False)
+
+            # UPSERT
+            row = db.query(DailyPortfolioSnapshot).filter(
+                DailyPortfolioSnapshot.user_id == user_id,
+                DailyPortfolioSnapshot.snapshot_date == target_date,
+            ).first()
+
+            if row:
+                row.usd_krw         = usd_krw
+                row.total_usd       = round(total_usd, 2)
+                row.total_krw       = round(total_krw, 2)
+                row.total_krw_equiv = total_krw_equiv
+                row.data            = data_json
+                row.saved_by        = "backfill"
+            else:
+                row = DailyPortfolioSnapshot(
+                    user_id         = user_id,
+                    snapshot_date   = target_date,
+                    usd_krw         = usd_krw,
+                    total_usd       = round(total_usd, 2),
+                    total_krw       = round(total_krw, 2),
+                    total_krw_equiv = total_krw_equiv,
+                    data            = data_json,
+                    saved_by        = "backfill",
+                )
+                db.add(row)
+
+            db.commit()
+            backfilled_dates.append(str(target_date))
+            logger.info("[BACKFILL] user=%d %s 스냅샷 저장 완료", user_id, target_date)
+
+        except Exception as exc:
+            logger.error("[BACKFILL] user=%d %s 처리 오류: %s", user_id, target_date, exc)
+            db.rollback()
+            continue
+
+    return {"backfilled": len(backfilled_dates), "dates": backfilled_dates}
+
+
+# ── POST /api/portfolio/backfill ────────────────────────────────────────────
+@router.post("/backfill")
+def run_backfill(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """로그인 시 누락된 날짜의 포트폴리오 스냅샷을 자동 백필.
+    프런트엔드에서 fire-and-forget으로 호출.
+    """
+    result = backfill_portfolio_snapshots(current_user.id, db)
+    logger.info("[BACKFILL] user=%d 완료: %s", current_user.id, result)
+    return result
 
 
 # ── GET /api/portfolio/groups ────────────────────────────────────────────────
