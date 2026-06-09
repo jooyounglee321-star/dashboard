@@ -4,6 +4,18 @@
 
 ---
 
+## [2026-06-09] — fix: 백필 호출을 LoginPage에서 App.jsx로 이동 — 자동 로그인 시에도 백필 실행되도록 수정
+
+### 변경 내용
+- **App.jsx**: 앱 초기화 시 `useEffect([], [])` 추가 — localStorage `'token'` 유효 시 `POST /api/portfolio/backfill` fire-and-forget 호출
+- **LoginPage.jsx**: 기존 백필 호출 코드 제거 (중복 방지)
+
+### 이유
+- LoginPage를 통해 로그인하는 경우에만 백필이 실행되어, 자동 로그인(토큰 유지) 상태로 앱을 다시 열면 백필이 실행되지 않는 문제 수정
+- App.jsx 최상위에서 1회 실행하면 로그인 방식과 무관하게 항상 백필 보장
+
+---
+
 ## [2026-06-09] — fix: 백필 엣지케이스 수정 (avg=0.0 False 평가 버그, 전량 매도 시 빈 스냅샷 저장)
 
 ### 변경 내용
