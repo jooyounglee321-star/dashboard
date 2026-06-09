@@ -290,37 +290,17 @@ function ExpItem({ e, editId, editForm, setEditForm, categories, lang, saveEdit,
   )
 }
 
-function TodayHeader({ compact, todayUSD, budgetPct, overBudget, lang, date, maxDate, onDateChange }) {
+function TodayHeader({ compact, todayUSD, budgetPct, overBudget, lang }) {
   return (
     <div className={compact ? 'm-exp-header' : 'exp-today'}>
-      {/* Today's Total 레이블+금액(좌) + 날짜 input(우) */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <span className={compact ? 'm-exp-lbl' : 'exp-label'}>{t(lang, 'expenseTodayTotal')}</span>
-          <div
-            className={compact ? 'm-exp-total' : 'exp-amount'}
-            style={{ color: todayUSD >= 0 ? undefined : '#e8a060' }}
-          >
-            {todayUSD < 0 ? '-' : ''}${Math.abs(todayUSD).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-          </div>
+      <div>
+        <span className={compact ? 'm-exp-lbl' : 'exp-label'}>{t(lang, 'expenseTodayTotal')}</span>
+        <div
+          className={compact ? 'm-exp-total' : 'exp-amount'}
+          style={{ color: todayUSD >= 0 ? undefined : '#e8a060' }}
+        >
+          {todayUSD < 0 ? '-' : ''}${Math.abs(todayUSD).toLocaleString(undefined, { maximumFractionDigits: 0 })}
         </div>
-        {date !== undefined && onDateChange && (
-          <input
-            type="date"
-            value={date}
-            max={maxDate}
-            onChange={onDateChange}
-            style={{
-              fontSize: '0.8rem',
-              borderRadius: 6,
-              border: '1px solid var(--border, #e5e7eb)',
-              padding: '0.28rem 0.45rem',
-              background: 'var(--card-bg, #fff)',
-              color: 'var(--ink, #374151)',
-              outline: 'none',
-            }}
-          />
-        )}
       </div>
       {budgetPct !== null && (
         <div className="exp-budget-block">
@@ -549,15 +529,22 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
           <Link to="/budget" style={{ fontSize: '0.6rem', color: 'var(--ink3)', marginLeft: '0.25rem', textDecoration: 'none' }}>↗</Link>
         </div>
         <div className="m-card-body">
+          {/* ── 날짜 선택 (식단 카드와 동일 패턴) ── */}
+          <div className="diet-date-row">
+            <input
+              type="date"
+              className="diet-date-inp"
+              value={form.date}
+              max={todayStr()}
+              onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+            />
+          </div>
           <TodayHeader
             compact
             todayUSD={todayUSD}
             budgetPct={budgetPct}
             overBudget={overBudget}
             lang={lang}
-            date={form.date}
-            maxDate={todayStr()}
-            onDateChange={e => setForm(f => ({ ...f, date: e.target.value }))}
           />
           <ExpForm
             compact
@@ -606,19 +593,23 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
         <Link to="/budget" style={{ fontSize: '0.65rem', color: 'var(--ink3)', marginLeft: '0.3rem', textDecoration: 'none' }}>
           {t(lang, 'expense.budgetLink')}
         </Link>
-        <span className="exp-db-badge" style={{ marginLeft: 'auto' }}>
-          {t(lang, 'expenseDbBadge')}
-        </span>
       </div>
       <div className="card-body">
+        {/* ── 날짜 선택 (식단 카드와 동일 패턴) ── */}
+        <div className="diet-date-row">
+          <input
+            type="date"
+            className="diet-date-inp"
+            value={form.date}
+            max={todayStr()}
+            onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+          />
+        </div>
         <TodayHeader
           todayUSD={todayUSD}
           budgetPct={budgetPct}
           overBudget={overBudget}
           lang={lang}
-          date={form.date}
-          maxDate={todayStr()}
-          onDateChange={e => setForm(f => ({ ...f, date: e.target.value }))}
         />
         <ExpForm
           form={form}

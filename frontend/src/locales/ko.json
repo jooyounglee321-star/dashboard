@@ -298,10 +298,10 @@
   "expenseOverBudget": "예산 초과!",
   "expenseEditing": "수정 중",
   "expense": {
-    "budgetLink": "↗ Budget"
+    "budgetLink": "↗ 가계부"
   },
   "diet": {
-    "statsLink": "↗ Diet Stats",
+    "statsLink": "↗ 식단 통계",
     "analyzeBtn": "🤖 AI 식단 분석",
     "analyzing": "분석 중...",
     "nutritionAnalysis": "영양 균형 분석",

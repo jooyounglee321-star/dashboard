@@ -4,6 +4,15 @@
 
 ---
 
+## [2026-06-08] — design: 가계부/식단 카드 UI 통일 (날짜 입력 위치, DB저장 배지 제거, 한글 링크 번역 수정)
+
+### 변경 내용
+- **ExpenseCard.jsx**: 날짜 input을 TodayHeader(합계 옆)에서 분리 → card-body 최상단 단독 한 줄로 이동 (식단 카드 `diet-date-row/diet-date-inp` 동일 패턴)
+- **ExpenseCard.jsx**: 데스크톱 헤더 "DB Saved" 배지 완전 제거
+- **ko.json**: `expense.budgetLink` "↗ Budget" → "↗ 가계부", `diet.statsLink` "↗ Diet Stats" → "↗ 식단 통계"
+
+---
+
 ## [2026-06-08] — design: 가계부/식단 카드 헤더 주식 카드 패턴으로 통일, 네비게이션 Budget 버튼 제거
 
 ### 변경 내용
