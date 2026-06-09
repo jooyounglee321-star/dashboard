@@ -1,6 +1,17 @@
 # 프로젝트 결정 기록
 
 ---
+## 2026-06-09 — 앱 초기화 시 포트폴리오 백필 자동 실행 (자동 로그인)
+**결정:** App.jsx의 App 컴포넌트에서 useEffect hook을 이용해 컴포넌트 마운트 시(앱 로드 시) 1회 실행되는 자동 백필 로직 추가. localStorage에 유효한 토큰이 있으면 `/api/portfolio/backfill` 엔드포인트를 자동으로 호출하도록 구현.
+**이유:** 사용자가 앱을 열 때 포트폴리오 데이터가 자동으로 최신 상태로 동기화되어야 함. 토큰 기반 자동 로그인과 함께 포트폴리오 스냅샷도 자동 업데이트하여 사용자 경험 개선.
+**대안:**
+- 수동 백필 버튼: 사용자가 명시적으로 트리거해야 함, UX 저하
+- 서버 사이드 스케줄러만 사용: 실시간성 부족, 사용자가 앱을 열었을 때 즉시 최신 데이터 없음
+- 지연 로딩(Lazy backfill): 특정 페이지 진입 시 트리거, 네비게이션 지연 발생
+- 선택한 방식: 앱 마운트 시 자동 실행으로 즉시성과 자동화 모두 달성
+**파일:** `frontend/src/App.jsx`
+
+---
 ## 2026-06-09 — 백필 엣지케이스 수정: avg=0.0 falsy 평가 버그, 전량 매도 시 빈 스냅샷 저장 조건 변경
 **결정:** (1) `if avg:` → `if avg is not None:` 변경하여 평균가가 정확히 0.0인 경우도 실현손익 계산에 포함. (2) `if not groups: continue` → `if not groups and total_realized_pl == 0.0: continue` 변경하여 보유 종목이 없어도 실현 손익이 있으면 빈 스냅샷(groups=[])을 저장.
 **이유:** Python의 falsy 평가에서 `0.0`은 거짓으로 평가되므로 `if avg:` 조건은 avg=0.0일 때 실현손익 계산을 건너뜀. 명시적 `is not None` 체크로 zero 값도 정상 처리. 또한 전량 매도 완료 후 날짜들의 스냅샷 누락으로 차트에 시각적 공백이 발생하는 문제를 해결하기 위해 realized_pl 여부로 스냅샷 저장 여부를 판단.
@@ -29,6 +40,13 @@
 - 프론트에서만 관리: 백필 데이터 일관성 문제
 - 선택한 방식: 스냅샷 저장 시점에 계산하여 DB에 저장, 조회 성능 최적화
 **파일:** C:\Users\Jason\Desktop\dashboard\routers\portfolio.py
+
+---
+## 2026-06-09 — 백필 호출 위치: LoginPage → App.jsx useEffect로 이동
+**결정:** 포트폴리오 백필 API 호출을 `LoginPage.jsx` 로그인 성공 핸들러에서 `App.jsx`의 `useEffect([], [])` 훅으로 이동. 앱 시작 시 토큰이 있으면 1회 자동 실행.
+**이유:** LoginPage에서만 호출하면 자동 로그인(토큰 유지) 상태로 앱을 재오픈할 때 백필이 실행되지 않음. App.jsx 최상위 훅으로 이동하면 로그인 방식과 무관하게 항상 백필이 보장됨.
+**대안:** LoginPage 유지 + 각 페이지에서 추가 호출 → 중복 호출 위험; IndexPage에서 호출 → 다른 페이지로 직접 진입 시 누락.
+**파일:** `frontend/src/App.jsx`, `frontend/src/pages/LoginPage.jsx`
 
 ---
 ## 2026-06-09 — 전량 매도 날짜의 빈 스냅샷 저장 조건: realized_pl > 0이면 저장
@@ -67,6 +85,18 @@
 - 매도 이벤트 시에만 스냅샷 저장: 특정 날짜 조회 시 데이터 누락 가능성
 - 선택한 방식: realized_pl 존재 여부를 기준으로 조건부 저장, 데이터 완결성과 효율성 병행
 **파일:** C:\Users\Jason\Desktop\dashboard\routers\portfolio.py
+
+---
+---
+## 2026-06-09 — 백필 호출 위치 이동: LoginPage → App.jsx 상단 (자동 로그인 지원)
+**결정:** `POST /api/portfolio/backfill` 호출 로직을 LoginPage.jsx에서 App.jsx의 최상위 App 컴포넌트 내 useEffect([], [])로 이동. localStorage에 유효한 토큰이 있으면 앱 마운트 시 1회만 백필을 자동 실행하도록 변경. LoginPage.jsx의 기존 백필 호출 코드는 제거하여 중복 방지.
+**이유:** LoginPage 경유 로그인 시에만 백필이 실행되었으므로, 앱을 열었을 때 토큰이 유지되어 자동 로그인이 진행되는 경우 백필이 미실행되는 버그 발생. App.jsx 최상위에서 1회 실행하면 로그인 방식(LoginPage 또는 토큰 자동 로그인) 무관하게 항상 백필 보장.
+**대안:**
+- 로그인 페이지에서만 호출 (기존): 자동 로그인 시 백필 누락
+- 특정 페이지 진입 시 트리거: 네비게이션 지연 및 사용자 경험 저하
+- 주기적 polling: 불필요한 API 호출 증가, 배터리 소모
+- 선택한 방식: 앱 초기화 단계에서 1회 실행으로 모든 로그인 경로 커버, 자동화와 단순성 동시 달성
+**파일:** `frontend/src/App.jsx`, `frontend/src/pages/LoginPage.jsx`
 
 ---
 ## 2024 — portfolio_groups을 포트폴리오 스냅샷의 primary source로 전환

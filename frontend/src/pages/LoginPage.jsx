@@ -54,14 +54,7 @@ export default function LoginPage() {
         }
         localStorage.setItem('token', jwt)
         if (data.user) localStorage.setItem('user', JSON.stringify(data.user))
-        // 누락된 포트폴리오 스냅샷 백필 (fire-and-forget)
-        fetch('/api/portfolio/backfill', {
-          method: 'POST',
-          headers: { Authorization: 'Bearer ' + jwt },
-        }).then(r => r.json()).then(d => {
-          if (d.backfilled > 0) console.log('[BACKFILL] 포트폴리오 백필 완료:', d)
-        }).catch(err => console.warn('[BACKFILL] 백필 실패:', err))
-        setMsg({ type: 'success', text: t(lang, 'auth.successLogin') })
+setMsg({ type: 'success', text: t(lang, 'auth.successLogin') })
         setTimeout(() => navigate('/'), 800)
       } else {
         setMsg({ type: 'error', text: data.detail || t(lang, 'auth.errLogin') })
