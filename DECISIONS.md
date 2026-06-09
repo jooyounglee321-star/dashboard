@@ -1,179 +1,29 @@
 # 프로젝트 결정 기록
 
 ---
-## 2026-06-08 — purchases[] 배열에 date 필드 추가: 백필 시 날짜 기준 정확한 매수량/평균단가 계산
-**결정:** purchases[] 각 항목에 `date` 필드(YYYY-MM-DD)를 추가. 매수일 기본값을 오늘 날짜로 설정. 백필 시 `purchase.date <= target_date`인 것만 합산하여 해당 날짜 기준 매수량 및 가중평균 단가 계산. date 없는 기존 항목은 항상 포함(하위호환).
-**이유:** 기존 방식은 purchases 전체를 합산하여 미래 매수분이 과거 날짜에도 반영되는 오류 발생. date 기반 필터로 각 날짜의 실제 매수 상태를 정확히 반영. 평균단가도 같은 기준으로 계산하여 eval_pl 정확도 향상.
-**대안:** purchases 전체 합산 유지 (기존 방식) → 소급 매수 입력 시 과거 날짜 결산 왜곡.
-**파일:** `frontend/src/pages/AdminPage.jsx`, `routers/portfolio.py`
+## 2026-06-08 — 1번 수정: 프론트 hold_qty 계산을 오늘 날짜 기준으로 변경하여 백필과 일치
+**결정:** StockCard.jsx `calcStock()` 및 IndexPage.jsx 스냅샷 저장 로직의 hold_qty 계산을 오늘 날짜(YYYY-MM-DD) 기준으로 필터링하도록 변경. `date <= today or no date` 조건으로 purchases/sells 모두 필터링.
+**이유:** 프론트 실시간 화면과 백필 결산 로직이 동일한 날짜 기준을 사용해야 차트 히스토리와 현재 화면이 일치함. 미래 날짜로 입력된 거래도 오늘 이전 것만 반영하여 정확도 확보.
+**대안:** 전체 합산 유지(기존) → 미래 거래가 현재 화면에 반영되는 오류 가능성.
+**파일:** `frontend/src/pages/index/StockCard.jsx`, `frontend/src/pages/index/IndexPage.jsx`
 
 ---
-## 2026-06-08 — sells[] 배열에 date 필드 추가: 백필 시 날짜 기준 보유량 계산
-**결정:** sells[] 배열의 각 항목에 `date` 필드(YYYY-MM-DD)를 추가. 매도일 미입력 시 오늘 날짜 자동 삽입. 백필 시 `sell.date <= target_date`인 매도만 차감하여 해당 날짜 기준 정확한 보유량 계산. date 없는 기존 항목은 항상 차감(하위호환).
-**이유:** 기존 방식은 `stocks.quantity`(현재 잔고)를 과거 모든 날짜에 동일하게 적용하여 매도 이전 날짜에도 현재 보유량으로 계산되는 오류 발생. date 기반 필터로 각 날짜의 실제 보유량을 정확히 반영.
-**대안:** sells[]에 날짜 없이 현재 stocks.quantity만 사용 (기존 방식) → 매도 후 과거 날짜 백필 시 보유량 왜곡.
-**파일:** `frontend/src/pages/AdminPage.jsx`, `routers/portfolio.py`
-
----
-## 2026-06-08 — 백필 시작일 정책: MAX(최초 종목 등록일, 회원가입일) — 가입 전 이력은 결산 대상 제외
-**결정:** 신규 유저의 포트폴리오 백필 시작일을 `MAX(stocks.created_at 최솟값, users.created_at)`으로 결정. 두 날짜 중 더 늦은 날짜를 시작일로 사용.
-**이유:** 사용자가 매입일(avg_price 기준)을 과거 날짜로 입력해도 실제 서비스 이용 시작 전의 기간에 대한 스냅샷을 생성하지 않음. 가입 전 데이터는 의미 없고 불필요한 yfinance API 호출이 발생하므로 가입일을 하한선으로 설정.
-**대안:** stocks.created_at만 사용 (기존) → 매입일을 과거로 입력 시 수년치 스냅샷이 생성될 수 있음.
+## 2026-06-08 — 3번 수정: 백필 시 quantity>0 필터 제거, target_date 기준 포함 여부 결정
+**결정:** `backfill_portfolio_snapshots()` 의 종목 소스를 `stocks(quantity>0)` 에서 `portfolio_groups.data` 전체로 전환. target_date 기준 hold_qty > 0인 경우만 해당 날짜 결산에 포함.
+**이유:** 전량 매도된 종목(quantity=0)도 매도 이전 날짜의 과거 백필에서 정확히 반영되어야 함. `stocks.quantity>0` 필터는 현재 잔고 기준이므로 과거 결산이 왜곡됨.
+**대안:** stocks 테이블에 is_active 플래그 추가 → schema 변경 필요; 기존 portfolio_groups JSON 활용이 추가 변경 없이 가장 실용적.
 **파일:** `routers/portfolio.py`
 
 ---
-## 2026-06-08 — APScheduler 포트폴리오 스냅샷 자동 결산 제거 → 로그인 시 백필 방식으로 전환
-**결정:** main.py의 APScheduler에서 한국/미국 주식 daily_portfolio_snapshot 스케줄 작업을 제거하고, 로그인 시 `POST /api/portfolio/backfill` fire-and-forget 방식으로 완전 전환. 환율 갱신(30분 간격) 스케줄은 유지.
-**이유:** APScheduler 방식은 서버 다운·장 외 시간 등으로 누락일이 발생해도 자동 복구가 안 됨. 로그인 시 백필 방식은 사용자가 실제로 접속한 시점에만 데이터를 채워 불필요한 서버 부하 없이 히스토리를 정확히 유지. 신규 유저는 최초 주식 매입일(stocks.created_at 최솟값)부터 최대 365일, 기존 유저는 마지막 결산일 다음날부터 최대 30일 백필.
-**대안:** (1) APScheduler 유지 + 누락 감지 재시도 로직 추가 → 스케줄러 복잡도 증가; (2) 서버 lifespan에서 전체 유저 백필 → 배포 시 부하 집중.
-**파일:** `main.py`, `routers/portfolio.py`
+## 2024 — portfolio_groups을 포트폴리오 스냅샷의 primary source로 전환
 
----
-## 2026-06-08 — 로그인 시 포트폴리오 스냅샷 자동 백필 전략
-**결정:** 로그인 성공 시 프런트엔드에서 `POST /api/portfolio/backfill`을 fire-and-forget으로 호출하여 누락된 날짜의 포트폴리오 스냅샷을 자동 백필.
-**이유:** 스케줄러가 23:59에 실행되므로 서버 다운·장 외 시간 등으로 인한 누락일 발생 가능. 로그인 시점에 히스토리 차트를 정확하게 표시하려면 그 전에 백필이 완료되어야 함. 백필 API를 별도 엔드포인트로 분리하여 스케줄러 로직과 중복 없이 유지.
-**구현 세부 사항:**
-- `backfill_portfolio_snapshots(user_id, db)`: 최신 스냅샷 다음 날부터 오늘(KST) 하루 전까지 누락된 날짜를 감지, 최대 30일치 처리.
-- yfinance 호출은 티커별 배치로 최소화 (날짜 범위 전체를 한 번에 조회, 주말/공휴일은 직전 거래일 종가 사용).
-- stocks 테이블 기반 (기존 APScheduler 스케줄러와 동일 소스, 일관성 유지).
-- `saved_by = "backfill"`으로 저장 소스 구분.
-- 프런트엔드: fire-and-forget fetch로 로그인 흐름 비차단.
-**대안:** (1) lifespan 이벤트에서 모든 유저 백필 → 서버 시작 시 부하 집중; (2) 스케줄러에서 누락 감지 재시도 → 복잡도 증가.
-**파일:** `routers/portfolio.py`, `frontend/src/pages/LoginPage.jsx`
+**결정:** `backfill_portfolio_snapshots()` 함수의 데이터 소스를 변경했다. 이전에는 `stocks` 테이블(quantity > 0)을 주요 소스로, `portfolio_groups`를 보조로 사용했다. 이제 `portfolio_groups.data`를 주요 소스로, `stocks` 테이블은 name/avg_price 보완용 보조 소스로 변경했다.
 
----
-## 2026-06-08 21:10 — 포트폴리오 API: 시장 데이터 동기화 아키텍처 도입
-**결정:** `routers/portfolio.py`에서 yfinance 라이브러리를 추가하고, Stock 및 ExchangeRate 모델을 import하여 실시간 시장 데이터를 fetch하고 저장하는 아키텍처를 구축
-**이유:** 포트폴리오 스냅샷 기능이 정적인 프런트엔드 데이터만 저장하는 것에서 벗어나, 실제 시장 가격(주식, 환율)을 자동으로 동기화하고 이력으로 저장하기 위해. 이를 통해 사용자의 포트폴리오 성과를 정확하게 추적할 수 있음
-**대안:** (1) 프런트엔드에서 매번 실시간 API 호출 → 보안 노출, 클라이언트 부하 증가; (2) 외부 데이터 API 직접 통합 → yfinance보다 복잡한 인증/요청 관리; (3) 사용자 입력값만 저장 → 포트폴리오 변화 추적 불가
-**파일:** C:\Users\Jason\Desktop\dashboard\routers\portfolio.py
-
----
-## 2026-06-08 — 카드 헤더 네비게이션 패턴 통일 (Stock → Expense/Diet)
-**결정:** 가계부(Expense), 식단(Diet) 카드의 각 제목 옆에 `↗ Budget`, `↗ Diet Stats` 링크를 추가하고, 기존 IndexPage 헤더의 전역 "Budget" 버튼을 제거하여 카드별 자체 네비게이션으로 통일
-**이유:** StockCard에서 이미 사용 중인 `↗ Stats` 패턴과 일관성을 맞추어 사용자가 각 도메인(주식/가계부/식단)으로의 상세 페이지 진입점을 명확하게 인식할 수 있음. 헤더의 네비게이션 항목을 최소화하여 인터페이스 단순화
-**대안:** (1) 헤더의 전역 네비게이션 버튼 유지 (기존 방식) → 헤더 복잡도 증가; (2) 카드에 내부 링크 없이 클릭 리다이렉트만 구현 → 사용자가 페이지 이동 의도 파악 어려움
-**파일:** CHANGELOG.md (카드 헤더 링크 패턴 변경 문서화)
-
----
-## 2026-06-09 — 포트폴리오 스냅샷 백필(Backfill) 기능 구현
-
-**결정:** `backfill_portfolio_snapshots()` 함수를 추가하여 누락된 과거 날짜의 포트폴리오 스냅샷을 yfinance를 통해 자동으로 채우는 기능을 구현. 한 번의 yfinance 호출로 여러 날짜의 종가를 배치 조회하고, 주말·공휴일의 경우 이전 최근 거래일의 종가를 사용.
-
-**이유:** 프런트엔드에서 기록된 스냅샷 데이터가 불완전한 날짜(주말 등)을 메우기 위해 백필 메커니즘이 필요. yfinance 호출을 최소화하면서도 실제 시장 데이터를 기반으로 정확한 평가액을 계산할 수 있도록 배치 조회 방식 선택.
-
-**대안:**
-- (1) 프런트엔드에서 모든 과거 날짜를 실시간 API 호출로 채우기 → 클라이언트 부하, 보안 노출
-- (2) 사용자가 수동으로 누락 날짜 입력 → 오류 가능성, UX 복잡도
-- (3) DB 스케줄러에서 매일 단일 종목 조회 → API 호출 수 증가, 비효율적
-
-**파일:** C:\Users\Jason\Desktop\dashboard\routers\portfolio.py
-
----
-## 2026-06-09 — 포트폴리오 백필 API 엔드포인트 추가 (동기식 fire-and-forget)
-
-**결정:** `POST /api/portfolio/backfill` 엔드포인트를 추가하여 로그인 시 프런트엔드에서 fire-and-forget으로 호출 가능한 동기식 백필 API를 구현. 기존 `backfill_portfolio_snapshots()` 함수를 래핑하는 라우터 핸들러 생성.
-
-**이유:** 프런트엔드가 로그인 후 누락된 포트폴리오 스냅샷을 자동으로 채우도록 하되, 응답 대기 없이 fire-and-forget 패턴으로 호출 가능해야 함. 동기식 실행으로 구현하면 백엔드 복잡도(async 큐, 워커)를 피하면서도 기존 함수를 직접 재사용 가능.
-
-**대안:**
-- (1) 비동기 작업 큐(Celery/RQ) 사용 → 인프라 복잡도 증가, 배포 복잡성
-- (2) WebSocket 실시간 진행률 리포팅 → 클라이언트 구현 복잡, 필요성 낮음 (한 번의 백필)
-- (3) 스케줄러에서만 수행 → 로그인 직후 빈 스냅샷 상태 유지, 사용자 불편
-
-**파일:** C:\Users\Jason\Desktop\dashboard\routers\portfolio.py
-
----
-## 2025-01-02 — TodayHeader 컴포넌트에 date picker 추가
-
-**결정:** ExpenseCard의 TodayHeader 컴포넌트에 날짜 선택 input 필드를 추가했다. 기존 "Today's Total" 레이블과 금액을 좌측에, 날짜 picker를 우측에 flex layout으로 배치했다.
-
-**이유:** 사용자가 과거 특정 날짜의 지출 내역을 조회하거나 필터링할 수 있도록 하기 위해, 헤더 영역에 직접 날짜 선택 기능을 노출하는 것이 UX상 효율적이다. 헤더에 배치하면 항상 접근 가능하고 눈에 띄는 위치이다.
+**이유:** 전량 매도된 종목도 포트폴리오 히스토리에 포함되어야 한다. `stocks` 테이블의 `quantity > 0` 필터는 현재 보유량 기준이므로, 과거에 매도된 종목들이 스냅샷에서 누락된다. 반면 `portfolio_groups.data`는 매수/매도 거래 이력(날짜 포함)을 JSON으로 저장하므로, 어느 시점의 포지션이든 정확히 재현할 수 있다.
 
 **대안:** 
-- 별도의 날짜 필터 UI를 form 아래에 배치 (더 낮은 우선순위)
-- 모달이나 드롭다운 패널로 date picker 제공 (더 복잡한 구현)
-- 쿼리 파라미터나 URL 기반 날짜 필터링 (초기 로드 후 변경 불가)
+- `stocks` 테이블에 `is_active` 플래그나 매도 이력을 저장: schema 변경 필요, 기존 데이터 마이그레이션 필요
+- 별도의 `transaction_history` 테이블: 더 정규화되지만 복잡도 증가
+- 선택한 방식: 기존 `portfolio_groups.data` JSON 구조를 활용해 스냅샷 재현
 
-**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\index\ExpenseCard.jsx
-
----
-## 2025-01-02 — 로그인 후 포트폴리오 백필 자동 트리거 (fire-and-forget)
-
-**결정:** LoginPage의 로그인 성공 후 처리 로직에서 `/api/portfolio/backfill` 엔드포인트를 fire-and-forget 방식으로 호출하는 코드를 추가. 응답 대기 없이 비동기로 실행되며, 성공/실패를 console에만 기록.
-
-**이유:** 사용자가 로그인했을 때 즉시 누락된 포트폴리오 스냅샷을 백필하도록 트리거하면, 사용자가 대시보드에 진입했을 때 데이터가 최신 상태로 준비되어 있을 확률이 높아짐. fire-and-forget 패턴을 사용하여 로그인 후 대시보드 네비게이션(800ms 지연)을 블로킹하지 않으면서도 백필을 병렬로 실행 가능.
-
-**대안:**
-- (1) 로그인 성공 후 백필 응답을 await → 로그인 지연 증가, 사용자 경험 악화
-- (2) 대시보드 페이지 진입 시 백필 호출 → 초기 렌더링 지연, 데이터 동기화 시점 불명확
-- (3) 서버의 스케줄러에서만 백필 실행 → 로그인 직후 데이터 누락 문제 미해결
-- (4) 웹소켓 또는 polling으로 실시간 진행률 추적 → 단순한 일회성 작업에 오버엔지니어링
-
-**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\LoginPage.jsx
----
-## 2025-01-09 — 신규 유저 포트폴리오 백필 전략 (연간 전체 vs 월간 증분)
-
-**결정:** `backfill_portfolio_snapshots()` 함수에서 신규 유저와 기존 유저를 구분하여 백필 범위를 차등 적용. 신규 유저(스냅샷 0건)는 stocks 테이블의 가장 오래된 created_at 날짜부터 최대 365일까지 역사를 채우고, 기존 유저(스냅샷 1건 이상)는 마지막 snapshot_date 다음 날부터 최대 30일까지만 처리. 또한 반환 값에 `is_new_user` 플래그를 추가하여 프런트엔드가 동작을 분기할 수 있게 함.
-
-**이유:** 
-- 신규 유저는 포트폴리오 역사가 전혀 없어 종목 매입부터 현재까지 모든 거래 기간을 시각화할 필요가 있음. 연간 전체 백필은 사용자가 과거 수익률 추이를 확인할 수 있도록 함.
-- 기존 유저는 이미 스냅샷이 있으므로 누락된 최근 30일만 증분 채우기로 충분. 이는 API 호출 수와 계산량을 줄여 서버 부하를 관리함.
-- 신규 유저와 기존 유저의 백필 속도가 다르면, 프런트엔드에서 로딩 상태(프로그레시브 로딩, 스켈레톤)를 다르게 처리해야 함. `is_new_user` 플래그로 이를 신호전달.
-
-**대안:**
-- (1) 모든 유저에게 동일하게 30일만 백필 → 신규 유저의 과거 데이터 손실, 투자 역사 추적 불가
-- (2) 모든 유저에게 365일 전체 백필 → 기존 유저도 불필요한 API 호출, 비용/성능 낭비
-- (3) 신규 유저는 수동으로 "Backfill History" 버튼 클릭하도록 유도 → UX 복잡, 사용자 이탈 증가
-- (4) 스케줄러에서만 차등 처리 → 로그인 직후 사용자가 신규/기존 상태에 맞는 백필이 필요한 시점을 놓침
-
-**파일:** C:\Users\Jason\Desktop\dashboard\routers\portfolio.py
-
----
-## 2025-01-09 14:35 — 신규 유저 포트폴리오 백필 시작일 계산 (최초 종목 등록일 vs 회원가입일)
-**결정:** `backfill_portfolio_snapshots()` 함수에서 신규 유저의 백필 시작일을 `MAX(최초 종목 등록일, 회원가입일)`로 변경. 기존에는 stocks.created_at의 최솟값만 사용했으나, 이제 User.created_at(회원가입일)과 비교하여 둘 중 더 늦은 날짜를 사용하도록 함.
-**이유:** 가입 전에 기록된 종목이 있을 수 있으므로, 회원가입일보다 앞선 종목 등록일을 사용하면 사용자가 실제로 포트폴리오를 관리하기 시작하지 않은 기간의 스냅샷을 백필하는 오류가 발생. 회원가입일을 기준점으로 삼아 "가입 전 이력은 결산 대상 제외" 원칙을 준수하도록 수정.
-**대안:** (1) 모든 종목의 created_at 무조건 사용 → 가입 전 데이터 혼입 가능; (2) User.created_at만 사용 → 가입 후 매입한 종목도 등록일이 created_at인데, 사용자가 실제 매입 전 시점부터 스냅샷 생성되는 문제 미해결 (현재는 max를 사용하므로 해결됨)
-**파일:** C:\Users\Jason\Desktop\dashboard\routers\portfolio.py
-
----
-## 2025-01-10 — 매도 내역 날짜 필드: null 허용 → 오늘 날짜 자동 기입
-**결정:** AdminPage의 StockDetailPanel 컴포넌트에서 `submitSell()` 함수 내 `newSell` 객체 생성 시, `date` 필드 기본값을 `null`에서 `new Date().toISOString().split('T')[0]`(오늘 날짜, YYYY-MM-DD 형식)으로 변경. 사용자가 매도일을 입력하지 않으면 자동으로 현재 날짜가 지정됨.
-**이유:** 매도 기록에 날짜가 없으면 포트폴리오 스냅샷 계산, 수익률 분석, 거래 내역 정렬 시 ambiguity가 발생. null 상태로 저장하면 데이터 품질이 저하되고, 프런트엔드와 백엔드에서 null 처리 로직이 필산. 사용자가 대부분 당일 거래를 기록하므로, 기본값을 오늘 날짜로 설정하는 것이 UX상 합리적. 사용자는 여전히 date picker로 과거 날짜로 수정 가능.
-**대안:** (1) null 유지 → 데이터 품질 저하, null 처리 로직 분산; (2) 사용자 입력 강제 → UI에서 required 필드로 구현 (현재는 optional); (3) 저장 후 모달에서 사용자에게 날짜 입력 강요 → UX 복잡
-**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\AdminPage.jsx
-
----
-## 2026-06-09 15:28 — 백필 함수에 portfolio_groups 데이터 통합 (두 데이터 소스 병합)
-**결정:** `backfill_portfolio_snapshots()` 함수의 ④-b 섹션에서 `PortfolioGroups` 테이블을 추가로 로드하여 매도 내역(날짜 포함)을 JSON으로 파싱한 후, ticker별 {purchases, sells} 매핑을 구축. 이를 통해 stocks 테이블(현재 보유)과 portfolio_groups(거래 내역)의 두 데이터 소스를 통합.
-**이유:** 포트폴리오 스냅샷 백필 시 정확한 평가액과 실현 손익(realized P&L)을 계산하려면, 특정 날짜의 실제 보유량을 알아야 함. 현재는 stocks 테이블의 최신 보유량만 사용하므로, 과거 매도분을 고려하지 못함. portfolio_groups의 매도 내역을 로드하여 ticker별로 구조화하면, 향후 날짜별 hold_qty 계산이 가능해짐.
-**대안:** (1) stocks 테이블만 사용 (기존) → 과거 스냅샷에서 실현 손익 계산 불가, 매도 후 복구 매입 시나리오 미지원; (2) DB에 transaction 테이블 추가 → 스키마 변경, 데이터 마이그레이션 필요; (3) 프런트엔드에서 모든 거래 내역을 매번 백엔드로 전송 → 무상태 API 원칙 위배, 중복 전송 오버헤드
-**파일:** C:\Users\Jason\Desktop\dashboard\routers\portfolio.py
-
----
-## 2025-01-10 16:45 — 백필 계산에 날짜 기준 보유량 도입 (ticker_history 조회 로직)
-**결정:** `backfill_portfolio_snapshots()` 함수의 본체 루프에서 `qty` 계산 로직을 변경. 이제 각 종목의 보유량을 단순 `stocks.quantity`가 아닌, `ticker_history`(portfolio_groups에서 로드한 매매 내역)를 기반으로 동적 계산. 만약 `s.ticker`가 `ticker_history`에 있으면, 매입량 합계에서 target_date 이하의 매도량을 차감하여 `qty = max(0.0, buy_qty - sell_qty)` 계산. 매도 기록이 date 필드가 없으면 항상 차감(하위호환성), date가 있으면 target_date 이하인 것만 차감. ticker_history에 없으면 기존 `stocks.quantity`로 폴백.
-**이유:** 포트폴리오 스냅샷 백필 시 과거 특정 날짜(target_date)의 정확한 보유량을 계산해야 정확한 평가액 반영 가능. 단순히 최신 stocks.quantity를 사용하면 과거에 일부를 매도한 경우, 과거 스냅샷에도 최신 보유량이 반영되어 잘못된 결과. ticker_history 기반 계산으로 "2025-01-05에 100주 매입, 2025-01-10에 30주 매도"라면, 2025-01-08 스냅샷에는 100주, 2025-01-12 스냅샷에는 70주가 정확히 반영됨.
-**대안:** (1) 항상 stocks.quantity 사용 (기존) → 과거 스냅샷의 보유량이 부정확함, 실현 손익 계산 불가; (2) 별도 transaction 테이블 추가 → 스키마 변경, 데이터 마이그레이션; (3) portfolio_groups 외에 다른 데이터 소스 사용 → 일관성 손실.
-**파일:** C:\Users\Jason\Desktop\dashboard\routers\portfolio.py
-
----
-## 2025-01-10 16:50 — 매입 내역 날짜 필드: 기본값을 오늘 날짜로 초기화
-**결정:** AdminPage의 StockDetailPanel 컴포넌트의 `buyDate` useState 초기값을 빈 문자열('')에서 `new Date().toISOString().split('T')[0]` (오늘 날짜, YYYY-MM-DD 형식)으로 변경. 컴포넌트가 마운트될 때 buyDate 입력 필드가 자동으로 현재 날짜로 채워짐.
-**이유:** 대부분의 주식 매입 기록은 당일 거래이므로, 날짜 필드를 오늘 날짜로 기본값 설정하면 사용자가 매번 date picker를 조작할 필요가 없어 UX 마찰 감소. 과거 날짜 매입이 필요한 경우에도 사용자는 여전히 date picker로 수정 가능. (매도 내역 submitSell()에서 이미 같은 방식 적용됨)
-**대안:** (1) 빈 문자열 유지 → 사용자가 매번 date picker 조작해야 함, 반복 작업 부담 증가; (2) date 필드를 required로 강제 → UI 복잡도, 사용자 거부감; (3) 저장 후 modal에서 날짜 입력 강요 → 저장 후 flow 방해
-**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\AdminPage.jsx
-
----
-## 2025-01-10 17:00 — 매입 기록 저장 시 미입력 날짜 → 오늘 날짜 자동 기입
-**결정:** AdminPage의 StockDetailPanel 컴포넌트에서 `submitBuy()` 함수 내 `newPurchase` 객체 생성 시, `date` 필드 기본값을 `buyDate || null`에서 `buyDate || new Date().toISOString().split('T')[0]` (오늘 날짜, YYYY-MM-DD 형식)으로 변경. 사용자가 매입일을 입력하지 않으면 자동으로 현재 날짜가 지정됨.
-**이유:** 매입 기록에 날짜가 없으면 포트폴리오 스냅샷 계산, 수익률 분석, 거래 내역 정렬 시 null 처리 로직이 분산되고 데이터 품질이 저하. null 상태로 저장하면 백엔드에서도 "날짜 없음"으로 표시되어 사용자 혼동 초래. 사용자가 대부분 당일 거래를 기록하므로, 기본값을 오늘 날짜로 설정하는 것이 합리적. 사용자는 여전히 date picker로 과거 날짜로 수정 가능. (매도 내역 submitSell()과 패리티 유지)
-**대안:** (1) null 유지 → 데이터 품질 저하, null 처리 로직 분산; (2) 사용자 입력 강제 → UI에서 required 필드로 구현 (현재는 optional); (3) 저장 후 모달에서 날짜 입력 강요 → UX 복잡
-**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\AdminPage.jsx
-
----
-## 2025-01-10 17:15 — 백필 평가액 계산: 정적 avg_price → 동적 가중평균 매수가(WACB) 전환
-**결정:** `backfill_portfolio_snapshots()` 함수에서 포트폴리오 평가액 및 손익 계산 시 사용하는 평균 매수가(avg)를 정적인 `stocks.avg_price` DB 컬럼에서 동적 **가중평균 비용 기준(WACB: Weighted Average Cost Basis)** 계산으로 변경. 매입 내역을 target_date로 필터링한 후, 개별 매입가격 × 수량의 합을 전체 수량으로 나누어 가중평균 계산: `avg = round(ws / vqt, 4) if vqt > 0 else fallback`. ticker_history에 없으면 기존 stocks.avg_price로 폴백.
-**이유:** 기존 방식(정적 avg_price)은 백필 과정에서 모든 과거 스냅샷에 동일한 평균 매수가를 적용하므로 정확도 상실. 예: 2025-01-05에 100주를 $10에 매입, 2025-01-10에 100주를 $12에 추가 매입한 경우, 2025-01-07 스냅샷에서는 첫 매입만 반영되어 평균가가 $10이어야 하는데, 정적 avg_price($11)를 사용하면 부정확함. 동적 WACB 계산은 각 스냅샷 날짜의 실제 매입 이력만 포함하여 정확한 원가 추적 가능. 특히 분할 매입, 매도 후 재매입 등 복합 거래 시나리오에서 손익 계산 신뢰도 향상.
-**대안:** (1) 정적 avg_price 유지 (기존) → 과거 스냅샷의 평균가 오류, 분할 매입 시 정확도 상실; (2) DB 스키마에 transaction_history 테이블 추가 → 마이그레이션 부담, 데이터 정규화 필요; (3) 프런트엔드에서 매번 상세 거래 내역 전송 → API 페이로드 증가, 상태 관리 복잡화
 **파일:** C:\Users\Jason\Desktop\dashboard\routers\portfolio.py
