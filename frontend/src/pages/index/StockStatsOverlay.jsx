@@ -57,9 +57,11 @@ function computeStockStats(stockData) {
   groups.forEach((g, gi) => {
     const purchases = []
     g.stocks.forEach(s => {
-      ;(s.purchases || []).filter(p => p.date).forEach(p =>
-        purchases.push({ date: p.date, amt: (p.qty || 0) * (p.price || 0) })
-      )
+      ;(s.purchases || []).filter(p => p.date).forEach(p => {
+        const rawAmt = (p.qty || 0) * (p.price || 0)
+        const amt = g.currency === 'USD' ? rawAmt * (fxRate ?? 1) : rawAmt
+        purchases.push({ date: p.date, amt })
+      })
     })
     if (!purchases.length) return
     purchases.sort((a, b) => a.date.localeCompare(b.date))
@@ -97,13 +99,14 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
 
     // Pie / doughnut chart
     if (pieRef.current) {
-      const pieTotal = grpTotals.reduce((a, g) => a + g.total, 0) || 1
+      const toKRW = (g) => g.currency === 'USD' ? g.total * (fxRate ?? 1) : g.total
+      const pieTotal = grpTotals.reduce((a, g) => a + toKRW(g), 0) || 1
       const inst = new Chart(pieRef.current, {
         type: 'doughnut',
         data: {
-          labels: grpTotals.map(g => `${g.name} (${(g.total / pieTotal * 100).toFixed(1)}%)`),
+          labels: grpTotals.map(g => `${g.name} (${(toKRW(g) / pieTotal * 100).toFixed(1)}%)`),
           datasets: [{
-            data: grpTotals.map(g => parseFloat(g.total.toFixed(2))),
+            data: grpTotals.map(g => parseFloat(toKRW(g).toFixed(2))),
             backgroundColor: CHART_COLORS.slice(0, grpTotals.length),
             borderWidth: 2,
             borderColor: '#fffef9',
