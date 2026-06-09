@@ -197,7 +197,7 @@ function AddStockRow({ gid, onAdd }) {
 
 /* ── 거래내역 패널 ── */
 function StockDetailPanel({ g, s, onUpdate }) {
-  const [buyDate,   setBuyDate]   = useState('')
+  const [buyDate,   setBuyDate]   = useState(() => new Date().toISOString().split('T')[0])
   const [buyQty,    setBuyQty]    = useState('')
   const [buyPrice,  setBuyPrice]  = useState('')
   const [sellDate,  setSellDate]  = useState('')
@@ -229,7 +229,7 @@ function StockDetailPanel({ g, s, onUpdate }) {
       if (close != null) { price = close; showToast(`✓ ${buyDate} 종가: ${sym}${close}`, 'ok') }
       else showToast('⚠ 시세 조회 실패', 'err')
     }
-    const newPurchase = { id: genId(), date: buyDate || null, qty, price: price || 0 }
+    const newPurchase = { id: genId(), date: buyDate || new Date().toISOString().split('T')[0], qty, price: price || 0 }
     onUpdate(g.id, s.id, 'addPurchase', newPurchase)
     setBuyDate(''); setBuyQty(''); setBuyPrice('')
     showToast('✓ 매입 내역 등록', 'ok')

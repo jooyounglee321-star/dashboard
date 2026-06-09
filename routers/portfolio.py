@@ -205,19 +205,30 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
             groups: dict[str, dict] = {}
 
             for s in stocks:
-                # 날짜 기준 보유량: portfolio_groups의 sells.date 활용
+                # 날짜 기준 보유량 + 가중평균 매수가: portfolio_groups 내역 활용
                 if s.ticker in ticker_history:
                     hist = ticker_history[s.ticker]
-                    buy_qty = sum(float(p.get("qty", 0)) for p in hist["purchases"])
+                    # purchases: date 없으면 항상 포함(하위호환), date 있으면 target_date 이하만
+                    valid_pp = [
+                        p for p in hist["purchases"]
+                        if not p.get("date") or p["date"] <= str(target_date)
+                    ]
+                    buy_qty = sum(float(p.get("qty", 0)) for p in valid_pp)
+                    # sells: date 없으면 항상 차감(하위호환), date 있으면 target_date 이하만
                     sell_qty = sum(
                         float(sv.get("qty", 0)) for sv in hist["sells"]
-                        # date 없으면 항상 차감(하위호환), date 있으면 target_date 이하만
                         if not sv.get("date") or sv["date"] <= str(target_date)
                     )
                     qty = max(0.0, buy_qty - sell_qty)
+                    # 날짜 기준 가중평균 매수가
+                    priced = [p for p in valid_pp if (p.get("price") or 0) > 0]
+                    ws  = sum(float(p["price"]) * float(p.get("qty", 0)) for p in priced)
+                    vqt = sum(float(p.get("qty", 0)) for p in priced)
+                    avg = round(ws / vqt, 4) if vqt > 0 else (float(s.avg_price) if s.avg_price else None)
                 else:
-                    # portfolio_groups에 없으면 stocks.quantity 폴백
+                    # portfolio_groups에 없으면 stocks 테이블 폴백
                     qty = float(s.quantity or 0)
+                    avg = float(s.avg_price) if s.avg_price else None
                 if qty <= 0:
                     continue
                 meta = _CAT_META.get(s.category)
@@ -228,12 +239,10 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
                 key = f"{s.ticker}_{s.category}"
                 price = price_cache[key].get(target_date)
                 if price is None:
-                    # 시세 없으면 avg_price 폴백
-                    price = float(s.avg_price) if s.avg_price else None
+                    price = avg  # 시세 없으면 avg_price 폴백
                 if price is None:
                     continue
 
-                avg = float(s.avg_price) if s.avg_price else None
                 eval_amt = round(qty * price, 2)
                 eval_pl  = round((price - avg) * qty, 2) if avg else None
 
