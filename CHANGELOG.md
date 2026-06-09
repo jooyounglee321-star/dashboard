@@ -4,6 +4,21 @@
 
 ---
 
+## [2026-06-08] — feat: 로그인 시 포트폴리오 스냅샷 자동 백필
+
+### 변경 내용
+- **routers/portfolio.py**: `backfill_portfolio_snapshots(user_id, db)` 함수 추가
+  - 최신 스냅샷 다음 날부터 오늘(KST) 하루 전까지 누락된 날짜 감지 (최대 30일)
+  - yfinance 배치 조회로 티커별 API 호출 최소화 (날짜 범위 전체를 한 번에 요청)
+  - 주말·공휴일: 해당일 이전 가장 최근 거래일 종가 사용
+  - 시세 조회 실패 시 avg_price 폴백
+  - `saved_by = "backfill"` 태그로 저장 소스 구분
+  - stocks 테이블 기반 (APScheduler 스케줄러와 동일 소스)
+- **routers/portfolio.py**: `POST /api/portfolio/backfill` 엔드포인트 추가
+- **LoginPage.jsx**: 로그인 성공 후 `/api/portfolio/backfill` fire-and-forget 호출 (로그인 흐름 비차단)
+
+---
+
 ## [2026-06-08] — design: 가계부/식단 카드 UI 통일 (날짜 입력 위치, DB저장 배지 제거, 한글 링크 번역 수정)
 
 ### 변경 내용
