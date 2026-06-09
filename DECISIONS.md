@@ -1,6 +1,13 @@
 # 프로젝트 결정 기록
 
 ---
+## 2026-06-08 — purchases[] 배열에 date 필드 추가: 백필 시 날짜 기준 정확한 매수량/평균단가 계산
+**결정:** purchases[] 각 항목에 `date` 필드(YYYY-MM-DD)를 추가. 매수일 기본값을 오늘 날짜로 설정. 백필 시 `purchase.date <= target_date`인 것만 합산하여 해당 날짜 기준 매수량 및 가중평균 단가 계산. date 없는 기존 항목은 항상 포함(하위호환).
+**이유:** 기존 방식은 purchases 전체를 합산하여 미래 매수분이 과거 날짜에도 반영되는 오류 발생. date 기반 필터로 각 날짜의 실제 매수 상태를 정확히 반영. 평균단가도 같은 기준으로 계산하여 eval_pl 정확도 향상.
+**대안:** purchases 전체 합산 유지 (기존 방식) → 소급 매수 입력 시 과거 날짜 결산 왜곡.
+**파일:** `frontend/src/pages/AdminPage.jsx`, `routers/portfolio.py`
+
+---
 ## 2026-06-08 — sells[] 배열에 date 필드 추가: 백필 시 날짜 기준 보유량 계산
 **결정:** sells[] 배열의 각 항목에 `date` 필드(YYYY-MM-DD)를 추가. 매도일 미입력 시 오늘 날짜 자동 삽입. 백필 시 `sell.date <= target_date`인 매도만 차감하여 해당 날짜 기준 정확한 보유량 계산. date 없는 기존 항목은 항상 차감(하위호환).
 **이유:** 기존 방식은 `stocks.quantity`(현재 잔고)를 과거 모든 날짜에 동일하게 적용하여 매도 이전 날짜에도 현재 보유량으로 계산되는 오류 발생. date 기반 필터로 각 날짜의 실제 보유량을 정확히 반영.
@@ -150,3 +157,23 @@
 **대안:** (1) 항상 stocks.quantity 사용 (기존) → 과거 스냅샷의 보유량이 부정확함, 실현 손익 계산 불가; (2) 별도 transaction 테이블 추가 → 스키마 변경, 데이터 마이그레이션; (3) portfolio_groups 외에 다른 데이터 소스 사용 → 일관성 손실.
 **파일:** C:\Users\Jason\Desktop\dashboard\routers\portfolio.py
 
+---
+## 2025-01-10 16:50 — 매입 내역 날짜 필드: 기본값을 오늘 날짜로 초기화
+**결정:** AdminPage의 StockDetailPanel 컴포넌트의 `buyDate` useState 초기값을 빈 문자열('')에서 `new Date().toISOString().split('T')[0]` (오늘 날짜, YYYY-MM-DD 형식)으로 변경. 컴포넌트가 마운트될 때 buyDate 입력 필드가 자동으로 현재 날짜로 채워짐.
+**이유:** 대부분의 주식 매입 기록은 당일 거래이므로, 날짜 필드를 오늘 날짜로 기본값 설정하면 사용자가 매번 date picker를 조작할 필요가 없어 UX 마찰 감소. 과거 날짜 매입이 필요한 경우에도 사용자는 여전히 date picker로 수정 가능. (매도 내역 submitSell()에서 이미 같은 방식 적용됨)
+**대안:** (1) 빈 문자열 유지 → 사용자가 매번 date picker 조작해야 함, 반복 작업 부담 증가; (2) date 필드를 required로 강제 → UI 복잡도, 사용자 거부감; (3) 저장 후 modal에서 날짜 입력 강요 → 저장 후 flow 방해
+**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\AdminPage.jsx
+
+---
+## 2025-01-10 17:00 — 매입 기록 저장 시 미입력 날짜 → 오늘 날짜 자동 기입
+**결정:** AdminPage의 StockDetailPanel 컴포넌트에서 `submitBuy()` 함수 내 `newPurchase` 객체 생성 시, `date` 필드 기본값을 `buyDate || null`에서 `buyDate || new Date().toISOString().split('T')[0]` (오늘 날짜, YYYY-MM-DD 형식)으로 변경. 사용자가 매입일을 입력하지 않으면 자동으로 현재 날짜가 지정됨.
+**이유:** 매입 기록에 날짜가 없으면 포트폴리오 스냅샷 계산, 수익률 분석, 거래 내역 정렬 시 null 처리 로직이 분산되고 데이터 품질이 저하. null 상태로 저장하면 백엔드에서도 "날짜 없음"으로 표시되어 사용자 혼동 초래. 사용자가 대부분 당일 거래를 기록하므로, 기본값을 오늘 날짜로 설정하는 것이 합리적. 사용자는 여전히 date picker로 과거 날짜로 수정 가능. (매도 내역 submitSell()과 패리티 유지)
+**대안:** (1) null 유지 → 데이터 품질 저하, null 처리 로직 분산; (2) 사용자 입력 강제 → UI에서 required 필드로 구현 (현재는 optional); (3) 저장 후 모달에서 날짜 입력 강요 → UX 복잡
+**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\AdminPage.jsx
+
+---
+## 2025-01-10 17:15 — 백필 평가액 계산: 정적 avg_price → 동적 가중평균 매수가(WACB) 전환
+**결정:** `backfill_portfolio_snapshots()` 함수에서 포트폴리오 평가액 및 손익 계산 시 사용하는 평균 매수가(avg)를 정적인 `stocks.avg_price` DB 컬럼에서 동적 **가중평균 비용 기준(WACB: Weighted Average Cost Basis)** 계산으로 변경. 매입 내역을 target_date로 필터링한 후, 개별 매입가격 × 수량의 합을 전체 수량으로 나누어 가중평균 계산: `avg = round(ws / vqt, 4) if vqt > 0 else fallback`. ticker_history에 없으면 기존 stocks.avg_price로 폴백.
+**이유:** 기존 방식(정적 avg_price)은 백필 과정에서 모든 과거 스냅샷에 동일한 평균 매수가를 적용하므로 정확도 상실. 예: 2025-01-05에 100주를 $10에 매입, 2025-01-10에 100주를 $12에 추가 매입한 경우, 2025-01-07 스냅샷에서는 첫 매입만 반영되어 평균가가 $10이어야 하는데, 정적 avg_price($11)를 사용하면 부정확함. 동적 WACB 계산은 각 스냅샷 날짜의 실제 매입 이력만 포함하여 정확한 원가 추적 가능. 특히 분할 매입, 매도 후 재매입 등 복합 거래 시나리오에서 손익 계산 신뢰도 향상.
+**대안:** (1) 정적 avg_price 유지 (기존) → 과거 스냅샷의 평균가 오류, 분할 매입 시 정확도 상실; (2) DB 스키마에 transaction_history 테이블 추가 → 마이그레이션 부담, 데이터 정규화 필요; (3) 프런트엔드에서 매번 상세 거래 내역 전송 → API 페이로드 증가, 상태 관리 복잡화
+**파일:** C:\Users\Jason\Desktop\dashboard\routers\portfolio.py

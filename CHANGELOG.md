@@ -4,6 +4,20 @@
 
 ---
 
+## [2026-06-08] — feat: 매수 내역에 date 필드 추가 및 매수일 직접 입력 UI 추가, 백필 시 날짜 기준 정확한 매수량/평균단가 계산 구현
+
+### 변경 내용
+- **AdminPage.jsx** `StockDetailPanel`:
+  - `buyDate` 초기값을 `''` → 오늘 날짜(`new Date().toISOString().split('T')[0]`)로 변경
+  - `newPurchase.date`: `buyDate || null` → `buyDate || 오늘날짜` (날짜 항상 보장)
+- **routers/portfolio.py** `backfill_portfolio_snapshots()`: purchases 날짜 필터 추가
+  - `valid_pp`: `purchase.date <= target_date` 또는 date 없는 것만 포함 (하위호환)
+  - `buy_qty = sum(valid_pp.qty)` (날짜 기준 매수량)
+  - `avg`: `valid_pp` 기준 가중평균 단가 계산 (날짜 기준 정확한 평균단가)
+  - 평균단가 없으면 `stocks.avg_price` 폴백
+
+---
+
 ## [2026-06-08] — feat: 매도 내역에 date 필드 추가, 백필 시 날짜 기준 정확한 보유량 계산 구현
 
 ### 변경 내용
