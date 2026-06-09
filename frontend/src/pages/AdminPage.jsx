@@ -980,23 +980,34 @@ export default function AdminPage() {
       </main>
 
       {/* 종목 삭제 확인 모달 */}
-      {deleteModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ background: 'var(--card)', borderRadius: 14, padding: '1.4rem 1.5rem', width: 'min(420px,100%)', boxShadow: '0 8px 40px rgba(0,0,0,0.25)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.9rem' }}>
-              <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--ink)' }}>⚠️ 종목 삭제</div>
-              <button onClick={() => setDeleteModal(null)} style={{ background: 'none', border: 'none', fontSize: '1.1rem', cursor: 'pointer', color: 'var(--ink3)', lineHeight: 1 }}>✕</button>
-            </div>
-            <div style={{ fontSize: '0.87rem', color: 'var(--ink)', lineHeight: 1.7, marginBottom: '1.1rem', padding: '0.65rem 0.8rem', background: 'var(--card2)', borderRadius: 8, borderLeft: '3px solid #dc2626' }}>
-              이 종목의 모든 거래내역이 삭제됩니다.<br />정말 삭제하시겠습니까?
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-              <button onClick={() => setDeleteModal(null)} style={{ padding: '0.42rem 1rem', fontSize: '0.85rem', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--card2)', color: 'var(--ink)', cursor: 'pointer' }}>취소</button>
-              <button onClick={doDelStock} style={{ padding: '0.42rem 1.1rem', fontSize: '0.85rem', border: 'none', borderRadius: 7, background: '#dc2626', color: '#fff', cursor: 'pointer', fontWeight: 500 }}>삭제</button>
+      {deleteModal && (() => {
+        const delStock = groups.find(g => g.id === deleteModal.gid)?.stocks.find(s => s.id === deleteModal.sid)
+        const hasPurchases = (delStock?.purchases || []).length > 0
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+            <div style={{ background: 'var(--card)', borderRadius: 14, padding: '1.4rem 1.5rem', width: 'min(420px,100%)', boxShadow: '0 8px 40px rgba(0,0,0,0.25)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.9rem' }}>
+                <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--ink)' }}>⚠️ 종목 삭제</div>
+                <button onClick={() => setDeleteModal(null)} style={{ background: 'none', border: 'none', fontSize: '1.1rem', cursor: 'pointer', color: 'var(--ink3)', lineHeight: 1 }}>✕</button>
+              </div>
+              {hasPurchases && (
+                <div style={{ fontSize: '0.85rem', color: '#92400e', lineHeight: 1.7, marginBottom: '0.75rem', padding: '0.65rem 0.8rem', background: '#fef3c7', borderRadius: 8, borderLeft: '3px solid #f59e0b' }}>
+                  🔔 <strong>매수 이력이 있는 종목입니다.</strong><br />
+                  삭제하면 과거 백필 결산에서 이 종목의 손익이 계산되지 않습니다.<br />
+                  <strong>매도 처리 후 삭제를 권장합니다.</strong>
+                </div>
+              )}
+              <div style={{ fontSize: '0.87rem', color: 'var(--ink)', lineHeight: 1.7, marginBottom: '1.1rem', padding: '0.65rem 0.8rem', background: 'var(--card2)', borderRadius: 8, borderLeft: '3px solid #dc2626' }}>
+                이 종목의 모든 거래내역이 삭제됩니다.<br />정말 삭제하시겠습니까?
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                <button onClick={() => setDeleteModal(null)} style={{ padding: '0.42rem 1rem', fontSize: '0.85rem', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--card2)', color: 'var(--ink)', cursor: 'pointer' }}>취소</button>
+                <button onClick={doDelStock} style={{ padding: '0.42rem 1.1rem', fontSize: '0.85rem', border: 'none', borderRadius: 7, background: '#dc2626', color: '#fff', cursor: 'pointer', fontWeight: 500 }}>삭제</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       <Toast toast={toast} />
     </div>
