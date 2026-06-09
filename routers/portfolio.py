@@ -157,15 +157,7 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
     if len(missing) > max_days:
         missing = missing[-max_days:]  # 가장 최근 N일만
 
-    # ④ 보유 종목 조회 (stocks 테이블 — 스케줄러와 동일 소스)
-    stocks = db.query(Stock).filter(
-        Stock.user_id == user_id,
-        Stock.quantity > 0,
-    ).all()
-    if not stocks:
-        return {"backfilled": 0, "dates": []}
-
-    # ④-b portfolio_groups에서 매도 내역(날짜 포함) 로드 → ticker별 매핑
+    # ④ portfolio_groups.data를 1차 소스 — 전량 매도 포함 모든 종목 처리
     pg_row = db.query(PortfolioGroups).filter(PortfolioGroups.user_id == user_id).first()
     pg_data: list = []
     if pg_row and pg_row.data:
@@ -174,16 +166,33 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
         except Exception:
             pg_data = []
 
-    # ticker → {purchases: [...], sells: [...]} 매핑
+    # 그룹명 → 카테고리 역방향 맵 (portfolio_groups.name → _CAT_META 키)
+    _name_to_cat = {v[0]: k for k, v in _CAT_META.items()}
+
+    # ticker → {purchases, sells, category, currency} 매핑
     ticker_history: dict[str, dict] = {}
     for grp in pg_data:
+        grp_name = grp.get("name", "")
+        currency = grp.get("currency", "USD")
+        cat = _name_to_cat.get(grp_name, "us" if currency == "USD" else "kor-stock")
         for st in grp.get("stocks", []):
             t = st.get("ticker", "")
             if t:
                 ticker_history[t] = {
                     "purchases": st.get("purchases") or [],
                     "sells":     st.get("sells")     or [],
+                    "category":  cat,
+                    "currency":  currency,
                 }
+
+    if not ticker_history:
+        return {"backfilled": 0, "dates": [], "is_new_user": is_new_user}
+
+    # ④-b stocks 테이블 — name/avg_price 보완용 (quantity 무관 전체 조회)
+    stocks_map: dict[str, "Stock"] = {
+        s.ticker: s
+        for s in db.query(Stock).filter(Stock.user_id == user_id).all()
+    }
 
     # ⑤ USD/KRW 환율
     fx_row = db.query(ExchangeRate).filter_by(
@@ -193,10 +202,10 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
 
     # ⑥ 티커별 배치 시세 조회 (yfinance 호출 최소화)
     price_cache: dict[str, dict[date, float]] = {}
-    for s in stocks:
-        key = f"{s.ticker}_{s.category}"
+    for ticker, hist in ticker_history.items():
+        key = f"{ticker}_{hist['category']}"
         if key not in price_cache:
-            price_cache[key] = _get_historical_prices_batch(s.ticker, s.category, missing)
+            price_cache[key] = _get_historical_prices_batch(ticker, hist["category"], missing)
 
     backfilled_dates: list[str] = []
 
@@ -204,58 +213,60 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
         try:
             groups: dict[str, dict] = {}
 
-            for s in stocks:
-                # 날짜 기준 보유량 + 가중평균 매수가: portfolio_groups 내역 활용
-                if s.ticker in ticker_history:
-                    hist = ticker_history[s.ticker]
-                    # purchases: date 없으면 항상 포함(하위호환), date 있으면 target_date 이하만
-                    valid_pp = [
-                        p for p in hist["purchases"]
-                        if not p.get("date") or p["date"] <= str(target_date)
-                    ]
-                    buy_qty = sum(float(p.get("qty", 0)) for p in valid_pp)
-                    # sells: date 없으면 항상 차감(하위호환), date 있으면 target_date 이하만
-                    sell_qty = sum(
-                        float(sv.get("qty", 0)) for sv in hist["sells"]
-                        if not sv.get("date") or sv["date"] <= str(target_date)
-                    )
-                    qty = max(0.0, buy_qty - sell_qty)
-                    # 날짜 기준 가중평균 매수가
-                    priced = [p for p in valid_pp if (p.get("price") or 0) > 0]
-                    ws  = sum(float(p["price"]) * float(p.get("qty", 0)) for p in priced)
-                    vqt = sum(float(p.get("qty", 0)) for p in priced)
-                    avg = round(ws / vqt, 4) if vqt > 0 else (float(s.avg_price) if s.avg_price else None)
-                else:
-                    # portfolio_groups에 없으면 stocks 테이블 폴백
-                    qty = float(s.quantity or 0)
-                    avg = float(s.avg_price) if s.avg_price else None
-                if qty <= 0:
-                    continue
-                meta = _CAT_META.get(s.category)
-                if not meta:
-                    continue
-                grp_name, currency = meta
+            for ticker, hist in ticker_history.items():
+                category = hist["category"]
+                currency = hist["currency"]
 
-                key = f"{s.ticker}_{s.category}"
-                price = price_cache[key].get(target_date)
+                # purchases: date 없으면 항상 포함(하위호환), date 있으면 target_date 이하만
+                valid_pp = [
+                    p for p in hist["purchases"]
+                    if not p.get("date") or p["date"] <= str(target_date)
+                ]
+                buy_qty = sum(float(p.get("qty", 0)) for p in valid_pp)
+                # sells: date 없으면 항상 차감(하위호환), date 있으면 target_date 이하만
+                sell_qty = sum(
+                    float(sv.get("qty", 0)) for sv in hist["sells"]
+                    if not sv.get("date") or sv["date"] <= str(target_date)
+                )
+                qty = max(0.0, buy_qty - sell_qty)
+                if qty <= 0:
+                    continue  # 해당 날짜에 보유 없음 → 제외
+
+                # 날짜 기준 가중평균 매수가
+                priced = [p for p in valid_pp if (p.get("price") or 0) > 0]
+                ws  = sum(float(p["price"]) * float(p.get("qty", 0)) for p in priced)
+                vqt = sum(float(p.get("qty", 0)) for p in priced)
+                s_row = stocks_map.get(ticker)
+                avg = (
+                    round(ws / vqt, 4) if vqt > 0
+                    else (float(s_row.avg_price) if s_row and s_row.avg_price else None)
+                )
+
+                key = f"{ticker}_{category}"
+                price = price_cache.get(key, {}).get(target_date)
                 if price is None:
                     price = avg  # 시세 없으면 avg_price 폴백
                 if price is None:
                     continue
 
+                meta = _CAT_META.get(category)
+                if not meta:
+                    continue
+                grp_name, _ = meta
+
                 eval_amt = round(qty * price, 2)
                 eval_pl  = round((price - avg) * qty, 2) if avg else None
 
-                if s.category not in groups:
-                    groups[s.category] = {
+                if category not in groups:
+                    groups[category] = {
                         "name":     grp_name,
                         "currency": currency,
                         "total":    0.0,
                         "stocks":   [],
                     }
-                groups[s.category]["stocks"].append({
-                    "ticker":        s.ticker,
-                    "name":          s.name,
+                groups[category]["stocks"].append({
+                    "ticker":        ticker,
+                    "name":          s_row.name if s_row else ticker,
                     "current_price": price,
                     "hold_qty":      qty,
                     "eval_amount":   eval_amt,
@@ -263,8 +274,8 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
                     "eval_pl":       eval_pl,
                     "realized_pl":   0,
                 })
-                groups[s.category]["total"] = round(
-                    groups[s.category]["total"] + eval_amt, 2
+                groups[category]["total"] = round(
+                    groups[category]["total"] + eval_amt, 2
                 )
 
             if not groups:

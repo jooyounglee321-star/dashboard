@@ -4,6 +4,22 @@
 
 ---
 
+## [2026-06-08] — fix: 주식 결산 프로세스 개선 — 프론트 hold_qty 날짜 기준 통일, 전량 매도 종목 과거 백필 포함
+
+### 변경 내용
+- **StockCard.jsx** `calcStock()`: purchases/sells 모두 `date <= today or no date` 필터 적용
+  - `activePP`, `activeSL` 변수로 오늘 이전 거래만 합산 → holdQty, avgCost, realizedPL 모두 날짜 기준 통일
+- **IndexPage.jsx** 스냅샷 저장 로직: 동일 필터 적용(`snapToday` 기준 activePP/activeSL)
+  - 프론트 실시간 화면과 백필 결산이 동일한 날짜 기준 사용
+- **routers/portfolio.py** `backfill_portfolio_snapshots()`: 종목 소스 전환
+  - 기존: `stocks(quantity > 0)` → 변경: `portfolio_groups.data` 전체 종목
+  - 그룹명 역방향 맵(`_name_to_cat`)으로 카테고리 추론
+  - `stocks_map`: name/avg_price 보완용 보조 조회 (quantity 무관)
+  - target_date 기준 hold_qty > 0인 경우만 해당 날짜 결산 포함
+  - 전량 매도 종목도 매도 이전 날짜에는 정확히 포함됨
+
+---
+
 ## [2026-06-08] — feat: 매수 내역에 date 필드 추가 및 매수일 직접 입력 UI 추가, 백필 시 날짜 기준 정확한 매수량/평균단가 계산 구현
 
 ### 변경 내용
