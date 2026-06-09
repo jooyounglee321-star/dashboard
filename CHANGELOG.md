@@ -4,6 +4,17 @@
 
 ---
 
+## [2026-06-09] — fix: 백필 신규 유저 시작일 계산을 stocks 테이블 대신 portfolio_groups 기준으로 수정 — stocks 테이블 비어있어도 백필 진행
+
+### 변경 내용
+- **routers/portfolio.py** `backfill_portfolio_snapshots()` `is_new_user` 블록 수정:
+  - 기존: `stocks.created_at` 최솟값 → 없으면 바로 종료
+  - 변경: `portfolio_groups.data` JSON 파싱 → 종목 1개 이상 있어야 진행
+  - 시작일 = `MIN(portfolio_groups.updated_at, users.created_at)` 중 이른 날짜, 단 `users.created_at` 하한선 유지
+  - `stocks` 테이블은 보조 확인용으로만 유지 (없어도 백필 진행)
+
+---
+
 ## [2026-06-09] — fix: 백필 호출을 LoginPage에서 App.jsx로 이동 — 자동 로그인 시에도 백필 실행되도록 수정
 
 ### 변경 내용

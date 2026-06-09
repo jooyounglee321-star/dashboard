@@ -42,6 +42,24 @@
 **파일:** C:\Users\Jason\Desktop\dashboard\routers\portfolio.py
 
 ---
+## 2026-06-09 — 백필 신규 유저 시작일 계산: stocks 테이블 → portfolio_groups 기준으로 전환
+**결정:** `backfill_portfolio_snapshots()` 함수의 `is_new_user` 블록에서 신규 유저 백필 시작일을 결정하는 데이터 소스를 변경: (1) 기존 방식(stocks.created_at 최솟값) 제거, (2) 대신 portfolio_groups.data JSON을 파싱하여 종목 1개 이상 여부 확인, (3) 시작일 = MIN(portfolio_groups.updated_at, users.created_at) 중 이른 날짜, 단 users.created_at을 하한선 유지, (4) stocks 테이블은 보조 확인용으로만 유지 (없어도 백필 진행).
+**이유:** stocks 테이블이 비어있으면 백필이 즉시 종료되던 문제 해결. portfolio_groups는 사용자가 종목 정보를 입력하는 신뢰할 수 있는 소스이며, 포트폴리오 매입/매도 데이터가 저장되는 primary 데이터 구조. 이를 기준으로 변경하면 stocks 테이블 없어도 백필 진행 가능하며, 더 정확한 보유 종목 정보 파싱 가능.
+**대안:**
+- stocks 테이블 기준 유지: 데이터 미입력 시 백필 불가
+- 두 소스 모두 필수: 더 엄격한 검증이지만 데이터 미입력 가능성 증가
+- portfolio_groups만 사용하되 updated_at 무시: users.created_at 이전 과거 데이터 포함 위험
+- 선택한 방식: portfolio_groups 기준 + users.created_at 하한선으로 정확성과 안정성 모두 확보
+**파일:** `routers/portfolio.py`, `CHANGELOG.md`
+
+---
+## 2026-06-09 — 백필 신규 유저 시작일 기준: stocks 테이블 → portfolio_groups.data 기준으로 전환
+**결정:** `backfill_portfolio_snapshots()` 신규 유저 판단 시 종목 존재 여부를 `stocks` 테이블 대신 `portfolio_groups.data` JSON 파싱으로 확인. 시작일을 `MIN(portfolio_groups.updated_at, users.created_at)` 중 이른 날짜로 계산하되 `users.created_at` 하한선 유지.
+**이유:** `stocks` 테이블이 비어있어도 `portfolio_groups.data`에 종목이 있을 수 있음. 기존 로직은 `stocks.created_at` 기준이라 stocks 미등록 유저는 백필이 바로 종료됨.
+**대안:** stocks 테이블에 데이터 동기화 강제 → 프론트 변경 필요; portfolio_groups 단독 사용이 추가 변경 없이 가장 실용적.
+**파일:** `routers/portfolio.py`
+
+---
 ## 2026-06-09 — 백필 호출 위치: LoginPage → App.jsx useEffect로 이동
 **결정:** 포트폴리오 백필 API 호출을 `LoginPage.jsx` 로그인 성공 핸들러에서 `App.jsx`의 `useEffect([], [])` 훅으로 이동. 앱 시작 시 토큰이 있으면 1회 자동 실행.
 **이유:** LoginPage에서만 호출하면 자동 로그인(토큰 유지) 상태로 앱을 재오픈할 때 백필이 실행되지 않음. App.jsx 최상위 훅으로 이동하면 로그인 방식과 무관하게 항상 백필이 보장됨.
@@ -97,6 +115,16 @@
 - 주기적 polling: 불필요한 API 호출 증가, 배터리 소모
 - 선택한 방식: 앱 초기화 단계에서 1회 실행으로 모든 로그인 경로 커버, 자동화와 단순성 동시 달성
 **파일:** `frontend/src/App.jsx`, `frontend/src/pages/LoginPage.jsx`
+
+---
+## 2026-06-09 — 신규 유저 백필 조건 변경: stocks 테이블 → portfolio_groups.data 기반 판단
+**결정:** `backfill_portfolio_snapshots()`의 신규 유저(is_new_user=True) 백필 조건을 변경. (1) 백필 실행 여부를 `portfolio_groups.data`에 1개 이상의 종목 존재로 판단 (기존: stocks 테이블 조회). (2) 백필 시작일을 `MIN(portfolio_groups.updated_at, users.created_at)` 중 이른 날짜로 계산하되, `users.created_at`을 절대 하한선으로 유지 (기존: MAX(oldest_stock.created_at, users.created_at)). (3) stocks 테이블은 보조 확인용으로 변경 — portfolio_groups에 데이터 있으면 계속 진행.
+**이유:** portfolio_groups.data는 프론트 localStorage에서 저장한 거래 이력 데이터로, 사용자가 실제로 입력한 포트폴리오를 반영함. stocks 테이블을 조회 조건으로 사용하면, stocks 데이터 동기화 지연 시 백필이 실행되지 않는 버그 가능성이 있음. portfolio_groups를 먼저 체크하고 stocks은 시작일 세부 조정용으로 활용하면 두 데이터 소스 간 불일치를 완화할 수 있음. 또한 users.created_at 하한선 유지로 회원가입 전 거래 기록은 차단.
+**대안:**
+- stocks 테이블 중심 유지: 프론트 입력과 DB 동기화 지연 시 백필 누락 가능성
+- portfolio_groups만 사용, stocks 무시: 과거에 등록된 stocks 데이터(start_date 계산)를 놓칠 가능성
+- 선택한 방식: portfolio_groups를 주요 판단 기준, stocks를 보조 source로 활용하여 두 데이터 소스 모두 반영
+**파일:** C:\Users\Jason\Desktop\dashboard\routers\portfolio.py
 
 ---
 ## 2024 — portfolio_groups을 포트폴리오 스냅샷의 primary source로 전환
