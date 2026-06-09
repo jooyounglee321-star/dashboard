@@ -108,16 +108,24 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
     is_new_user = latest is None
 
     if is_new_user:
-        # 신규 유저: stocks 테이블의 가장 오래된 created_at 날짜부터
+        # 신규 유저: MAX(최초 종목 등록일, 회원가입일) — 가입 전 이력은 결산 대상 제외
         from sqlalchemy import func as sa_func
-        oldest = (
+        oldest_stock = (
             db.query(sa_func.min(Stock.created_at))
             .filter(Stock.user_id == user_id)
             .scalar()
         )
-        if oldest is None:
+        if oldest_stock is None:
             return {"backfilled": 0, "dates": [], "is_new_user": True}
-        start_date = oldest.date() if hasattr(oldest, "date") else oldest
+        user_row = db.query(User).filter(User.id == user_id).first()
+        user_created = user_row.created_at if user_row and user_row.created_at else None
+
+        stock_date = oldest_stock.date() if hasattr(oldest_stock, "date") else oldest_stock
+        if user_created:
+            user_date = user_created.date() if hasattr(user_created, "date") else user_created
+            start_date = max(stock_date, user_date)
+        else:
+            start_date = stock_date
         max_days = 365
     else:
         start_date = latest.snapshot_date + timedelta(days=1)
