@@ -4,6 +4,18 @@
 
 ---
 
+## [2026-06-09] — fix: 주식 통계 차트 USD→KRW 환산 버그 수정
+
+### 변경 내용
+- **StockStatsOverlay.jsx** 파이차트: `g.total`을 USD/KRW 혼합 그대로 비율 계산하던 버그 수정
+  - USD 그룹은 `g.total * (fxRate ?? 1)` 로 KRW 환산 후 비율 계산
+  - USD 그룹이 0.0%로 표시되던 문제 해결
+- **StockStatsOverlay.jsx** 누적 투자금액 라인차트: USD 그룹 `amt`에 `fxRate` 미적용 버그 수정
+  - USD 그룹 매수금액을 KRW 단위로 환산하여 y축 스케일 통일
+  - USD 라인이 0에 붙어 보이던 문제 해결
+
+---
+
 ## [2026-06-09] — fix: 백필 시 소프트 딜리트 종목 제외
 
 ### 변경 내용
