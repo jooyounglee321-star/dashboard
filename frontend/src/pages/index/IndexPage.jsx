@@ -71,6 +71,19 @@ export default function IndexPage() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
   const activeItems = editMode ? draftItems : layoutItems
 
+  // 포트폴리오 백필 — IndexPage 마운트 시 1회 (로그인 직후 및 페이지 새로고침 모두 커버)
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token || token.trim() === '' || token === 'undefined' || token === 'null') return
+    fetch('/api/portfolio/backfill', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token },
+    })
+      .then(r => r.json())
+      .then(d => { if (d.backfilled > 0) console.log('[BACKFILL] 포트폴리오 백필 완료:', d) })
+      .catch(err => console.warn('[BACKFILL] 백필 실패:', err))
+  }, [])
+
   // Header date tick (localStorage 캐시 언어로 초기화)
   const cachedLang = (() => { try { return localStorage.getItem('dashboard_lang') || 'ko' } catch { return 'ko' } })()
   const headerLangRef = useRef(cachedLang)
