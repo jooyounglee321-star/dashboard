@@ -4,6 +4,19 @@
 
 ---
 
+## [2026-06-09] — fix: 백필 호출을 App.jsx에서 IndexPage.jsx로 이동 — 로그인 직후에도 백필 실행
+
+### 변경 내용
+- **IndexPage.jsx**: `useEffect([], [])` 추가 — 홈 화면 마운트 시 토큰 있으면 백필 fire-and-forget 실행
+- **App.jsx**: 백필 useEffect 제거 (App은 로그인 후 재마운트되지 않아 신규 로그인 시 미실행 버그)
+
+### 이유
+- App.jsx의 `useEffect([], [])` 는 앱 최초 로드 시 1회만 실행 — 로그인 전에 토큰이 없으면 바로 return
+- 로그인 후 navigate('/')는 App을 재마운트하지 않아 useEffect가 재실행되지 않음
+- IndexPage는 로그인 후 `/` 진입 시마다 마운트 → 신규 로그인 + 페이지 새로고침 모두 커버
+
+---
+
 ## [2026-06-09] — fix: 백필 신규 유저 시작일 계산을 stocks 테이블 대신 portfolio_groups 기준으로 수정 — stocks 테이블 비어있어도 백필 진행
 
 ### 변경 내용

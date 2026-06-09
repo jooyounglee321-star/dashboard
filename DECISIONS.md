@@ -1,6 +1,16 @@
 # 프로젝트 결정 기록
 
 ---
+## 2026-06-09 — 백필 호출을 App.jsx에서 IndexPage.jsx로 이동 (React 라이프사이클 버그 수정)
+**결정:** 포트폴리오 백필(portfolio/snapshot) API 호출을 App 컴포넌트의 최상위 useEffect에서 IndexPage(홈 화면) 컴포넌트의 useEffect로 옮김. 이를 통해 새로운 로그인 직후에도 자동으로 백필이 실행되도록 수정.
+**이유:** App.jsx의 `useEffect([], [])` 는 앱 최초 로드 시 1회만 실행되는데, 로그인 전에는 토큰이 없어 return 되고, 로그인 후 `navigate('/')` 는 App 컴포넌트를 재마운트하지 않음. 따라서 신규 로그인 시 백필이 실행되지 않는 버그 발생. IndexPage는 로그인 후 `/` 진입 시마다 마운트되므로 신규 로그인과 페이지 새로고침 모두 커버 가능.
+**대안:**
+- App.jsx 유지 + 상태 기반 트리거: 로그인 여부가 변경될 때마다 별도 상태 관리 필요, 복잡도 증가
+- 로그인 페이지에서만 호출: 자동 로그인 시나리오를 놓침
+- 컴포넌트 언마운트 시 백필 호출: 불안정한 타이밍, 네비게이션 중 실행 위험
+**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\index\IndexPage.jsx, C:\Users\Jason\Desktop\dashboard\frontend\src\App.jsx
+
+---
 ## 2026-06-09 — 앱 초기화 시 포트폴리오 백필 자동 실행 (자동 로그인)
 **결정:** App.jsx의 App 컴포넌트에서 useEffect hook을 이용해 컴포넌트 마운트 시(앱 로드 시) 1회 실행되는 자동 백필 로직 추가. localStorage에 유효한 토큰이 있으면 `/api/portfolio/backfill` 엔드포인트를 자동으로 호출하도록 구현.
 **이유:** 사용자가 앱을 열 때 포트폴리오 데이터가 자동으로 최신 상태로 동기화되어야 함. 토큰 기반 자동 로그인과 함께 포트폴리오 스냅샷도 자동 업데이트하여 사용자 경험 개선.
@@ -51,6 +61,13 @@
 - portfolio_groups만 사용하되 updated_at 무시: users.created_at 이전 과거 데이터 포함 위험
 - 선택한 방식: portfolio_groups 기준 + users.created_at 하한선으로 정확성과 안정성 모두 확보
 **파일:** `routers/portfolio.py`, `CHANGELOG.md`
+
+---
+## 2026-06-09 — 백필 호출 위치 최종: IndexPage.jsx useEffect로 확정
+**결정:** 포트폴리오 백필 API 호출을 `IndexPage.jsx`의 `useEffect([], [])` 훅으로 이동. App.jsx 백필 코드는 완전 제거.
+**이유:** App.jsx useEffect는 앱 최초 로드 시 1회만 실행. 로그인 전에 토큰이 없으면 바로 return하고, 로그인 후 navigate('/')는 App을 재마운트하지 않아 신규 로그인 시 백필이 실행되지 않는 버그 발생. IndexPage는 로그인 후 홈 진입 시마다 마운트되어 신규 로그인과 페이지 새로고침 모두 커버.
+**대안:** App.jsx 유지 + LoginPage 동시 호출(중복 방지 플래그) → 복잡도 증가; IndexPage 단독이 가장 단순하고 정확.
+**파일:** `frontend/src/pages/index/IndexPage.jsx`, `frontend/src/App.jsx`
 
 ---
 ## 2026-06-09 — 백필 신규 유저 시작일 기준: stocks 테이블 → portfolio_groups.data 기준으로 전환
@@ -139,3 +156,14 @@
 - 선택한 방식: 기존 `portfolio_groups.data` JSON 구조를 활용해 스냅샷 재현
 
 **파일:** C:\Users\Jason\Desktop\dashboard\routers\portfolio.py
+
+---
+## 2026-06-09 — 백필 호출 위치 재조정: IndexPage 추가 호출 (중복 호출 허용)
+**결정:** 포트폴리오 백필 API 호출을 IndexPage.jsx 컴포넌트 마운트 시점에 추가로 실행하도록 구현. 기존 App.jsx의 백필은 유지하되, IndexPage에서도 `useEffect([], [])` 훅으로 1회 자동 실행하도록 함. 토큰 유효성 검증 후 `/api/portfolio/backfill` POST 요청.
+**이유:** IndexPage는 모든 대시보드 데이터를 표시하는 메인 진입점이므로, 페이지 로드 시점에 포트폴리오 동기화가 최종 확인되어야 함. 로그인→IndexPage 경로뿐 아니라 북마크/직접 주소 입력으로 IndexPage에 진입하는 경우도 백필이 보장되어야 함. App.jsx 백필과 중복되더라도 엔드포인트가 idempotent하므로 무해.
+**대안:**
+- App.jsx만 유지 (기존): IndexPage 직접 진입 시 백필 누락 가능성 (예: 북마크, 이전 세션 복구)
+- 라우터 레이어에서 가드 추가: 모든 라우트에 미들웨어 필요, 복잡도 증가
+- localStorage 플래그로 중복 방지: 백필 상태 관리 필요, edge case 증가
+- 선택한 방식: IndexPage 마운트 시 추가 호출로 단순성과 안정성 모두 확보, 중복 호출은 무시 처리
+**파일:** `frontend/src/pages/index/IndexPage.jsx`

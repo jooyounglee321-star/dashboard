@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -41,19 +40,6 @@ function LoginGuard({ children }) {
 }
 
 export default function App() {
-  // 앱 시작 시 1회 — 토큰 있으면 백필 자동 실행 (자동 로그인 포함)
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (!token || token.trim() === '' || token === 'undefined' || token === 'null') return
-    fetch('/api/portfolio/backfill', {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + token },
-    })
-      .then(r => r.json())
-      .then(d => { if (d.backfilled > 0) console.log('[BACKFILL] 포트폴리오 백필 완료:', d) })
-      .catch(err => console.warn('[BACKFILL] 백필 실패:', err))
-  }, [])
-
   return (
     <BrowserRouter>
       <Routes>
