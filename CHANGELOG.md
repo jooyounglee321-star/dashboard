@@ -4,6 +4,20 @@
 
 ---
 
+## [2026-06-08] — feat: 포트폴리오 자동 결산 APScheduler 제거 → 로그인 시 백필 방식으로 전환, 신규 유저 최초 매입일부터 365일 백필 지원
+
+### 변경 내용
+- **main.py**: APScheduler에서 `daily_snapshot_kr`, `daily_snapshot_us` 스케줄 작업 완전 제거
+  - 관련 함수 제거: `_CAT_META`, `_KR_CATS`, `_US_CATS`, `_fetch_usd_krw`, `_snapshot_user_partial`, `_run_snapshot_job`, `_daily_snapshot_kr_job`, `_daily_snapshot_us_job`
+  - 불필요해진 import 제거: `asyncio`, `json`, `datetime`, `ZoneInfo`, `CronTrigger`
+  - 환율 갱신(30분 간격) 스케줄 및 APScheduler 자체는 유지
+- **routers/portfolio.py**: `backfill_portfolio_snapshots` 신규 유저 처리 추가
+  - 스냅샷 0건인 유저: `stocks.created_at` 최솟값부터 시작, 최대 365일 백필
+  - 기존 유저: 마지막 snapshot_date 다음날부터, 최대 30일 (변경 없음)
+  - 반환값에 `is_new_user: bool` 추가
+
+---
+
 ## [2026-06-08] — feat: 로그인 시 포트폴리오 스냅샷 자동 백필
 
 ### 변경 내용
