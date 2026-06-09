@@ -4,6 +4,17 @@
 
 ---
 
+## [2026-06-09] — fix: 백필 엣지케이스 수정 (avg=0.0 False 평가 버그, 전량 매도 시 빈 스냅샷 저장)
+
+### 변경 내용
+- **routers/portfolio.py** `backfill_portfolio_snapshots()`:
+  - `if avg:` → `if avg is not None:` 변경 — avg=0.0일 때 Python falsy 평가로 실현손익 계산이 누락되는 버그 수정
+  - `if not groups: continue` → `if not groups and total_realized_pl == 0.0: continue` 변경
+    - 특정 날짜에 보유 종목이 없어도 realized_pl이 있으면 빈 스냅샷(groups=[]) 저장
+    - 전량 매도 완료 후 날짜가 차트에서 공백으로 빠지는 버그 방지
+
+---
+
 ## [2026-06-08] — fix: 주식 결산 프로세스 개선 — realized_pl 정확 계산 및 DB 컬럼 추가
 
 ### 변경 내용

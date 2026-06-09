@@ -1,6 +1,16 @@
 # 프로젝트 결정 기록
 
 ---
+## 2026-06-09 — 백필 엣지케이스 수정: avg=0.0 falsy 평가 버그, 전량 매도 시 빈 스냅샷 저장 조건 변경
+**결정:** (1) `if avg:` → `if avg is not None:` 변경하여 평균가가 정확히 0.0인 경우도 실현손익 계산에 포함. (2) `if not groups: continue` → `if not groups and total_realized_pl == 0.0: continue` 변경하여 보유 종목이 없어도 실현 손익이 있으면 빈 스냅샷(groups=[])을 저장.
+**이유:** Python의 falsy 평가에서 `0.0`은 거짓으로 평가되므로 `if avg:` 조건은 avg=0.0일 때 실현손익 계산을 건너뜀. 명시적 `is not None` 체크로 zero 값도 정상 처리. 또한 전량 매도 완료 후 날짜들의 스냅샷 누락으로 차트에 시각적 공백이 발생하는 문제를 해결하기 위해 realized_pl 여부로 스냅샷 저장 여부를 판단.
+**대안:**
+- avg=0.0 처리 안 함: 특정 시나리오(0.0 평균가)에서 실현손익 오류 계속 발생
+- 매도 이벤트 시에만 스냅샷 저장: 조회 시 특정 날짜 데이터 누락 가능성
+- 선택한 방식: 명시적 None 체크와 realized_pl 기반 저장 조건으로 데이터 정확성과 연속성 보장
+**파일:** `routers/portfolio.py`
+
+---
 ## 2026-06-09 — DB_SCHEMA.md: `daily_portfolio_snapshot` 테이블에 realized_pl 컬럼 및 backfill 저장 주체 추가
 **결정:** `daily_portfolio_snapshot` 테이블 스키마에 (1) `realized_pl` 컬럼 추가 (FLOAT, NULLABLE): 해당 날짜까지 누적 실현 손익 합계, (2) `saved_by` 열거값 확장: `frontend` / `scheduler`에서 `frontend` / `backfill` / `scheduler`로 변경.
 **이유:** 포트폴리오 성과 분석을 위해 평가손익(unrealized P&L)과 별도로 실현손익(realized P&L)을 추적해야 함. `backfill` 값 추가는 백필 프로세스(`backfill_portfolio_snapshots()`)가 과거 스냅샷을 재구성할 때 저장 주체를 명확히 하기 위함.
@@ -19,6 +29,13 @@
 - 프론트에서만 관리: 백필 데이터 일관성 문제
 - 선택한 방식: 스냅샷 저장 시점에 계산하여 DB에 저장, 조회 성능 최적화
 **파일:** C:\Users\Jason\Desktop\dashboard\routers\portfolio.py
+
+---
+## 2026-06-09 — 전량 매도 날짜의 빈 스냅샷 저장 조건: realized_pl > 0이면 저장
+**결정:** `backfill_portfolio_snapshots()`에서 `if not groups: continue` 조건을 `if not groups and total_realized_pl == 0.0: continue`로 변경. 보유 종목이 없어도 realized_pl이 존재하면 groups=[]인 빈 스냅샷을 저장.
+**이유:** 전량 매도 완료 후 날짜들이 스냅샷에 누락되면 차트에서 해당 기간이 공백으로 표시됨. realized_pl은 실제로 발생한 손익이므로 기록되어야 함.
+**대안:** 스냅샷 저장을 건너뛰고 차트 레이어에서 보간(interpolation) — 프론트 로직 복잡도 증가; 선택한 방식이 단순하고 정확함.
+**파일:** `routers/portfolio.py`
 
 ---
 ## 2026-06-08 — realized_pl 계산 시점: qty 체크 전에 수행하여 전량 매도 종목도 반영
@@ -40,6 +57,16 @@
 **이유:** 전량 매도된 종목(quantity=0)도 매도 이전 날짜의 과거 백필에서 정확히 반영되어야 함. `stocks.quantity>0` 필터는 현재 잔고 기준이므로 과거 결산이 왜곡됨.
 **대안:** stocks 테이블에 is_active 플래그 추가 → schema 변경 필요; 기존 portfolio_groups JSON 활용이 추가 변경 없이 가장 실용적.
 **파일:** `routers/portfolio.py`
+
+---
+## 2026-06-09 — 백필 시 empty groups 스냅샷 저장 조건 변경: realized_pl 여부로 판단
+**결정:** `backfill_portfolio_snapshots()` 함수의 스냅샷 스킵 조건을 `if not groups:` 에서 `if not groups and total_realized_pl == 0.0:` 로 변경. 보유 종목이 없어도 실현 손익이 있으면 스냅샷을 저장하도록 수정.
+**이유:** 전량 매도 완료 이후 날짜들에서 스냅샷이 저장되지 않아 차트에 시각적 공백이 발생하는 버그 방지. 실현 손익이 있다는 것은 그 날짜까지 거래가 있었다는 의미이므로, 포트폴리오 시계열 데이터의 연속성 보장.
+**대안:**
+- 항상 스냅샷 저장 (매일): 불필요한 empty 스냅샷 증가, DB 용량 낭비
+- 매도 이벤트 시에만 스냅샷 저장: 특정 날짜 조회 시 데이터 누락 가능성
+- 선택한 방식: realized_pl 존재 여부를 기준으로 조건부 저장, 데이터 완결성과 효율성 병행
+**파일:** C:\Users\Jason\Desktop\dashboard\routers\portfolio.py
 
 ---
 ## 2024 — portfolio_groups을 포트폴리오 스냅샷의 primary source로 전환
