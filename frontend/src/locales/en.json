@@ -533,7 +533,8 @@
     "filterByGroup": "By Group",
     "filterByCurrency": "By Currency",
     "allGroups": "All",
-    "allCurrencies": "All"
+    "allCurrencies": "All",
+    "noData": "No data for selected filters"
   },
 
   "chart": {

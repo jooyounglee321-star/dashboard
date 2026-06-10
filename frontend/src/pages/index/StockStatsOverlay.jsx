@@ -173,6 +173,21 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
 
     const { grpTotals, stockValues, stockEvals, lineDatasets, fxRate, groupTickers } = computed
 
+    // ── 필터 진단 로그 ──
+    console.log('[StockStats] 필터 상태:', { overviewGroup, overviewCurrency, overviewPeriod })
+    console.log('[StockStats] lineDatasets:', lineDatasets?.map(d => ({ label: d.label, pts: d.data?.length })))
+    console.log('[StockStats] stockEvals:', stockEvals?.map(s => ({ label: s.label, groupName: s.groupName })))
+    console.log('[StockStats] groupTickers:', groupTickers)
+    if (overviewGroup) {
+      const filteredLine = lineDatasets?.filter(d => d.label === overviewGroup)
+      const filteredTickers = new Set(groupTickers?.[overviewGroup] ?? [])
+      const filteredBar = stockEvals?.filter(s => filteredTickers.has(s.label))
+      const filteredPie = stockValues?.filter(s => s.groupName === overviewGroup)
+      console.log('[StockStats] 그룹 필터 후 lineDatasets:', filteredLine?.length, filteredLine?.map(d => d.label))
+      console.log('[StockStats] 그룹 필터 후 barEvals:', filteredBar?.length, filteredBar?.map(s => s.label))
+      console.log('[StockStats] 그룹 필터 후 pieStocks:', filteredPie?.length, filteredPie?.map(s => s.name))
+    }
+
     // 기간 cutoff
     const now = new Date()
     const cutoff = overviewPeriod === '1m'
@@ -386,8 +401,38 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
 
   if (!isOpen) return null
 
-  const { grpTotals, grandUSD, grandKRW, totalKRW, stockEvals, lineDatasets, fxRate } = computed || {}
+  const { grpTotals, grandUSD, grandKRW, totalKRW, stockEvals, lineDatasets, fxRate, groupTickers, stockValues } = computed || {}
   const groupNames = stockData?.groups?.map(g => g.name) ?? []
+
+  // ── 필터 적용 후 유효 데이터 (JSX 조건부 렌더링 + useEffect 공유) ──
+  const now = new Date()
+  const periodCutoff = overviewPeriod === '1m'
+    ? new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString().slice(0, 10)
+    : overviewPeriod === '3m'
+      ? new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()).toISOString().slice(0, 10)
+      : null
+
+  const effectiveLineDatasets = (() => {
+    if (!lineDatasets) return []
+    let ds = overviewGroup ? lineDatasets.filter(d => d.label === overviewGroup) : lineDatasets
+    if (periodCutoff) {
+      ds = ds.map(d => ({ ...d, data: d.data.filter(pt => pt.x >= periodCutoff) })).filter(d => d.data.length > 0)
+    }
+    return ds
+  })()
+
+  const effectiveStockEvals = (() => {
+    if (!stockEvals) return []
+    if (!overviewGroup) return stockEvals
+    const tickers = new Set(groupTickers?.[overviewGroup] ?? [])
+    return stockEvals.filter(s => tickers.has(s.label))
+  })()
+
+  const effectivePieItems = (() => {
+    if (!computed) return []
+    if (overviewGroup) return (stockValues ?? []).filter(s => s.groupName === overviewGroup)
+    return grpTotals ?? []
+  })()
 
   // 공통 스타일
   const selStyle = {
@@ -489,18 +534,20 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               <div className="stats-section-title">
                 {overviewGroup ? `${overviewGroup} — ${t(lang, 'statsPieTitle')}` : t(lang, 'statsPieTitle')}
               </div>
-              <div className="stats-chart-wrap pie-wrap">
-                <canvas ref={pieRef} />
-              </div>
+              {effectivePieItems.length > 0
+                ? <div className="stats-chart-wrap pie-wrap"><canvas ref={pieRef} /></div>
+                : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
+              }
             </div>
 
             {/* ── 라인차트 ── */}
             {lineDatasets?.length > 0 && (
               <div className="stats-section">
                 <div className="stats-section-title">{t(lang, 'statsLineTitle')}</div>
-                <div className="stats-chart-wrap">
-                  <canvas ref={lineRef} />
-                </div>
+                {effectiveLineDatasets.length > 0
+                  ? <div className="stats-chart-wrap"><canvas ref={lineRef} /></div>
+                  : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
+                }
               </div>
             )}
 
@@ -508,9 +555,10 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             {stockEvals?.length > 0 && (
               <div className="stats-section">
                 <div className="stats-section-title">{t(lang, 'statsBarTitle')}</div>
-                <div className="stats-chart-wrap">
-                  <canvas ref={barRef} />
-                </div>
+                {effectiveStockEvals.length > 0
+                  ? <div className="stats-chart-wrap"><canvas ref={barRef} /></div>
+                  : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
+                }
               </div>
             )}
           </>

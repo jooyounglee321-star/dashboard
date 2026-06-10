@@ -533,7 +533,8 @@
     "filterByGroup": "그룹별",
     "filterByCurrency": "통화별",
     "allGroups": "전체",
-    "allCurrencies": "전체"
+    "allCurrencies": "전체",
+    "noData": "해당 조건에 데이터가 없습니다"
   },
 
   "chart": {
