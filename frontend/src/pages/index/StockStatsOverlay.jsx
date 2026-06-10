@@ -53,9 +53,18 @@ function computeStockStats(stockData) {
     })
   })
 
+  // 전체 그룹의 모든 매수 날짜 수집 → 전역 오름차순 정렬
+  const allDateSet = new Set()
+  groups.forEach(g => {
+    g.stocks.forEach(s => {
+      ;(s.purchases || []).forEach(p => { if (p.date) allDateSet.add(p.date) })
+    })
+  })
+  const globalDates = [...allDateSet].sort()   // YYYY-MM-DD 문자열 정렬 = 시간순
+
   const lineDatasets = []
   groups.forEach((g, gi) => {
-    // 날짜별 합산 map
+    // 그룹 내 날짜별 매수금액 합산 (date 없는 항목 제외)
     const dailyMap = {}
     g.stocks.forEach(s => {
       ;(s.purchases || []).filter(p => p.date).forEach(p => {
@@ -64,10 +73,18 @@ function computeStockStats(stockData) {
         dailyMap[p.date] = (dailyMap[p.date] ?? 0) + amt
       })
     })
-    const dates = Object.keys(dailyMap).sort()
-    if (!dates.length) return
+    if (!Object.keys(dailyMap).length) return
+
+    // 전역 날짜 축 기준으로 누적합 계산 (carry-forward: 이전값 유지)
     let cum = 0
-    const pts = dates.map(date => { cum += dailyMap[date]; return { x: date, y: Math.round(cum) } })
+    let started = false
+    const pts = []
+    globalDates.forEach(date => {
+      if (dailyMap[date]) { cum += dailyMap[date]; started = true }
+      if (started) pts.push({ x: date, y: Math.round(cum) })
+    })
+    if (!pts.length) return
+
     lineDatasets.push({
       label: g.name,
       data: pts,
