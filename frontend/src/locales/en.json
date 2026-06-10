@@ -544,9 +544,10 @@
     "newsLangKo": "Korean",
     "newsLangEn": "English"
   },
-  "stockNewsReady": "News not configured...",
+  "stockNewsSetup": "Set up news source",
+  "stockNewsPrompt": "Click to see the latest news",
   "stockNewsLoading": "Loading news...",
-  "stockNewsError": "Unable to load news",
+  "stockNewsError": "Unable to load news (retry)",
 
   "chart": {
     "pieTitle":            "Expense by Category",
