@@ -4,6 +4,15 @@
 
 ---
 
+## [2026-06-09] — fix: 백필 LIMIT 중복 SQL 에러 수정, 제약조건 중복 추가 에러 무시 처리
+
+### 변경 내용
+- **main.py** `_migrate_add_user_id`에서 `ADD CONSTRAINT uq_user_snapshot_date` → `ADD CONSTRAINT IF NOT EXISTS uq_user_snapshot_date`로 변경 — 서버 재시작 시 이미 존재하는 제약조건 추가 시도로 발생하는 에러/트랜잭션 오염 방지
+- **main.py** 제약조건 추가 실패 시 명시적 `conn.rollback()` 추가
+- 참고: `portfolio.py` 전체 스캔 결과 현재 코드에는 LIMIT 중복 구문 없음 (이전 배포 버전에서 발생한 에러로 추정)
+
+---
+
 ## [2026-06-09] — fix: 백필 snapshot_date NULL 저장 버그 수정
 
 ### 변경 내용
