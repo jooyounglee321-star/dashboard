@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { t } from './i18n'
 
 const GRP_COLORS = [
@@ -35,6 +36,69 @@ function calcStock(s, priceMap) {
   const evalPL = avgCost > 0 ? (cur - avgCost) * holdQty : null
   const evalPct = avgCost > 0 ? ((cur - avgCost) / avgCost * 100) : null
   return { holdQty, avgCost, cur, chP, val, evalPL, evalPct, realizedPL, totalSellQty, isLive }
+}
+
+const NEWS_TTL = 5 * 60 * 1000 // 5분 캐시
+
+function StockNewsRow({ newsConfig, lang }) {
+  const [status, setStatus] = useState('idle') // idle | loading | ok | err
+  const [news,   setNews]   = useState(null)
+
+  const query  = newsConfig?.query  || ''
+  const source = newsConfig?.source || 'google'
+  const nLang  = newsConfig?.lang   || 'ko'
+
+  useEffect(() => {
+    if (!newsConfig || !query) return
+    const cacheKey = `news:${source}:${nLang}:${query}`
+    try {
+      const cached = sessionStorage.getItem(cacheKey)
+      if (cached) {
+        const { data, ts } = JSON.parse(cached)
+        if (Date.now() - ts < NEWS_TTL) { setNews(data); setStatus('ok'); return }
+      }
+    } catch {}
+    setStatus('loading')
+    const token = localStorage.getItem('token') || ''
+    fetch(`/api/stocks/news?query=${encodeURIComponent(query)}&source=${source}&lang=${nLang}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(data => {
+        try { sessionStorage.setItem(cacheKey, JSON.stringify({ data, ts: Date.now() })) } catch {}
+        setNews(data); setStatus('ok')
+      })
+      .catch(() => setStatus('err'))
+  }, [query, source, nLang]) // eslint-disable-line
+
+  const base = {
+    background: 'var(--bg2, #f9fafb)', borderRadius: 6,
+    padding: '0.28rem 0.6rem', marginTop: '0.45rem',
+    fontSize: '0.7rem', color: 'var(--ink3)',
+  }
+
+  if (!newsConfig || !query) {
+    return <div style={base}>📰 {t(lang, 'stockNewsReady')}</div>
+  }
+  if (status === 'idle' || status === 'loading') {
+    return <div style={base}>📰 {t(lang, 'stockNewsLoading')}</div>
+  }
+  if (status === 'err' || !news) {
+    return <div style={base}>📰 {t(lang, 'stockNewsError')}</div>
+  }
+  return (
+    <a href={news.url} target="_blank" rel="noreferrer" style={{
+      ...base, display: 'block', color: 'var(--ink2)',
+      textDecoration: 'none', overflow: 'hidden',
+      textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+    }}
+      title={news.title}
+      onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent)'; e.currentTarget.style.textDecoration = 'underline' }}
+      onMouseLeave={e => { e.currentTarget.style.color = 'var(--ink2)'; e.currentTarget.style.textDecoration = 'none' }}
+    >
+      📰 {news.title}{news.published ? ` (${news.published})` : ''}
+    </a>
+  )
 }
 
 const btnStyle = {
@@ -155,13 +219,7 @@ export default function StockCard({ groups, priceMap, fxRate, loading, onOpenSta
                 </div>
               </div>
             </div>
-            {/* 뉴스 placeholder */}
-            <div data-news-ticker={s.ticker} style={{
-              background: 'var(--bg2, #f9fafb)', borderRadius: 6, padding: '0.28rem 0.6rem',
-              marginTop: '0.45rem', fontSize: '0.7rem', color: 'var(--ink3)',
-            }}>
-              📰 뉴스 준비 중...
-            </div>
+            <StockNewsRow newsConfig={s.news_config} lang={lang} />
           </li>
         )
       } else {
