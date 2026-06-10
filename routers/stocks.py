@@ -326,31 +326,19 @@ async def get_stock_history(
         raise HTTPException(status_code=503, detail=str(e))
 
 
-# ── 뉴스 캐시 (5분 TTL) ────────────────────────────────────────────────────
-_news_cache: dict[str, tuple[dict, float]] = {}
-_NEWS_CACHE_TTL = 300
-
-
-def _fetch_google_rss(query: str, lang: str) -> dict | None:
+def _fetch_google_rss(query: str, lang: str, count: int = 5) -> list[dict]:
     if lang == "ko":
         url = f"https://news.google.com/rss/search?q={urllib.parse.quote(query)}&hl=ko&gl=KR&ceid=KR:ko"
     else:
         url = f"https://news.google.com/rss/search?q={urllib.parse.quote(query)}&hl=en&gl=US&ceid=US:en"
     feed = feedparser.parse(url)
-    if not feed.entries:
-        return None
-    e = feed.entries[0]
-    pub = ""
-    if hasattr(e, "published_parsed") and e.published_parsed:
-        pub = dt.date(*e.published_parsed[:3]).isoformat()
-    link = e.get("link", "")
-    return {"title": e.get("title", ""), "url": link, "published": pub, "source": "Google News"}
-
-
-def _fetch_naver_rss(query: str) -> dict | None:
-    url = f"https://news.naver.com/search/results.nhn?query={urllib.parse.quote(query)}&sort=0&photo=0&field=0&reporter_article=&pd=0&ds=&de=&docid=&related=0&statnews=0&part=&section=0&view=all&readNews="
-    # Naver does not provide a public RSS search endpoint — fall back to Google
-    return None
+    results = []
+    for e in feed.entries[:count]:
+        pub = ""
+        if hasattr(e, "published_parsed") and e.published_parsed:
+            pub = dt.date(*e.published_parsed[:3]).isoformat()
+        results.append({"title": e.get("title", ""), "url": e.get("link", ""), "published": pub, "source": "Google News"})
+    return results
 
 
 @router.get("/news")
@@ -358,31 +346,19 @@ async def get_stock_news(
     query: str = Query(..., description="검색어"),
     source: str = Query("google", description="google 또는 naver"),
     lang: str = Query("ko", description="ko 또는 en"),
+    count: int = Query(5, ge=1, le=10, description="반환할 뉴스 수"),
 ):
-    """종목 관련 최신 뉴스 1건을 반환합니다 (Google/Naver RSS)."""
-    cache_key = f"{source}:{lang}:{query}"
-    now = time.time()
-    if cache_key in _news_cache:
-        item, ts = _news_cache[cache_key]
-        if now - ts < _NEWS_CACHE_TTL:
-            return item
-
+    """종목 관련 최신 뉴스를 반환합니다 (Google RSS, 최대 10건)."""
     def _fetch():
-        if source == "naver":
-            result = _fetch_naver_rss(query)
-            if result is None:
-                result = _fetch_google_rss(query, "ko")
-        else:
-            result = _fetch_google_rss(query, lang)
-        return result
+        effective_lang = "ko" if source == "naver" else lang
+        return _fetch_google_rss(query, effective_lang, count)
 
     try:
         loop = asyncio.get_event_loop()
-        item = await loop.run_in_executor(_executor, _fetch)
-        if item is None:
+        items = await loop.run_in_executor(_executor, _fetch)
+        if not items:
             raise HTTPException(status_code=404, detail="뉴스를 찾을 수 없습니다")
-        _news_cache[cache_key] = (item, now)
-        return item
+        return items
     except HTTPException:
         raise
     except Exception as e:
