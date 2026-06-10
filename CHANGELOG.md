@@ -4,6 +4,15 @@
 
 ---
 
+## [2026-06-10] — fix: StockCard 헤더 빈 영역 cursor-pointer 제거
+
+### 변경 내용
+- **StockCard.jsx** wrapper에서 `stock-card-clickable` 클래스 제거 → 헤더 빈 영역 cursor 기본값(auto)으로 복원
+- `hdr` 변수에서도 `stock-card-clickable` 제거 (모바일)
+- "↗ 통계" / "⚙ 내 주식 설정" 버튼에만 `cursor:pointer` 유지 (btnStyle)
+
+---
+
 ## [2026-06-10] — design: StockCard 종목 레이아웃 개편 (뉴스 placeholder, 종목명 말줄임, 금액 우측 정렬)
 
 ### 변경 내용
