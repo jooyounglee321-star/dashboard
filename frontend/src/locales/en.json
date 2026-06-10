@@ -522,7 +522,14 @@
     "displayUSD": "$ USD",
     "displayKRW": "₩ KRW",
     "byGroup": "By Group",
-    "byCurrency": "By Currency"
+    "byCurrency": "By Currency",
+    "currentTab": "Overview",
+    "historyTab": "History",
+    "highestAsset": "Highest Asset",
+    "lowestAsset": "Lowest Asset",
+    "periodReturn": "Period Return",
+    "savedBy": "Saved By",
+    "noHistory": "No history data yet"
   },
 
   "chart": {
