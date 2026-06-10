@@ -4,6 +4,18 @@
 
 ---
 
+## [2026-06-09] — feat: 종목별 평가손익 차트 USD/KRW 선택 버튼 추가 및 종목명 표시 수정
+
+### 변경 내용
+- **StockStatsOverlay.jsx** 바차트 상단에 `[₩ KRW 기준]` / `[$ USD 기준]` 토글 버튼 추가 (기본값: KRW)
+  - KRW 선택 시: USD 종목 평가손익을 fxRate로 KRW 환산하여 통일된 y축으로 표시
+  - USD 선택 시: KRW 종목 평가손익을 fxRate로 USD 환산하여 표시
+  - y축 레이블도 선택 통화에 맞게 변경 (`₩` 또는 `$`)
+- **StockStatsOverlay.jsx** 바차트 x축 레이블을 ticker → `s.name` (없으면 ticker 폴백)으로 변경
+- **ko.json / en.json** `stock.displayKRW`, `stock.displayUSD` i18n 키 추가
+
+---
+
 ## [2026-06-09] — fix: 주식 통계 차트 USD/KRW 판단을 그룹명 대신 currency 필드 기반으로 수정
 
 ### 변경 내용
