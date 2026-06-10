@@ -548,6 +548,7 @@
   "stockNewsPrompt": "Click to see the latest news",
   "stockNewsLoading": "Loading news...",
   "stockNewsError": "Unable to load news (retry)",
+  "stockNewsRefresh": "Refresh",
 
   "chart": {
     "pieTitle":            "Expense by Category",

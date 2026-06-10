@@ -38,12 +38,10 @@ function calcStock(s, priceMap) {
   return { holdQty, avgCost, cur, chP, val, evalPL, evalPct, realizedPL, totalSellQty, isLive }
 }
 
-const NEWS_TTL = 5 * 60 * 1000
-
 function StockNewsRow({ newsConfig, lang, onOpenSettings }) {
   // status: 'ready' | 'loading' | 'ok' | 'err'
-  const [status, setStatus] = useState('ready')
-  const [news,   setNews]   = useState(null)
+  const [status,   setStatus]   = useState('ready')
+  const [newsList, setNewsList] = useState([]) // 항상 배열
 
   const query  = newsConfig?.query  || ''
   const source = newsConfig?.source || 'google'
@@ -73,23 +71,16 @@ function StockNewsRow({ newsConfig, lang, onOpenSettings }) {
   }
 
   function fetchNews() {
-    const cacheKey = `news:${source}:${nLang}:${query}`
-    try {
-      const cached = sessionStorage.getItem(cacheKey)
-      if (cached) {
-        const { data, ts } = JSON.parse(cached)
-        if (Date.now() - ts < NEWS_TTL) { setNews(data); setStatus('ok'); return }
-      }
-    } catch {}
+    // 캐시 없음 — 항상 새로 fetch
     setStatus('loading')
     const token = localStorage.getItem('token') || ''
-    fetch(`/api/stocks/news?query=${encodeURIComponent(query)}&source=${source}&lang=${nLang}`, {
+    fetch(`/api/stocks/news?query=${encodeURIComponent(query)}&source=${source}&lang=${nLang}&count=5`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then(data => {
-        try { sessionStorage.setItem(cacheKey, JSON.stringify({ data, ts: Date.now() })) } catch {}
-        setNews(data); setStatus('ok')
+        setNewsList(Array.isArray(data) ? data : [data])
+        setStatus('ok')
       })
       .catch(() => setStatus('err'))
   }
@@ -111,10 +102,10 @@ function StockNewsRow({ newsConfig, lang, onOpenSettings }) {
     return <div style={{ ...base, color: 'var(--ink3)', cursor: 'default' }}>📰 {t(lang, 'stockNewsLoading')}</div>
   }
 
-  if (status === 'err' || !news) {
+  if (status === 'err' || !newsList.length) {
     return (
       <button style={{ ...base, color: '#ef4444', cursor: 'pointer' }}
-        onClick={e => { e.stopPropagation(); setStatus('ready'); setNews(null) }}
+        onClick={e => { e.stopPropagation(); setStatus('ready'); setNewsList([]) }}
         onMouseEnter={e => e.currentTarget.style.color = '#b91c1c'}
         onMouseLeave={e => e.currentTarget.style.color = '#ef4444'}
       >
@@ -123,16 +114,28 @@ function StockNewsRow({ newsConfig, lang, onOpenSettings }) {
     )
   }
 
-  // 뉴스 로드 성공 — 클릭 시 새 탭
+  // 뉴스 목록 표시 (최대 5개) + 새로고침 버튼
   return (
-    <a href={news.url} target="_blank" rel="noreferrer"
-      style={{ ...base, color: '#3b82f6', cursor: 'pointer' }}
-      title={news.title}
-      onMouseEnter={e => { e.currentTarget.style.color = '#1d4ed8'; e.currentTarget.style.textDecoration = 'underline' }}
-      onMouseLeave={e => { e.currentTarget.style.color = '#3b82f6'; e.currentTarget.style.textDecoration = 'none' }}
-    >
-      📰 {news.title}{news.published ? ` (${news.published})` : ''}
-    </a>
+    <div style={{ marginTop: '0.45rem' }}>
+      {newsList.map((item, idx) => (
+        <a key={idx} href={item.url} target="_blank" rel="noreferrer"
+          style={{ ...base, marginTop: idx === 0 ? 0 : '0.18rem', color: '#3b82f6', cursor: 'pointer' }}
+          title={item.title}
+          onMouseEnter={e => { e.currentTarget.style.color = '#1d4ed8'; e.currentTarget.style.textDecoration = 'underline' }}
+          onMouseLeave={e => { e.currentTarget.style.color = '#3b82f6'; e.currentTarget.style.textDecoration = 'none' }}
+        >
+          📰 {item.title}{item.published ? ` (${item.published})` : ''}
+        </a>
+      ))}
+      <button
+        onClick={e => { e.stopPropagation(); fetchNews() }}
+        style={{ ...base, marginTop: '0.18rem', color: 'var(--ink3)', fontSize: '0.65rem', cursor: 'pointer' }}
+        onMouseEnter={e => e.currentTarget.style.color = '#3b82f6'}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--ink3)'}
+      >
+        🔄 {t(lang, 'stockNewsRefresh')}
+      </button>
+    </div>
   )
 }
 
