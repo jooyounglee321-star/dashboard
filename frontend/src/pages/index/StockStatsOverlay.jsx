@@ -86,6 +86,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   const barRef = useRef(null)
   const chartsRef = useRef([])
   const [barMode, setBarMode] = useState('KRW')
+  const [summaryTab, setSummaryTab] = useState('group')
 
   const computed = useMemo(() => computeStockStats(stockData), [stockData])
 
@@ -219,22 +220,67 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             {/* Summary */}
             <div className="stats-section">
               <div className="stats-section-title">{t(lang, 'statsSummaryTitle')}</div>
-              <div className="stats-summary-grid">
-                <div className="stats-summary-card">
-                  <div className="stats-summary-label">{t(lang, 'statsUSDGroup')}</div>
-                  <div className="stats-summary-value">${fmtUSD(grandUSD ?? 0)}</div>
-                </div>
-                <div className="stats-summary-card">
-                  <div className="stats-summary-label">{t(lang, 'statsKRWGroup')}</div>
-                  <div className="stats-summary-value">₩{fmtKRW(grandKRW ?? 0)}</div>
-                </div>
-                <div className="stats-summary-card">
-                  <div className="stats-summary-label">
-                    {t(lang, 'statsKRWEquiv')}{fxRate ? ` ($1=₩${fmtKRW(fxRate)})` : ` (${t(lang, 'statsFxNone')})`}
-                  </div>
-                  <div className="stats-summary-value">₩{fmtKRW(totalKRW ?? 0)}</div>
-                </div>
+              {/* 탭 버튼 */}
+              <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.75rem' }}>
+                {[['group', 'stock.byGroup'], ['currency', 'stock.byCurrency']].map(([key, i18nKey]) => (
+                  <button
+                    key={key}
+                    onClick={() => setSummaryTab(key)}
+                    style={{
+                      padding: '0.3rem 0.85rem',
+                      fontSize: '0.8rem',
+                      fontWeight: summaryTab === key ? 700 : 400,
+                      border: `1.5px solid ${summaryTab === key ? 'var(--accent)' : 'var(--border)'}`,
+                      borderRadius: 6,
+                      background: summaryTab === key ? 'var(--accent)' : 'transparent',
+                      color: summaryTab === key ? '#fff' : 'var(--ink3)',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {t(lang, i18nKey)}
+                  </button>
+                ))}
               </div>
+
+              {summaryTab === 'group' ? (
+                /* 그룹별 탭 */
+                <div className="stats-summary-grid">
+                  {(grpTotals ?? []).map((g, i) => (
+                    <div className="stats-summary-card" key={i}>
+                      <div className="stats-summary-label">{g.name} ({g.currency})</div>
+                      <div className="stats-summary-value">
+                        {g.currency === 'USD' ? `$${fmtUSD(g.total)}` : `₩${fmtKRW(g.total)}`}
+                      </div>
+                    </div>
+                  ))}
+                  <div className="stats-summary-card">
+                    <div className="stats-summary-label">
+                      {t(lang, 'statsKRWEquiv')}{fxRate ? ` ($1=₩${fmtKRW(fxRate)})` : ` (${t(lang, 'statsFxNone')})`}
+                    </div>
+                    <div className="stats-summary-value">₩{fmtKRW(totalKRW ?? 0)}</div>
+                  </div>
+                </div>
+              ) : (
+                /* 통화별 탭 */
+                <div className="stats-summary-grid">
+                  <div className="stats-summary-card">
+                    <div className="stats-summary-label">{t(lang, 'statsUSDGroup')}</div>
+                    <div className="stats-summary-value">${fmtUSD(grandUSD ?? 0)}</div>
+                  </div>
+                  <div className="stats-summary-card">
+                    <div className="stats-summary-label">{t(lang, 'statsKRWGroup')}</div>
+                    <div className="stats-summary-value">₩{fmtKRW(grandKRW ?? 0)}</div>
+                  </div>
+                  <div className="stats-summary-card">
+                    <div className="stats-summary-label">
+                      {t(lang, 'statsKRWEquiv')}{fxRate ? ` ($1=₩${fmtKRW(fxRate)})` : ` (${t(lang, 'statsFxNone')})`}
+                    </div>
+                    <div className="stats-summary-value">₩{fmtKRW(totalKRW ?? 0)}</div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Pie chart */}

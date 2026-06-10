@@ -520,7 +520,9 @@
 
   "stock": {
     "displayUSD": "$ USD",
-    "displayKRW": "₩ KRW"
+    "displayKRW": "₩ KRW",
+    "byGroup": "By Group",
+    "byCurrency": "By Currency"
   },
 
   "chart": {
