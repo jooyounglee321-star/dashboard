@@ -118,7 +118,11 @@ function computeStockStats(stockData, userJoinDate) {
     })
   })
 
-  return { grpTotals, grandUSD, grandKRW, totalKRW, stockEvals, lineDatasets, fxRate }
+  // 그룹명 → ticker[] 맵 (바차트 그룹 필터용)
+  const groupTickers = {}
+  groups.forEach(g => { groupTickers[g.name] = g.stocks.map(s => s.ticker) })
+
+  return { grpTotals, grandUSD, grandKRW, totalKRW, stockEvals, lineDatasets, fxRate, groupTickers }
 }
 
 export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = 'ko' }) {
@@ -138,6 +142,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   const [histPage, setHistPage] = useState(0)
   const [histGroupFilter, setHistGroupFilter] = useState('')
   const [histCurrencyFilter, setHistCurrencyFilter] = useState('')
+  const [barGroupFilter, setBarGroupFilter] = useState('')
   const HIST_PAGE_SIZE = 20
 
   // 회원가입일 로드 (localStorage 우선 → /api/auth/me 폴백)
@@ -215,9 +220,13 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     }
 
     // Bar chart (unrealized P/L by stock)
-    if (barRef.current && stockEvals.length) {
+    // stockEvals.label = ticker; filter by matching ticker to selected group
+    const { groupTickers } = computed
+    const barGrpTickers = barGroupFilter ? new Set(groupTickers[barGroupFilter] ?? []) : null
+    const filteredEvals = barGrpTickers ? stockEvals.filter(s => barGrpTickers.has(s.label)) : stockEvals
+    if (barRef.current && filteredEvals.length) {
       // barMode에 따라 evalPL 환산
-      const convertedEvals = stockEvals.map(s => {
+      const convertedEvals = filteredEvals.map(s => {
         if (barMode === 'KRW' && !s.isKRW && fxRate) {
           return { ...s, evalPL: s.evalPL * fxRate, sym: '₩', isKRW: true }
         }
@@ -268,7 +277,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       chartsRef.current.forEach(c => c.destroy())
       chartsRef.current = []
     }
-  }, [isOpen, computed, lang, barMode, mainTab])
+  }, [isOpen, computed, lang, barMode, mainTab, barGroupFilter])
 
   // 히스토리 데이터 fetch
   useEffect(() => {
@@ -467,36 +476,50 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             )}
 
             {/* Bar chart */}
-            {stockEvals?.length > 0 && (
-              <div className="stats-section">
-                <div className="stats-section-title">{t(lang, 'statsBarTitle')}</div>
-                <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.75rem' }}>
-                  {['KRW', 'USD'].map(mode => (
-                    <button
-                      key={mode}
-                      onClick={() => setBarMode(mode)}
-                      style={{
-                        padding: '0.3rem 0.85rem',
-                        fontSize: '0.8rem',
-                        fontWeight: barMode === mode ? 700 : 400,
-                        border: `1.5px solid ${barMode === mode ? 'var(--accent)' : 'var(--border)'}`,
-                        borderRadius: 6,
-                        background: barMode === mode ? 'var(--accent)' : 'transparent',
-                        color: barMode === mode ? '#fff' : 'var(--ink3)',
-                        cursor: 'pointer',
-                        fontFamily: 'inherit',
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      {t(lang, mode === 'KRW' ? 'stock.displayKRW' : 'stock.displayUSD')}
-                    </button>
-                  ))}
+            {stockEvals?.length > 0 && (() => {
+              const barGroupNames = stockData?.groups?.map(g => g.name) ?? []
+              const barSelStyle = {
+                fontSize: '0.78rem', padding: '0.25rem 0.5rem', borderRadius: 6,
+                border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)',
+                fontFamily: 'inherit', cursor: 'pointer',
+              }
+              return (
+                <div className="stats-section">
+                  <div className="stats-section-title">{t(lang, 'statsBarTitle')}</div>
+                  {/* 필터 행: 그룹별 드롭다운 + 통화 버튼 */}
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>{t(lang, 'stock.filterByGroup')}:</span>
+                    <select value={barGroupFilter} onChange={e => setBarGroupFilter(e.target.value)} style={barSelStyle}>
+                      <option value="">{t(lang, 'stock.allGroups')}</option>
+                      {barGroupNames.map(name => <option key={name} value={name}>{name}</option>)}
+                    </select>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--ink3)', marginLeft: '0.3rem' }}>
+                      {t(lang, 'stock.filterByCurrency')}:
+                    </span>
+                    {['KRW', 'USD'].map(mode => (
+                      <button
+                        key={mode}
+                        onClick={() => setBarMode(mode)}
+                        style={{
+                          padding: '0.3rem 0.85rem', fontSize: '0.8rem',
+                          fontWeight: barMode === mode ? 700 : 400,
+                          border: `1.5px solid ${barMode === mode ? 'var(--accent)' : 'var(--border)'}`,
+                          borderRadius: 6,
+                          background: barMode === mode ? 'var(--accent)' : 'transparent',
+                          color: barMode === mode ? '#fff' : 'var(--ink3)',
+                          cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+                        }}
+                      >
+                        {t(lang, mode === 'KRW' ? 'stock.displayKRW' : 'stock.displayUSD')}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="stats-chart-wrap">
+                    <canvas ref={barRef} />
+                  </div>
                 </div>
-                <div className="stats-chart-wrap">
-                  <canvas ref={barRef} />
-                </div>
-              </div>
-            )}
+              )
+            })()}
           </>
         ))}
 
