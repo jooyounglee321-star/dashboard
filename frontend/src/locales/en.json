@@ -536,7 +536,13 @@
     "filterByCurrency": "By Currency",
     "allGroups": "All",
     "allCurrencies": "All",
-    "noData": "No data for selected filters"
+    "noData": "No data for selected filters",
+    "newsSettings": "News Settings",
+    "newsSource": "News Source",
+    "newsQuery": "Search Query",
+    "newsLang": "Language",
+    "newsLangKo": "Korean",
+    "newsLangEn": "English"
   },
 
   "chart": {

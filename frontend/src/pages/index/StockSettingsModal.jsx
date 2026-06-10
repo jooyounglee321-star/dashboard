@@ -292,6 +292,8 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
   const [totalMode,   setTotalMode]   = useState(() => ld(TOTAL_MODE_KEY, 'KRW'))
   const [expanded,    setExpanded]    = useState(new Set())
   const [deleteModal, setDeleteModal] = useState(null)
+  const [newsOpen,    setNewsOpen]    = useState(null) // stock id
+  const [newsDraft,   setNewsDraft]   = useState({})   // { source, query, lang }
 
   useEffect(() => {
     if (embedded || isOpen) loadGroups()
@@ -367,6 +369,25 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
     })
     setExpanded(prev => new Set([...prev, sid]))
   }
+  function openNewsSettings(s) {
+    const cfg = s.news_config || {}
+    setNewsDraft({
+      source: cfg.source || 'google',
+      query:  cfg.query  || s.name || s.ticker,
+      lang:   cfg.lang   || 'ko',
+    })
+    setNewsOpen(s.id)
+  }
+  function saveNewsConfig(gid, sid) {
+    const cfg = { source: newsDraft.source, query: newsDraft.query, lang: newsDraft.lang }
+    const next = groups.map(g => g.id !== gid ? g : {
+      ...g, stocks: g.stocks.map(s => s.id !== sid ? s : { ...s, news_config: cfg }),
+    })
+    saveGroupsToDB(next)
+    setNewsOpen(null)
+    showToast('✓ 뉴스 설정 저장', 'ok')
+  }
+
   function confirmDelStock(gid, sid) { setDeleteModal({ gid, sid }) }
   function doDelStock() {
     if (!deleteModal) return
@@ -443,8 +464,48 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
                                 {totalSellQty > 0 ? ` · 매도 ${totalSellQty.toLocaleString()}주` : ''}
                               </div>
                             </div>
+                            <button onClick={() => openNewsSettings(s)} style={{ padding: '0.16rem 0.48rem', fontSize: '0.72rem', cursor: 'pointer', border: '1px solid var(--border)', borderRadius: 5, background: 'transparent', color: 'var(--ink2)', fontFamily: 'inherit', transition: 'all 0.12s' }}>📰 {t(lang, 'stock.newsSettings')}</button>
                             <button onClick={() => confirmDelStock(g.id, s.id)} style={{ padding: '0.16rem 0.48rem', fontSize: '0.72rem', cursor: 'pointer', border: '1px solid #c0392b', borderRadius: 5, background: 'transparent', color: '#c0392b', fontFamily: 'inherit', transition: 'all 0.12s' }}>{t(lang, 'admin.delStock')}</button>
                           </div>
+                          {newsOpen === s.id && (
+                            <div style={{ borderTop: '1px solid var(--border)', background: '#f8faff', padding: '0.7rem 0.9rem', display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+                              {/* 뉴스 소스 */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--ink2)', minWidth: 60 }}>{t(lang, 'stock.newsSource')}</span>
+                                {[['google', 'Google'], ['naver', 'Naver']].map(([val, label]) => (
+                                  <label key={val} style={{ fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.28rem', cursor: 'pointer' }}>
+                                    <input type="radio" name={`ns-src-${s.id}`} value={val} checked={newsDraft.source === val}
+                                      onChange={() => setNewsDraft(d => ({ ...d, source: val, lang: val === 'naver' ? 'ko' : d.lang }))} />
+                                    {label}
+                                  </label>
+                                ))}
+                              </div>
+                              {/* 검색어 */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--ink2)', minWidth: 60 }}>{t(lang, 'stock.newsQuery')}</span>
+                                <input type="text" value={newsDraft.query}
+                                  onChange={e => setNewsDraft(d => ({ ...d, query: e.target.value }))}
+                                  style={{ flex: 1, minWidth: 140, padding: '0.28rem 0.5rem', fontSize: '0.8rem', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit' }} />
+                              </div>
+                              {/* 언어 */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--ink2)', minWidth: 60 }}>{t(lang, 'stock.newsLang')}</span>
+                                {[['ko', t(lang, 'stock.newsLangKo')], ['en', t(lang, 'stock.newsLangEn')]].map(([val, label]) => (
+                                  <label key={val} style={{ fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.28rem', cursor: newsDraft.source === 'naver' && val === 'en' ? 'not-allowed' : 'pointer', opacity: newsDraft.source === 'naver' && val === 'en' ? 0.4 : 1 }}>
+                                    <input type="radio" name={`ns-lang-${s.id}`} value={val} checked={newsDraft.lang === val}
+                                      disabled={newsDraft.source === 'naver' && val === 'en'}
+                                      onChange={() => setNewsDraft(d => ({ ...d, lang: val }))} />
+                                    {label}
+                                  </label>
+                                ))}
+                              </div>
+                              {/* 버튼 */}
+                              <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
+                                <button onClick={() => setNewsOpen(null)} style={{ padding: '0.3rem 0.8rem', fontSize: '0.78rem', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--card2)', color: 'var(--ink)', cursor: 'pointer' }}>{t(lang, 'common.cancel')}</button>
+                                <button onClick={() => saveNewsConfig(g.id, s.id)} style={{ padding: '0.3rem 0.9rem', fontSize: '0.78rem', border: 'none', borderRadius: 6, background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontWeight: 500 }}>{t(lang, 'common.save')}</button>
+                              </div>
+                            </div>
+                          )}
                           {isOpenS && <StockDetailPanel g={g} s={s} onUpdate={handleStockUpdate} />}
                         </div>
                       )
