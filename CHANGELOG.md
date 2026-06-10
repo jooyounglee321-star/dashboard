@@ -4,6 +4,13 @@
 
 ---
 
+## [2026-06-10] — design: StockCard 뉴스 placeholder 위치 종목 하단으로 이동
+
+### 변경 내용
+- **StockCard.jsx** 뉴스 placeholder 위치를 종목 정보 상단 → 하단으로 이동 (`marginBottom` → `marginTop`)
+
+---
+
 ## [2026-06-10] — feat: 내 주식 설정 버튼 클릭 시 보유주식관리 모달 표시
 
 ### 변경 내용
