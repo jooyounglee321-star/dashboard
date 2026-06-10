@@ -50,10 +50,10 @@ export default function StockCard({ groups, priceMap, fxRate, loading, onOpenSta
   const rowS = { display: 'flex', justifyContent: 'space-between', alignItems: 'center' }
   const divS = { height: '0.5px', background: 'rgba(255,255,255,0.18)', margin: '0.2rem 0' }
 
-  const hdr = isMobile ? 'm-card-header stock-card-clickable' : 'card-header'
+  const hdr = isMobile ? 'm-card-header' : 'card-header'
   const titleCls = isMobile ? 'm-card-title' : 'card-title'
   const body = isMobile ? 'm-card-body' : 'card-body'
-  const wrapper = isMobile ? 'm-card' : 'card card-stock stock-card-clickable'
+  const wrapper = isMobile ? 'm-card' : 'card card-stock'
 
   if (loading) {
     return (
