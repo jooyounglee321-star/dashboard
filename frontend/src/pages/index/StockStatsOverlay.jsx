@@ -158,7 +158,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   const computed = useMemo(() => computeStockStats(stockData, userJoinDate), [JSON.stringify(stockData), userJoinDate])
 
   useEffect(() => {
-    if (!isOpen || !computed) return
+    if (!isOpen || !computed || mainTab !== 'overview') return
 
     // Destroy previous chart instances
     chartsRef.current.forEach(c => c.destroy())
@@ -268,7 +268,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       chartsRef.current.forEach(c => c.destroy())
       chartsRef.current = []
     }
-  }, [isOpen, computed, lang, barMode])
+  }, [isOpen, computed, lang, barMode, mainTab])
 
   // 히스토리 데이터 fetch
   useEffect(() => {

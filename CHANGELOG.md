@@ -4,6 +4,14 @@
 
 ---
 
+## [2026-06-09] — fix: 현황 탭 차트 빈 화면 버그 수정 (mainTab 전환 후 차트 미생성)
+
+### 변경 내용
+- **StockStatsOverlay.jsx** 차트 생성 useEffect에 `mainTab` 의존성 추가 + `mainTab !== 'overview'` 조기 탈출 조건 추가
+- **원인:** `overview` → `history` → `overview` 탭 전환 시 canvas 요소가 unmount/remount 되지만 useEffect 의존성 배열에 `mainTab`이 없어 effect가 재실행되지 않아 빈 canvas에 Chart.js가 연결되지 않던 버그
+
+---
+
 ## [2026-06-09] — feat: 포트폴리오 히스토리 차트 그룹별/통화별 필터 및 기간 선택 추가
 
 ### 변경 내용
