@@ -4,6 +4,14 @@
 
 ---
 
+## [2026-06-09] — fix: 백필 snapshot_date NULL 저장 버그 수정
+
+### 변경 내용
+- **routers/portfolio.py** `backfill_portfolio_snapshots`의 `latest` 쿼리 및 `existing` 쿼리에 `.isnot(None)` 필터 추가 — PostgreSQL에서 `ORDER BY snapshot_date DESC`는 NULL을 FIRST로 반환하므로 NULL 행이 있으면 `latest.snapshot_date + timedelta(1)` 에서 TypeError 크래시 발생하는 버그 수정
+- **main.py** 서버 시작 시 `snapshot_date IS NULL` 행을 자동 정리하는 마이그레이션 함수 `_migrate_cleanup_null_snapshot_dates()` 추가
+
+---
+
 ## [2026-06-09] — fix: 누적 투자금액 차트 globalDates를 연속 날짜 배열로 변경
 
 ### 변경 내용
