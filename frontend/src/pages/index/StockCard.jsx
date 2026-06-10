@@ -124,14 +124,7 @@ export default function StockCard({ groups, priceMap, fxRate, loading, onOpenSta
             onMouseEnter={e => e.currentTarget.style.background = 'var(--bg2, #f9fafb)'}
             onMouseLeave={e => e.currentTarget.style.background = ''}
           >
-            {/* 뉴스 placeholder */}
-            <div data-news-ticker={s.ticker} style={{
-              background: 'var(--bg2, #f9fafb)', borderRadius: 6, padding: '0.28rem 0.6rem',
-              marginBottom: '0.45rem', fontSize: '0.7rem', color: 'var(--ink3)',
-            }}>
-              📰 뉴스 준비 중...
-            </div>
-            {/* 하단 2열 */}
+            {/* 2열 */}
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
               {/* 좌측 */}
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -161,6 +154,13 @@ export default function StockCard({ groups, priceMap, fxRate, loading, onOpenSta
                   {sg}{Math.abs(chP).toFixed(2)}%
                 </div>
               </div>
+            </div>
+            {/* 뉴스 placeholder */}
+            <div data-news-ticker={s.ticker} style={{
+              background: 'var(--bg2, #f9fafb)', borderRadius: 6, padding: '0.28rem 0.6rem',
+              marginTop: '0.45rem', fontSize: '0.7rem', color: 'var(--ink3)',
+            }}>
+              📰 뉴스 준비 중...
             </div>
           </li>
         )
