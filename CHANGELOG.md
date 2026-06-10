@@ -4,6 +4,18 @@
 
 ---
 
+## [2026-06-09] — feat: 포트폴리오 히스토리 차트 그룹별/통화별 필터 및 기간 선택 추가
+
+### 변경 내용
+- **StockStatsOverlay.jsx** 히스토리 탭 총자산 라인차트 상단에 그룹별 드롭다운 + 통화별 드롭다운 필터 UI 추가
+- 그룹별 필터: `portfolio_groups` 데이터에서 동적으로 그룹명 옵션 생성, 선택 시 `snapshot.data` JSON 파싱해서 해당 그룹의 total 추출 (USD 그룹은 usd_krw 환산)
+- 통화별 필터: USD 선택 시 `total_usd` + 달러 단위 y축, KRW 선택 시 `total_krw` + 억/만 단위 y축
+- 그룹별 선택 시 통화별 드롭다운 자동 비활성화 (그룹 선택 우선)
+- y축 레이블/틱 단위 동적 전환 (USD: `$` + 달러 포맷 / KRW·전체: `₩` + 억/만 포맷)
+- **ko.json, en.json** `stock.filterByGroup`, `stock.filterByCurrency`, `stock.allGroups`, `stock.allCurrencies` i18n 키 추가
+
+---
+
 ## [2026-06-09] — fix: StockStatsOverlay 무한 렌더링 루프 버그 수정, DEBUG 로그 제거
 
 ### 변경 내용

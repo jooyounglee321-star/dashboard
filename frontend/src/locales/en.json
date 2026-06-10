@@ -529,7 +529,11 @@
     "lowestAsset": "Lowest Asset",
     "periodReturn": "Period Return",
     "savedBy": "Saved By",
-    "noHistory": "No history data yet"
+    "noHistory": "No history data yet",
+    "filterByGroup": "By Group",
+    "filterByCurrency": "By Currency",
+    "allGroups": "All",
+    "allCurrencies": "All"
   },
 
   "chart": {
