@@ -190,6 +190,23 @@ def _migrate_add_realized_pl():
             logger.info("[MIGRATE] daily_portfolio_snapshot.realized_pl — 이미 존재, 건너뜀")
 
 
+def _migrate_cleanup_null_snapshot_dates():
+    """daily_portfolio_snapshot에서 snapshot_date IS NULL인 행 삭제.
+    NULL 행이 있으면 ORDER BY snapshot_date DESC 쿼리가 NULL을 FIRST로 반환해
+    백필 시작일 계산이 TypeError로 크래시되는 버그 방지.
+    """
+    with engine.connect() as conn:
+        try:
+            result = conn.execute(
+                text("DELETE FROM daily_portfolio_snapshot WHERE snapshot_date IS NULL")
+            )
+            conn.commit()
+            if result.rowcount:
+                logger.info("[MIGRATE] snapshot_date IS NULL 행 %d건 삭제", result.rowcount)
+        except Exception as e:
+            logger.warning("[MIGRATE] NULL snapshot_date 정리 실패: %s", e)
+
+
 _ADMIN_EMAIL = "jooyounglee321123@gmail.com"
 
 
@@ -749,6 +766,7 @@ async def lifespan(app: FastAPI):
     _seed_expense_categories()
     _migrate_add_other_subcategory()
     _migrate_add_realized_pl()
+    _migrate_cleanup_null_snapshot_dates()
     _seed_income_categories()
     logger.info("[DB] 테이블 생성/확인 완료")
 

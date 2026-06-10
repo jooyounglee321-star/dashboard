@@ -98,10 +98,13 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
     """
     today_kst = datetime.now(ZoneInfo("Asia/Seoul")).date()
 
-    # ① 스냅샷 존재 여부 확인
+    # ① 스냅샷 존재 여부 확인 (snapshot_date IS NULL 행 제외 — NULL DESC는 FIRST라 오염 방지)
     latest = (
         db.query(DailyPortfolioSnapshot.snapshot_date)
-        .filter(DailyPortfolioSnapshot.user_id == user_id)
+        .filter(
+            DailyPortfolioSnapshot.user_id == user_id,
+            DailyPortfolioSnapshot.snapshot_date.isnot(None),
+        )
         .order_by(DailyPortfolioSnapshot.snapshot_date.desc())
         .first()
     )
@@ -169,12 +172,13 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
         start_date = latest.snapshot_date + timedelta(days=1)
         max_days = 30
 
-    # ② 이미 존재하는 날짜 집합 (범위 내 한 번에 조회)
+    # ② 이미 존재하는 날짜 집합 (범위 내 한 번에 조회, NULL 제외)
     existing = {
         r.snapshot_date
         for r in db.query(DailyPortfolioSnapshot.snapshot_date)
         .filter(
             DailyPortfolioSnapshot.user_id == user_id,
+            DailyPortfolioSnapshot.snapshot_date.isnot(None),
             DailyPortfolioSnapshot.snapshot_date >= start_date,
             DailyPortfolioSnapshot.snapshot_date < today_kst,
         )
