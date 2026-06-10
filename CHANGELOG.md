@@ -4,6 +4,17 @@
 
 ---
 
+## [2026-06-10] — design: StockCard 종목 레이아웃 개편 (뉴스 placeholder, 종목명 말줄임, 금액 우측 정렬)
+
+### 변경 내용
+- **StockCard.jsx** PC 종목 아이템 레이아웃 2열 flex 구조로 개편
+- 상단: 뉴스 placeholder 영역 추가 (`data-news-ticker` 속성, "📰 뉴스 준비 중..." 텍스트)
+- 좌측: 종목명(최대 160px, truncate + title hover), 티커, 보유수량·평균단가
+- 우측(text-right): 현재가+LIVE 배지, 평가금액, 평가손익(수익/손실 색상), 전일비
+- 종목 카드 hover 배경 효과 + border-b 구분선 추가
+
+---
+
 ## [2026-06-10] — feat: 보유주식 헤더 버튼 분리 (통계/내주식설정), 헤더 전체 클릭 제거
 
 ### 변경 내용

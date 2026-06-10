@@ -110,31 +110,57 @@ export default function StockCard({ groups, priceMap, fxRate, loading, onOpenSta
         : <span style={{ fontSize: '0.52rem', background: '#a89880', color: '#fff', padding: '0.05rem 0.38rem', borderRadius: 8, verticalAlign: 'middle', marginLeft: '0.25rem' }}>{t(lang, 'stockAvgBadge')}</span>
 
       if (!isMobile) {
+        const upColor = 'var(--up, #16a34a)'
+        const downColor = 'var(--down, #dc2626)'
+        const evalColor = evalPL == null ? undefined : evalPL >= 0 ? upColor : downColor
+        const chColor = chP >= 0 ? upColor : downColor
         return (
-          <li key={s.ticker} className="stock-item">
-            <div>
-              <div className="stock-name">
-                {s.name || s.ticker}
-                <span style={{ fontSize: '0.65rem', color: 'var(--ink3)', marginLeft: 4 }}>{s.ticker}</span>
-              </div>
-              <div className="stock-qty">
-                {holdQty.toLocaleString()}{t(lang, 'stockHoldSuffix')}{avgCost > 0 ? ` · ${t(lang, 'stockAvg')} ${sym}${fmt(avgCost)}` : ''}
-              </div>
+          <li key={s.ticker} className="stock-item" style={{
+            display: 'block', padding: '0.6rem 0.75rem',
+            borderBottom: '1px solid var(--border, #e5e7eb)',
+            borderRadius: 8,
+            transition: 'background 0.12s',
+          }}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg2, #f9fafb)'}
+            onMouseLeave={e => e.currentTarget.style.background = ''}
+          >
+            {/* 뉴스 placeholder */}
+            <div data-news-ticker={s.ticker} style={{
+              background: 'var(--bg2, #f9fafb)', borderRadius: 6, padding: '0.28rem 0.6rem',
+              marginBottom: '0.45rem', fontSize: '0.7rem', color: 'var(--ink3)',
+            }}>
+              📰 뉴스 준비 중...
             </div>
-            <div className="stock-right">
-              <div className="stock-price">{sym}{fmt(cur)}{liveBadge}</div>
-              <div className="stock-val">{sym}{fmt(val)}</div>
-              {evalPL != null && (
-                <div className={eps} style={{ fontSize: '0.62rem' }}>
-                  {t(lang, 'stockEvalPL')} {evalPL >= 0 ? '+' : ''}{sym}{fmt(Math.abs(evalPL))} ({evalPct >= 0 ? '+' : ''}{evalPct.toFixed(2)}%)
+            {/* 하단 2열 */}
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+              {/* 좌측 */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  fontWeight: 500, fontSize: '0.85rem', color: 'var(--ink)',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160,
+                }} title={s.name || s.ticker}>
+                  {s.name || s.ticker}
                 </div>
-              )}
-              {totalSellQty > 0 && (
-                <div className={rps} style={{ fontSize: '0.62rem' }}>
-                  {t(lang, 'stockRealPL')} {realizedPL >= 0 ? '+' : ''}{sym}{fmt(Math.abs(realizedPL))}
+                <div style={{ fontSize: '0.68rem', color: 'var(--ink3)', marginTop: '0.1rem' }}>
+                  {s.ticker}
                 </div>
-              )}
-              <div className={cs} style={{ fontSize: '0.62rem' }}>{t(lang, 'stockChange')} {sg}{Math.abs(chP).toFixed(2)}%</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--ink3)', marginTop: '0.1rem' }}>
+                  {holdQty.toLocaleString()}{t(lang, 'stockHoldSuffix')}{avgCost > 0 ? ` · ${t(lang, 'stockAvg')} ${sym}${fmt(avgCost)}` : ''}
+                </div>
+              </div>
+              {/* 우측 */}
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{sym}{fmt(cur)}{liveBadge}</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--ink2)', marginTop: '0.1rem' }}>{sym}{fmt(val)}</div>
+                {evalPL != null && (
+                  <div style={{ fontSize: '0.68rem', color: evalColor, marginTop: '0.1rem' }}>
+                    {evalPL >= 0 ? '+' : ''}{sym}{fmt(Math.abs(evalPL))} ({evalPct >= 0 ? '+' : ''}{evalPct.toFixed(2)}%)
+                  </div>
+                )}
+                <div style={{ fontSize: '0.68rem', color: chColor, marginTop: '0.1rem' }}>
+                  {sg}{Math.abs(chP).toFixed(2)}%
+                </div>
+              </div>
             </div>
           </li>
         )
