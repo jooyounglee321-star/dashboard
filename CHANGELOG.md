@@ -4,6 +4,19 @@
 
 ---
 
+## [2026-06-09] — feat: 주식 Stats 오버레이에 포트폴리오 히스토리 탭 추가
+
+### 변경 내용
+- **StockStatsOverlay.jsx** 상단에 `[현황]` / `[히스토리]` 메인 탭 추가 (기본값: 현황)
+- **히스토리 탭 구성:**
+  - 상단 요약 카드: 최고 자산 (날짜), 최저 자산 (날짜), 기간 수익률
+  - 총자산 변화 라인차트: `GET /api/portfolio/history` 연동, `[1개월]` `[3개월]` `[전체]` 범위 선택, y축 억/만 단위 포맷
+  - 일별 결산 테이블: 날짜·USD합계·KRW합계·원화환산전체·실현손익·저장방식 컬럼, 최신순, 20행 페이지네이션
+  - 저장방식: `backfill`(파란 배지) / `frontend`(초록 배지) 구분 표시
+- **ko.json / en.json** `stock.currentTab`, `stock.historyTab`, `stock.highestAsset`, `stock.lowestAsset`, `stock.periodReturn`, `stock.savedBy`, `stock.noHistory` i18n 키 추가
+
+---
+
 ## [2026-06-09] — feat: 주식 통계 요약 섹션 그룹별/통화별 탭 전환 추가
 
 ### 변경 내용

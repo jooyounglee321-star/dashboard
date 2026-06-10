@@ -522,7 +522,14 @@
     "displayUSD": "$ USD 기준",
     "displayKRW": "₩ KRW 기준",
     "byGroup": "그룹별",
-    "byCurrency": "통화별"
+    "byCurrency": "통화별",
+    "currentTab": "현황",
+    "historyTab": "히스토리",
+    "highestAsset": "최고 자산",
+    "lowestAsset": "최저 자산",
+    "periodReturn": "기간 수익률",
+    "savedBy": "저장방식",
+    "noHistory": "아직 결산 데이터가 없습니다"
   },
 
   "chart": {

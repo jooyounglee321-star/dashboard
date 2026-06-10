@@ -86,8 +86,16 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   const lineRef = useRef(null)
   const barRef = useRef(null)
   const chartsRef = useRef([])
+  const histLineRef = useRef(null)
+  const histChartRef = useRef(null)
   const [barMode, setBarMode] = useState('KRW')
   const [summaryTab, setSummaryTab] = useState('group')
+  const [mainTab, setMainTab] = useState('overview')
+  const [histData, setHistData] = useState([])
+  const [histLoading, setHistLoading] = useState(false)
+  const [histRange, setHistRange] = useState('1m')
+  const [histPage, setHistPage] = useState(0)
+  const HIST_PAGE_SIZE = 20
 
   const computed = useMemo(() => computeStockStats(stockData), [stockData])
 
@@ -199,6 +207,64 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     }
   }, [isOpen, computed, lang, barMode])
 
+  // 히스토리 데이터 fetch
+  useEffect(() => {
+    if (!isOpen || mainTab !== 'history') return
+    setHistLoading(true)
+    const token = localStorage.getItem('token')
+    fetch('/api/portfolio/history', { headers: { Authorization: 'Bearer ' + token } })
+      .then(r => r.ok ? r.json() : [])
+      .then(d => { setHistData(Array.isArray(d) ? d : []); setHistPage(0) })
+      .catch(() => setHistData([]))
+      .finally(() => setHistLoading(false))
+  }, [isOpen, mainTab])
+
+  // 히스토리 라인차트
+  useEffect(() => {
+    if (!isOpen || mainTab !== 'history' || histLoading || !histLineRef.current) return
+    if (histChartRef.current) { histChartRef.current.destroy(); histChartRef.current = null }
+    if (!histData.length) return
+
+    const now = new Date()
+    const cutoff = histRange === '1m'
+      ? new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString().slice(0, 10)
+      : histRange === '3m'
+        ? new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()).toISOString().slice(0, 10)
+        : null
+    const filtered = [...histData]
+      .filter(r => r.total_krw_equiv != null && (!cutoff || r.snapshot_date >= cutoff))
+      .sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date))
+    if (!filtered.length) return
+
+    histChartRef.current = new Chart(histLineRef.current, {
+      type: 'line',
+      data: {
+        labels: filtered.map(r => r.snapshot_date),
+        datasets: [{
+          label: t(lang, 'statsKRWEquiv'),
+          data: filtered.map(r => r.total_krw_equiv),
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37,99,235,0.08)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: filtered.length > 60 ? 0 : 3,
+        }],
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: { type: 'category', title: { display: true, text: t(lang, 'statsAxisDate') }, ticks: { maxTicksLimit: 10 } },
+          y: {
+            title: { display: true, text: '₩' },
+            ticks: { callback: v => v >= 100000000 ? `${(v / 100000000).toFixed(1)}억` : v >= 10000 ? `${(v / 10000).toFixed(0)}만` : v },
+          },
+        },
+        plugins: { legend: { display: false } },
+      },
+    })
+    return () => { if (histChartRef.current) { histChartRef.current.destroy(); histChartRef.current = null } }
+  }, [isOpen, mainTab, histData, histRange, lang])
+
   if (!isOpen) return null
 
   const { grpTotals, grandUSD, grandKRW, totalKRW, stockEvals, lineDatasets, fxRate } = computed || {}
@@ -213,8 +279,21 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         <button className="stats-back" onClick={onClose}>{t(lang, 'statsBack')}</button>
         <span className="stats-title">{t(lang, 'statsTitle')}</span>
       </div>
+      {/* 메인 탭 */}
+      <div style={{ display: 'flex', gap: '0', borderBottom: '1.5px solid var(--border)', padding: '0 1.2rem' }}>
+        {[['overview', 'stock.currentTab'], ['history', 'stock.historyTab']].map(([key, i18nKey]) => (
+          <button key={key} onClick={() => setMainTab(key)} style={{
+            padding: '0.6rem 1.2rem', fontSize: '0.88rem', fontWeight: mainTab === key ? 700 : 400,
+            border: 'none', borderBottom: mainTab === key ? '2.5px solid var(--accent)' : '2.5px solid transparent',
+            background: 'transparent', color: mainTab === key ? 'var(--accent)' : 'var(--ink3)',
+            cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', marginBottom: '-1.5px',
+          }}>
+            {t(lang, i18nKey)}
+          </button>
+        ))}
+      </div>
       <div className="stats-body">
-        {!computed ? (
+        {mainTab === 'overview' && (!computed ? (
           <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--ink3)' }}>{t(lang, 'statsLoading')}</div>
         ) : (
           <>
@@ -334,7 +413,138 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               </div>
             )}
           </>
-        )}
+        ))}
+
+        {mainTab === 'history' && (() => {
+          if (histLoading) return (
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--ink3)' }}>{t(lang, 'statsLoading')}</div>
+          )
+          if (!histData.length) return (
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--ink3)' }}>{t(lang, 'stock.noHistory')}</div>
+          )
+
+          // 범위 필터링
+          const now = new Date()
+          const cutoff = histRange === '1m'
+            ? new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString().slice(0, 10)
+            : histRange === '3m'
+              ? new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()).toISOString().slice(0, 10)
+              : null
+          const filtered = [...histData]
+            .filter(r => r.total_krw_equiv != null && (!cutoff || r.snapshot_date >= cutoff))
+            .sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date))
+
+          // 요약 카드 계산
+          const equivVals = filtered.map(r => r.total_krw_equiv)
+          const maxVal = equivVals.length ? Math.max(...equivVals) : 0
+          const minVal = equivVals.length ? Math.min(...equivVals) : 0
+          const maxRow = filtered.find(r => r.total_krw_equiv === maxVal)
+          const minRow = filtered.find(r => r.total_krw_equiv === minVal)
+          const first = filtered[0]?.total_krw_equiv ?? 0
+          const last = filtered[filtered.length - 1]?.total_krw_equiv ?? 0
+          const periodReturn = first > 0 ? ((last - first) / first * 100) : null
+
+          // 테이블용: 최신순, 페이지네이션
+          const tableRows = [...histData].sort((a, b) => b.snapshot_date.localeCompare(a.snapshot_date))
+          const totalPages = Math.ceil(tableRows.length / HIST_PAGE_SIZE)
+          const pageRows = tableRows.slice(histPage * HIST_PAGE_SIZE, (histPage + 1) * HIST_PAGE_SIZE)
+
+          const tabBtnStyle = (active) => ({
+            padding: '0.28rem 0.75rem', fontSize: '0.78rem', fontWeight: active ? 700 : 400,
+            border: `1.5px solid ${active ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 6,
+            background: active ? 'var(--accent)' : 'transparent',
+            color: active ? '#fff' : 'var(--ink3)', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+          })
+
+          return (
+            <>
+              {/* 요약 카드 */}
+              <div className="stats-section">
+                <div className="stats-summary-grid">
+                  <div className="stats-summary-card">
+                    <div className="stats-summary-label">{t(lang, 'stock.highestAsset')}</div>
+                    <div className="stats-summary-value" style={{ fontSize: '0.95rem' }}>₩{fmtKRW(maxVal)}</div>
+                    {maxRow && <div style={{ fontSize: '0.72rem', color: 'var(--ink3)', marginTop: '0.15rem' }}>{maxRow.snapshot_date}</div>}
+                  </div>
+                  <div className="stats-summary-card">
+                    <div className="stats-summary-label">{t(lang, 'stock.lowestAsset')}</div>
+                    <div className="stats-summary-value" style={{ fontSize: '0.95rem' }}>₩{fmtKRW(minVal)}</div>
+                    {minRow && <div style={{ fontSize: '0.72rem', color: 'var(--ink3)', marginTop: '0.15rem' }}>{minRow.snapshot_date}</div>}
+                  </div>
+                  <div className="stats-summary-card">
+                    <div className="stats-summary-label">{t(lang, 'stock.periodReturn')}</div>
+                    <div className="stats-summary-value" style={{ color: periodReturn == null ? 'inherit' : periodReturn >= 0 ? 'var(--up)' : 'var(--down)', fontSize: '0.95rem' }}>
+                      {periodReturn == null ? '—' : `${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%`}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 날짜 범위 버튼 + 라인차트 */}
+              <div className="stats-section">
+                <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.75rem' }}>
+                  {[['1m', '1개월'], ['3m', '3개월'], ['all', '전체']].map(([key, label]) => (
+                    <button key={key} onClick={() => setHistRange(key)} style={tabBtnStyle(histRange === key)}>{label}</button>
+                  ))}
+                </div>
+                <div className="stats-chart-wrap">
+                  <canvas ref={histLineRef} />
+                </div>
+              </div>
+
+              {/* 일별 결산 테이블 */}
+              <div className="stats-section">
+                <div className="stats-section-title" style={{ marginBottom: '0.6rem' }}>일별 결산</div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1.5px solid var(--border)', color: 'var(--ink3)', textAlign: 'right' }}>
+                        <th style={{ textAlign: 'left', padding: '0.4rem 0.5rem', fontWeight: 600 }}>날짜</th>
+                        <th style={{ padding: '0.4rem 0.5rem', fontWeight: 600 }}>USD합계</th>
+                        <th style={{ padding: '0.4rem 0.5rem', fontWeight: 600 }}>KRW합계</th>
+                        <th style={{ padding: '0.4rem 0.5rem', fontWeight: 600 }}>원화환산전체</th>
+                        <th style={{ padding: '0.4rem 0.5rem', fontWeight: 600 }}>실현손익</th>
+                        <th style={{ padding: '0.4rem 0.5rem', fontWeight: 600 }}>{t(lang, 'stock.savedBy')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pageRows.map(r => (
+                        <tr key={r.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={{ padding: '0.4rem 0.5rem', color: 'var(--ink)', fontWeight: 500 }}>{r.snapshot_date}</td>
+                          <td style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: 'var(--ink)' }}>${fmtUSD(r.total_usd ?? 0)}</td>
+                          <td style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: 'var(--ink)' }}>₩{fmtKRW(r.total_krw ?? 0)}</td>
+                          <td style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: 'var(--ink)', fontWeight: 600 }}>₩{fmtKRW(r.total_krw_equiv ?? 0)}</td>
+                          <td style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: (r.realized_pl ?? 0) >= 0 ? 'var(--up)' : 'var(--down)' }}>
+                            {r.realized_pl != null ? `${r.realized_pl >= 0 ? '+' : ''}₩${fmtKRW(r.realized_pl)}` : '—'}
+                          </td>
+                          <td style={{ padding: '0.4rem 0.5rem', textAlign: 'center' }}>
+                            <span style={{
+                              display: 'inline-block', padding: '0.15rem 0.45rem', borderRadius: 4, fontSize: '0.7rem', fontWeight: 600,
+                              background: r.saved_by === 'backfill' ? 'rgba(37,99,235,0.12)' : 'rgba(22,163,74,0.12)',
+                              color: r.saved_by === 'backfill' ? '#2563eb' : '#16a34a',
+                            }}>
+                              {r.saved_by ?? 'frontend'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {/* 페이지네이션 */}
+                {totalPages > 1 && (
+                  <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center', marginTop: '0.75rem' }}>
+                    <button onClick={() => setHistPage(p => Math.max(0, p - 1))} disabled={histPage === 0}
+                      style={{ ...tabBtnStyle(false), opacity: histPage === 0 ? 0.4 : 1 }}>←</button>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--ink3)', alignSelf: 'center' }}>{histPage + 1} / {totalPages}</span>
+                    <button onClick={() => setHistPage(p => Math.min(totalPages - 1, p + 1))} disabled={histPage === totalPages - 1}
+                      style={{ ...tabBtnStyle(false), opacity: histPage === totalPages - 1 ? 0.4 : 1 }}>→</button>
+                  </div>
+                )}
+              </div>
+            </>
+          )
+        })()}
       </div>
     </div>
   )
