@@ -4,6 +4,14 @@
 
 ---
 
+## [2026-06-09] — fix: 누적 투자금액 차트 globalDates를 연속 날짜 배열로 변경
+
+### 변경 내용
+- **StockStatsOverlay.jsx** `globalDates` 생성 로직을 purchases 날짜 수집 방식에서 `startDate`~오늘 연속 날짜 생성(`generateDateRange`)으로 변경
+- 매수가 없는 날에도 carry-forward 값이 유지되어 차트가 연속적으로 표시됨
+
+---
+
 ## [2026-06-09] — fix: 누적 투자금액 차트 x축 time scale 적용, date 없는 purchases startDate로 처리
 
 ### 변경 내용
