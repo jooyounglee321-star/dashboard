@@ -8,7 +8,7 @@ const CHART_COLORS = ['#2563eb', '#16a34a', '#d97706', '#9333ea', '#dc2626', '#0
 function fmtKRW(v) { return Math.round(v).toLocaleString('ko-KR') }
 function fmtUSD(v) { return Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
 
-function computeStockStats(stockData) {
+function computeStockStats(stockData, userJoinDate) {
   if (!stockData) return null
   const { groups, priceMap, fxRate } = stockData
 
@@ -53,21 +53,29 @@ function computeStockStats(stockData) {
     })
   })
 
-  // 전체 그룹의 모든 매수 날짜 수집 → 전역 오름차순 정렬
+  // 전체 그룹의 모든 매수 날짜 수집
   const allDateSet = new Set()
   groups.forEach(g => {
     g.stocks.forEach(s => {
       ;(s.purchases || []).forEach(p => { if (p.date) allDateSet.add(p.date) })
     })
   })
-  const globalDates = [...allDateSet].sort()   // YYYY-MM-DD 문자열 정렬 = 시간순
+  const allDates = [...allDateSet].sort()   // YYYY-MM-DD 문자열 정렬 = 시간순
+
+  // 시작일 = MAX(최초 purchase.date, 가입일) — 가입 전 이력 차트 제외
+  const minPurchaseDate = allDates[0] ?? null
+  const joinDate = userJoinDate ?? null
+  const startDate = minPurchaseDate && joinDate
+    ? (minPurchaseDate > joinDate ? minPurchaseDate : joinDate)
+    : (joinDate ?? minPurchaseDate)
+  const globalDates = startDate ? allDates.filter(d => d >= startDate) : allDates
 
   const lineDatasets = []
   groups.forEach((g, gi) => {
-    // 그룹 내 날짜별 매수금액 합산 (date 없는 항목 제외)
+    // 그룹 내 날짜별 매수금액 합산 (date 없는 항목 및 startDate 이전 제외)
     const dailyMap = {}
     g.stocks.forEach(s => {
-      ;(s.purchases || []).filter(p => p.date).forEach(p => {
+      ;(s.purchases || []).filter(p => p.date && (!startDate || p.date >= startDate)).forEach(p => {
         const rawAmt = (p.qty || 0) * (p.price || 0)
         const amt = g.currency === 'USD' ? rawAmt * (fxRate ?? 1) : rawAmt
         dailyMap[p.date] = (dailyMap[p.date] ?? 0) + amt
@@ -108,13 +116,28 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   const [barMode, setBarMode] = useState('KRW')
   const [summaryTab, setSummaryTab] = useState('group')
   const [mainTab, setMainTab] = useState('overview')
+  const [userJoinDate, setUserJoinDate] = useState(null)
   const [histData, setHistData] = useState([])
   const [histLoading, setHistLoading] = useState(false)
   const [histRange, setHistRange] = useState('1m')
   const [histPage, setHistPage] = useState(0)
   const HIST_PAGE_SIZE = 20
 
-  const computed = useMemo(() => computeStockStats(stockData), [stockData])
+  // 회원가입일 로드 (localStorage 우선 → /api/auth/me 폴백)
+  useEffect(() => {
+    if (!isOpen || userJoinDate) return
+    try {
+      const u = JSON.parse(localStorage.getItem('user') || '{}')
+      if (u.created_at) { setUserJoinDate(u.created_at.slice(0, 10)); return }
+    } catch {}
+    const token = localStorage.getItem('token')
+    fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.created_at) setUserJoinDate(d.created_at.slice(0, 10)) })
+      .catch(() => {})
+  }, [isOpen])
+
+  const computed = useMemo(() => computeStockStats(stockData, userJoinDate), [stockData, userJoinDate])
 
   useEffect(() => {
     if (!isOpen || !computed) return

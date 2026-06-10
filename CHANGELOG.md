@@ -4,6 +4,16 @@
 
 ---
 
+## [2026-06-09] — fix: 누적 투자금액 차트 시작일을 MAX(최초매입일, 가입일)로 통일
+
+### 변경 내용
+- **StockStatsOverlay.jsx** `computeStockStats(stockData, userJoinDate)` — 두 번째 인자로 가입일 수신
+- `startDate = MAX(minPurchaseDate, userJoinDate)` 계산 후 globalDates 및 dailyMap 모두 startDate 기준 필터링
+- `userJoinDate` state 추가: localStorage `user.created_at` 우선 사용, 없으면 `GET /api/auth/me` 폴백
+- `useMemo` deps에 `userJoinDate` 포함 → 가입일 로드 후 차트 자동 갱신
+
+---
+
 ## [2026-06-09] — fix: 그룹별 누적 투자금액 추이 차트 전면 재작성 (날짜 정렬, 누적합 버그 수정)
 
 ### 변경 내용
