@@ -4,6 +4,21 @@
 
 ---
 
+## [2026-06-09] — fix: 누적 투자금액 차트 x축 time scale 적용, date 없는 purchases startDate로 처리
+
+### 변경 내용
+- **StockStatsOverlay.jsx** 라인차트 x축을 `type: 'category'` → `type: 'time'`으로 변경
+  - `chartjs-adapter-date-fns`, `date-fns` 패키지 설치 및 import 추가
+  - `displayFormats: { day: 'yyyy-MM-dd' }`, `maxTicksLimit: 10` 설정
+  - x축 날짜 역순 문제 해결 (Chart.js가 time scale에서 날짜를 올바르게 정렬)
+- **date 없는 purchases 처리 수정**: 기존 완전 제외 → `startDate` 날짜로 귀속
+  - `filter(p => !p.date || !startDate || p.date >= startDate)`
+  - `const dateKey = p.date || startDate` — 누락된 날짜 매수금액이 시작일에 포함됨
+  - KOR stock 우하향 문제 해결 (date 없는 매수가 누락되어 발생하던 버그)
+- y축 단위 포맷 개선: 억/천만/M/K 단위 표시
+
+---
+
 ## [2026-06-09] — fix: 누적 투자금액 차트 시작일을 MAX(최초매입일, 가입일)로 통일
 
 ### 변경 내용

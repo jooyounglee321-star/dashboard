@@ -1,5 +1,6 @@
 import { useEffect, useRef, useMemo, useState } from 'react'
 import { Chart, registerables } from 'chart.js'
+import 'chartjs-adapter-date-fns'
 import { t } from './i18n'
 Chart.register(...registerables)
 
@@ -70,15 +71,25 @@ function computeStockStats(stockData, userJoinDate) {
     : (joinDate ?? minPurchaseDate)
   const globalDates = startDate ? allDates.filter(d => d >= startDate) : allDates
 
+  // DEBUG: 첫 번째 그룹 첫 번째 종목 purchases 확인
+  if (groups[0]?.stocks[0]) {
+    console.log('[DEBUG] groups[0].name:', groups[0].name, '| currency:', groups[0].currency)
+    console.log('[DEBUG] stocks[0].ticker:', groups[0].stocks[0].ticker)
+    console.log('[DEBUG] purchases:', JSON.parse(JSON.stringify(groups[0].stocks[0].purchases || [])))
+    console.log('[DEBUG] startDate:', startDate, '| globalDates:', globalDates)
+  }
+
   const lineDatasets = []
   groups.forEach((g, gi) => {
     // 그룹 내 날짜별 매수금액 합산 (date 없는 항목 및 startDate 이전 제외)
     const dailyMap = {}
     g.stocks.forEach(s => {
-      ;(s.purchases || []).filter(p => p.date && (!startDate || p.date >= startDate)).forEach(p => {
+      ;(s.purchases || []).filter(p => !p.date || !startDate || p.date >= startDate).forEach(p => {
         const rawAmt = (p.qty || 0) * (p.price || 0)
         const amt = g.currency === 'USD' ? rawAmt * (fxRate ?? 1) : rawAmt
-        dailyMap[p.date] = (dailyMap[p.date] ?? 0) + amt
+        const dateKey = p.date || startDate
+        if (!dateKey) return
+        dailyMap[dateKey] = (dailyMap[dateKey] ?? 0) + amt
       })
     })
     if (!Object.keys(dailyMap).length) return
@@ -179,10 +190,15 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         options: {
           responsive: true,
           scales: {
-            x: { type: 'category', title: { display: true, text: t(lang, 'statsAxisDate') } },
+            x: {
+              type: 'time',
+              time: { unit: 'day', displayFormats: { day: 'yyyy-MM-dd' } },
+              title: { display: true, text: t(lang, 'statsAxisDate') },
+              ticks: { source: 'auto', maxTicksLimit: 10 },
+            },
             y: {
               title: { display: true, text: t(lang, 'statsAxisInvest') },
-              ticks: { callback: v => v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `${(v / 1000).toFixed(0)}K` : v },
+              ticks: { callback: v => v >= 100000000 ? `${(v / 100000000).toFixed(1)}억` : v >= 10000000 ? `${(v / 10000000).toFixed(0)}천만` : v >= 1000000 ? `${(v / 1000000).toFixed(0)}M` : v >= 1000 ? `${(v / 1000).toFixed(0)}K` : v },
             },
           },
           plugins: { legend: { position: 'bottom' } },
