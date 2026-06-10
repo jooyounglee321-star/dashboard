@@ -530,6 +530,8 @@
     "periodReturn": "Period Return",
     "savedBy": "Saved By",
     "noHistory": "No history data yet",
+    "statsLink": "↗ Stats",
+    "settings": "⚙ My Stock Settings",
     "filterByGroup": "By Group",
     "filterByCurrency": "By Currency",
     "allGroups": "All",

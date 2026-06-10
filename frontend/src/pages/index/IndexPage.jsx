@@ -52,6 +52,7 @@ export default function IndexPage() {
 
   // Stats overlay
   const [statsOpen, setStatsOpen] = useState(false)
+  const [stockSettingsOpen, setStockSettingsOpen] = useState(false)
 
   // 위젯 설정 (localStorage 캐시로 언어 즉시 반영)
   const [widgetCfg, setWidgetCfg] = useState(() => {
@@ -374,7 +375,7 @@ export default function IndexPage() {
       case 'hero':     return <HeroSection zones={zones} clockCount={widgetCfg?.hero?.clock_count ?? 3} tempUnit={widgetCfg?.hero?.temp_unit ?? 'C'} lang={lang} />
       case 'schedule': return <ScheduleCard lang={lang} />
       case 'youtube':  return <YoutubeCard maxCount={widgetCfg?.youtube?.max_count ?? 10} lang={lang} />
-      case 'stock':    return <StockCard groups={stockGroups} priceMap={priceMap} fxRate={fxRate} loading={stockLoading} onOpenStats={() => setStatsOpen(true)} currencyDisplay={widgetCfg?.stock?.currency_display} lang={lang} />
+      case 'stock':    return <StockCard groups={stockGroups} priceMap={priceMap} fxRate={fxRate} loading={stockLoading} onOpenStats={() => setStatsOpen(true)} onOpenSettings={() => setStockSettingsOpen(true)} currencyDisplay={widgetCfg?.stock?.currency_display} lang={lang} />
       case 'expense':  return <ExpenseCard lang={lang} />
       case 'diet':     return <DietCard mealConfig={widgetCfg?.diet?.meals} lang={lang} />
       case 'memo':     return <MemoCard lang={lang} />
@@ -412,6 +413,29 @@ export default function IndexPage() {
         stockData={stockData}
         lang={lang}
       />
+
+      {/* 내 주식 설정 모달 (placeholder) */}
+      {stockSettingsOpen && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 600,
+          background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }} onClick={() => setStockSettingsOpen(false)}>
+          <div style={{
+            background: 'var(--bg)', borderRadius: 14, padding: '2rem 2.5rem',
+            minWidth: 320, maxWidth: 480, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
+              <span style={{ fontWeight: 700, fontSize: '1rem' }}>⚙ {t(lang, 'stock.settings')}</span>
+              <button onClick={() => setStockSettingsOpen(false)} style={{
+                background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: 'var(--ink3)',
+              }}>✕</button>
+            </div>
+            <div style={{ color: 'var(--ink3)', fontSize: '0.88rem', textAlign: 'center', padding: '2rem 0' }}>
+              준비 중입니다.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 헤더 */}
       <header className="header">
@@ -519,6 +543,7 @@ export default function IndexPage() {
               fxRate={fxRate}
               loading={stockLoading}
               onOpenStats={() => setStatsOpen(true)}
+              onOpenSettings={() => setStockSettingsOpen(true)}
               currencyDisplay={widgetCfg?.stock?.currency_display}
               isMobile
               lang={lang}
