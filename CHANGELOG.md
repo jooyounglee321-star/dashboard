@@ -4,6 +4,18 @@
 
 ---
 
+## [2026-06-10] — feat: 종목별 뉴스 소스/검색어/언어 설정 UI 추가 (StockSettingsModal)
+
+### 변경 내용
+- **StockSettingsModal.jsx** 각 종목 행에 `[📰 뉴스 설정]` 버튼 추가
+  - 클릭 시 인라인 패널 확장: 뉴스 소스(Google/Naver), 검색어, 언어(ko/en) 설정
+  - Naver 선택 시 언어 자동 한국어 고정
+  - 저장 시 `portfolio_groups` PUT API로 `news_config: { source, query, lang }` 반영
+- **locales/ko.json, en.json** `stock.newsSettings` 등 i18n 키 6개 추가
+- **DECISIONS.md** 종목별 뉴스 설정 저장 방식 결정 기록
+
+---
+
 ## [2026-06-10] — design: StockCard 뉴스 placeholder 위치 종목 하단으로 이동
 
 ### 변경 내용

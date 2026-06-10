@@ -536,7 +536,13 @@
     "filterByCurrency": "통화별",
     "allGroups": "전체",
     "allCurrencies": "전체",
-    "noData": "해당 조건에 데이터가 없습니다"
+    "noData": "해당 조건에 데이터가 없습니다",
+    "newsSettings": "뉴스 설정",
+    "newsSource": "뉴스 소스",
+    "newsQuery": "검색어",
+    "newsLang": "언어",
+    "newsLangKo": "한국어",
+    "newsLangEn": "English"
   },
 
   "chart": {
