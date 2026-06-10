@@ -20,8 +20,7 @@ function computeStockStats(stockData, userJoinDate) {
       const bq = pp.reduce((x, p) => x + (p.qty || 0), 0)
       const sq = sl.reduce((x, p) => x + (p.qty || 0), 0)
       const hq = Math.max(0, bq - sq)
-      const priceObj = priceMap[s.ticker]
-      const livePrice = priceObj?.current_price
+      const livePrice = priceMap[s.ticker]?.current_price
       const validPP = pp.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
       const ws = validPP.reduce((x, p) => x + p.price * p.qty, 0)
       const vqt = validPP.reduce((x, p) => x + p.qty, 0)
@@ -35,6 +34,8 @@ function computeStockStats(stockData, userJoinDate) {
   grpTotals.forEach(g => { if (g.isKRW) grandKRW += g.total; else grandUSD += g.total })
   const totalKRW = grandKRW + (fxRate ? grandUSD * fxRate : 0)
 
+  // 종목별 평가액 (파이차트 그룹 드릴다운 + 바차트용)
+  const stockValues = []
   const stockEvals = []
   groups.forEach(g => {
     const isKRW = g.currency === 'KRW'
@@ -49,6 +50,8 @@ function computeStockStats(stockData, userJoinDate) {
       const vqt = validPP.reduce((a, p) => a + p.qty, 0)
       const avg = vqt > 0 ? ws / vqt : 0
       const cur = priceMap[s.ticker]?.current_price ?? avg
+      const evalAmt = cur * hq
+      if (hq > 0) stockValues.push({ ticker: s.ticker, name: s.name || s.ticker, evalAmt, groupName: g.name, currency: g.currency, isKRW })
       const evalPL = avg > 0 ? (cur - avg) * hq : null
       if (evalPL != null) stockEvals.push({ label: s.ticker, name: s.name || s.ticker, evalPL, sym, isKRW })
     })
@@ -67,7 +70,6 @@ function computeStockStats(stockData, userJoinDate) {
     return dates
   }
 
-  // startDate 계산: MAX(최초 purchase.date, 가입일)
   const allPurchaseDates = []
   groups.forEach(g => {
     g.stocks.forEach(s => {
@@ -80,12 +82,10 @@ function computeStockStats(stockData, userJoinDate) {
     ? (minPurchaseDate > joinDate ? minPurchaseDate : joinDate)
     : (joinDate ?? minPurchaseDate ?? today)
 
-  // startDate ~ 오늘 연속 날짜 배열
   const globalDates = generateDateRange(startDate, today)
 
   const lineDatasets = []
   groups.forEach((g, gi) => {
-    // 그룹 내 날짜별 매수금액 합산 (date 없는 항목 및 startDate 이전 제외)
     const dailyMap = {}
     g.stocks.forEach(s => {
       ;(s.purchases || []).filter(p => !p.date || !startDate || p.date >= startDate).forEach(p => {
@@ -98,9 +98,7 @@ function computeStockStats(stockData, userJoinDate) {
     })
     if (!Object.keys(dailyMap).length) return
 
-    // 전역 날짜 축 기준으로 누적합 계산 (carry-forward: 이전값 유지)
-    let cum = 0
-    let started = false
+    let cum = 0, started = false
     const pts = []
     globalDates.forEach(date => {
       if (dailyMap[date]) { cum += dailyMap[date]; started = true }
@@ -118,11 +116,11 @@ function computeStockStats(stockData, userJoinDate) {
     })
   })
 
-  // 그룹명 → ticker[] 맵 (바차트 그룹 필터용)
+  // 그룹명 → ticker[] 맵
   const groupTickers = {}
   groups.forEach(g => { groupTickers[g.name] = g.stocks.map(s => s.ticker) })
 
-  return { grpTotals, grandUSD, grandKRW, totalKRW, stockEvals, lineDatasets, fxRate, groupTickers }
+  return { grpTotals, grandUSD, grandKRW, totalKRW, stockValues, stockEvals, lineDatasets, fxRate, groupTickers }
 }
 
 export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = 'ko' }) {
@@ -132,8 +130,13 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   const chartsRef = useRef([])
   const histLineRef = useRef(null)
   const histChartRef = useRef(null)
-  const [barMode, setBarMode] = useState('KRW')
-  const [summaryTab, setSummaryTab] = useState('group')
+
+  // 현황 탭 공통 필터
+  const [overviewGroup, setOverviewGroup] = useState('')
+  const [overviewCurrency, setOverviewCurrency] = useState('KRW')
+  const [overviewPeriod, setOverviewPeriod] = useState('all')
+
+  // 히스토리 탭 필터
   const [mainTab, setMainTab] = useState('overview')
   const [userJoinDate, setUserJoinDate] = useState(null)
   const [histData, setHistData] = useState([])
@@ -142,7 +145,6 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   const [histPage, setHistPage] = useState(0)
   const [histGroupFilter, setHistGroupFilter] = useState('')
   const [histCurrencyFilter, setHistCurrencyFilter] = useState('')
-  const [barGroupFilter, setBarGroupFilter] = useState('')
   const HIST_PAGE_SIZE = 20
 
   // 회원가입일 로드 (localStorage 우선 → /api/auth/me 폴백)
@@ -162,122 +164,146 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const computed = useMemo(() => computeStockStats(stockData, userJoinDate), [JSON.stringify(stockData), userJoinDate])
 
+  // 현황 탭 차트 렌더링
   useEffect(() => {
     if (!isOpen || !computed || mainTab !== 'overview') return
 
-    // Destroy previous chart instances
     chartsRef.current.forEach(c => c.destroy())
     chartsRef.current = []
 
-    const { grpTotals, stockEvals, lineDatasets, fxRate } = computed
+    const { grpTotals, stockValues, stockEvals, lineDatasets, fxRate, groupTickers } = computed
 
-    // Pie / doughnut chart
+    // 기간 cutoff
+    const now = new Date()
+    const cutoff = overviewPeriod === '1m'
+      ? new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString().slice(0, 10)
+      : overviewPeriod === '3m'
+        ? new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()).toISOString().slice(0, 10)
+        : null
+
+    // 통화 환산 헬퍼
+    const toDisplay = (val, isKRW) => {
+      if (overviewCurrency === 'USD' && isKRW && fxRate) return val / fxRate
+      if (overviewCurrency === 'KRW' && !isKRW && fxRate) return val * fxRate
+      return val
+    }
+
+    // ── 파이차트 ──
     if (pieRef.current) {
-      const toKRW = (g) => g.currency === 'USD' ? g.total * (fxRate ?? 1) : g.total
-      const pieTotal = grpTotals.reduce((a, g) => a + toKRW(g), 0) || 1
+      let pieLabels, pieData
+      if (overviewGroup) {
+        // 선택 그룹 내 종목별 비중
+        const grpStocks = stockValues.filter(s => s.groupName === overviewGroup)
+        const vals = grpStocks.map(s => ({ name: s.name, val: Math.max(0, toDisplay(s.evalAmt, s.isKRW)) }))
+        const total = vals.reduce((a, x) => a + x.val, 0) || 1
+        pieLabels = vals.map(x => `${x.name} (${(x.val / total * 100).toFixed(1)}%)`)
+        pieData = vals.map(x => parseFloat(x.val.toFixed(2)))
+      } else {
+        // 그룹별 비중
+        const vals = grpTotals.map(g => ({ name: g.name, val: Math.max(0, toDisplay(g.total, g.isKRW)) }))
+        const total = vals.reduce((a, x) => a + x.val, 0) || 1
+        pieLabels = vals.map(x => `${x.name} (${(x.val / total * 100).toFixed(1)}%)`)
+        pieData = vals.map(x => parseFloat(x.val.toFixed(2)))
+      }
       const inst = new Chart(pieRef.current, {
         type: 'doughnut',
         data: {
-          labels: grpTotals.map(g => `${g.name} (${(toKRW(g) / pieTotal * 100).toFixed(1)}%)`),
-          datasets: [{
-            data: grpTotals.map(g => parseFloat(toKRW(g).toFixed(2))),
-            backgroundColor: CHART_COLORS.slice(0, grpTotals.length),
-            borderWidth: 2,
-            borderColor: '#fffef9',
-          }],
+          labels: pieLabels,
+          datasets: [{ data: pieData, backgroundColor: CHART_COLORS.slice(0, pieData.length), borderWidth: 2, borderColor: '#fffef9' }],
         },
-        options: {
-          responsive: true,
-          plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 12 } } },
-        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 12 } } } },
       })
       chartsRef.current.push(inst)
     }
 
-    // Line chart (cumulative investment)
-    if (lineRef.current && lineDatasets.length) {
-      const inst = new Chart(lineRef.current, {
-        type: 'line',
-        data: { datasets: lineDatasets },
-        options: {
-          responsive: true,
-          scales: {
-            x: {
-              type: 'time',
-              time: { unit: 'day', displayFormats: { day: 'yyyy-MM-dd' } },
-              title: { display: true, text: t(lang, 'statsAxisDate') },
-              ticks: { source: 'auto', maxTicksLimit: 10 },
+    // ── 라인차트 ──
+    if (lineRef.current) {
+      let datasets = overviewGroup
+        ? lineDatasets.filter(ds => ds.label === overviewGroup)
+        : lineDatasets
+      if (cutoff) {
+        datasets = datasets.map(ds => ({ ...ds, data: ds.data.filter(pt => pt.x >= cutoff) }))
+          .filter(ds => ds.data.length > 0)
+      }
+      if (datasets.length > 0) {
+        const inst = new Chart(lineRef.current, {
+          type: 'line',
+          data: { datasets },
+          options: {
+            responsive: true,
+            scales: {
+              x: {
+                type: 'time',
+                time: { unit: 'day', displayFormats: { day: 'yyyy-MM-dd' } },
+                title: { display: true, text: t(lang, 'statsAxisDate') },
+                ticks: { source: 'auto', maxTicksLimit: 10 },
+              },
+              y: {
+                title: { display: true, text: t(lang, 'statsAxisInvest') },
+                ticks: { callback: v => v >= 100000000 ? `${(v / 100000000).toFixed(1)}억` : v >= 10000000 ? `${(v / 10000000).toFixed(0)}천만` : v >= 1000000 ? `${(v / 1000000).toFixed(0)}M` : v >= 1000 ? `${(v / 1000).toFixed(0)}K` : v },
+              },
             },
-            y: {
-              title: { display: true, text: t(lang, 'statsAxisInvest') },
-              ticks: { callback: v => v >= 100000000 ? `${(v / 100000000).toFixed(1)}억` : v >= 10000000 ? `${(v / 10000000).toFixed(0)}천만` : v >= 1000000 ? `${(v / 1000000).toFixed(0)}M` : v >= 1000 ? `${(v / 1000).toFixed(0)}K` : v },
-            },
+            plugins: { legend: { position: 'bottom' } },
           },
-          plugins: { legend: { position: 'bottom' } },
-        },
-      })
-      chartsRef.current.push(inst)
+        })
+        chartsRef.current.push(inst)
+      }
     }
 
-    // Bar chart (unrealized P/L by stock)
-    // stockEvals.label = ticker; filter by matching ticker to selected group
-    const { groupTickers } = computed
-    const barGrpTickers = barGroupFilter ? new Set(groupTickers[barGroupFilter] ?? []) : null
-    const filteredEvals = barGrpTickers ? stockEvals.filter(s => barGrpTickers.has(s.label)) : stockEvals
-    if (barRef.current && filteredEvals.length) {
-      // barMode에 따라 evalPL 환산
-      const convertedEvals = filteredEvals.map(s => {
-        if (barMode === 'KRW' && !s.isKRW && fxRate) {
-          return { ...s, evalPL: s.evalPL * fxRate, sym: '₩', isKRW: true }
-        }
-        if (barMode === 'USD' && s.isKRW && fxRate) {
-          return { ...s, evalPL: s.evalPL / fxRate, sym: '$', isKRW: false }
-        }
-        return s
-      })
-      const sorted = [...convertedEvals].sort((a, b) => b.evalPL - a.evalPL)
-      const axisSymbol = barMode === 'KRW' ? '₩' : '$'
-      const inst = new Chart(barRef.current, {
-        type: 'bar',
-        data: {
-          labels: sorted.map(s => s.name),
-          datasets: [{
-            label: t(lang, 'statsBarLabel'),
-            data: sorted.map(s => parseFloat(s.evalPL.toFixed(2))),
-            backgroundColor: sorted.map(s => s.evalPL >= 0 ? 'rgba(74,124,89,0.75)' : 'rgba(220,38,38,0.75)'),
-            borderColor: sorted.map(s => s.evalPL >= 0 ? '#4a7c59' : '#dc2626'),
-            borderWidth: 1,
-          }],
-        },
-        options: {
-          responsive: true,
-          scales: {
-            y: {
-              title: { display: true, text: `${t(lang, 'statsAxisPL')} (${axisSymbol})` },
-              ticks: { callback: v => v >= 0 ? `+${v}` : `${v}` },
-            },
+    // ── 바차트 ──
+    if (barRef.current && stockEvals.length) {
+      const tickerSet = overviewGroup ? new Set(groupTickers[overviewGroup] ?? []) : null
+      const filtered = tickerSet ? stockEvals.filter(s => tickerSet.has(s.label)) : stockEvals
+      if (filtered.length) {
+        const converted = filtered.map(s => {
+          if (overviewCurrency === 'KRW' && !s.isKRW && fxRate) return { ...s, evalPL: s.evalPL * fxRate, sym: '₩', isKRW: true }
+          if (overviewCurrency === 'USD' && s.isKRW && fxRate) return { ...s, evalPL: s.evalPL / fxRate, sym: '$', isKRW: false }
+          return s
+        })
+        const sorted = [...converted].sort((a, b) => b.evalPL - a.evalPL)
+        const axisSymbol = overviewCurrency === 'KRW' ? '₩' : '$'
+        const inst = new Chart(barRef.current, {
+          type: 'bar',
+          data: {
+            labels: sorted.map(s => s.name),
+            datasets: [{
+              label: t(lang, 'statsBarLabel'),
+              data: sorted.map(s => parseFloat(s.evalPL.toFixed(2))),
+              backgroundColor: sorted.map(s => s.evalPL >= 0 ? 'rgba(74,124,89,0.75)' : 'rgba(220,38,38,0.75)'),
+              borderColor: sorted.map(s => s.evalPL >= 0 ? '#4a7c59' : '#dc2626'),
+              borderWidth: 1,
+            }],
           },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: ctx => {
-                  const s = sorted[ctx.dataIndex]
-                  return `${s.evalPL >= 0 ? '+' : ''}${s.sym}${s.isKRW ? fmtKRW(Math.abs(s.evalPL)) : fmtUSD(Math.abs(s.evalPL))}`
+          options: {
+            responsive: true,
+            scales: {
+              y: {
+                title: { display: true, text: `${t(lang, 'statsAxisPL')} (${axisSymbol})` },
+                ticks: { callback: v => v >= 0 ? `+${v}` : `${v}` },
+              },
+            },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: ctx => {
+                    const s = sorted[ctx.dataIndex]
+                    return `${s.evalPL >= 0 ? '+' : ''}${s.sym}${s.isKRW ? fmtKRW(Math.abs(s.evalPL)) : fmtUSD(Math.abs(s.evalPL))}`
+                  },
                 },
               },
             },
           },
-        },
-      })
-      chartsRef.current.push(inst)
+        })
+        chartsRef.current.push(inst)
+      }
     }
 
     return () => {
       chartsRef.current.forEach(c => c.destroy())
       chartsRef.current = []
     }
-  }, [isOpen, computed, lang, barMode, mainTab, barGroupFilter])
+  }, [isOpen, computed, lang, overviewCurrency, overviewGroup, overviewPeriod, mainTab])
 
   // 히스토리 데이터 fetch
   useEffect(() => {
@@ -297,7 +323,6 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     if (histChartRef.current) { histChartRef.current.destroy(); histChartRef.current = null }
     if (!histData.length) return
 
-    // 필터 기반 값 추출: 그룹 선택 > 통화 선택 > 전체
     const getValue = (r) => {
       if (histGroupFilter) {
         try {
@@ -362,6 +387,20 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   if (!isOpen) return null
 
   const { grpTotals, grandUSD, grandKRW, totalKRW, stockEvals, lineDatasets, fxRate } = computed || {}
+  const groupNames = stockData?.groups?.map(g => g.name) ?? []
+
+  // 공통 스타일
+  const selStyle = {
+    fontSize: '0.78rem', padding: '0.25rem 0.5rem', borderRadius: 6,
+    border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)',
+    fontFamily: 'inherit', cursor: 'pointer',
+  }
+  const periodBtn = (active) => ({
+    padding: '0.28rem 0.75rem', fontSize: '0.78rem', fontWeight: active ? 700 : 400,
+    border: `1.5px solid ${active ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 6,
+    background: active ? 'var(--accent)' : 'transparent',
+    color: active ? '#fff' : 'var(--ink3)', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+  })
 
   return (
     <div
@@ -373,6 +412,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         <button className="stats-back" onClick={onClose}>{t(lang, 'statsBack')}</button>
         <span className="stats-title">{t(lang, 'statsTitle')}</span>
       </div>
+
       {/* 메인 탭 */}
       <div style={{ display: 'flex', gap: '0', borderBottom: '1.5px solid var(--border)', padding: '0 1.2rem' }}>
         {[['overview', 'stock.currentTab'], ['history', 'stock.historyTab']].map(([key, i18nKey]) => (
@@ -386,86 +426,75 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
           </button>
         ))}
       </div>
+
       <div className="stats-body">
+        {/* ══════════════ 현황 탭 ══════════════ */}
         {mainTab === 'overview' && (!computed ? (
           <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--ink3)' }}>{t(lang, 'statsLoading')}</div>
         ) : (
           <>
-            {/* Summary */}
-            <div className="stats-section">
-              <div className="stats-section-title">{t(lang, 'statsSummaryTitle')}</div>
-              {/* 탭 버튼 */}
-              <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.75rem' }}>
-                {[['group', 'stock.byGroup'], ['currency', 'stock.byCurrency']].map(([key, i18nKey]) => (
-                  <button
-                    key={key}
-                    onClick={() => setSummaryTab(key)}
-                    style={{
-                      padding: '0.3rem 0.85rem',
-                      fontSize: '0.8rem',
-                      fontWeight: summaryTab === key ? 700 : 400,
-                      border: `1.5px solid ${summaryTab === key ? 'var(--accent)' : 'var(--border)'}`,
-                      borderRadius: 6,
-                      background: summaryTab === key ? 'var(--accent)' : 'transparent',
-                      color: summaryTab === key ? '#fff' : 'var(--ink3)',
-                      cursor: 'pointer',
-                      fontFamily: 'inherit',
-                      transition: 'all 0.15s',
-                    }}
-                  >
-                    {t(lang, i18nKey)}
-                  </button>
-                ))}
-              </div>
-
-              {summaryTab === 'group' ? (
-                /* 그룹별 탭 */
-                <div className="stats-summary-grid">
-                  {(grpTotals ?? []).map((g, i) => (
-                    <div className="stats-summary-card" key={i}>
-                      <div className="stats-summary-label">{g.name} ({g.currency})</div>
-                      <div className="stats-summary-value">
-                        {g.currency === 'USD' ? `$${fmtUSD(g.total)}` : `₩${fmtKRW(g.total)}`}
-                      </div>
-                    </div>
-                  ))}
-                  <div className="stats-summary-card">
-                    <div className="stats-summary-label">
-                      {t(lang, 'statsKRWEquiv')}{fxRate ? ` ($1=₩${fmtKRW(fxRate)})` : ` (${t(lang, 'statsFxNone')})`}
-                    </div>
-                    <div className="stats-summary-value">₩{fmtKRW(totalKRW ?? 0)}</div>
-                  </div>
-                </div>
-              ) : (
-                /* 통화별 탭 */
-                <div className="stats-summary-grid">
-                  <div className="stats-summary-card">
-                    <div className="stats-summary-label">{t(lang, 'statsUSDGroup')}</div>
-                    <div className="stats-summary-value">${fmtUSD(grandUSD ?? 0)}</div>
-                  </div>
-                  <div className="stats-summary-card">
-                    <div className="stats-summary-label">{t(lang, 'statsKRWGroup')}</div>
-                    <div className="stats-summary-value">₩{fmtKRW(grandKRW ?? 0)}</div>
-                  </div>
-                  <div className="stats-summary-card">
-                    <div className="stats-summary-label">
-                      {t(lang, 'statsKRWEquiv')}{fxRate ? ` ($1=₩${fmtKRW(fxRate)})` : ` (${t(lang, 'statsFxNone')})`}
-                    </div>
-                    <div className="stats-summary-value">₩{fmtKRW(totalKRW ?? 0)}</div>
-                  </div>
-                </div>
-              )}
+            {/* ── 공통 필터 바 ── */}
+            <div style={{
+              display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center',
+              padding: '0.7rem 1.2rem', borderBottom: '1px solid var(--border)',
+              background: 'var(--bg)',
+            }}>
+              <span style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>{t(lang, 'stock.filterByGroup')}:</span>
+              <select value={overviewGroup} onChange={e => setOverviewGroup(e.target.value)} style={selStyle}>
+                <option value="">{t(lang, 'stock.allGroups')}</option>
+                {groupNames.map(name => <option key={name} value={name}>{name}</option>)}
+              </select>
+              <span style={{ fontSize: '0.78rem', color: 'var(--ink3)', marginLeft: '0.4rem' }}>{t(lang, 'stock.filterByCurrency')}:</span>
+              <select value={overviewCurrency} onChange={e => setOverviewCurrency(e.target.value)} style={selStyle}>
+                <option value="KRW">KRW</option>
+                <option value="USD">USD</option>
+              </select>
+              <span style={{ fontSize: '0.78rem', color: 'var(--ink3)', marginLeft: '0.4rem' }}>기간:</span>
+              {[['1m', '1개월'], ['3m', '3개월'], ['all', '전체']].map(([key, label]) => (
+                <button key={key} onClick={() => setOverviewPeriod(key)} style={periodBtn(overviewPeriod === key)}>
+                  {label}
+                </button>
+              ))}
             </div>
 
-            {/* Pie chart */}
+            {/* ── 전체 합계 요약 카드 ── */}
             <div className="stats-section">
-              <div className="stats-section-title">{t(lang, 'statsPieTitle')}</div>
+              <div className="stats-section-title">{t(lang, 'statsSummaryTitle')}</div>
+              <div className="stats-summary-grid">
+                {(grpTotals ?? [])
+                  .filter(g => !overviewGroup || g.name === overviewGroup)
+                  .map((g, i) => {
+                    let display
+                    if (overviewCurrency === 'USD' && g.isKRW && fxRate) display = `$${fmtUSD(g.total / fxRate)}`
+                    else if (overviewCurrency === 'KRW' && !g.isKRW && fxRate) display = `₩${fmtKRW(g.total * fxRate)}`
+                    else display = g.currency === 'USD' ? `$${fmtUSD(g.total)}` : `₩${fmtKRW(g.total)}`
+                    return (
+                      <div className="stats-summary-card" key={i}>
+                        <div className="stats-summary-label">{g.name} ({g.currency})</div>
+                        <div className="stats-summary-value">{display}</div>
+                      </div>
+                    )
+                  })}
+                <div className="stats-summary-card">
+                  <div className="stats-summary-label">
+                    {t(lang, 'statsKRWEquiv')}{fxRate ? ` ($1=₩${fmtKRW(fxRate)})` : ` (${t(lang, 'statsFxNone')})`}
+                  </div>
+                  <div className="stats-summary-value">₩{fmtKRW(totalKRW ?? 0)}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── 파이차트 ── */}
+            <div className="stats-section">
+              <div className="stats-section-title">
+                {overviewGroup ? `${overviewGroup} — ${t(lang, 'statsPieTitle')}` : t(lang, 'statsPieTitle')}
+              </div>
               <div className="stats-chart-wrap pie-wrap">
                 <canvas ref={pieRef} />
               </div>
             </div>
 
-            {/* Line chart */}
+            {/* ── 라인차트 ── */}
             {lineDatasets?.length > 0 && (
               <div className="stats-section">
                 <div className="stats-section-title">{t(lang, 'statsLineTitle')}</div>
@@ -475,54 +504,19 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               </div>
             )}
 
-            {/* Bar chart */}
-            {stockEvals?.length > 0 && (() => {
-              const barGroupNames = stockData?.groups?.map(g => g.name) ?? []
-              const barSelStyle = {
-                fontSize: '0.78rem', padding: '0.25rem 0.5rem', borderRadius: 6,
-                border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)',
-                fontFamily: 'inherit', cursor: 'pointer',
-              }
-              return (
-                <div className="stats-section">
-                  <div className="stats-section-title">{t(lang, 'statsBarTitle')}</div>
-                  {/* 필터 행: 그룹별 드롭다운 + 통화 버튼 */}
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.75rem' }}>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>{t(lang, 'stock.filterByGroup')}:</span>
-                    <select value={barGroupFilter} onChange={e => setBarGroupFilter(e.target.value)} style={barSelStyle}>
-                      <option value="">{t(lang, 'stock.allGroups')}</option>
-                      {barGroupNames.map(name => <option key={name} value={name}>{name}</option>)}
-                    </select>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--ink3)', marginLeft: '0.3rem' }}>
-                      {t(lang, 'stock.filterByCurrency')}:
-                    </span>
-                    {['KRW', 'USD'].map(mode => (
-                      <button
-                        key={mode}
-                        onClick={() => setBarMode(mode)}
-                        style={{
-                          padding: '0.3rem 0.85rem', fontSize: '0.8rem',
-                          fontWeight: barMode === mode ? 700 : 400,
-                          border: `1.5px solid ${barMode === mode ? 'var(--accent)' : 'var(--border)'}`,
-                          borderRadius: 6,
-                          background: barMode === mode ? 'var(--accent)' : 'transparent',
-                          color: barMode === mode ? '#fff' : 'var(--ink3)',
-                          cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
-                        }}
-                      >
-                        {t(lang, mode === 'KRW' ? 'stock.displayKRW' : 'stock.displayUSD')}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="stats-chart-wrap">
-                    <canvas ref={barRef} />
-                  </div>
+            {/* ── 바차트 ── */}
+            {stockEvals?.length > 0 && (
+              <div className="stats-section">
+                <div className="stats-section-title">{t(lang, 'statsBarTitle')}</div>
+                <div className="stats-chart-wrap">
+                  <canvas ref={barRef} />
                 </div>
-              )
-            })()}
+              </div>
+            )}
           </>
         ))}
 
+        {/* ══════════════ 히스토리 탭 ══════════════ */}
         {mainTab === 'history' && (() => {
           if (histLoading) return (
             <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--ink3)' }}>{t(lang, 'statsLoading')}</div>
@@ -531,7 +525,6 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--ink3)' }}>{t(lang, 'stock.noHistory')}</div>
           )
 
-          // 범위 필터링
           const now = new Date()
           const cutoff = histRange === '1m'
             ? new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString().slice(0, 10)
@@ -542,7 +535,6 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             .filter(r => r.total_krw_equiv != null && (!cutoff || r.snapshot_date >= cutoff))
             .sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date))
 
-          // 요약 카드 계산
           const equivVals = filtered.map(r => r.total_krw_equiv)
           const maxVal = equivVals.length ? Math.max(...equivVals) : 0
           const minVal = equivVals.length ? Math.min(...equivVals) : 0
@@ -552,24 +544,11 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
           const last = filtered[filtered.length - 1]?.total_krw_equiv ?? 0
           const periodReturn = first > 0 ? ((last - first) / first * 100) : null
 
-          // 테이블용: 최신순, 페이지네이션
           const tableRows = [...histData].sort((a, b) => b.snapshot_date.localeCompare(a.snapshot_date))
           const totalPages = Math.ceil(tableRows.length / HIST_PAGE_SIZE)
           const pageRows = tableRows.slice(histPage * HIST_PAGE_SIZE, (histPage + 1) * HIST_PAGE_SIZE)
 
-          const tabBtnStyle = (active) => ({
-            padding: '0.28rem 0.75rem', fontSize: '0.78rem', fontWeight: active ? 700 : 400,
-            border: `1.5px solid ${active ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 6,
-            background: active ? 'var(--accent)' : 'transparent',
-            color: active ? '#fff' : 'var(--ink3)', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
-          })
-
-          const groupNames = stockData?.groups?.map(g => g.name) ?? []
-          const selStyle = {
-            fontSize: '0.78rem', padding: '0.25rem 0.5rem', borderRadius: 6,
-            border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)',
-            fontFamily: 'inherit', cursor: 'pointer',
-          }
+          const histGroupNames = stockData?.groups?.map(g => g.name) ?? []
 
           return (
             <>
@@ -597,12 +576,11 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
 
               {/* 날짜 범위 버튼 + 필터 + 라인차트 */}
               <div className="stats-section">
-                {/* 필터 행: 그룹별 + 통화별 */}
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.5rem' }}>
                   <span style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>{t(lang, 'stock.filterByGroup')}:</span>
                   <select value={histGroupFilter} onChange={e => setHistGroupFilter(e.target.value)} style={selStyle}>
                     <option value="">{t(lang, 'stock.allGroups')}</option>
-                    {groupNames.map(name => <option key={name} value={name}>{name}</option>)}
+                    {histGroupNames.map(name => <option key={name} value={name}>{name}</option>)}
                   </select>
                   <span style={{ fontSize: '0.78rem', color: 'var(--ink3)', marginLeft: '0.3rem' }}>{t(lang, 'stock.filterByCurrency')}:</span>
                   <select
@@ -616,10 +594,9 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                     <option value="KRW">KRW</option>
                   </select>
                 </div>
-                {/* 기간 버튼 */}
                 <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.75rem' }}>
                   {[['1m', '1개월'], ['3m', '3개월'], ['all', '전체']].map(([key, label]) => (
-                    <button key={key} onClick={() => setHistRange(key)} style={tabBtnStyle(histRange === key)}>{label}</button>
+                    <button key={key} onClick={() => setHistRange(key)} style={periodBtn(histRange === key)}>{label}</button>
                   ))}
                 </div>
                 <div className="stats-chart-wrap">
@@ -666,14 +643,13 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                     </tbody>
                   </table>
                 </div>
-                {/* 페이지네이션 */}
                 {totalPages > 1 && (
                   <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center', marginTop: '0.75rem' }}>
                     <button onClick={() => setHistPage(p => Math.max(0, p - 1))} disabled={histPage === 0}
-                      style={{ ...tabBtnStyle(false), opacity: histPage === 0 ? 0.4 : 1 }}>←</button>
+                      style={{ ...periodBtn(false), opacity: histPage === 0 ? 0.4 : 1 }}>←</button>
                     <span style={{ fontSize: '0.8rem', color: 'var(--ink3)', alignSelf: 'center' }}>{histPage + 1} / {totalPages}</span>
                     <button onClick={() => setHistPage(p => Math.min(totalPages - 1, p + 1))} disabled={histPage === totalPages - 1}
-                      style={{ ...tabBtnStyle(false), opacity: histPage === totalPages - 1 ? 0.4 : 1 }}>→</button>
+                      style={{ ...periodBtn(false), opacity: histPage === totalPages - 1 ? 0.4 : 1 }}>→</button>
                   </div>
                 )}
               </div>
