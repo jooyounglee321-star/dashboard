@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from 'react'
+import { useEffect, useRef, useMemo, useState } from 'react'
 import { Chart, registerables } from 'chart.js'
 import { t } from './i18n'
 Chart.register(...registerables)
@@ -85,6 +85,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   const lineRef = useRef(null)
   const barRef = useRef(null)
   const chartsRef = useRef([])
+  const [barMode, setBarMode] = useState('KRW')
 
   const computed = useMemo(() => computeStockStats(stockData), [stockData])
 
@@ -95,7 +96,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     chartsRef.current.forEach(c => c.destroy())
     chartsRef.current = []
 
-    const { grpTotals, stockEvals, lineDatasets } = computed
+    const { grpTotals, stockEvals, lineDatasets, fxRate } = computed
 
     // Pie / doughnut chart
     if (pieRef.current) {
@@ -142,11 +143,22 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
 
     // Bar chart (unrealized P/L by stock)
     if (barRef.current && stockEvals.length) {
-      const sorted = [...stockEvals].sort((a, b) => b.evalPL - a.evalPL)
+      // barMode에 따라 evalPL 환산
+      const convertedEvals = stockEvals.map(s => {
+        if (barMode === 'KRW' && !s.isKRW && fxRate) {
+          return { ...s, evalPL: s.evalPL * fxRate, sym: '₩', isKRW: true }
+        }
+        if (barMode === 'USD' && s.isKRW && fxRate) {
+          return { ...s, evalPL: s.evalPL / fxRate, sym: '$', isKRW: false }
+        }
+        return s
+      })
+      const sorted = [...convertedEvals].sort((a, b) => b.evalPL - a.evalPL)
+      const axisSymbol = barMode === 'KRW' ? '₩' : '$'
       const inst = new Chart(barRef.current, {
         type: 'bar',
         data: {
-          labels: sorted.map(s => s.label),
+          labels: sorted.map(s => s.name),
           datasets: [{
             label: t(lang, 'statsBarLabel'),
             data: sorted.map(s => parseFloat(s.evalPL.toFixed(2))),
@@ -159,7 +171,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
           responsive: true,
           scales: {
             y: {
-              title: { display: true, text: t(lang, 'statsAxisPL') },
+              title: { display: true, text: `${t(lang, 'statsAxisPL')} (${axisSymbol})` },
               ticks: { callback: v => v >= 0 ? `+${v}` : `${v}` },
             },
           },
@@ -183,7 +195,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       chartsRef.current.forEach(c => c.destroy())
       chartsRef.current = []
     }
-  }, [isOpen, computed, lang])
+  }, [isOpen, computed, lang, barMode])
 
   if (!isOpen) return null
 
@@ -247,6 +259,28 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             {stockEvals?.length > 0 && (
               <div className="stats-section">
                 <div className="stats-section-title">{t(lang, 'statsBarTitle')}</div>
+                <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.75rem' }}>
+                  {['KRW', 'USD'].map(mode => (
+                    <button
+                      key={mode}
+                      onClick={() => setBarMode(mode)}
+                      style={{
+                        padding: '0.3rem 0.85rem',
+                        fontSize: '0.8rem',
+                        fontWeight: barMode === mode ? 700 : 400,
+                        border: `1.5px solid ${barMode === mode ? 'var(--accent)' : 'var(--border)'}`,
+                        borderRadius: 6,
+                        background: barMode === mode ? 'var(--accent)' : 'transparent',
+                        color: barMode === mode ? '#fff' : 'var(--ink3)',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {t(lang, mode === 'KRW' ? 'stock.displayKRW' : 'stock.displayUSD')}
+                    </button>
+                  ))}
+                </div>
                 <div className="stats-chart-wrap">
                   <canvas ref={barRef} />
                 </div>

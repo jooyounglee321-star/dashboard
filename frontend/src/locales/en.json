@@ -518,6 +518,11 @@
     "chf": "Swiss Franc"
   },
 
+  "stock": {
+    "displayUSD": "$ USD",
+    "displayKRW": "₩ KRW"
+  },
+
   "chart": {
     "pieTitle":            "Expense by Category",
     "lineTitle":           "Daily Expense Trend",

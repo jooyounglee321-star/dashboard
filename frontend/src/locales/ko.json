@@ -518,6 +518,11 @@
     "chf": "스위스 프랑"
   },
 
+  "stock": {
+    "displayUSD": "$ USD 기준",
+    "displayKRW": "₩ KRW 기준"
+  },
+
   "chart": {
     "pieTitle":            "카테고리별 지출",
     "lineTitle":           "일별 지출 추이",
