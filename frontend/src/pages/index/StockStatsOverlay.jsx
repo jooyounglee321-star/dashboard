@@ -54,22 +54,34 @@ function computeStockStats(stockData, userJoinDate) {
     })
   })
 
-  // 전체 그룹의 모든 매수 날짜 수집
-  const allDateSet = new Set()
+  // startDate부터 오늘까지 연속 날짜 생성
+  const today = new Date().toISOString().slice(0, 10)
+  const generateDateRange = (start, end) => {
+    const dates = []
+    const cur = new Date(start)
+    const endDate = new Date(end)
+    while (cur <= endDate) {
+      dates.push(cur.toISOString().slice(0, 10))
+      cur.setDate(cur.getDate() + 1)
+    }
+    return dates
+  }
+
+  // startDate 계산: MAX(최초 purchase.date, 가입일)
+  const allPurchaseDates = []
   groups.forEach(g => {
     g.stocks.forEach(s => {
-      ;(s.purchases || []).forEach(p => { if (p.date) allDateSet.add(p.date) })
+      ;(s.purchases || []).forEach(p => { if (p.date) allPurchaseDates.push(p.date) })
     })
   })
-  const allDates = [...allDateSet].sort()   // YYYY-MM-DD 문자열 정렬 = 시간순
-
-  // 시작일 = MAX(최초 purchase.date, 가입일) — 가입 전 이력 차트 제외
-  const minPurchaseDate = allDates[0] ?? null
+  const minPurchaseDate = allPurchaseDates.length ? allPurchaseDates.sort()[0] : null
   const joinDate = userJoinDate ?? null
   const startDate = minPurchaseDate && joinDate
     ? (minPurchaseDate > joinDate ? minPurchaseDate : joinDate)
-    : (joinDate ?? minPurchaseDate)
-  const globalDates = startDate ? allDates.filter(d => d >= startDate) : allDates
+    : (joinDate ?? minPurchaseDate ?? today)
+
+  // startDate ~ 오늘 연속 날짜 배열
+  const globalDates = generateDateRange(startDate, today)
 
   // DEBUG: 첫 번째 그룹 첫 번째 종목 purchases 확인
   if (groups[0]?.stocks[0]) {
