@@ -11,6 +11,7 @@ import ScheduleCard from './ScheduleCard'
 import YoutubeCard from './YoutubeCard'
 import StockCard from './StockCard'
 import StockStatsOverlay from './StockStatsOverlay'
+import StockSettingsModal from './StockSettingsModal'
 import ExpenseCard from './ExpenseCard'
 import DietCard from './DietCard'
 import MemoCard from './MemoCard'
@@ -414,28 +415,12 @@ export default function IndexPage() {
         lang={lang}
       />
 
-      {/* 내 주식 설정 모달 (placeholder) */}
-      {stockSettingsOpen && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 600,
-          background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }} onClick={() => setStockSettingsOpen(false)}>
-          <div style={{
-            background: 'var(--bg)', borderRadius: 14, padding: '2rem 2.5rem',
-            minWidth: 320, maxWidth: 480, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-          }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
-              <span style={{ fontWeight: 700, fontSize: '1rem' }}>⚙ {t(lang, 'stock.settings')}</span>
-              <button onClick={() => setStockSettingsOpen(false)} style={{
-                background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: 'var(--ink3)',
-              }}>✕</button>
-            </div>
-            <div style={{ color: 'var(--ink3)', fontSize: '0.88rem', textAlign: 'center', padding: '2rem 0' }}>
-              준비 중입니다.
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 내 주식 설정 모달 */}
+      <StockSettingsModal
+        isOpen={stockSettingsOpen}
+        onClose={() => setStockSettingsOpen(false)}
+        lang={lang}
+      />
 
       {/* 헤더 */}
       <header className="header">

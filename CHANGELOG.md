@@ -4,6 +4,21 @@
 
 ---
 
+## [2026-06-10] — feat: 내 주식 설정 버튼 클릭 시 보유주식관리 모달 표시
+
+### 변경 내용
+- **StockSettingsModal.jsx** 신규 파일 생성 (frontend/src/pages/index/)
+  - AdminPage의 보유주식 관리 UI 전체를 자체 state/로직 포함하는 독립 컴포넌트로 분리
+  - `embedded=true` 시 오버레이 없이 내용만 렌더 (AdminPage 재사용), 기본값은 전체화면 모달
+  - 포함: stockSummary, useStockSearch, StockDropdown, AddStockRow, StockDetailPanel, 그룹/종목 CRUD, 종목삭제 확인 모달
+- **AdminPage.jsx** 기존 stock 인라인 섹션 → `<StockSettingsModal embedded lang={lang} />` 으로 교체
+  - groups/totalMode/expanded/deleteModal state 제거
+  - loadGroups, saveGroupsToDB, addGroup/delGroup/updateGroup, addStock, handleStockUpdate, confirmDelStock, doDelStock 함수 제거
+  - 사용 안하는 TOTAL_MODE_KEY, GRP_COLORS, stockSummary, useStockSearch, StockDropdown, AddStockRow, StockDetailPanel 제거
+- **IndexPage.jsx** placeholder 모달 → `<StockSettingsModal isOpen onClose lang>` 로 교체
+
+---
+
 ## [2026-06-10] — fix: StockCard 헤더 빈 영역 cursor-pointer 제거
 
 ### 변경 내용
