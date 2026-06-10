@@ -4,6 +4,17 @@
 
 ---
 
+## [2026-06-09] — fix: 현황 탭 공통 필터 적용 후 차트 빈 화면 버그 수정
+
+### 변경 내용
+- **StockStatsOverlay.jsx** JSX 조건부 렌더링 버그 수정: 라인/바차트 canvas를 전체 데이터(`lineDatasets?.length > 0`) 기준으로 렌더링 → 필터 적용 후 유효 데이터(`effectiveLineDatasets`, `effectiveStockEvals`, `effectivePieItems`) 기준으로 변경
+- 파이/라인/바차트 각각: 필터 결과가 비어있을 때 "해당 조건에 데이터가 없습니다" 메시지 표시
+- render body에서 `effectiveLineDatasets`, `effectiveStockEvals`, `effectivePieItems` 사전 계산 (기간 cutoff 포함)
+- useEffect에 `console.log` 진단 코드 추가 — 필터 상태, 그룹별 lineDatasets/barEvals/pieStocks 필터링 결과 출력
+- `stock.noData` i18n 키 추가 (ko: "해당 조건에 데이터가 없습니다", en: "No data for selected filters")
+
+---
+
 ## [2026-06-09] — feat: Stats 오버레이 전체 섹션 공통 필터 바 통일 (그룹별/통화별/기간)
 
 ### 변경 내용
