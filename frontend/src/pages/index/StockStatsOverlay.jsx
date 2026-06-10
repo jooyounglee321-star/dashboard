@@ -136,6 +136,8 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   const [histLoading, setHistLoading] = useState(false)
   const [histRange, setHistRange] = useState('1m')
   const [histPage, setHistPage] = useState(0)
+  const [histGroupFilter, setHistGroupFilter] = useState('')
+  const [histCurrencyFilter, setHistCurrencyFilter] = useState('')
   const HIST_PAGE_SIZE = 20
 
   // 회원가입일 로드 (localStorage 우선 → /api/auth/me 폴백)
@@ -286,6 +288,24 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     if (histChartRef.current) { histChartRef.current.destroy(); histChartRef.current = null }
     if (!histData.length) return
 
+    // 필터 기반 값 추출: 그룹 선택 > 통화 선택 > 전체
+    const getValue = (r) => {
+      if (histGroupFilter) {
+        try {
+          const grps = JSON.parse(r.data || '[]')
+          const grp = grps.find(g => g.name === histGroupFilter)
+          if (!grp) return null
+          return grp.currency === 'USD' ? grp.total * (r.usd_krw || 1) : grp.total
+        } catch { return null }
+      }
+      if (histCurrencyFilter === 'USD') return r.total_usd
+      if (histCurrencyFilter === 'KRW') return r.total_krw
+      return r.total_krw_equiv
+    }
+
+    const useUSD = histCurrencyFilter === 'USD' && !histGroupFilter
+    const yLabel = useUSD ? '$' : '₩'
+
     const now = new Date()
     const cutoff = histRange === '1m'
       ? new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString().slice(0, 10)
@@ -293,7 +313,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         ? new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()).toISOString().slice(0, 10)
         : null
     const filtered = [...histData]
-      .filter(r => r.total_krw_equiv != null && (!cutoff || r.snapshot_date >= cutoff))
+      .filter(r => getValue(r) != null && (!cutoff || r.snapshot_date >= cutoff))
       .sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date))
     if (!filtered.length) return
 
@@ -302,8 +322,8 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       data: {
         labels: filtered.map(r => r.snapshot_date),
         datasets: [{
-          label: t(lang, 'statsKRWEquiv'),
-          data: filtered.map(r => r.total_krw_equiv),
+          label: yLabel,
+          data: filtered.map(r => getValue(r)),
           borderColor: '#2563eb',
           backgroundColor: 'rgba(37,99,235,0.08)',
           fill: true,
@@ -316,15 +336,19 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         scales: {
           x: { type: 'category', title: { display: true, text: t(lang, 'statsAxisDate') }, ticks: { maxTicksLimit: 10 } },
           y: {
-            title: { display: true, text: '₩' },
-            ticks: { callback: v => v >= 100000000 ? `${(v / 100000000).toFixed(1)}억` : v >= 10000 ? `${(v / 10000).toFixed(0)}만` : v },
+            title: { display: true, text: yLabel },
+            ticks: {
+              callback: useUSD
+                ? v => `$${Number(v).toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+                : v => v >= 100000000 ? `${(v / 100000000).toFixed(1)}억` : v >= 10000 ? `${(v / 10000).toFixed(0)}만` : v,
+            },
           },
         },
         plugins: { legend: { display: false } },
       },
     })
     return () => { if (histChartRef.current) { histChartRef.current.destroy(); histChartRef.current = null } }
-  }, [isOpen, mainTab, histData, histRange, lang])
+  }, [isOpen, mainTab, histData, histRange, histGroupFilter, histCurrencyFilter, lang])
 
   if (!isOpen) return null
 
@@ -517,6 +541,13 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             color: active ? '#fff' : 'var(--ink3)', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
           })
 
+          const groupNames = stockData?.groups?.map(g => g.name) ?? []
+          const selStyle = {
+            fontSize: '0.78rem', padding: '0.25rem 0.5rem', borderRadius: 6,
+            border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)',
+            fontFamily: 'inherit', cursor: 'pointer',
+          }
+
           return (
             <>
               {/* 요약 카드 */}
@@ -541,8 +572,28 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                 </div>
               </div>
 
-              {/* 날짜 범위 버튼 + 라인차트 */}
+              {/* 날짜 범위 버튼 + 필터 + 라인차트 */}
               <div className="stats-section">
+                {/* 필터 행: 그룹별 + 통화별 */}
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>{t(lang, 'stock.filterByGroup')}:</span>
+                  <select value={histGroupFilter} onChange={e => setHistGroupFilter(e.target.value)} style={selStyle}>
+                    <option value="">{t(lang, 'stock.allGroups')}</option>
+                    {groupNames.map(name => <option key={name} value={name}>{name}</option>)}
+                  </select>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--ink3)', marginLeft: '0.3rem' }}>{t(lang, 'stock.filterByCurrency')}:</span>
+                  <select
+                    value={histCurrencyFilter}
+                    onChange={e => setHistCurrencyFilter(e.target.value)}
+                    disabled={!!histGroupFilter}
+                    style={{ ...selStyle, opacity: histGroupFilter ? 0.45 : 1, cursor: histGroupFilter ? 'not-allowed' : 'pointer' }}
+                  >
+                    <option value="">{t(lang, 'stock.allCurrencies')}</option>
+                    <option value="USD">USD</option>
+                    <option value="KRW">KRW</option>
+                  </select>
+                </div>
+                {/* 기간 버튼 */}
                 <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.75rem' }}>
                   {[['1m', '1개월'], ['3m', '3개월'], ['all', '전체']].map(([key, label]) => (
                     <button key={key} onClick={() => setHistRange(key)} style={tabBtnStyle(histRange === key)}>{label}</button>
