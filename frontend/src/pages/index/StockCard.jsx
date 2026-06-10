@@ -37,7 +37,13 @@ function calcStock(s, priceMap) {
   return { holdQty, avgCost, cur, chP, val, evalPL, evalPct, realizedPL, totalSellQty, isLive }
 }
 
-export default function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, isMobile = false, currencyDisplay, lang = 'ko' }) {
+const btnStyle = {
+  fontSize: '0.65rem', color: 'var(--ink3)', marginLeft: '0.3rem',
+  background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+  fontFamily: 'inherit', textDecoration: 'none',
+}
+
+export default function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSettings, isMobile = false, currencyDisplay, lang = 'ko' }) {
   const totalMode = currencyDisplay ?? (() => { try { return localStorage.getItem(TOTAL_MODE_KEY) || 'KRW' } catch { return 'KRW' } })()
   const fxText = fxRate ? `$1 = ₩${fmtKRW(fxRate)}` : ''
   const fxNote = fxRate ? ` (${t(lang, 'stockFxLabel')} ₩${fmtKRW(fxRate)}/$)` : ''
@@ -52,10 +58,11 @@ export default function StockCard({ groups, priceMap, fxRate, loading, onOpenSta
   if (loading) {
     return (
       <div className={wrapper}>
-        <div className={hdr} onClick={isMobile ? onOpenStats : undefined}>
+        <div className={isMobile ? 'm-card-header' : 'card-header'}>
           <span className="card-icon">📈</span>
           <span className={titleCls}>{t(lang, 'stockTitle')}</span>
-          {isMobile && <span style={{ fontSize: '0.6rem', color: 'var(--ink3)', marginLeft: '0.25rem' }}>↗</span>}
+          <button style={btnStyle} onClick={onOpenStats}>{t(lang, 'stock.statsLink')}</button>
+          <button style={{ ...btnStyle, marginLeft: '0.4rem' }} onClick={onOpenSettings}>{t(lang, 'stock.settings')}</button>
           <span style={{ marginLeft: 'auto', fontSize: '0.68rem', color: 'var(--ink3)' }}>{fxText}</span>
         </div>
         <div className={body}>
@@ -68,11 +75,11 @@ export default function StockCard({ groups, priceMap, fxRate, loading, onOpenSta
   if (!groups.length || !groups.some(g => g.stocks?.length)) {
     return (
       <div className={wrapper}>
-        <div className={!isMobile ? 'card-header' : hdr} onClick={isMobile ? onOpenStats : undefined}>
+        <div className={isMobile ? 'm-card-header' : 'card-header'}>
           <span className="card-icon">📈</span>
           <span className={titleCls}>{t(lang, 'stockTitle')}</span>
-          {!isMobile && <span style={{ fontSize: '0.65rem', color: 'var(--ink3)', marginLeft: '0.3rem' }}>{t(lang, 'stockStats')}</span>}
-          {isMobile && <span style={{ fontSize: '0.6rem', color: 'var(--ink3)', marginLeft: '0.25rem' }}>↗</span>}
+          <button style={btnStyle} onClick={onOpenStats}>{t(lang, 'stock.statsLink')}</button>
+          <button style={{ ...btnStyle, marginLeft: '0.4rem' }} onClick={onOpenSettings}>{t(lang, 'stock.settings')}</button>
           <span style={{ marginLeft: 'auto', fontSize: isMobile ? '0.65rem' : '0.68rem', color: 'var(--ink3)' }}>{fxText}</span>
         </div>
         <div className={body}>
@@ -226,16 +233,11 @@ export default function StockCard({ groups, priceMap, fxRate, loading, onOpenSta
   return (
     <div className={wrapper}>
       {/* PC header is clickable for stats */}
-      <div
-        className={!isMobile ? 'card-header' : hdr}
-        onClick={onOpenStats}
-        title={!isMobile ? '클릭하면 통계 화면으로 이동' : undefined}
-        style={{ cursor: 'pointer' }}
-      >
+      <div className={isMobile ? 'm-card-header' : 'card-header'}>
         <span className="card-icon">📈</span>
         <span className={titleCls}>{t(lang, 'stockTitle')}</span>
-        {!isMobile && <span style={{ fontSize: '0.65rem', color: 'var(--ink3)', marginLeft: '0.3rem' }}>{t(lang, 'stockStats')}</span>}
-        {isMobile && <span style={{ fontSize: '0.6rem', color: 'var(--ink3)', marginLeft: '0.25rem' }}>↗</span>}
+        <button style={btnStyle} onClick={onOpenStats}>{t(lang, 'stock.statsLink')}</button>
+        <button style={{ ...btnStyle, marginLeft: '0.4rem' }} onClick={onOpenSettings}>{t(lang, 'stock.settings')}</button>
         <span style={{ marginLeft: 'auto', fontSize: isMobile ? '0.65rem' : '0.68rem', color: 'var(--ink3)', fontWeight: 400 }}>
           {fxText}
         </span>

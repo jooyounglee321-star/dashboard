@@ -4,6 +4,18 @@
 
 ---
 
+## [2026-06-10] — feat: 보유주식 헤더 버튼 분리 (통계/내주식설정), 헤더 전체 클릭 제거
+
+### 변경 내용
+- **StockCard.jsx** 헤더 전체 클릭(onOpenStats) 제거, cursor:pointer 및 title 제거
+- 헤더 좌측 타이틀 옆 버튼 2개 추가: "↗ 통계" (onOpenStats), "⚙ 내 주식 설정" (onOpenSettings)
+- PC/모바일/loading/empty 모든 상태 헤더 통일 (isMobile 분기 제거, 항상 동일 버튼 표시)
+- **IndexPage.jsx** `stockSettingsOpen` state 추가, 두 StockCard 인스턴스에 `onOpenSettings` prop 전달
+- placeholder 주식 설정 모달 추가 (준비 중 메시지, ✕ 버튼으로 닫기)
+- `stock.statsLink`, `stock.settings` i18n 키 추가 (ko/en)
+
+---
+
 ## [2026-06-09] — fix: 현황 탭 공통 필터 적용 후 차트 빈 화면 버그 수정
 
 ### 변경 내용

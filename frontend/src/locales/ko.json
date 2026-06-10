@@ -530,6 +530,8 @@
     "periodReturn": "기간 수익률",
     "savedBy": "저장방식",
     "noHistory": "아직 결산 데이터가 없습니다",
+    "statsLink": "↗ 통계",
+    "settings": "⚙ 내 주식 설정",
     "filterByGroup": "그룹별",
     "filterByCurrency": "통화별",
     "allGroups": "전체",
