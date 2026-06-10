@@ -55,18 +55,19 @@ function computeStockStats(stockData) {
 
   const lineDatasets = []
   groups.forEach((g, gi) => {
-    const purchases = []
+    // 날짜별 합산 map
+    const dailyMap = {}
     g.stocks.forEach(s => {
       ;(s.purchases || []).filter(p => p.date).forEach(p => {
         const rawAmt = (p.qty || 0) * (p.price || 0)
         const amt = g.currency === 'USD' ? rawAmt * (fxRate ?? 1) : rawAmt
-        purchases.push({ date: p.date, amt })
+        dailyMap[p.date] = (dailyMap[p.date] ?? 0) + amt
       })
     })
-    if (!purchases.length) return
-    purchases.sort((a, b) => a.date.localeCompare(b.date))
+    const dates = Object.keys(dailyMap).sort()
+    if (!dates.length) return
     let cum = 0
-    const pts = purchases.map(p => { cum += p.amt; return { x: p.date, y: cum } })
+    const pts = dates.map(date => { cum += dailyMap[date]; return { x: date, y: Math.round(cum) } })
     lineDatasets.push({
       label: g.name,
       data: pts,
