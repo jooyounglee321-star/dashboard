@@ -520,7 +520,9 @@
 
   "stock": {
     "displayUSD": "$ USD 기준",
-    "displayKRW": "₩ KRW 기준"
+    "displayKRW": "₩ KRW 기준",
+    "byGroup": "그룹별",
+    "byCurrency": "통화별"
   },
 
   "chart": {
