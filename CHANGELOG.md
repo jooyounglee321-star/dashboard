@@ -4,6 +4,14 @@
 
 ---
 
+## [2026-06-09] — fix: StockStatsOverlay 무한 렌더링 루프 버그 수정, DEBUG 로그 제거
+
+### 변경 내용
+- **StockStatsOverlay.jsx** `computeStockStats` 내 DEBUG console.log 4개 전부 제거
+- **StockStatsOverlay.jsx** `useMemo` 의존성을 `stockData` 객체 참조 → `JSON.stringify(stockData)` 문자열 비교로 변경 — 부모 컴포넌트가 매 렌더링마다 새 객체 참조를 내려줄 때 computed가 매번 재계산되어 chart useEffect가 반복 실행되던 무한 루프 수정
+
+---
+
 ## [2026-06-09] — fix: 백필 LIMIT 중복 SQL 에러 수정, 제약조건 중복 추가 에러 무시 처리
 
 ### 변경 내용
