@@ -9,6 +9,23 @@ const CHART_COLORS = ['#2563eb', '#16a34a', '#d97706', '#9333ea', '#dc2626', '#0
 function fmtKRW(v) { return Math.round(v).toLocaleString('ko-KR') }
 function fmtUSD(v) { return Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
 
+// 차트 y축/tooltip용 축약 포맷터
+const formatKRW = (val) => {
+  const abs = Math.abs(val)
+  const sign = val < 0 ? '-' : ''
+  if (abs >= 100000000) return sign + (abs / 100000000).toFixed(1) + '억'
+  if (abs >= 10000) return sign + (abs / 10000).toFixed(0) + '만'
+  return sign + Math.round(abs).toLocaleString()
+}
+const formatUSD = (val) => {
+  const abs = Math.abs(val)
+  const sign = val < 0 ? '-' : ''
+  if (abs >= 1000000) return sign + '$' + (abs / 1000000).toFixed(1) + 'M'
+  if (abs >= 1000) return sign + '$' + (abs / 1000).toFixed(1) + 'K'
+  return sign + '$' + abs.toFixed(0)
+}
+const formatAuto = (val, currency) => currency === 'USD' ? formatUSD(val) : formatKRW(val)
+
 function computeStockStats(stockData, userJoinDate) {
   if (!stockData) return null
   const { groups, priceMap, fxRate } = stockData
@@ -255,10 +272,20 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               },
               y: {
                 title: { display: true, text: t(lang, 'statsAxisInvest') },
-                ticks: { callback: v => v >= 100000000 ? `${(v / 100000000).toFixed(1)}억` : v >= 10000000 ? `${(v / 10000000).toFixed(0)}천만` : v >= 1000000 ? `${(v / 1000000).toFixed(0)}M` : v >= 1000 ? `${(v / 1000).toFixed(0)}K` : v },
+                ticks: { callback: v => overviewCurrency === 'USD' ? formatUSD(v) : `₩${formatKRW(v)}` },
               },
             },
-            plugins: { legend: { position: 'bottom' } },
+            plugins: {
+              legend: { position: 'bottom' },
+              tooltip: {
+                callbacks: {
+                  label: ctx => {
+                    const v = ctx.parsed.y
+                    return overviewCurrency === 'USD' ? formatUSD(v) : `₩${formatKRW(v)}`
+                  },
+                },
+              },
+            },
           },
         })
         chartsRef.current.push(inst)
@@ -294,7 +321,12 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             scales: {
               y: {
                 title: { display: true, text: `${t(lang, 'statsAxisPL')} (${axisSymbol})` },
-                ticks: { callback: v => v >= 0 ? `+${v}` : `${v}` },
+                ticks: {
+                  callback: v => {
+                    const fmt = formatAuto(Math.abs(v), overviewCurrency)
+                    return v >= 0 ? `+${fmt}` : `-${fmt}`
+                  },
+                },
               },
             },
             plugins: {
@@ -303,7 +335,8 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                 callbacks: {
                   label: ctx => {
                     const s = sorted[ctx.dataIndex]
-                    return `${s.evalPL >= 0 ? '+' : ''}${s.sym}${s.isKRW ? fmtKRW(Math.abs(s.evalPL)) : fmtUSD(Math.abs(s.evalPL))}`
+                    const fmt = formatAuto(Math.abs(s.evalPL), overviewCurrency)
+                    return `${s.evalPL >= 0 ? '+' : '-'}${fmt}`
                   },
                 },
               },
@@ -386,14 +419,20 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
           x: { type: 'category', title: { display: true, text: t(lang, 'statsAxisDate') }, ticks: { maxTicksLimit: 10 } },
           y: {
             title: { display: true, text: yLabel },
-            ticks: {
-              callback: useUSD
-                ? v => `$${Number(v).toLocaleString('en-US', { maximumFractionDigits: 0 })}`
-                : v => v >= 100000000 ? `${(v / 100000000).toFixed(1)}억` : v >= 10000 ? `${(v / 10000).toFixed(0)}만` : v,
+            ticks: { callback: v => useUSD ? formatUSD(v) : `₩${formatKRW(v)}` },
+          },
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const v = ctx.parsed.y
+                return useUSD ? formatUSD(v) : `₩${formatKRW(v)}`
+              },
             },
           },
         },
-        plugins: { legend: { display: false } },
       },
     })
     return () => { if (histChartRef.current) { histChartRef.current.destroy(); histChartRef.current = null } }
@@ -510,9 +549,9 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                   .filter(g => !overviewGroup || g.name === overviewGroup)
                   .map((g, i) => {
                     let display
-                    if (overviewCurrency === 'USD' && g.isKRW && fxRate) display = `$${fmtUSD(g.total / fxRate)}`
-                    else if (overviewCurrency === 'KRW' && !g.isKRW && fxRate) display = `₩${fmtKRW(g.total * fxRate)}`
-                    else display = g.currency === 'USD' ? `$${fmtUSD(g.total)}` : `₩${fmtKRW(g.total)}`
+                    if (overviewCurrency === 'USD' && g.isKRW && fxRate) display = formatUSD(g.total / fxRate)
+                    else if (overviewCurrency === 'KRW' && !g.isKRW && fxRate) display = `₩${formatKRW(g.total * fxRate)}`
+                    else display = g.currency === 'USD' ? formatUSD(g.total) : `₩${formatKRW(g.total)}`
                     return (
                       <div className="stats-summary-card" key={i}>
                         <div className="stats-summary-label">{g.name} ({g.currency})</div>
@@ -524,7 +563,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                   <div className="stats-summary-label">
                     {t(lang, 'statsKRWEquiv')}{fxRate ? ` ($1=₩${fmtKRW(fxRate)})` : ` (${t(lang, 'statsFxNone')})`}
                   </div>
-                  <div className="stats-summary-value">₩{fmtKRW(totalKRW ?? 0)}</div>
+                  <div className="stats-summary-value">₩{formatKRW(totalKRW ?? 0)}</div>
                 </div>
               </div>
             </div>
@@ -605,12 +644,12 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                 <div className="stats-summary-grid">
                   <div className="stats-summary-card">
                     <div className="stats-summary-label">{t(lang, 'stock.highestAsset')}</div>
-                    <div className="stats-summary-value" style={{ fontSize: '0.95rem' }}>₩{fmtKRW(maxVal)}</div>
+                    <div className="stats-summary-value" style={{ fontSize: '0.95rem' }}>₩{formatKRW(maxVal)}</div>
                     {maxRow && <div style={{ fontSize: '0.72rem', color: 'var(--ink3)', marginTop: '0.15rem' }}>{maxRow.snapshot_date}</div>}
                   </div>
                   <div className="stats-summary-card">
                     <div className="stats-summary-label">{t(lang, 'stock.lowestAsset')}</div>
-                    <div className="stats-summary-value" style={{ fontSize: '0.95rem' }}>₩{fmtKRW(minVal)}</div>
+                    <div className="stats-summary-value" style={{ fontSize: '0.95rem' }}>₩{formatKRW(minVal)}</div>
                     {minRow && <div style={{ fontSize: '0.72rem', color: 'var(--ink3)', marginTop: '0.15rem' }}>{minRow.snapshot_date}</div>}
                   </div>
                   <div className="stats-summary-card">
