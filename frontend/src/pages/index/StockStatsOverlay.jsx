@@ -83,14 +83,6 @@ function computeStockStats(stockData, userJoinDate) {
   // startDate ~ 오늘 연속 날짜 배열
   const globalDates = generateDateRange(startDate, today)
 
-  // DEBUG: 첫 번째 그룹 첫 번째 종목 purchases 확인
-  if (groups[0]?.stocks[0]) {
-    console.log('[DEBUG] groups[0].name:', groups[0].name, '| currency:', groups[0].currency)
-    console.log('[DEBUG] stocks[0].ticker:', groups[0].stocks[0].ticker)
-    console.log('[DEBUG] purchases:', JSON.parse(JSON.stringify(groups[0].stocks[0].purchases || [])))
-    console.log('[DEBUG] startDate:', startDate, '| globalDates:', globalDates)
-  }
-
   const lineDatasets = []
   groups.forEach((g, gi) => {
     // 그룹 내 날짜별 매수금액 합산 (date 없는 항목 및 startDate 이전 제외)
@@ -160,7 +152,8 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       .catch(() => {})
   }, [isOpen])
 
-  const computed = useMemo(() => computeStockStats(stockData, userJoinDate), [stockData, userJoinDate])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const computed = useMemo(() => computeStockStats(stockData, userJoinDate), [JSON.stringify(stockData), userJoinDate])
 
   useEffect(() => {
     if (!isOpen || !computed) return
