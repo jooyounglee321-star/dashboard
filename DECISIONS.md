@@ -1,6 +1,13 @@
 # 프로젝트 결정 기록
 
 ---
+## 2026-06-10 12:15 — 종목 뉴스 조회 백엔드: RSS 피드 파싱 + 메모리 캐시 (5분 TTL)
+**결정:** `/api/stocks/news` 엔드포인트에서 Google/Naver RSS 피드를 feedparser로 파싱하고, 메모리 내 dict 캐시(`_news_cache`)에 5분 TTL로 저장. ThreadPoolExecutor를 통해 블로킹 RSS 작업을 비동기 실행.
+**이유:** RSS는 뉴스 제공자의 표준 공개 인터페이스이므로 추가 인증 없이 접근 가능. 개별 종목의 최신 뉴스 1건만 조회하므로 DB 저장 불필요하고, 5분 캐시로 중복 요청 방지 가능. ThreadPoolExecutor는 기존 가격 조회(`_fetch_price`)와 동일한 패턴으로 일관성 유지.
+**대안:** 전문 뉴스 API(NewsAPI 등) — API 구독 비용, 인증 복잡성. DB 저장 — 뉴스는 시간 민감 데이터로 장기 저장 가치 낮음. 웹 스크래핑 — 약관 위반 위험, 구조 변경에 취약. 동기 호출 — 뉴스 조회 지연으로 API 응답성 저하.
+**파일:** `routers/stocks.py`
+
+---
 ## 2026-06-10 — 종목별 뉴스 설정 저장: portfolio_groups.data의 news_config 필드 활용
 **결정:** 종목별 뉴스 소스(Google/Naver), 검색어, 언어 설정을 `portfolio_groups.data` JSON의 각 종목 객체에 `news_config: { source, query, lang }` 필드로 저장. 별도 테이블 없이 기존 JSON 구조 활용.
 **이유:** 뉴스 설정은 종목 데이터와 강하게 결합되어 있고, 이미 종목 데이터가 `portfolio_groups.data` JSON에 관리되므로 같은 구조에 추가하면 별도 DB 마이그레이션 없이 즉시 저장 가능. PUT API도 기존 것을 재사용하여 코드 변경 최소화.
@@ -83,3 +90,10 @@
 **이유:** 분산된 필터는 사용자가 여러 위치에서 제어해야 하므로 혼동을 유발함. 단일 필터바는 모든 차트에 일관되게 적용되어 예측 가능한 UX 제공. 파이차트에 그룹 드릴다운 기능을 추가하면 더 효율적인 데이터 탐색 가능. 상태 관리도 간결해져 버그 위험 감소.
 **대안:** (1) 탭 유지 + 필터 중복 — 어느 필터를 사용할지 사용자 혼동. (2) 각 차트별 독립 필터 — 불일치하는 필터 상태 발생 위험.
 **파일:** `frontend/src/pages/index/StockStatsOverlay.jsx`
+
+---
+## 2026-06-10 12:16 — 종목 뉴스 프론트엔드: sessionStorage 클라이언트 캐시 (5분 TTL) + 온디맨드 fetch
+**결정:** StockCard.jsx에 `StockNewsRow` 컴포넌트 추가. newsConfig에서 query/source/lang 등을 받아 `/api/stocks/news` 엔드포인트로 fetch 후, `sessionStorage`에 5분 TTL로 캐싱. 상태(`idle`/`loading`/`ok`/`err`) 기반 조건부 렌더링으로 로딩, 에러, 뉴스 링크 표시.
+**이유:** 클라이언트 sessionStorage는 프론트엔드에서 간단하게 구현 가능하고, 5분 TTL로 같은 검색어에 대한 중복 API 호출 방지. 세션 범위 캐시이므로 다른 사용자 간 격리 필요 없음. 온디맨드 fetch 방식으로 불필요한 초기 로딩 시간 회피.
+**대안:** (1) 백엔드에서만 캐시 — 프론트엔드에서 매번 API 호출 필요. (2) localStorage 영구 캐시 — 뉴스는 시간 민감 데이터로 오래된 캐시 표시 위험. (3) 다중 요청 배칭(Promise.all) — 초기 로딩 지연 증가.
+**파일:** `frontend/src/pages/index/StockCard.jsx`

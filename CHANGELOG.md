@@ -4,6 +4,22 @@
 
 ---
 
+## [2026-06-10] — feat: 종목별 뉴스 자동 조회 구현 (Google/Naver RSS) + CLAUDE.md 예상시간 규칙 추가
+
+### 변경 내용
+- **routers/stocks.py** `GET /api/stocks/news` 엔드포인트 추가
+  - Google News RSS 파싱 (feedparser, API 키 불필요)
+  - Naver RSS 미지원 시 Google로 자동 폴백
+  - 백엔드 5분 캐시 (`_news_cache`)
+- **StockCard.jsx** `StockNewsRow` 컴포넌트 추가
+  - `s.news_config` 있으면 뉴스 자동 fetch
+  - 로딩/성공(클릭 링크)/실패 상태 표시
+  - sessionStorage 5분 캐시
+- **locales/ko.json, en.json** `stockNewsReady`, `stockNewsLoading`, `stockNewsError` i18n 키 추가
+- **CLAUDE.md** 작업 시작 전 예상 소요 시간 안내 규칙 추가
+
+---
+
 ## [2026-06-10] — feat: 종목별 뉴스 소스/검색어/언어 설정 UI 추가 (StockSettingsModal)
 
 ### 변경 내용
