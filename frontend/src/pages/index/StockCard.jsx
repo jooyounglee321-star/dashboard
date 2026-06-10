@@ -38,18 +38,41 @@ function calcStock(s, priceMap) {
   return { holdQty, avgCost, cur, chP, val, evalPL, evalPct, realizedPL, totalSellQty, isLive }
 }
 
-const NEWS_TTL = 5 * 60 * 1000 // 5분 캐시
+const NEWS_TTL = 5 * 60 * 1000
 
-function StockNewsRow({ newsConfig, lang }) {
-  const [status, setStatus] = useState('idle') // idle | loading | ok | err
+function StockNewsRow({ newsConfig, lang, onOpenSettings }) {
+  // status: 'ready' | 'loading' | 'ok' | 'err'
+  const [status, setStatus] = useState('ready')
   const [news,   setNews]   = useState(null)
 
   const query  = newsConfig?.query  || ''
   const source = newsConfig?.source || 'google'
   const nLang  = newsConfig?.lang   || 'ko'
 
-  useEffect(() => {
-    if (!newsConfig || !query) return
+  const base = {
+    background: 'var(--bg2, #f9fafb)', borderRadius: 6,
+    padding: '0.28rem 0.6rem', marginTop: '0.45rem',
+    fontSize: '0.7rem', display: 'block',
+    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+    border: 'none', width: '100%', textAlign: 'left',
+    fontFamily: 'inherit', textDecoration: 'none',
+    boxSizing: 'border-box',
+  }
+
+  // news_config 없음 → 설정 유도
+  if (!newsConfig || !query) {
+    return (
+      <button style={{ ...base, color: '#f59e0b', cursor: 'pointer' }}
+        onClick={e => { e.stopPropagation(); onOpenSettings?.() }}
+        onMouseEnter={e => e.currentTarget.style.color = '#d97706'}
+        onMouseLeave={e => e.currentTarget.style.color = '#f59e0b'}
+      >
+        📰 {t(lang, 'stockNewsSetup')}
+      </button>
+    )
+  }
+
+  function fetchNews() {
     const cacheKey = `news:${source}:${nLang}:${query}`
     try {
       const cached = sessionStorage.getItem(cacheKey)
@@ -69,32 +92,44 @@ function StockNewsRow({ newsConfig, lang }) {
         setNews(data); setStatus('ok')
       })
       .catch(() => setStatus('err'))
-  }, [query, source, nLang]) // eslint-disable-line
-
-  const base = {
-    background: 'var(--bg2, #f9fafb)', borderRadius: 6,
-    padding: '0.28rem 0.6rem', marginTop: '0.45rem',
-    fontSize: '0.7rem', color: 'var(--ink3)',
   }
 
-  if (!newsConfig || !query) {
-    return <div style={base}>📰 {t(lang, 'stockNewsReady')}</div>
+  // 설정 완료 — 미로드 상태
+  if (status === 'ready') {
+    return (
+      <button style={{ ...base, color: '#3b82f6', cursor: 'pointer' }}
+        onClick={e => { e.stopPropagation(); fetchNews() }}
+        onMouseEnter={e => e.currentTarget.style.color = '#1d4ed8'}
+        onMouseLeave={e => e.currentTarget.style.color = '#3b82f6'}
+      >
+        📰 {t(lang, 'stockNewsPrompt')}
+      </button>
+    )
   }
-  if (status === 'idle' || status === 'loading') {
-    return <div style={base}>📰 {t(lang, 'stockNewsLoading')}</div>
+
+  if (status === 'loading') {
+    return <div style={{ ...base, color: 'var(--ink3)', cursor: 'default' }}>📰 {t(lang, 'stockNewsLoading')}</div>
   }
+
   if (status === 'err' || !news) {
-    return <div style={base}>📰 {t(lang, 'stockNewsError')}</div>
+    return (
+      <button style={{ ...base, color: '#ef4444', cursor: 'pointer' }}
+        onClick={e => { e.stopPropagation(); setStatus('ready'); setNews(null) }}
+        onMouseEnter={e => e.currentTarget.style.color = '#b91c1c'}
+        onMouseLeave={e => e.currentTarget.style.color = '#ef4444'}
+      >
+        📰 {t(lang, 'stockNewsError')}
+      </button>
+    )
   }
+
+  // 뉴스 로드 성공 — 클릭 시 새 탭
   return (
-    <a href={news.url} target="_blank" rel="noreferrer" style={{
-      ...base, display: 'block', color: 'var(--ink2)',
-      textDecoration: 'none', overflow: 'hidden',
-      textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-    }}
+    <a href={news.url} target="_blank" rel="noreferrer"
+      style={{ ...base, color: '#3b82f6', cursor: 'pointer' }}
       title={news.title}
-      onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent)'; e.currentTarget.style.textDecoration = 'underline' }}
-      onMouseLeave={e => { e.currentTarget.style.color = 'var(--ink2)'; e.currentTarget.style.textDecoration = 'none' }}
+      onMouseEnter={e => { e.currentTarget.style.color = '#1d4ed8'; e.currentTarget.style.textDecoration = 'underline' }}
+      onMouseLeave={e => { e.currentTarget.style.color = '#3b82f6'; e.currentTarget.style.textDecoration = 'none' }}
     >
       📰 {news.title}{news.published ? ` (${news.published})` : ''}
     </a>
@@ -219,7 +254,7 @@ export default function StockCard({ groups, priceMap, fxRate, loading, onOpenSta
                 </div>
               </div>
             </div>
-            <StockNewsRow newsConfig={s.news_config} lang={lang} />
+            <StockNewsRow newsConfig={s.news_config} lang={lang} onOpenSettings={onOpenSettings} />
           </li>
         )
       } else {

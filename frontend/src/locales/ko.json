@@ -544,9 +544,10 @@
     "newsLangKo": "한국어",
     "newsLangEn": "English"
   },
-  "stockNewsReady": "뉴스 준비 중...",
+  "stockNewsSetup": "뉴스 출처를 설정해주세요",
+  "stockNewsPrompt": "클릭하면 최신 뉴스를 볼 수 있어요",
   "stockNewsLoading": "뉴스 로딩 중...",
-  "stockNewsError": "뉴스를 불러올 수 없습니다",
+  "stockNewsError": "뉴스를 불러올 수 없습니다 (재시도)",
 
   "chart": {
     "pieTitle":            "카테고리별 지출",

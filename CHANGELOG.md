@@ -4,6 +4,18 @@
 
 ---
 
+## [2026-06-10] — feat: StockCard 뉴스 영역 설정 여부에 따라 안내 문구 분기 처리
+
+### 변경 내용
+- **StockCard.jsx** `StockNewsRow` 로직 재설계
+  - `news_config` 없음 → amber 색상 "뉴스 출처를 설정해주세요" + 클릭 시 내 주식 설정 모달 오픈
+  - `news_config` 있음 → blue 색상 "클릭하면 최신 뉴스를 볼 수 있어요" + 클릭 시 fetch 실행
+  - 로딩 중 / 성공(링크 클릭 새 탭) / 실패(재시도 클릭 초기화) 상태 분기
+  - 5분 캐시 유지 (sessionStorage), 만료 시 재클릭으로 새로 fetch
+- **locales/ko.json, en.json** `stockNewsSetup`, `stockNewsPrompt` 키 추가 및 `stockNewsError` 문구 수정
+
+---
+
 ## [2026-06-10] — feat: 종목별 뉴스 자동 조회 구현 (Google/Naver RSS) + CLAUDE.md 예상시간 규칙 추가
 
 ### 변경 내용
