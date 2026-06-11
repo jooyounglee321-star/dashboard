@@ -13,17 +13,28 @@ const COLOR_KEYS = Object.keys(PASTEL)
 const MAX_MEMOS  = 6
 const INIT_FORM  = { title: '', content: '', color: 'yellow' }
 
+function lsKey(id) { return `pinned_memo_collapsed_${id}` }
+function readCollapsed(id) { try { return localStorage.getItem(lsKey(id)) === '1' } catch { return false } }
+function writeCollapsed(id, val) { try { localStorage.setItem(lsKey(id), val ? '1' : '0') } catch {} }
+
 const PinnedMemoCard = forwardRef(function PinnedMemoCard({ lang = 'ko' }, ref) {
-  const [memos,    setMemos]    = useState([])
-  const [showForm, setShowForm] = useState(false)
-  const [form,     setForm]     = useState(INIT_FORM)
-  const [editId,   setEditId]   = useState(null)
-  const [saving,   setSaving]   = useState(false)
+  const [memos,     setMemos]     = useState([])
+  const [showForm,  setShowForm]  = useState(false)
+  const [form,      setForm]      = useState(INIT_FORM)
+  const [editId,    setEditId]    = useState(null)
+  const [saving,    setSaving]    = useState(false)
+  const [collapsed, setCollapsed] = useState({})   // { [id]: bool }
 
   const load = useCallback(async () => {
     const list = await fetch('/api/pinned-memos', { headers: authHdr() })
       .then(r => r.ok ? r.json() : []).catch(() => [])
     setMemos(list)
+    // localStorage에서 접힘 상태 복원
+    setCollapsed(prev => {
+      const next = { ...prev }
+      list.forEach(m => { if (!(m.id in next)) next[m.id] = readCollapsed(m.id) })
+      return next
+    })
   }, [])
 
   useEffect(() => { load() }, [load])
@@ -130,33 +141,49 @@ const PinnedMemoCard = forwardRef(function PinnedMemoCard({ lang = 'ko' }, ref) 
         <div className="pinned-cards-row">
           {memos.map(memo => {
             const scheme = PASTEL[memo.color] || PASTEL.yellow
+            const isCollapsed = !!collapsed[memo.id]
+
+            function toggleCollapse() {
+              setCollapsed(prev => {
+                const next = { ...prev, [memo.id]: !prev[memo.id] }
+                writeCollapsed(memo.id, next[memo.id])
+                return next
+              })
+            }
+
             return (
               <div key={memo.id} className="pinned-card" style={{ background: scheme.bg }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: memo.content ? '0.35rem' : 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: (!isCollapsed && memo.content) ? '0.35rem' : 0 }}>
                   <div className="pinned-card-title" style={{ color: scheme.text, fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {memo.title || ''}
                   </div>
-                  <div className="pinned-card-pin" style={{ flexShrink: 0, marginLeft: '0.4rem' }}>📌</div>
+                  <button
+                    onClick={toggleCollapse}
+                    title={isCollapsed ? t(lang, 'pinnedMemoExpand') : t(lang, 'pinnedMemoCollapse')}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 0 0.4rem', flexShrink: 0, opacity: isCollapsed ? 0.4 : 1, fontSize: '1rem', lineHeight: 1 }}
+                  >📌</button>
                 </div>
-                {memo.content && (
+                {!isCollapsed && memo.content && (
                   <div className="pinned-card-content" style={{ color: scheme.text }}>
                     {memo.content}
                   </div>
                 )}
-                <div className="pinned-card-actions">
-                  <button
-                    onClick={() => openEdit(memo)}
-                    className="pinned-card-btn"
-                    title={t(lang, 'pinnedMemoEdit')}
-                    style={{ color: scheme.text }}
-                  >✏️</button>
-                  <button
-                    onClick={() => deleteMemo(memo.id)}
-                    className="pinned-card-btn"
-                    title={t(lang, 'pinnedMemoDelete')}
-                    style={{ color: scheme.text }}
-                  >🗑️</button>
-                </div>
+                {!isCollapsed && (
+                  <div className="pinned-card-actions">
+                    <button
+                      onClick={() => openEdit(memo)}
+                      className="pinned-card-btn"
+                      title={t(lang, 'pinnedMemoEdit')}
+                      style={{ color: scheme.text }}
+                    >✏️</button>
+                    <button
+                      onClick={() => deleteMemo(memo.id)}
+                      className="pinned-card-btn"
+                      title={t(lang, 'pinnedMemoDelete')}
+                      style={{ color: scheme.text }}
+                    >🗑️</button>
+                  </div>
+                )}
               </div>
             )
           })}

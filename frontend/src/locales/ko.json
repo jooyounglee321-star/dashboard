@@ -362,6 +362,8 @@
   "pinnedMemoCancel": "취소",
   "pinnedMemoEdit": "수정",
   "pinnedMemoDelete": "삭제",
+  "pinnedMemoCollapse": "접기",
+  "pinnedMemoExpand": "펼치기",
   "pinnedMemoEmpty": "고정 메모가 없습니다. 항상 표시할 메모를 추가해보세요.",
   "pinnedMemoColor": "색상",
   "pinnedMemoTitlePh": "제목 (선택)",

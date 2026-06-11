@@ -362,6 +362,8 @@
   "pinnedMemoCancel": "Cancel",
   "pinnedMemoEdit": "Edit",
   "pinnedMemoDelete": "Delete",
+  "pinnedMemoCollapse": "Collapse",
+  "pinnedMemoExpand": "Expand",
   "pinnedMemoEmpty": "No pinned notes yet. Add notes that should always stay visible.",
   "pinnedMemoColor": "Color",
   "pinnedMemoTitlePh": "Title (optional)",
