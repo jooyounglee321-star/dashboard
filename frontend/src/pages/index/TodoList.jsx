@@ -108,12 +108,15 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
             style={{ fontSize: fs.title, padding: '0.35rem 0.5rem', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit' }}
           />
           <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-            <input
-              type="date"
-              value={newDue}
-              onChange={e => setNewDue(e.target.value)}
-              style={{ flex: 1, fontSize: fs.sub, padding: '0.3rem 0.45rem', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit' }}
-            />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--ink3)' }}>{t(lang, 'todoDuePlaceholder')}</span>
+              <input
+                type="date"
+                value={newDue}
+                onChange={e => setNewDue(e.target.value)}
+                style={{ width: '100%', fontSize: fs.sub, padding: '0.3rem 0.45rem', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit' }}
+              />
+            </div>
             <button
               onClick={addTodo}
               disabled={saving || !newTitle.trim()}
