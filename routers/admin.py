@@ -1,3 +1,5 @@
+import os
+import re
 import secrets
 import string
 from datetime import date, datetime
@@ -196,3 +198,41 @@ def reset_password(user_id: int, db: Session = Depends(get_db), _: User = Depend
     user.hashed_password = pwd_context.hash(new_pw)
     db.commit()
     return {"ok": True, "new_password": new_pw}
+
+
+# ── GET /api/superadmin/changelog ─────────────────────────────────────────────
+
+_CHANGELOG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "CHANGELOG.md")
+
+@router.get("/superadmin/changelog")
+def get_changelog(_: User = Depends(_require_admin)):
+    try:
+        with open(_CHANGELOG_PATH, encoding="utf-8") as f:
+            text = f.read()
+    except FileNotFoundError:
+        return []
+
+    entries = []
+    current_date = None
+    current_title = None
+    current_items: list[str] = []
+
+    for line in text.splitlines():
+        # ## [YYYY-MM-DD] — 제목
+        m = re.match(r"^## \[(\d{4}-\d{2}-\d{2})\]\s*[—-]\s*(.+)$", line)
+        if m:
+            if current_date:
+                entries.append({"date": current_date, "title": current_title, "items": current_items})
+            current_date = m.group(1)
+            current_title = m.group(2).strip()
+            current_items = []
+            continue
+        # bullet items
+        if current_date and re.match(r"^\s*[-*]\s+", line):
+            current_items.append(re.sub(r"^\s*[-*]\s+", "", line))
+
+    if current_date:
+        entries.append({"date": current_date, "title": current_title, "items": current_items})
+
+    entries.sort(key=lambda e: e["date"], reverse=True)
+    return entries

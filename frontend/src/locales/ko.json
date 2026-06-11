@@ -222,7 +222,12 @@
     "toastMemoSaved": "메모가 저장되었습니다.",
     "toastPwIssued": "임시 비밀번호가 발급되었습니다.",
     "toastPwErr": "초기화 실패",
-    "confirmResetPw": "임시 비밀번호를 발급하시겠습니까? 기존 비밀번호는 즉시 무효화됩니다."
+    "confirmResetPw": "임시 비밀번호를 발급하시겠습니까? 기존 비밀번호는 즉시 무효화됩니다.",
+    "changelogTitle": "📋 변경 이력 (CHANGELOG)",
+    "changelogSearch": "날짜 또는 내용 검색…",
+    "changelogEmpty": "검색 결과가 없습니다.",
+    "changelogLoading": "변경 이력을 불러오는 중…",
+    "changelogCount": "건"
   },
 
   "adminLink": "⚙ 관리자",
