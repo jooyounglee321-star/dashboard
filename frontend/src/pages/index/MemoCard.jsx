@@ -65,9 +65,13 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
   const [editing, setEditing]   = useState(false)
   const [mood, setMood]         = useState('')
   const [text, setText]         = useState('')
-  const [emojiOpen, setEmojiOpen]   = useState(false)
-  const [emojiCatIdx, setEmojiCatIdx] = useState(0)
 
+  // 이모지 피커
+  const [emojiOpen, setEmojiOpen]     = useState(false)
+  const [emojiCatIdx, setEmojiCatIdx] = useState(0)
+  const [emojiPos, setEmojiPos]       = useState({ top: 0, left: 0 })
+
+  // 달력
   const _now = new Date()
   const [calOpen, setCalOpen]     = useState(false)
   const [allMemos, setAllMemos]   = useState([])
@@ -75,9 +79,9 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
   const [calMonth, setCalMonth]   = useState(_now.getMonth() + 1)
   const [dayDetail, setDayDetail] = useState(null)
 
-  const taRef      = useRef(null)
-  const pickerRef  = useRef(null)
-  const pickerBtnRef = useRef(null)
+  const taRef       = useRef(null)
+  const pickerRef   = useRef(null)
+  const emojiBtnRef = useRef(null)
 
   const authHdr = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') })
 
@@ -107,16 +111,16 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
   // 이모지 피커 외부 클릭 닫기
   useEffect(() => {
     if (!emojiOpen) return
-    function onClickOutside(e) {
+    function onDown(e) {
       if (
         pickerRef.current && !pickerRef.current.contains(e.target) &&
-        pickerBtnRef.current && !pickerBtnRef.current.contains(e.target)
+        emojiBtnRef.current && !emojiBtnRef.current.contains(e.target)
       ) {
         setEmojiOpen(false)
       }
     }
-    document.addEventListener('mousedown', onClickOutside)
-    return () => document.removeEventListener('mousedown', onClickOutside)
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
   }, [emojiOpen])
 
   async function saveMemo() {
@@ -134,8 +138,7 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
         body: JSON.stringify({ date: todayKey(), content }),
       })
     }
-    setEditing(false)
-    setEmojiOpen(false)
+    setEditing(false); setEmojiOpen(false)
     await loadToday()
   }
 
@@ -155,9 +158,29 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
     setEditing(true)
   }
 
+  // 이모지 피커 열기 — 버튼 위치 기반으로 fixed 좌표 계산
+  function openEmojiPicker() {
+    if (emojiOpen) { setEmojiOpen(false); return }
+    const btn = emojiBtnRef.current
+    if (btn) {
+      const r = btn.getBoundingClientRect()
+      // 오른쪽 공간 확인 후 left/right 결정
+      const pickerW = 300
+      const spaceRight = window.innerWidth - r.left
+      const left = spaceRight >= pickerW ? r.left : Math.max(4, r.right - pickerW)
+      // 아래 공간 확인
+      const pickerH = 240
+      const spaceBelow = window.innerHeight - r.bottom
+      const top = spaceBelow >= pickerH ? r.bottom + 6 : r.top - pickerH - 6
+      setEmojiPos({ top, left })
+    }
+    setEmojiOpen(true)
+  }
+
   function insertEmoji(emoji) {
     const ta = taRef.current
-    if (!ta) { setText(prev => prev + emoji); setEmojiOpen(false); return }
+    setEmojiOpen(false)
+    if (!ta) { setText(prev => prev + emoji); return }
     const start = ta.selectionStart ?? text.length
     const end   = ta.selectionEnd   ?? text.length
     const next  = text.slice(0, start) + emoji + text.slice(end)
@@ -167,19 +190,17 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
       const pos = start + emoji.length
       ta.setSelectionRange(pos, pos)
     })
-    setEmojiOpen(false)
   }
 
   async function openCalendar() {
     const list = await fetch('/api/memos', { headers: authHdr() })
       .then(r => r.ok ? r.json() : []).catch(() => [])
-    setAllMemos(list)
-    setCalOpen(true)
-    setDayDetail(null)
+    setAllMemos(list); setCalOpen(true); setDayDetail(null)
   }
 
   function closeCalendar() { setCalOpen(false); setDayDetail(null) }
 
+  // 달력 계산
   const mLabels     = ML[lang] || ML.en
   const daysInMonth = new Date(calYear, calMonth, 0).getDate()
   const firstDow    = new Date(calYear, calMonth - 1, 1).getDay()
@@ -200,8 +221,8 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
   const wrapper  = isMobile ? 'm-card'        : 'card card-memo'
 
   const emojiCatLabels = lang === 'ko'
-    ? ['표정/감정', '음식/음료', '활동/일상', '날씨/자연', '기타']
-    : ['Emotions', 'Food', 'Activity', 'Nature', 'Others']
+    ? ['표정', '음식', '활동', '날씨', '기타']
+    : ['Mood', 'Food', 'Activity', 'Nature', 'Etc']
 
   return (
     <div className={wrapper}>
@@ -219,11 +240,15 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
         </button>
       </div>
 
-      <div className={body} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      {/* ── 카드 바디 — 명시적 블록 스택 레이아웃 ── */}
+      <div className={body}>
 
-        {/* ── 기분 선택 (편집 모드, textarea 위에 독립 배치) ── */}
+        {/* 1. 기분 선택 — 편집 모드, textarea 위에 독립 블록 */}
         {editing && (
-          <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+          <div style={{
+            display: 'flex', gap: '0.3rem', flexWrap: 'wrap',
+            marginBottom: '0.5rem',
+          }}>
             {MOODS.map(m => (
               <button
                 key={m.key}
@@ -247,7 +272,7 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
           </div>
         )}
 
-        {/* ── 표시 영역 (보기 모드) ── */}
+        {/* 2. 보기 영역 (비편집 모드) */}
         {!editing && (
           <div className={isMobile ? 'm-memo-display' : 'memo-display'}>
             {memoData ? (
@@ -265,97 +290,46 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
           </div>
         )}
 
-        {/* ── 텍스트 입력 (편집 모드) ── */}
+        {/* 3. 텍스트 입력 (편집 모드) — 기분 버튼과 완전히 분리된 별도 블록 */}
         {editing && (
-          <textarea
-            ref={taRef}
-            className={isMobile ? 'm-memo-ta' : 'memo-ta'}
-            style={{
-              display: 'block', width: '100%', boxSizing: 'border-box',
-              minHeight: '96px', resize: 'none', overflow: 'hidden',
-            }}
-            rows={4}
-            value={text}
-            onChange={e => setText(e.target.value)}
-            placeholder={t(lang, 'memoTaPlaceholder')}
-            autoFocus
-          />
-        )}
-
-        {/* ── 이모지 피커 버튼 (편집 모드) ── */}
-        {editing && (
-          <div style={{ position: 'relative', display: 'inline-block' }}>
-            <button
-              ref={pickerBtnRef}
-              type="button"
-              onClick={() => setEmojiOpen(o => !o)}
+          <div style={{ display: 'block' }}>
+            <textarea
+              ref={taRef}
+              className={isMobile ? 'm-memo-ta' : 'memo-ta'}
               style={{
-                background: 'var(--bg)', border: '1px solid var(--border)',
-                borderRadius: '6px', cursor: 'pointer', fontSize: '1rem',
-                padding: '0.18rem 0.5rem', lineHeight: 1,
+                display: 'block',
+                width: '100%',
+                boxSizing: 'border-box',
+                minHeight: '96px',
+                resize: 'none',
+                overflow: 'hidden',
               }}
-              title={t(lang, 'memoEmojiBtn')}
-            >😀</button>
+              rows={4}
+              value={text}
+              onChange={e => setText(e.target.value)}
+              placeholder={t(lang, 'memoTaPlaceholder')}
+              autoFocus
+            />
 
-            {emojiOpen && (
-              <div
-                ref={pickerRef}
+            {/* 4. 이모지 피커 버튼 — textarea 바로 아래 */}
+            <div style={{ marginTop: '0.35rem' }}>
+              <button
+                ref={emojiBtnRef}
+                type="button"
+                onClick={openEmojiPicker}
                 style={{
-                  position: 'absolute', left: 0, top: 'calc(100% + 6px)', zIndex: 600,
-                  background: '#1a2336', border: '1px solid rgba(255,255,255,0.18)',
-                  borderRadius: '0.85rem', width: '300px',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.55)',
-                  overflow: 'hidden',
+                  background: 'var(--bg)', border: '1px solid var(--border)',
+                  borderRadius: '6px', cursor: 'pointer', fontSize: '1rem',
+                  padding: '0.18rem 0.5rem', lineHeight: 1,
                 }}
-              >
-                {/* 카테고리 탭 */}
-                <div style={{
-                  display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.1)',
-                  overflowX: 'auto',
-                }}>
-                  {emojiCatLabels.map((label, ci) => (
-                    <button
-                      key={ci}
-                      onClick={() => setEmojiCatIdx(ci)}
-                      style={{
-                        flex: '0 0 auto', background: 'none', border: 'none',
-                        cursor: 'pointer', padding: '0.45rem 0.65rem',
-                        fontSize: '0.68rem', fontWeight: emojiCatIdx === ci ? 700 : 400,
-                        color: emojiCatIdx === ci ? '#60a5fa' : '#9aacbf',
-                        borderBottom: emojiCatIdx === ci ? '2px solid #60a5fa' : '2px solid transparent',
-                        whiteSpace: 'nowrap', lineHeight: 1,
-                        transition: 'color 0.12s',
-                      }}
-                    >{label}</button>
-                  ))}
-                </div>
-
-                {/* 이모지 그리드 */}
-                <div style={{ padding: '0.6rem', display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
-                  {EMOJI_CATS[emojiCatIdx].emojis.map(e => (
-                    <button
-                      key={e}
-                      type="button"
-                      onClick={() => insertEmoji(e)}
-                      style={{
-                        background: 'rgba(255,255,255,0.05)',
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        borderRadius: '5px', cursor: 'pointer',
-                        fontSize: '1.25rem', padding: '0.22rem 0.3rem', lineHeight: 1,
-                        transition: 'background 0.1s',
-                      }}
-                      onMouseEnter={ev => ev.currentTarget.style.background = 'rgba(255,255,255,0.18)'}
-                      onMouseLeave={ev => ev.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                    >{e}</button>
-                  ))}
-                </div>
-              </div>
-            )}
+                title={t(lang, 'memoEmojiBtn')}
+              >😀</button>
+            </div>
           </div>
         )}
 
-        {/* ── 버튼 영역 ── */}
-        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* 5. 액션 버튼 영역 */}
+        <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.55rem', flexWrap: 'wrap', alignItems: 'center' }}>
           {!editing ? (
             <>
               {!memoData && (
@@ -393,6 +367,65 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
           )}
         </div>
       </div>
+
+      {/* ── 이모지 피커 — position: fixed로 overflow:hidden 탈출 ── */}
+      {emojiOpen && (
+        <div
+          ref={pickerRef}
+          style={{
+            position: 'fixed',
+            top: emojiPos.top,
+            left: emojiPos.left,
+            zIndex: 2000,
+            background: '#1a2336',
+            border: '1px solid rgba(255,255,255,0.18)',
+            borderRadius: '0.85rem',
+            width: '300px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+            overflow: 'hidden',
+          }}
+        >
+          {/* 카테고리 탭 */}
+          <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.1)', overflowX: 'auto' }}>
+            {emojiCatLabels.map((label, ci) => (
+              <button
+                key={ci}
+                onClick={() => setEmojiCatIdx(ci)}
+                style={{
+                  flex: '0 0 auto', background: 'none', border: 'none',
+                  cursor: 'pointer', padding: '0.45rem 0.6rem',
+                  fontSize: '0.68rem',
+                  fontWeight: emojiCatIdx === ci ? 700 : 400,
+                  color: emojiCatIdx === ci ? '#60a5fa' : '#9aacbf',
+                  borderBottom: emojiCatIdx === ci ? '2px solid #60a5fa' : '2px solid transparent',
+                  whiteSpace: 'nowrap', lineHeight: 1,
+                  transition: 'color 0.12s',
+                }}
+              >{label}</button>
+            ))}
+          </div>
+
+          {/* 이모지 그리드 */}
+          <div style={{ padding: '0.6rem', display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
+            {EMOJI_CATS[emojiCatIdx].emojis.map(e => (
+              <button
+                key={e}
+                type="button"
+                onClick={() => insertEmoji(e)}
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: '5px', cursor: 'pointer',
+                  fontSize: '1.25rem', padding: '0.22rem 0.3rem', lineHeight: 1,
+                  transition: 'background 0.1s',
+                }}
+                onMouseEnter={ev => ev.currentTarget.style.background = 'rgba(255,255,255,0.18)'}
+                onMouseLeave={ev => ev.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+              >{e}</button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ══════════════════════════════════════════════
           달력 모달
