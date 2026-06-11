@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, memo } from 'react'
 import { t } from './i18n'
+import { calcStock } from '../../utils/calcStock'
 
 const GRP_COLORS = [
   { bg: '#c8deff', tx: '#1a3d7c' }, { bg: '#c0edd8', tx: '#0d4a2a' },
@@ -14,29 +15,6 @@ const TOTAL_MODE_KEY = 'stock_total_mode'
 function fmtKRW(v) { return Math.round(v).toLocaleString('ko-KR') }
 function fmtUSD(v) { return Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
 
-function calcStock(s, priceMap) {
-  const today = new Date().toISOString().split('T')[0]
-  const pp = s.purchases || []; const sl = s.sells || []
-  // 오늘 날짜 기준: date 없으면 항상 포함(하위호환), date 있으면 오늘 이하만
-  const activePP = pp.filter(p => !p.date || p.date <= today)
-  const activeSL = sl.filter(p => !p.date || p.date <= today)
-  const totalBuyQty = activePP.reduce((a, p) => a + (p.qty || 0), 0)
-  const totalSellQty = activeSL.reduce((a, p) => a + (p.qty || 0), 0)
-  const holdQty = Math.max(0, totalBuyQty - totalSellQty)
-  const validPP = activePP.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
-  const ws = validPP.reduce((a, p) => a + p.price * p.qty, 0)
-  const vq = validPP.reduce((a, p) => a + p.qty, 0)
-  const avgCost = vq > 0 ? ws / vq : 0
-  const realizedPL = activeSL.reduce((a, p) => a + ((p.price || 0) - avgCost) * (p.qty || 0), 0)
-  const priceObj = priceMap[s.ticker]
-  const isLive = priceObj?.current_price != null
-  const cur = isLive ? priceObj.current_price : (avgCost || 0)
-  const chP = priceObj?.change_percent ?? 0
-  const val = cur * holdQty
-  const evalPL = avgCost > 0 ? (cur - avgCost) * holdQty : null
-  const evalPct = avgCost > 0 ? ((cur - avgCost) / avgCost * 100) : null
-  return { holdQty, avgCost, cur, chP, val, evalPL, evalPct, realizedPL, totalSellQty, isLive }
-}
 
 function StockNewsRow({ newsConfig, lang, onOpenSettings }) {
   // status: 'ready' | 'loading' | 'ok' | 'err'

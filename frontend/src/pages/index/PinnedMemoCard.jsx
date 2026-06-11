@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react'
 import { t } from './i18n'
+import { authH as authHdr } from '../../utils/api'
 
 const PASTEL = {
   yellow:   { bg: '#FFF9C4', text: '#5a4a00' },
@@ -10,7 +11,6 @@ const PASTEL = {
 }
 const COLOR_KEYS = Object.keys(PASTEL)
 const MAX_MEMOS  = 6
-const authHdr    = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') })
 const INIT_FORM  = { title: '', content: '', color: 'yellow' }
 
 const PinnedMemoCard = forwardRef(function PinnedMemoCard({ lang = 'ko' }, ref) {

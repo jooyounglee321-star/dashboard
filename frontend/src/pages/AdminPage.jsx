@@ -4,11 +4,12 @@ import Toast, { useToast } from '../components/Toast'
 import { t, T } from './index/i18n'
 import StockSettingsModal from './index/StockSettingsModal'
 
+import { authH } from '../utils/api'
+
 /* ── 유틸 ── */
 const sv = (k, v) => localStorage.setItem(k, JSON.stringify(v))
 const ld = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d } catch { return d } }
 const genId = () => Math.random().toString(36).slice(2, 10)
-const authH = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') })
 const TOTAL_MODE_KEY = 'stock_total_mode'
 
 const ALL_TZ = [
