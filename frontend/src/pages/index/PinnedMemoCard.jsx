@@ -132,12 +132,12 @@ const PinnedMemoCard = forwardRef(function PinnedMemoCard({ lang = 'ko' }, ref) 
             const scheme = PASTEL[memo.color] || PASTEL.yellow
             return (
               <div key={memo.id} className="pinned-card" style={{ background: scheme.bg }}>
-                <div className="pinned-card-pin">📌</div>
-                {memo.title && (
-                  <div className="pinned-card-title" style={{ color: scheme.text }}>
-                    {memo.title}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: memo.content ? '0.35rem' : 0 }}>
+                  <div className="pinned-card-title" style={{ color: scheme.text, fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {memo.title || ''}
                   </div>
-                )}
+                  <div className="pinned-card-pin" style={{ flexShrink: 0, marginLeft: '0.4rem' }}>📌</div>
+                </div>
                 {memo.content && (
                   <div className="pinned-card-content" style={{ color: scheme.text }}>
                     {memo.content}
