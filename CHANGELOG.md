@@ -4,6 +4,21 @@
 
 ---
 
+## [2026-06-11] — refactor: SuperadminPage CHANGELOG 표시 형식 개편
+
+### 변경 내용
+- **routers/admin.py**: changelog 파싱 로직 개편
+  - `## [date] — type:` 에서 타입(feat/fix/refactor/design/perf/docs/chore) 추출
+  - 같은 날짜 여러 블록 자동 병합
+  - 위젯/페이지명 키워드 추출 (19개 컴포넌트명 매칭)
+  - 응답 items 형식: `{ type, widget, desc }` 구조화
+- **SuperadminPage.jsx**: changelog 렌더링 개편
+  - 타입 뱃지 색상 분기 (feat→파랑, fix→초록, design→보라, refactor→주황 등)
+  - 트리 형식 (`├──` / `└──`) + 위젯명 bold + desc 표시
+  - 헤더에서 제목 제거, 날짜(monospace) + 항목 수 뱃지만 표시
+
+---
+
 ## [2026-06-11] — feat: 오늘의 일정 위젯 좌우 2분할 + 할 일 체크리스트 추가
 
 ### 변경 내용
