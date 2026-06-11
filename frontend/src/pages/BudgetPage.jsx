@@ -3,15 +3,12 @@ import { Link } from 'react-router-dom'
 import { t } from '../i18n'
 import { Chart, registerables } from 'chart.js'
 import { INCOME_CATEGORIES, getSubcategories } from '../data/incomeCategories'
+import { CURRENCY_CODES as CURRENCIES, CURRENCY_SYMBOLS as SYM } from '../data/currencies'
 import { useToast } from '../components/Toast'
 import Toast from '../components/Toast'
 import './BudgetPage.css'
 
 Chart.register(...registerables)
-
-// ── 상수 ─────────────────────────────────────────────────────────────────────
-const CURRENCIES = ['USD', 'KRW', 'EUR', 'JPY', 'GBP', 'CNY', 'CAD', 'AUD', 'CHF', 'HKD']
-const SYM = { USD: '$', KRW: '₩', EUR: '€', JPY: '¥', GBP: '£', CNY: '¥', CAD: 'C$', AUD: 'A$', CHF: 'Fr', HKD: 'HK$' }
 const COLORS = ['#e8a060','#60b4e8','#7ee882','#e860c8','#e8e060','#60e8d0','#e88060','#a060e8','#60e89a','#e86060']
 const ML = {
   ko: ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],

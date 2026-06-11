@@ -2,22 +2,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { t } from './i18n'
 import { INCOME_CATEGORIES, getSubcategories } from '../../data/incomeCategories'
+import { CURRENCY_LIST as CURRENCIES } from '../../data/currencies'
 import { useToast } from '../../components/Toast'
 import Toast from '../../components/Toast'
-
-/* ── 통화 목록 ──────────────────────────────────────────────────────────── */
-const CURRENCIES = [
-  { code: 'USD', symbol: '$',   label: '$ USD'   },
-  { code: 'KRW', symbol: '₩',   label: '₩ KRW'   },
-  { code: 'EUR', symbol: '€',   label: '€ EUR'   },
-  { code: 'JPY', symbol: '¥',   label: '¥ JPY'   },
-  { code: 'GBP', symbol: '£',   label: '£ GBP'   },
-  { code: 'CAD', symbol: 'C$',  label: 'C$ CAD'  },
-  { code: 'AUD', symbol: 'A$',  label: 'A$ AUD'  },
-  { code: 'CNY', symbol: '¥',   label: '¥ CNY'   },
-  { code: 'HKD', symbol: 'HK$', label: 'HK$ HKD' },
-  { code: 'SGD', symbol: 'S$',  label: 'S$ SGD'  },
-]
 
 // toISOString()은 UTC 기준 → PDT(UTC-7) 오후 5시 이후엔 내일 날짜를 반환하는 버그
 // 로컬 날짜 메서드로 교체하여 어느 타임존에서도 정확한 오늘 날짜 반환

@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import Expense, ExpenseBudget, ExpenseCategory, ExchangeRate, User
+from routers._shared import get_rate as _get_rate, cat_name as _cat_name
 from routers.auth import get_current_user
 
 logger = logging.getLogger(__name__)
@@ -84,24 +85,10 @@ class BudgetPatch(BaseModel):
 
 # ── 내부 유틸 ────────────────────────────────────────────────────────────────
 
-def _get_rate(currency: str, db: Session) -> float:
-    """DB에서 USD 기준 환율 조회. 없거나 USD면 1.0."""
-    if currency == "USD":
-        return 1.0
-    row = db.query(ExchangeRate).filter_by(
-        base_currency="USD", target_currency=currency
-    ).first()
-    return float(row.rate) if row else 1.0
-
-
 def _to_usd(amount: float, currency: str, db: Session) -> tuple[float, float]:
     """금액을 USD로 환산. (converted_usd, applied_rate) 반환."""
     rate = _get_rate(currency, db)
     return round(amount / rate, 2), rate
-
-
-def _cat_name(cat: ExpenseCategory, lang: str) -> str:
-    return cat.name_en if lang == "en" else cat.name_ko
 
 
 def _cat_dict(cat: ExpenseCategory, lang: str, subs: list[dict]) -> dict:
