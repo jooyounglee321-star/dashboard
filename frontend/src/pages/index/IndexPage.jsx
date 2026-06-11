@@ -162,10 +162,14 @@ export default function IndexPage() {
     setHeaderDate(getHeaderDate(newLang))
   }, [widgetCfg])
 
-  // 저장된 레이아웃 복원
+  // 저장된 레이아웃 복원 — 새로 추가된 위젯은 끝에 자동 병합
   useEffect(() => {
     const saved = widgetCfg?.layout?.items
-    if (Array.isArray(saved) && saved.length) setLayoutItems(saved)
+    if (Array.isArray(saved) && saved.length) {
+      const savedIds = new Set(saved.map(i => i.id))
+      const newItems = DEFAULT_LAYOUT_ITEMS.filter(i => !savedIds.has(i.id))
+      setLayoutItems(newItems.length ? [...saved, ...newItems] : saved)
+    }
   }, [widgetCfg])
 
   // ProfilePage에서 언어 저장 시 실시간 반영 (같은 탭 내)
