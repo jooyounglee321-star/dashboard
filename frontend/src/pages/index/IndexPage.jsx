@@ -68,6 +68,7 @@ export default function IndexPage() {
   const w = (key) => !widgetCfg || widgetCfg[key]?.enabled !== false
 
   // 고정 메모 접기/펼치기 (localStorage 유지)
+  const pinnedRef = useRef(null)
   const [pinnedOpen, setPinnedOpen] = useState(() => {
     try { return localStorage.getItem('pinned_memo_open') !== 'false' } catch { return true }
   })
@@ -76,6 +77,13 @@ export default function IndexPage() {
       try { localStorage.setItem('pinned_memo_open', String(!o)) } catch {}
       return !o
     })
+  }
+  function handlePinnedAdd() {
+    if (!pinnedOpen) {
+      setPinnedOpen(true)
+      try { localStorage.setItem('pinned_memo_open', 'true') } catch {}
+    }
+    setTimeout(() => pinnedRef.current?.openAdd(), 0)
   }
 
   // ── 레이아웃 편집 상태 ────────────────────────────────────────────────────
@@ -507,15 +515,18 @@ export default function IndexPage() {
 
       {/* ═══ 고정 메모 영역 (위젯 외부 최상단) ═══ */}
       <div className="pinned-memo-zone">
-        <div className="pinned-memo-zone-header" onClick={togglePinned} style={{ cursor: 'pointer' }}>
-          <span style={{ fontWeight: 600, fontSize: '0.78rem', color: 'var(--ink2)', letterSpacing: '0.06em' }}>
+        <div className="pinned-memo-zone-header">
+          <span className="pinned-zone-title" onClick={togglePinned}>
             📌 {t(lang, 'pinnedMemoTitle')}
+            <span className="pinned-zone-chevron" style={{ transform: pinnedOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▾</span>
           </span>
-          <span style={{ fontSize: '0.85rem', color: 'var(--ink3)', transition: 'transform 0.2s', display: 'inline-block', transform: pinnedOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>
-            ▾
-          </span>
+          <div className="pinned-zone-actions">
+            <button className="pinned-zone-add-btn" onClick={handlePinnedAdd}>
+              + {t(lang, 'pinnedMemoAdd')}
+            </button>
+          </div>
         </div>
-        {pinnedOpen && <PinnedMemoCard lang={lang} />}
+        {pinnedOpen && <PinnedMemoCard ref={pinnedRef} lang={lang} />}
       </div>
 
       {/* ═══ PC 레이아웃 ═══ */}
@@ -536,19 +547,6 @@ export default function IndexPage() {
           </SortableContext>
         </DndContext>
       </main>
-
-      {/* ═══ 모바일 고정 메모 ═══ */}
-      <div className="pinned-memo-zone pinned-memo-zone--mobile">
-        <div className="pinned-memo-zone-header" onClick={togglePinned} style={{ cursor: 'pointer' }}>
-          <span style={{ fontWeight: 600, fontSize: '0.78rem', color: 'var(--ink2)', letterSpacing: '0.06em' }}>
-            📌 {t(lang, 'pinnedMemoTitle')}
-          </span>
-          <span style={{ fontSize: '0.85rem', color: 'var(--ink3)', transition: 'transform 0.2s', display: 'inline-block', transform: pinnedOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>
-            ▾
-          </span>
-        </div>
-        {pinnedOpen && <PinnedMemoCard lang={lang} />}
-      </div>
 
       {/* ═══ 모바일 레이아웃 ═══ */}
       <div className="mobile-view">

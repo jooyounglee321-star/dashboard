@@ -269,9 +269,43 @@
 
 /* ── 고정 메모 영역 ── */
 .pinned-memo-zone{margin:0 0 1rem 0;padding:0;}
-.pinned-memo-zone--mobile{margin:0.5rem 0.75rem 0.5rem;}
-.pinned-memo-zone-header{display:flex;align-items:center;justify-content:space-between;padding:0.35rem 0.75rem;border-radius:8px;background:var(--card2);border:1px solid var(--border);margin-bottom:0.5rem;user-select:none;}
-.pinned-memo-zone-header:hover{background:var(--bg2);}
+.pinned-memo-zone-header{display:flex;align-items:center;justify-content:space-between;padding:0.3rem 0.75rem;border-radius:8px;background:var(--card2);border:1px solid var(--border);margin-bottom:0.5rem;user-select:none;}
+.pinned-zone-title{display:flex;align-items:center;gap:0.35rem;font-size:0.78rem;font-weight:600;color:var(--ink2);letter-spacing:0.06em;cursor:pointer;flex:1;padding:0.1rem 0;}
+.pinned-zone-title:hover{color:var(--ink1);}
+.pinned-zone-chevron{font-size:0.82rem;color:var(--ink3);transition:transform 0.2s;display:inline-block;line-height:1;}
+.pinned-zone-actions{display:flex;align-items:center;gap:0.4rem;}
+.pinned-zone-add-btn{background:var(--accent);border:none;border-radius:6px;color:#fff;cursor:pointer;font-family:inherit;font-size:0.75rem;font-weight:600;padding:0.22rem 0.65rem;transition:opacity 0.15s;}
+.pinned-zone-add-btn:hover{opacity:0.85;}
+
+/* 고정 메모 콘텐츠 */
+.pinned-content{padding:0 0 0.25rem;}
+.pinned-cards-row{display:flex;flex-wrap:wrap;gap:0.6rem;margin-bottom:0.25rem;}
+.pinned-card{flex:1 1 200px;min-width:200px;max-width:280px;border-radius:10px;padding:0.75rem 0.8rem;display:flex;flex-direction:column;gap:0.3rem;box-shadow:0 2px 6px rgba(0,0,0,0.08);}
+.pinned-card-pin{text-align:center;font-size:1rem;line-height:1;margin-bottom:0.1rem;}
+.pinned-card-title{font-size:0.8rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pinned-card-content{font-size:0.76rem;line-height:1.55;flex:1;overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;word-break:break-word;max-height:5.4rem;}
+.pinned-card-actions{display:flex;gap:0.25rem;margin-top:auto;padding-top:0.35rem;}
+.pinned-card-btn{background:rgba(0,0,0,0.07);border:none;border-radius:5px;cursor:pointer;font-size:0.7rem;padding:0.15rem 0.4rem;font-family:inherit;}
+.pinned-card-btn:hover{background:rgba(0,0,0,0.13);}
+
+/* 고정 메모 폼 */
+.pinned-form{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:0.75rem 0.9rem;margin-bottom:0.6rem;display:flex;flex-direction:column;gap:0.45rem;}
+.pinned-form-colors{display:flex;gap:0.4rem;align-items:center;}
+.pinned-color-dot{width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,0.25);cursor:pointer;padding:0;flex-shrink:0;transition:box-shadow 0.15s;}
+.pinned-color-dot.active{box-shadow:0 0 0 2px var(--accent);border-color:transparent;}
+.pinned-form-input{background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:0.38rem 0.6rem;color:var(--ink1);font-size:0.85rem;font-family:inherit;outline:none;}
+.pinned-form-input:focus{border-color:var(--accent);}
+.pinned-form-textarea{background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:0.38rem 0.6rem;color:var(--ink1);font-size:0.82rem;font-family:inherit;resize:vertical;outline:none;line-height:1.6;}
+.pinned-form-textarea:focus{border-color:var(--accent);}
+.pinned-form-actions{display:flex;gap:0.4rem;}
+.pinned-form-save{background:var(--accent);border:none;border-radius:7px;color:#fff;cursor:pointer;font-family:inherit;font-size:0.82rem;font-weight:600;padding:0.32rem 0.9rem;}
+.pinned-form-save:disabled{opacity:0.5;cursor:default;}
+.pinned-form-cancel{background:var(--bg2);border:1px solid var(--border);border-radius:7px;color:var(--ink3);cursor:pointer;font-family:inherit;font-size:0.82rem;padding:0.32rem 0.9rem;}
+
+@media(max-width:767px){
+  .pinned-memo-zone{padding:0 0.75rem;}
+  .pinned-card{min-width:160px;max-width:none;flex:1 1 160px;}
+}
 
 /* ── 모바일 공통 카드 ── */
 .m-card{background:var(--card);border-radius:12px;border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden;margin-bottom:0.75rem;}
