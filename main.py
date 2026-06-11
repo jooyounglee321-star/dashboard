@@ -626,6 +626,24 @@ def _migrate_add_category_code_fields():
                 logger.info("[MIGRATE] expense_categories.%s — 이미 존재, 건너뜀", col_name)
 
 
+def _migrate_todos_start_date():
+    """todos 테이블에 start_date 컬럼 추가 (nullable DATE)."""
+    with engine.connect() as conn:
+        try:
+            existing = {c["name"] for c in inspect(conn).get_columns("todos")}
+        except Exception:
+            return
+        if "start_date" not in existing:
+            try:
+                conn.execute(text("ALTER TABLE todos ADD COLUMN start_date DATE"))
+                conn.commit()
+                logger.info("[MIGRATE] todos.start_date 컬럼 추가")
+            except Exception as e:
+                logger.warning("[MIGRATE] todos.start_date 컬럼 추가 실패: %s", e)
+        else:
+            logger.info("[MIGRATE] todos.start_date — 이미 존재, 건너뜀")
+
+
 _DEFAULT_INCOME_CATEGORIES = [
     {
         'code': 'REGULAR', 'name_en': 'Regular Income', 'name_ko': '주수입 (정기)',
@@ -767,6 +785,7 @@ async def lifespan(app: FastAPI):
     _migrate_user_roles()
     _migrate_add_category_icon()           # expense_categories.icon 누락 컬럼 추가
     _migrate_add_category_code_fields()
+    _migrate_todos_start_date()
     _seed_admin_email()
     _seed_default_permissions()
     _seed_exchange_rates()
