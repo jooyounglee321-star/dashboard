@@ -278,9 +278,9 @@
 .pinned-zone-add-btn:hover{opacity:0.85;}
 
 /* 고정 메모 콘텐츠 */
-.pinned-content{padding:0 0 0.25rem;}
-.pinned-cards-row{display:flex;flex-wrap:wrap;gap:0.6rem;margin-bottom:0.25rem;}
-.pinned-card{flex:1 1 200px;min-width:200px;max-width:280px;border-radius:10px;padding:0.75rem 0.8rem;display:flex;flex-direction:column;gap:0.3rem;box-shadow:0 2px 6px rgba(0,0,0,0.08);}
+.pinned-content{padding:0 24px 0.25rem;}
+.pinned-cards-row{display:flex;flex-wrap:wrap;gap:20px;padding:12px 0 16px;margin-bottom:0.25rem;}
+.pinned-card{flex:1 1 200px;min-width:200px;max-width:240px;border-radius:10px;padding:0.9rem 1rem;display:flex;flex-direction:column;gap:0.3rem;box-shadow:0 2px 6px rgba(0,0,0,0.08);}
 .pinned-card-pin{text-align:center;font-size:1rem;line-height:1;margin-bottom:0.1rem;}
 .pinned-card-title{font-size:0.8rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .pinned-card-content{font-size:0.76rem;line-height:1.55;flex:1;overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;word-break:break-word;max-height:5.4rem;}
