@@ -178,7 +178,7 @@
 .exp-item{display:flex;justify-content:space-between;align-items:center;font-size:0.8rem;padding:0.32rem 0;border-bottom:1px solid var(--border);gap:0.5rem;}
 .exp-item:last-child{border-bottom:none;}
 .exp-item--editing{align-items:flex-start;}
-.exp-item-info{display:flex;flex-direction:column;flex:1;min-width:0;gap:0.08rem;}
+.exp-item-info{display:flex;flex:1;min-width:0;}
 .exp-item-path{font-size:0.75rem;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .exp-item-desc{font-size:0.72rem;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .exp-item-right{display:flex;align-items:center;gap:0.4rem;flex-shrink:0;}

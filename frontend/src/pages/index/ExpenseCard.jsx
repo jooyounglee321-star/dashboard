@@ -259,18 +259,18 @@ function ExpItem({ e, editId, editForm, setEditForm, categories, lang, saveEdit,
 
   return (
     <li className="exp-item">
-      {/* 왼쪽: 카테고리 경로 + 메모 */}
+      {/* 왼쪽: 카테고리 경로 + 메모 (한 줄) */}
       <div className="exp-item-info">
-        <span className="exp-item-path">
+        <span className="exp-item-path" title={
+          `${e.category_icon ? e.category_icon + ' ' : ''}${e.category_name ?? ''}` +
+          (e.subcategory_name ? ` › ${e.subcategory_icon ? e.subcategory_icon + ' ' : ''}${e.subcategory_name}` : '') +
+          (e.description ? ` - ${e.description}` : '')
+        }>
           {e.category_icon ? `${e.category_icon} ` : ''}
           {e.category_name ?? ''}
-          {e.subcategory_name
-            ? ` › ${e.subcategory_icon ? e.subcategory_icon + ' ' : ''}${e.subcategory_name}`
-            : ''}
+          {e.subcategory_name ? ` › ${e.subcategory_icon ? e.subcategory_icon + ' ' : ''}${e.subcategory_name}` : ''}
+          {e.description ? ` - ${e.description}` : ''}
         </span>
-        {e.description && (
-          <span className="exp-item-desc">{e.description}</span>
-        )}
       </div>
 
       {/* 오른쪽: 금액 + 환산 + 버튼 */}
