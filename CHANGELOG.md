@@ -4,6 +4,17 @@
 
 ---
 
+## [2026-06-11] — refactor: 프론트 공통 유틸 추출 + SummaryTab N+1 쿼리 제거
+
+### 변경 내용
+- **frontend/src/utils/api.js** (신규): `getToken`, `authH`, `authHJ` 공통화 — 7개 파일 중복 제거 (MED-15)
+- **frontend/src/utils/date.js** (신규): `pad2`, `todayStr` 공통화 — BudgetPage, ExpenseCard 중복 제거 (MED-16)
+- **frontend/src/utils/calcStock.js** (신규): `calcStock` 공통화 — StockCard, IndexPage 중복 제거 (MED-21)
+- **BudgetPage.jsx**: SummaryTab의 12개 월별 API 호출 → 최대 2개 yearly 호출로 대체 (MED-32)
+- **AdminPage, StockSettingsModal, PinnedMemoCard, MemoCard, DietCard, ExpenseCard, StockCard, IndexPage**: 각 파일의 인라인 `authH`/`getToken`/`todayStr`/`calcStock` 정의 제거 후 utils import로 교체 (MED-33)
+
+---
+
 ## [2026-06-10] — feat: 고정 메모(핀 메모) 위젯 추가
 
 ### 변경 내용
