@@ -13,9 +13,10 @@ export const DEFAULT_LAYOUT_ITEMS = [
   { id: 'stock',    span: 12 },   // 100%
   { id: 'expense',  span: 12 },   // 100%
   { id: 'diet',     span: 6  },   //  50%
-  { id: 'memo',     span: 6  },   //  50%
-  { id: 'news',     span: 6  },   //  50%
-  { id: 'sites',    span: 6  },   //  50%
+  { id: 'memo',        span: 6  },   //  50%
+  { id: 'pinned_memo', span: 6  },   //  50%
+  { id: 'news',        span: 6  },   //  50%
+  { id: 'sites',       span: 6  },   //  50%
 ]
 
 const SIZE_OPTIONS = [

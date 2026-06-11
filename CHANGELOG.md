@@ -4,6 +4,26 @@
 
 ---
 
+## [2026-06-10] — feat: 고정 메모(핀 메모) 위젯 추가
+
+### 변경 내용
+- **DB**: `pinned_memos` 테이블 추가 (id, user_id, title, content, color, created_at, updated_at)
+- **models.py**: `PinnedMemo` 모델 추가 (SQLAlchemy Mapped 스타일)
+- **schemas.py**: `PinnedMemoCreate`, `PinnedMemoUpdate`, `PinnedMemoOut` 스키마 추가; `DEFAULT_WIDGET_CONFIG`에 `pinned_memo: {enabled: true}` 추가
+- **routers/pinned_memos.py**: 신규 라우터 (GET/POST/PUT/DELETE `/api/pinned-memos`)
+- **main.py**: PinnedMemo 모델 임포트 + 라우터 등록
+- **PinnedMemoCard.jsx**: 신규 위젯 컴포넌트
+  - 포스트잇 스타일 5가지 색상 (yellow/green/sky/pink/lavender)
+  - 최대 6개 메모 auto-fill 그리드
+  - 추가/수정/삭제 인라인 폼
+- **IndexPage.jsx**: PinnedMemoCard 렌더링 등록 (데스크탑 + 모바일)
+- **LayoutEditor.jsx**: `DEFAULT_LAYOUT_ITEMS`에 `pinned_memo` 항목 추가 (span: 6)
+- **AdminPage.jsx**: 위젯 설정 패널에 "고정 메모" 토글 추가
+- **ko.json / en.json**: pinnedMemo* i18n 키 추가
+- **DB_SCHEMA.md**: `pinned_memos` 테이블 항목 추가
+
+---
+
 ## [2026-06-10] — feat: MemoCard 기분 선택 + 달력 뷰 추가
 
 ### 변경 내용

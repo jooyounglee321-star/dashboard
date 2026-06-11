@@ -73,6 +73,31 @@ class MemoOut(MemoCreate):
     model_config = {"from_attributes": True}
 
 
+# ── PinnedMemo ───────────────────────────────────────────────────────────────
+
+class PinnedMemoCreate(BaseModel):
+    title: str | None = None
+    content: str | None = None
+    color: str = "yellow"
+
+
+class PinnedMemoUpdate(BaseModel):
+    title: str | None = None
+    content: str | None = None
+    color: str | None = None
+
+
+class PinnedMemoOut(BaseModel):
+    id: int
+    title: str | None
+    content: str | None
+    color: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 # ── Stock ─────────────────────────────────────────────────────────────────────
 
 class StockCategory(str, Enum):
@@ -331,9 +356,10 @@ DEFAULT_WIDGET_CONFIG: dict = {
     "stock":    {"enabled": True, "currency_display": "KRW"},
     "expense":  {"enabled": True},
     "diet":     {"enabled": True, "meals": {"아침": True, "점심": True, "저녁": True, "간식": True}},
-    "memo":     {"enabled": True},
-    "news":     {"enabled": True, "default_tab": "kr"},
-    "sites":    {"enabled": True},
+    "memo":         {"enabled": True},
+    "pinned_memo":  {"enabled": True},
+    "news":         {"enabled": True, "default_tab": "kr"},
+    "sites":        {"enabled": True},
 }
 
 

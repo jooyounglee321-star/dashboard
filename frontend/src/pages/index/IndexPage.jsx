@@ -15,6 +15,7 @@ import StockSettingsModal from './StockSettingsModal'
 import ExpenseCard from './ExpenseCard'
 import DietCard from './DietCard'
 import MemoCard from './MemoCard'
+import PinnedMemoCard from './PinnedMemoCard'
 import NewsCard from './NewsCard'
 import SitesCard from './SitesCard'
 import { t } from './i18n'
@@ -379,8 +380,9 @@ export default function IndexPage() {
       case 'stock':    return <StockCard groups={stockGroups} priceMap={priceMap} fxRate={fxRate} loading={stockLoading} onOpenStats={() => setStatsOpen(true)} onOpenSettings={() => setStockSettingsOpen(true)} currencyDisplay={widgetCfg?.stock?.currency_display} lang={lang} />
       case 'expense':  return <ExpenseCard lang={lang} />
       case 'diet':     return <DietCard mealConfig={widgetCfg?.diet?.meals} lang={lang} />
-      case 'memo':     return <MemoCard lang={lang} />
-      case 'news':     return <NewsCard defaultTab={widgetCfg?.news?.default_tab ?? 'kr'} lang={lang} />
+      case 'memo':        return <MemoCard lang={lang} />
+      case 'pinned_memo': return <PinnedMemoCard lang={lang} />
+      case 'news':        return <NewsCard defaultTab={widgetCfg?.news?.default_tab ?? 'kr'} lang={lang} />
       case 'sites':    return <SitesCard lang={lang} />
       default:         return null
     }
@@ -540,6 +542,7 @@ export default function IndexPage() {
         <div className={`mob-section${mobileTab === 'health' ? ' active' : ''}`}>
           {w('diet') && <DietCard isMobile mealConfig={widgetCfg?.diet?.meals} lang={lang} />}
           {w('memo') && <MemoCard isMobile lang={lang} />}
+          {w('pinned_memo') && <PinnedMemoCard isMobile lang={lang} />}
         </div>
 
         {/* 미디어: 뉴스+유튜브 */}
