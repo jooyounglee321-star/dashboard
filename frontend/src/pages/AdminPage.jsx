@@ -69,18 +69,17 @@ export default function AdminPage() {
     expense:  { enabled: true },
     diet:     { enabled: true, meals: { 아침: true, 점심: true, 저녁: true, 간식: true } },
     memo:        { enabled: true },
-    pinned_memo: { enabled: true },
     news:        { enabled: true, default_tab: 'kr' },
     sites:       { enabled: true },
   }
   const WIDGET_ICONS = {
     hero: '🕐', schedule: '📅', youtube: '▶', stock: '📈',
-    expense: '💳', diet: '🥗', memo: '📝', pinned_memo: '📌', news: '📰', sites: '🌐',
+    expense: '💳', diet: '🥗', memo: '📝', news: '📰', sites: '🌐',
   }
   const WIDGET_LABEL_KEYS = {
     hero: 'admin.wHero', schedule: 'admin.wSchedule', youtube: 'admin.wYoutube',
     stock: 'admin.wStock', expense: 'admin.wExpense', diet: 'admin.wDiet',
-    memo: 'admin.wMemo', pinned_memo: 'admin.wPinnedMemo', news: 'admin.wNews', sites: 'admin.wSites',
+    memo: 'admin.wMemo', news: 'admin.wNews', sites: 'admin.wSites',
   }
   const [widgetCfg, setWidgetCfg] = useState(() => {
     const cached = localStorage.getItem('dashboard_lang')
