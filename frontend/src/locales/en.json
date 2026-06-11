@@ -341,6 +341,8 @@
   "memoMood_fire": "Fired up",
   "memoMood_stress": "Stressed",
   "memoEmojiBtn": "Add emoji",
+  "memoAddBtn": "+ Add memo",
+  "memoMaxReached": "You can save up to 4 memos per day",
   "pinnedMemoTitle": "Pinned Notes",
   "pinnedMemoAdd": "Add Note",
   "pinnedMemoSave": "Save",
