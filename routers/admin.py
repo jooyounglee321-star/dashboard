@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import RolePermission, User
+from routers.auth import get_current_user
 from schemas import (
     AdminMemoUpdate, PermissionBulkUpdate, PlanUpdate,
     RoleUpdate, StatusUpdate, UserAdminOut,
@@ -17,6 +18,12 @@ from schemas import (
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def _require_admin(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="관리자만 접근할 수 있습니다.")
+    return current_user
 
 ALLOWED_SORT  = {"created_at", "last_login_at", "login_count", "total_payment", "email", "name"}
 ALLOWED_ROLES = {"admin", "premium", "free", "guest"}
@@ -34,6 +41,7 @@ def list_admin_users(
     sort_by: str = Query("created_at"),
     order: str = Query("desc"),
     db: Session = Depends(get_db),
+    _: User = Depends(_require_admin),
 ):
     q = db.query(User)
     if search:
@@ -52,7 +60,7 @@ def list_admin_users(
 
 
 @router.get("/stats")
-def get_admin_stats(db: Session = Depends(get_db)):
+def get_admin_stats(db: Session = Depends(get_db), _: User = Depends(_require_admin)):
     today = date.today()
     month_start = datetime(today.year, today.month, 1)
 
@@ -78,7 +86,7 @@ def get_admin_stats(db: Session = Depends(get_db)):
 
 
 @router.get("/users/{user_id}", response_model=UserAdminOut)
-def get_admin_user(user_id: int, db: Session = Depends(get_db)):
+def get_admin_user(user_id: int, db: Session = Depends(get_db), _: User = Depends(_require_admin)):
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
@@ -86,7 +94,7 @@ def get_admin_user(user_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/users/{user_id}/plan")
-def update_plan(user_id: int, body: PlanUpdate, db: Session = Depends(get_db)):
+def update_plan(user_id: int, body: PlanUpdate, db: Session = Depends(get_db), _: User = Depends(_require_admin)):
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
@@ -97,7 +105,7 @@ def update_plan(user_id: int, body: PlanUpdate, db: Session = Depends(get_db)):
 
 
 @router.put("/users/{user_id}/status")
-def update_status(user_id: int, body: StatusUpdate, db: Session = Depends(get_db)):
+def update_status(user_id: int, body: StatusUpdate, db: Session = Depends(get_db), _: User = Depends(_require_admin)):
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
@@ -109,7 +117,7 @@ def update_status(user_id: int, body: StatusUpdate, db: Session = Depends(get_db
 
 
 @router.put("/users/{user_id}/memo")
-def update_memo(user_id: int, body: AdminMemoUpdate, db: Session = Depends(get_db)):
+def update_memo(user_id: int, body: AdminMemoUpdate, db: Session = Depends(get_db), _: User = Depends(_require_admin)):
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
@@ -121,7 +129,7 @@ def update_memo(user_id: int, body: AdminMemoUpdate, db: Session = Depends(get_d
 # ── PUT /api/admin/users/{id}/role ───────────────────────────────────────────
 
 @router.put("/users/{user_id}/role", summary="회원 레벨 변경")
-def update_role(user_id: int, body: RoleUpdate, db: Session = Depends(get_db)):
+def update_role(user_id: int, body: RoleUpdate, db: Session = Depends(get_db), _: User = Depends(_require_admin)):
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
@@ -138,7 +146,7 @@ def update_role(user_id: int, body: RoleUpdate, db: Session = Depends(get_db)):
 # ── GET /api/admin/permissions ────────────────────────────────────────────────
 
 @router.get("/permissions", summary="레벨별 권한 목록 조회")
-def get_permissions(db: Session = Depends(get_db)):
+def get_permissions(db: Session = Depends(get_db), _: User = Depends(_require_admin)):
     """역할별 권한 맵 반환: {role: {permission_name: is_allowed, ...}, ...}"""
     rows = db.query(RolePermission).order_by(RolePermission.role, RolePermission.permission_name).all()
     result: dict[str, dict[str, bool]] = {}
@@ -150,7 +158,7 @@ def get_permissions(db: Session = Depends(get_db)):
 # ── PUT /api/admin/permissions ────────────────────────────────────────────────
 
 @router.put("/permissions", summary="레벨별 권한 일괄 수정")
-def update_permissions(body: PermissionBulkUpdate, db: Session = Depends(get_db)):
+def update_permissions(body: PermissionBulkUpdate, db: Session = Depends(get_db), _: User = Depends(_require_admin)):
     for item in body.permissions:
         if item.role not in ALLOWED_ROLES:
             continue
@@ -177,7 +185,7 @@ def update_permissions(body: PermissionBulkUpdate, db: Session = Depends(get_db)
 # ── POST /api/admin/users/{id}/reset-password ─────────────────────────────────
 
 @router.post("/users/{user_id}/reset-password")
-def reset_password(user_id: int, db: Session = Depends(get_db)):
+def reset_password(user_id: int, db: Session = Depends(get_db), _: User = Depends(_require_admin)):
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")

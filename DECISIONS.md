@@ -26,3 +26,30 @@
 - 상태 유지 미구현 → 매 방문 시 초기화, UX 저하
 
 **파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\index\IndexPage.jsx
+
+---
+## 2025-01-16 — PinnedMemoCard를 forwardRef로 변경하여 부모 컴포넌트의 직접 제어 가능하게 함
+
+**결정:** PinnedMemoCard 컴포넌트를 forwardRef와 useImperativeHandle을 사용하여 리팩토링하고, 부모 컴포넌트에서 ref를 통해 `openAdd()` 메서드를 직접 호출할 수 있도록 변경했다.
+
+**이유:** 부모 컴포넌트(IndexPage)에서 고정 메모 추가 폼을 프로그래매틱하게 열 수 있어야 하는데, 콜백 props 대신 ref 기반 imperative 호출이 더 직관적이고 제어 흐름이 명확하다. 또한 컴포넌트의 내부 상태 노출을 최소화할 수 있다.
+
+**대안:**
+- onOpenAdd 콜백 props 사용 → 상태 관리가 부모에 분산되고, props drilling 가능성
+- 전역 상태 관리(Context/Redux) 사용 → 간단한 기능에 과도한 복잡도
+
+**파일:** C:\Users\Jason\Desktop\dashboard\frontend\src\pages\index\PinnedMemoCard.jsx
+
+---
+## 2026-06-11 08:55 — 회원 목록 조회 엔드포인트에 역할 기반 접근 제어(RBAC) 추가
+
+**결정:** GET /api/auth/users 엔드포인트에 관리자 권한 검증을 추가했다. FastAPI의 Depends 의존성 주입을 사용하여 get_current_user를 매개변수로 받고, 현재 사용자의 역할이 "admin"이 아니면 HTTP 403 Forbidden 예외를 발생시키도록 구현했다.
+
+**이유:** 회원 목록은 민감한 정보이므로 관리자만 접근할 수 있어야 한다. FastAPI의 Depends 패턴은 프레임워크 네이티브이고, 코드 가독성이 좋으며, 다른 엔드포인트에서도 같은 패턴을 재사용할 수 있어 일관성이 높다.
+
+**대안:**
+- 데코레이터 패턴 (@require_admin) → 추가 코드 필요하지만 보일러플레이트 감소 가능
+- 미들웨어 기반 인증 → 모든 엔드포인트에 일괄 적용되므로 선택적 권한 검증 어려움
+- 개별 로직 → 각 엔드포인트마다 권한 검증 코드를 복제하여 유지보수 부담 증가
+
+**파일:** C:\Users\Jason\Desktop\dashboard\routers\auth.py
