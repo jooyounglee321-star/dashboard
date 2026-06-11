@@ -4,6 +4,15 @@
 
 ---
 
+## [2026-06-11] — fix: PinnedMemoCard 접기 높이 축소
+
+### 변경 내용
+- **PinnedMemoCard.jsx**: `{!isCollapsed && ...}` 조건부 렌더링 → `pinned-card-body` div + CSS 클래스 방식으로 전환
+- 접힌 상태 시 `max-height: 0` transition으로 카드가 제목 한 줄 높이로 줄어듦
+- `marginBottom` 인라인 스타일 제거, CSS로 처리
+
+---
+
 ## [2026-06-11] — refactor: SuperadminPage CHANGELOG 표시 형식 개편
 
 ### 변경 내용
