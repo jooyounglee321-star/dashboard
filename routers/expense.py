@@ -120,9 +120,22 @@ def _cat_dict(cat: ExpenseCategory, lang: str, subs: list[dict]) -> dict:
     }
 
 
-def _expense_dict(e: Expense, db: Session, lang: str = "ko") -> dict:
-    cat = db.get(ExpenseCategory, e.category_id)    if e.category_id    else None
-    sub = db.get(ExpenseCategory, e.subcategory_id) if e.subcategory_id else None
+def _build_cat_map(rows: list, db: Session) -> dict:
+    """rows의 모든 category_id/subcategory_id를 단일 배치 쿼리로 조회."""
+    ids = {e.category_id for e in rows if e.category_id} | \
+          {e.subcategory_id for e in rows if e.subcategory_id}
+    if not ids:
+        return {}
+    return {c.id: c for c in db.query(ExpenseCategory).filter(ExpenseCategory.id.in_(ids)).all()}
+
+
+def _expense_dict(e: Expense, db: Session, lang: str = "ko", cat_map: dict | None = None) -> dict:
+    if cat_map is not None:
+        cat = cat_map.get(e.category_id)    if e.category_id    else None
+        sub = cat_map.get(e.subcategory_id) if e.subcategory_id else None
+    else:
+        cat = db.get(ExpenseCategory, e.category_id)    if e.category_id    else None
+        sub = db.get(ExpenseCategory, e.subcategory_id) if e.subcategory_id else None
     return {
         "id":               e.id,
         "date":             e.date.isoformat(),
@@ -155,18 +168,22 @@ def _split_income_expense(rows: list) -> tuple:
 
 
 def _group_by_category(
-    rows: list[Expense], db: Session, lang: str, expense_type: str | None = None
+    rows: list[Expense], db: Session, lang: str, expense_type: str | None = None,
+    cat_map: dict | None = None,
 ) -> list[dict]:
     """지출 목록을 카테고리별로 집계. total_usd 내림차순.
 
     expense_type='expense' 이면 지출 행만, 'income' 이면 수입 행만 집계.
     None 이면 전체(하위 호환).
+    cat_map 제공 시 배치 조회 결과를 재사용 (N+1 방지).
     """
+    if cat_map is None:
+        cat_map = _build_cat_map(rows, db)
     totals: dict[int | None, dict[str, Any]] = {}
     for e in rows:
         if expense_type is not None and getattr(e, "type", "expense") != expense_type:
             continue
-        cat = db.get(ExpenseCategory, e.category_id) if e.category_id else None
+        cat = cat_map.get(e.category_id) if e.category_id else None
         key  = e.category_id
         name = _cat_name(cat, lang) if cat else (e.category or ("Other" if lang == "en" else "기타"))
         icon = cat.icon if cat else "📦"
@@ -305,14 +322,15 @@ def summary_daily(
         .all()
     )
     total_income, total_expense, net = _split_income_expense(rows)
+    cat_map = _build_cat_map(rows, db)
     return {
         "date":           date.isoformat(),
         "total_usd":      total_expense,           # 하위 호환: 지출 합계
         "total_income":   total_income,
         "total_expense":  total_expense,
         "net":            net,
-        "items":          [_expense_dict(e, db, lang) for e in rows],
-        "by_category":    _group_by_category(rows, db, lang, expense_type="expense"),
+        "items":          [_expense_dict(e, db, lang, cat_map=cat_map) for e in rows],
+        "by_category":    _group_by_category(rows, db, lang, expense_type="expense", cat_map=cat_map),
     }
 
 
@@ -336,6 +354,7 @@ def summary_monthly(
     )
 
     total_income, total_expense, net = _split_income_expense(rows)
+    cat_map = _build_cat_map(rows, db)
 
     # 일별 합계 (지출만 — 차트용)
     daily_map: dict[int, float] = {}
@@ -348,7 +367,7 @@ def summary_monthly(
     daily_list = [{"day": d, "total_usd": daily_map[d]} for d in sorted(daily_map)]
 
     # 카테고리 합계 + 예산 매핑 (지출만)
-    by_cat = _group_by_category(rows, db, lang, expense_type="expense")
+    by_cat = _group_by_category(rows, db, lang, expense_type="expense", cat_map=cat_map)
     budgets = (
         db.query(ExpenseBudget)
         .filter(
@@ -436,7 +455,7 @@ def summary_yearly(
         "yoy_change_pct":      yoy_pct,
         "monthly":             _monthly_totals(rows),
         "prev_monthly":        _monthly_totals(prev_rows),
-        "by_category":         _group_by_category(rows, db, lang, expense_type="expense"),
+        "by_category":         _group_by_category(rows, db, lang, expense_type="expense", cat_map=_build_cat_map(rows, db)),
     }
 
 
@@ -459,9 +478,10 @@ def expense_stats(
         .all()
     )
     total_income, total_expense, net = _split_income_expense(rows)
+    cat_map = _build_cat_map(rows, db)
 
     # 카테고리별 집계 — 지출만
-    by_cat    = _group_by_category(rows, db, lang, expense_type="expense")
+    by_cat    = _group_by_category(rows, db, lang, expense_type="expense", cat_map=cat_map)
     total_cat = sum(c["total_usd"] for c in by_cat)
 
     for c in by_cat:
@@ -702,7 +722,8 @@ def list_expenses(
     if type:
         q = q.filter(Expense.type == type)
     rows = q.order_by(Expense.date.desc(), Expense.created_at.desc()).all()
-    return [_expense_dict(e, db, lang) for e in rows]
+    cat_map = _build_cat_map(rows, db)
+    return [_expense_dict(e, db, lang, cat_map=cat_map) for e in rows]
 
 
 @expense_router.post("", status_code=201)

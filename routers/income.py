@@ -147,10 +147,20 @@ def list_incomes(
 
     rows = q.order_by(Expense.date.desc(), Expense.created_at.desc()).all()
 
+    # 배치 조회: 루프 내 N+1 방지
+    cat_ids = {e.category_id for e in rows if e.category_id} | \
+              {e.subcategory_id for e in rows if e.subcategory_id}
+    cat_map: dict[int, ExpenseCategory] = {}
+    if cat_ids:
+        cat_map = {
+            c.id: c
+            for c in db.query(ExpenseCategory).filter(ExpenseCategory.id.in_(cat_ids)).all()
+        }
+
     def _cat_info(cat_id):
         if not cat_id:
             return None, None, None
-        c = db.query(ExpenseCategory).get(cat_id)
+        c = cat_map.get(cat_id)
         if not c:
             return None, None, None
         return c.id, c.code, _cat_name(c, lang)
