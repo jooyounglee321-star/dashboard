@@ -72,6 +72,7 @@ def _cat_name(cat: ExpenseCategory, lang: str) -> str:
 def list_income_categories(
     lang: str = Query("ko", pattern="^(ko|en)$"),
     db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
 ):
     """수입 대분류 + 소분류 목록 반환."""
     parents = (
