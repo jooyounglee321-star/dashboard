@@ -114,7 +114,7 @@ function StockNewsRow({ newsConfig, lang, onOpenSettings }) {
     )
   }
 
-  // 뉴스 목록 표시 (최대 5개) + 새로고침 버튼
+  // 뉴스 목록 표시 (최대 5개)
   return (
     <div style={{ marginTop: '0.45rem' }}>
       {newsList.map((item, idx) => (
@@ -127,14 +127,6 @@ function StockNewsRow({ newsConfig, lang, onOpenSettings }) {
           📰 {item.title}{item.published ? ` (${item.published})` : ''}
         </a>
       ))}
-      <button
-        onClick={e => { e.stopPropagation(); fetchNews() }}
-        style={{ ...base, marginTop: '0.18rem', color: 'var(--ink3)', fontSize: '0.65rem', cursor: 'pointer' }}
-        onMouseEnter={e => e.currentTarget.style.color = '#3b82f6'}
-        onMouseLeave={e => e.currentTarget.style.color = 'var(--ink3)'}
-      >
-        🔄 {t(lang, 'stockNewsRefresh')}
-      </button>
     </div>
   )
 }
