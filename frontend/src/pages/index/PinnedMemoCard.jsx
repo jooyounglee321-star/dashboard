@@ -152,8 +152,8 @@ const PinnedMemoCard = forwardRef(function PinnedMemoCard({ lang = 'ko' }, ref) 
             }
 
             return (
-              <div key={memo.id} className="pinned-card" style={{ background: scheme.bg }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: (!isCollapsed && memo.content) ? '0.35rem' : 0 }}>
+              <div key={memo.id} className={`pinned-card${isCollapsed ? ' collapsed' : ''}`} style={{ background: scheme.bg }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div className="pinned-card-title" style={{ color: scheme.text, fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {memo.title || ''}
                   </div>
@@ -163,12 +163,12 @@ const PinnedMemoCard = forwardRef(function PinnedMemoCard({ lang = 'ko' }, ref) 
                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 0 0.4rem', flexShrink: 0, opacity: isCollapsed ? 0.4 : 1, fontSize: '1rem', lineHeight: 1 }}
                   >📌</button>
                 </div>
-                {!isCollapsed && memo.content && (
-                  <div className="pinned-card-content" style={{ color: scheme.text }}>
-                    {memo.content}
-                  </div>
-                )}
-                {!isCollapsed && (
+                <div className={`pinned-card-body${isCollapsed ? ' hidden' : ''}`}>
+                  {memo.content && (
+                    <div className="pinned-card-content" style={{ color: scheme.text, marginTop: '0.35rem' }}>
+                      {memo.content}
+                    </div>
+                  )}
                   <div className="pinned-card-actions">
                     <button
                       onClick={() => openEdit(memo)}
@@ -183,7 +183,7 @@ const PinnedMemoCard = forwardRef(function PinnedMemoCard({ lang = 'ko' }, ref) 
                       style={{ color: scheme.text }}
                     >🗑️</button>
                   </div>
-                )}
+                </div>
               </div>
             )
           })}
