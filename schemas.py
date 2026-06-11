@@ -357,7 +357,6 @@ DEFAULT_WIDGET_CONFIG: dict = {
     "expense":  {"enabled": True},
     "diet":     {"enabled": True, "meals": {"아침": True, "점심": True, "저녁": True, "간식": True}},
     "memo":         {"enabled": True},
-    "pinned_memo":  {"enabled": True},
     "news":         {"enabled": True, "default_tab": "kr"},
     "sites":        {"enabled": True},
 }

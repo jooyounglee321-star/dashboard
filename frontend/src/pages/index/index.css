@@ -267,6 +267,12 @@
 .mob-section{display:none;}
 .mob-section.active{display:block;}
 
+/* ── 고정 메모 영역 ── */
+.pinned-memo-zone{margin:0 0 1rem 0;padding:0;}
+.pinned-memo-zone--mobile{margin:0.5rem 0.75rem 0.5rem;}
+.pinned-memo-zone-header{display:flex;align-items:center;justify-content:space-between;padding:0.35rem 0.75rem;border-radius:8px;background:var(--card2);border:1px solid var(--border);margin-bottom:0.5rem;user-select:none;}
+.pinned-memo-zone-header:hover{background:var(--bg2);}
+
 /* ── 모바일 공통 카드 ── */
 .m-card{background:var(--card);border-radius:12px;border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden;margin-bottom:0.75rem;}
 .m-card-header{display:flex;align-items:center;gap:0.4rem;padding:0.65rem 1rem;border-bottom:1px solid var(--border);background:var(--card2);}

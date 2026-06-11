@@ -67,6 +67,17 @@ export default function IndexPage() {
   // widgetCfg가 null(로딩 중)이면 모두 보여줌, 이후 설정대로 표시
   const w = (key) => !widgetCfg || widgetCfg[key]?.enabled !== false
 
+  // 고정 메모 접기/펼치기 (localStorage 유지)
+  const [pinnedOpen, setPinnedOpen] = useState(() => {
+    try { return localStorage.getItem('pinned_memo_open') !== 'false' } catch { return true }
+  })
+  function togglePinned() {
+    setPinnedOpen(o => {
+      try { localStorage.setItem('pinned_memo_open', String(!o)) } catch {}
+      return !o
+    })
+  }
+
   // ── 레이아웃 편집 상태 ────────────────────────────────────────────────────
   const [editMode,     setEditMode]     = useState(false)
   const [layoutItems,  setLayoutItems]  = useState(DEFAULT_LAYOUT_ITEMS)
@@ -385,7 +396,6 @@ export default function IndexPage() {
       case 'expense':  return <ExpenseCard lang={lang} />
       case 'diet':     return <DietCard mealConfig={widgetCfg?.diet?.meals} lang={lang} />
       case 'memo':        return <MemoCard lang={lang} />
-      case 'pinned_memo': return <PinnedMemoCard lang={lang} />
       case 'news':        return <NewsCard defaultTab={widgetCfg?.news?.default_tab ?? 'kr'} lang={lang} />
       case 'sites':    return <SitesCard lang={lang} />
       default:         return null
@@ -495,6 +505,19 @@ export default function IndexPage() {
         </div>
       )}
 
+      {/* ═══ 고정 메모 영역 (위젯 외부 최상단) ═══ */}
+      <div className="pinned-memo-zone">
+        <div className="pinned-memo-zone-header" onClick={togglePinned} style={{ cursor: 'pointer' }}>
+          <span style={{ fontWeight: 600, fontSize: '0.78rem', color: 'var(--ink2)', letterSpacing: '0.06em' }}>
+            📌 {t(lang, 'pinnedMemoTitle')}
+          </span>
+          <span style={{ fontSize: '0.85rem', color: 'var(--ink3)', transition: 'transform 0.2s', display: 'inline-block', transform: pinnedOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>
+            ▾
+          </span>
+        </div>
+        {pinnedOpen && <PinnedMemoCard lang={lang} />}
+      </div>
+
       {/* ═══ PC 레이아웃 ═══ */}
       <main className="main">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -513,6 +536,19 @@ export default function IndexPage() {
           </SortableContext>
         </DndContext>
       </main>
+
+      {/* ═══ 모바일 고정 메모 ═══ */}
+      <div className="pinned-memo-zone pinned-memo-zone--mobile">
+        <div className="pinned-memo-zone-header" onClick={togglePinned} style={{ cursor: 'pointer' }}>
+          <span style={{ fontWeight: 600, fontSize: '0.78rem', color: 'var(--ink2)', letterSpacing: '0.06em' }}>
+            📌 {t(lang, 'pinnedMemoTitle')}
+          </span>
+          <span style={{ fontSize: '0.85rem', color: 'var(--ink3)', transition: 'transform 0.2s', display: 'inline-block', transform: pinnedOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>
+            ▾
+          </span>
+        </div>
+        {pinnedOpen && <PinnedMemoCard lang={lang} />}
+      </div>
 
       {/* ═══ 모바일 레이아웃 ═══ */}
       <div className="mobile-view">
@@ -546,7 +582,6 @@ export default function IndexPage() {
         <div className={`mob-section${mobileTab === 'health' ? ' active' : ''}`}>
           {w('diet') && <DietCard isMobile mealConfig={widgetCfg?.diet?.meals} lang={lang} />}
           {w('memo') && <MemoCard isMobile lang={lang} />}
-          {w('pinned_memo') && <PinnedMemoCard isMobile lang={lang} />}
         </div>
 
         {/* 미디어: 뉴스+유튜브 */}
