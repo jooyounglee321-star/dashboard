@@ -222,7 +222,12 @@
     "toastMemoSaved": "Memo saved.",
     "toastPwIssued": "Temporary password issued.",
     "toastPwErr": "Reset failed.",
-    "confirmResetPw": "Issue a temporary password? The existing password will be invalidated immediately."
+    "confirmResetPw": "Issue a temporary password? The existing password will be invalidated immediately.",
+    "changelogTitle": "📋 Change History (CHANGELOG)",
+    "changelogSearch": "Search by date or content…",
+    "changelogEmpty": "No results found.",
+    "changelogLoading": "Loading change history…",
+    "changelogCount": "items"
   },
 
   "adminLink": "⚙ Admin",

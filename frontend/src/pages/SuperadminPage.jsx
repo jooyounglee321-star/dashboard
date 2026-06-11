@@ -42,6 +42,11 @@ export default function SuperadminPage() {
   const [modalMemo, setModalMemo] = useState('')
   const [pwResult, setPwResult] = useState('')
 
+  const [changelog, setChangelog] = useState([])
+  const [clLoading, setClLoading] = useState(false)
+  const [clSearch, setClSearch] = useState('')
+  const [clOpen, setClOpen] = useState(new Set())
+
   useEffect(() => {
     function handleLangChange() {
       try { setLang(localStorage.getItem('dashboard_lang') || 'ko') } catch {}
@@ -79,6 +84,20 @@ export default function SuperadminPage() {
   }, [search, planFilter, statusFilter, sortSelect])
 
   useEffect(() => { loadUsers() }, []) // eslint-disable-line
+
+  useEffect(() => {
+    setClLoading(true)
+    const tok = { Authorization: 'Bearer ' + localStorage.getItem('token') }
+    fetch('/api/admin/superadmin/changelog', { headers: tok })
+      .then(r => r.ok ? r.json() : [])
+      .catch(() => [])
+      .then(data => {
+        setChangelog(data)
+        // 최신 3개는 기본 펼침
+        setClOpen(new Set(data.slice(0, 3).map((_, i) => i)))
+      })
+      .finally(() => setClLoading(false))
+  }, [])
 
   const debouncedSearch = useRef(debounce((val) => {
     setSearch(val)
@@ -161,6 +180,38 @@ export default function SuperadminPage() {
   function handleStatusFilterChange(val) {
     setStatusFilter(val)
     loadUsers({ statusFilter: val })
+  }
+
+  function renderMd(text) {
+    const parts = []
+    let rest = text
+    let key = 0
+    const re = /(\*\*(.+?)\*\*|`([^`]+)`)/g
+    let last = 0, m
+    re.lastIndex = 0
+    while ((m = re.exec(rest)) !== null) {
+      if (m.index > last) parts.push(<span key={key++}>{rest.slice(last, m.index)}</span>)
+      if (m[2] != null) parts.push(<strong key={key++}>{m[2]}</strong>)
+      else parts.push(<code key={key++} style={{ background: 'var(--bg2)', padding: '0.1em 0.35em', borderRadius: 3, fontSize: '0.82em', fontFamily: 'monospace' }}>{m[3]}</code>)
+      last = m.index + m[0].length
+    }
+    if (last < rest.length) parts.push(<span key={key++}>{rest.slice(last)}</span>)
+    return parts
+  }
+
+  const clFiltered = changelog.filter(entry => {
+    if (!clSearch.trim()) return true
+    const q = clSearch.toLowerCase()
+    return entry.date.includes(q) || (entry.title || '').toLowerCase().includes(q) ||
+      entry.items.some(item => item.toLowerCase().includes(q))
+  })
+
+  function toggleCl(i) {
+    setClOpen(prev => {
+      const next = new Set(prev)
+      next.has(i) ? next.delete(i) : next.add(i)
+      return next
+    })
   }
 
   return (
@@ -270,6 +321,57 @@ export default function SuperadminPage() {
             </span>
             <button className="page-btn" onClick={() => setCurrentPage(p => p-1)} disabled={currentPage <= 1}>{t(lang, 'superadmin.prevPage')}</button>
             <button className="page-btn" onClick={() => setCurrentPage(p => p+1)} disabled={currentPage >= pages}>{t(lang, 'superadmin.nextPage')}</button>
+          </div>
+        </div>
+
+        {/* ── CHANGELOG 섹션 ── */}
+        <div style={{ marginTop: '2.5rem' }}>
+          <hr style={{ border: 'none', borderTop: '1px solid var(--border)', marginBottom: '2rem' }} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--ink)' }}>{t(lang, 'superadmin.changelogTitle')}</h2>
+            <input
+              type="text"
+              placeholder={t(lang, 'superadmin.changelogSearch')}
+              value={clSearch}
+              onChange={e => setClSearch(e.target.value)}
+              style={{ padding: '0.4rem 0.75rem', fontSize: '0.82rem', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit', width: 260 }}
+            />
+          </div>
+
+          {clLoading && <p style={{ color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'superadmin.changelogLoading')}</p>}
+
+          {!clLoading && clFiltered.length === 0 && (
+            <p style={{ color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'superadmin.changelogEmpty')}</p>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {clFiltered.map((entry, i) => {
+              const isOpen = clOpen.has(i)
+              return (
+                <div key={entry.date + i} style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', background: 'var(--card)' }}>
+                  <button
+                    onClick={() => toggleCl(i)}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.7rem 1rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', gap: '0.75rem' }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', minWidth: 0 }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--ink)', whiteSpace: 'nowrap' }}>{entry.date}</span>
+                      {entry.title && <span style={{ fontSize: '0.82rem', color: 'var(--ink2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.title}</span>}
+                      <span style={{ fontSize: '0.72rem', background: 'var(--bg2)', color: 'var(--ink3)', padding: '0.1rem 0.45rem', borderRadius: 10, whiteSpace: 'nowrap' }}>
+                        {entry.items.length}{t(lang, 'superadmin.changelogCount')}
+                      </span>
+                    </div>
+                    <span style={{ color: 'var(--ink3)', fontSize: '0.8rem', flexShrink: 0 }}>{isOpen ? '▲' : '▼'}</span>
+                  </button>
+                  {isOpen && (
+                    <ul style={{ margin: 0, padding: '0 1rem 0.85rem 1.8rem', listStyle: 'disc', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                      {entry.items.map((item, j) => (
+                        <li key={j} style={{ fontSize: '0.83rem', color: 'var(--ink)', lineHeight: 1.55 }}>{renderMd(item)}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>

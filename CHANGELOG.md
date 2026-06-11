@@ -4,6 +4,23 @@
 
 ---
 
+## [2026-06-11] — feat: SuperadminPage CHANGELOG 섹션 추가
+
+### 변경 내용
+- **routers/admin.py**: `GET /api/admin/superadmin/changelog` 엔드포인트 추가
+  - CHANGELOG.md 파일 파싱 → 날짜/제목/항목 배열 반환
+  - `## [YYYY-MM-DD] — 제목` 형식 파싱, bullet 항목 수집, 최신순 정렬
+  - admin 권한 필요 (`_require_admin`)
+- **SuperadminPage.jsx**: 회원 목록 하단에 CHANGELOG 섹션 추가
+  - 날짜별 아코디언 카드 (클릭 시 접기/펼치기)
+  - 최신 3개 기본 펼침, 나머지 접힘
+  - 날짜 헤더 + 제목 + 항목 수 뱃지
+  - 검색 필터 (날짜/제목/항목 내용 실시간 필터링)
+  - 마크다운 볼드(`**text**`), 코드(`` `text` ``) 기본 렌더링
+- **ko.json / en.json**: `superadmin.changelogTitle/Search/Empty/Loading/Count` i18n 키 추가
+
+---
+
 ## [2026-06-11] — refactor: 프론트 공통 유틸 추출 + SummaryTab N+1 쿼리 제거
 
 ### 변경 내용
