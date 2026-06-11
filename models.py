@@ -185,6 +185,18 @@ class PinnedMemo(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
 
+class Todo(Base):
+    """수동 할 일 체크리스트. due_date까지 매일 표시."""
+    __tablename__ = "todos"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    is_done_dates: Mapped[str] = mapped_column(Text, nullable=False, server_default="[]")  # JSON array of "YYYY-MM-DD"
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
 class Stock(Base):
     """보유 종목. 카테고리당 최대 10개."""
     __tablename__ = "stocks"

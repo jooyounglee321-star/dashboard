@@ -4,6 +4,31 @@
 
 ---
 
+## [2026-06-11] — feat: 오늘의 일정 위젯 좌우 2분할 + 할 일 체크리스트 추가
+
+### 변경 내용
+- **models.py**: `Todo` 모델 추가 (`todos` 테이블 — id, user_id, title, due_date, is_done_dates JSON, created_at)
+- **schemas.py**: `TodoCreate`, `TodoCheckToggle`, `TodoOut` 스키마 추가
+- **routers/todos.py** (신규): CRUD API
+  - `GET /api/todos?date=YYYY-MM-DD` — 해당 날짜에 표시할 할 일 목록 (due_date 필터링)
+  - `POST /api/todos` — 할 일 생성
+  - `PUT /api/todos/{id}/check` — 날짜별 체크/언체크 토글
+  - `DELETE /api/todos/{id}` — 삭제
+- **main.py**: Todo 모델 임포트 + todos 라우터 등록
+- **TodoList.jsx** (신규): 체크리스트 UI 컴포넌트
+  - 날짜별 독립 체크 상태, 체크 시 취소선+흐리게
+  - 마감일 표시 (오늘/지난 마감일 빨간색 강조)
+  - 인라인 추가 폼 (내용 + 마감일 선택)
+  - 삭제 버튼
+- **ScheduleCard.jsx**: 좌우 2분할 레이아웃으로 개편
+  - 좌측 50%: 기존 Google Calendar 연동 화면
+  - 우측 50%: TodoList 컴포넌트 (구분선으로 분리)
+  - 모바일: 상하 2단 레이아웃으로 대응
+- **ko.json / en.json**: `todo*` i18n 키 추가
+- **DB_SCHEMA.md**: `todos` 테이블 항목 추가
+
+---
+
 ## [2026-06-11] — feat: SuperadminPage CHANGELOG 섹션 추가
 
 ### 변경 내용
