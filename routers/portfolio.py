@@ -5,7 +5,7 @@ from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import yfinance as yf
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -498,13 +498,18 @@ def save_snapshot(
 # ── GET /api/portfolio/history ───────────────────────────────────────────────
 @router.get("/history", response_model=list[PortfolioSnapshotOut])
 def get_history(
-    db: Session = Depends(get_db),
+    days: int       = Query(365, ge=1, le=3650),
+    db: Session     = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """현재 사용자의 전체 스냅샷 목록 (최신순)."""
+    """현재 사용자의 스냅샷 목록 (최신순). days로 조회 기간 제한, 기본 365일."""
+    cutoff = date.today() - timedelta(days=days)
     rows = (
         db.query(DailyPortfolioSnapshot)
-        .filter(DailyPortfolioSnapshot.user_id == current_user.id)
+        .filter(
+            DailyPortfolioSnapshot.user_id == current_user.id,
+            DailyPortfolioSnapshot.snapshot_date >= cutoff,
+        )
         .order_by(DailyPortfolioSnapshot.snapshot_date.desc())
         .all()
     )
