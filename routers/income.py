@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import Expense, ExpenseCategory, ExchangeRate, User
 from routers.auth import get_current_user
+from routers._shared import get_rate as _get_rate, cat_name as _cat_name
 
 logger = logging.getLogger(__name__)
 
@@ -44,14 +45,6 @@ class IncomePatch(BaseModel):
 
 # ── 내부 유틸 ────────────────────────────────────────────────────────────────
 
-def _get_rate(currency: str, db: Session) -> float:
-    if currency == "USD":
-        return 1.0
-    row = db.query(ExchangeRate).filter_by(
-        base_currency="USD", target_currency=currency
-    ).first()
-    return float(row.rate) if row else 1.0
-
 def _resolve_category(code: str | None, db: Session) -> int | None:
     """code → expense_categories.id (income 타입만 검색)."""
     if not code:
@@ -62,9 +55,6 @@ def _resolve_category(code: str | None, db: Session) -> int | None:
         ExpenseCategory.is_active == True,   # noqa: E712
     ).first()
     return cat.id if cat else None
-
-def _cat_name(cat: ExpenseCategory, lang: str) -> str:
-    return cat.name_en if lang == "en" else cat.name_ko
 
 # ── 카테고리 조회 ─────────────────────────────────────────────────────────────
 
