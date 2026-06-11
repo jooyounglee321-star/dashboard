@@ -11,10 +11,26 @@ const MOODS = [
 ]
 
 const EMOJI_CATS = [
-  { key: 'emotions', emojis: ['😀','😂','😍','😔','😤','😭','🥰','😎','🤔','😴'] },
-  { key: 'activity', emojis: ['🔥','💪','🏃','📚','💻','🎵','🍎','☕','🛌','✈️'] },
-  { key: 'nature',   emojis: ['☀️','🌧️','❄️','🌸','🌙','⭐'] },
-  { key: 'etc',      emojis: ['❤️','👍','✅','⚡','🎉','💡','📌','🙏'] },
+  {
+    key: 'emotions',
+    emojis: ['😀','😂','🥰','😍','🤩','😎','🙂','😔','😢','😭','😤','😠','🤔','😴','🥱','😰','🤯','🥳','😇','🫠'],
+  },
+  {
+    key: 'food',
+    emojis: ['☕','🍎','🍕','🍜','🍣','🍰','🥗','🍳','🥤','🧃','🍺','🍷','🥐','🍇','🍓'],
+  },
+  {
+    key: 'activity',
+    emojis: ['💪','🏃','📚','💻','🎵','🎮','🛌','✈️','🚗','🏋️','🧘','🎨','📝','🛁','🧹'],
+  },
+  {
+    key: 'nature',
+    emojis: ['☀️','🌧️','❄️','🌸','🌙','⭐','🌈','🌊','🍃','🔥'],
+  },
+  {
+    key: 'etc',
+    emojis: ['❤️','💛','💙','👍','✅','⚡','🎉','💡','📌','🙏','💰','🏆','⏰','💊','🔑'],
+  },
 ]
 
 const pad2 = n => String(n).padStart(2, '0')
@@ -49,7 +65,8 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
   const [editing, setEditing]   = useState(false)
   const [mood, setMood]         = useState('')
   const [text, setText]         = useState('')
-  const [emojiOpen, setEmojiOpen] = useState(false)
+  const [emojiOpen, setEmojiOpen]   = useState(false)
+  const [emojiCatIdx, setEmojiCatIdx] = useState(0)
 
   const _now = new Date()
   const [calOpen, setCalOpen]     = useState(false)
@@ -58,7 +75,9 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
   const [calMonth, setCalMonth]   = useState(_now.getMonth() + 1)
   const [dayDetail, setDayDetail] = useState(null)
 
-  const taRef = useRef(null)
+  const taRef      = useRef(null)
+  const pickerRef  = useRef(null)
+  const pickerBtnRef = useRef(null)
 
   const authHdr = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') })
 
@@ -80,10 +99,25 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
   // textarea auto-resize
   useEffect(() => {
     const ta = taRef.current
-    if (!ta) return
+    if (!ta || !editing) return
     ta.style.height = 'auto'
     ta.style.height = ta.scrollHeight + 'px'
   }, [text, editing])
+
+  // 이모지 피커 외부 클릭 닫기
+  useEffect(() => {
+    if (!emojiOpen) return
+    function onClickOutside(e) {
+      if (
+        pickerRef.current && !pickerRef.current.contains(e.target) &&
+        pickerBtnRef.current && !pickerBtnRef.current.contains(e.target)
+      ) {
+        setEmojiOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [emojiOpen])
 
   async function saveMemo() {
     const content = JSON.stringify({ mood, text })
@@ -124,13 +158,14 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
   function insertEmoji(emoji) {
     const ta = taRef.current
     if (!ta) { setText(prev => prev + emoji); setEmojiOpen(false); return }
-    const start = ta.selectionStart
-    const end   = ta.selectionEnd
+    const start = ta.selectionStart ?? text.length
+    const end   = ta.selectionEnd   ?? text.length
     const next  = text.slice(0, start) + emoji + text.slice(end)
     setText(next)
     requestAnimationFrame(() => {
       ta.focus()
-      ta.setSelectionRange(start + emoji.length, start + emoji.length)
+      const pos = start + emoji.length
+      ta.setSelectionRange(pos, pos)
     })
     setEmojiOpen(false)
   }
@@ -165,8 +200,8 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
   const wrapper  = isMobile ? 'm-card'        : 'card card-memo'
 
   const emojiCatLabels = lang === 'ko'
-    ? ['표정/감정', '활동', '날씨/자연', '기타']
-    : ['Emotions', 'Activity', 'Nature', 'Others']
+    ? ['표정/감정', '음식/음료', '활동/일상', '날씨/자연', '기타']
+    : ['Emotions', 'Food', 'Activity', 'Nature', 'Others']
 
   return (
     <div className={wrapper}>
@@ -184,11 +219,11 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
         </button>
       </div>
 
-      <div className={body}>
+      <div className={body} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
 
-        {/* ── 기분 선택 (편집 모드) ── */}
+        {/* ── 기분 선택 (편집 모드, textarea 위에 독립 배치) ── */}
         {editing && (
-          <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginBottom: '0.55rem' }}>
+          <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
             {MOODS.map(m => (
               <button
                 key={m.key}
@@ -200,6 +235,7 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
                   padding: '0.28rem 0.45rem', cursor: 'pointer',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px',
                   transition: 'border-color 0.12s, background 0.12s',
+                  flexShrink: 0,
                 }}
               >
                 <span style={{ fontSize: '1.1rem' }}>{m.icon}</span>
@@ -211,8 +247,8 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
           </div>
         )}
 
-        {/* ── 표시 / 편집 영역 ── */}
-        {!editing ? (
+        {/* ── 표시 영역 (보기 모드) ── */}
+        {!editing && (
           <div className={isMobile ? 'm-memo-display' : 'memo-display'}>
             {memoData ? (
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
@@ -227,73 +263,99 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
               </span>
             )}
           </div>
-        ) : (
-          <div style={{ position: 'relative' }}>
-            <textarea
-              ref={taRef}
-              className={isMobile ? 'm-memo-ta' : 'memo-ta'}
-              style={{ display: 'block', minHeight: '96px', resize: 'none', overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}
-              rows={4}
-              value={text}
-              onChange={e => setText(e.target.value)}
-              placeholder={t(lang, 'memoTaPlaceholder')}
-              autoFocus
-            />
+        )}
 
-            {/* 이모지 피커 */}
-            <div style={{ marginTop: '0.3rem', position: 'relative' }}>
-              <button
-                type="button"
-                onClick={() => setEmojiOpen(o => !o)}
+        {/* ── 텍스트 입력 (편집 모드) ── */}
+        {editing && (
+          <textarea
+            ref={taRef}
+            className={isMobile ? 'm-memo-ta' : 'memo-ta'}
+            style={{
+              display: 'block', width: '100%', boxSizing: 'border-box',
+              minHeight: '96px', resize: 'none', overflow: 'hidden',
+            }}
+            rows={4}
+            value={text}
+            onChange={e => setText(e.target.value)}
+            placeholder={t(lang, 'memoTaPlaceholder')}
+            autoFocus
+          />
+        )}
+
+        {/* ── 이모지 피커 버튼 (편집 모드) ── */}
+        {editing && (
+          <div style={{ position: 'relative', display: 'inline-block' }}>
+            <button
+              ref={pickerBtnRef}
+              type="button"
+              onClick={() => setEmojiOpen(o => !o)}
+              style={{
+                background: 'var(--bg)', border: '1px solid var(--border)',
+                borderRadius: '6px', cursor: 'pointer', fontSize: '1rem',
+                padding: '0.18rem 0.5rem', lineHeight: 1,
+              }}
+              title={t(lang, 'memoEmojiBtn')}
+            >😀</button>
+
+            {emojiOpen && (
+              <div
+                ref={pickerRef}
                 style={{
-                  background: 'var(--bg)', border: '1px solid var(--border)',
-                  borderRadius: '6px', cursor: 'pointer', fontSize: '1rem',
-                  padding: '0.18rem 0.45rem', lineHeight: 1,
+                  position: 'absolute', left: 0, top: 'calc(100% + 6px)', zIndex: 600,
+                  background: '#1a2336', border: '1px solid rgba(255,255,255,0.18)',
+                  borderRadius: '0.85rem', width: '300px',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.55)',
+                  overflow: 'hidden',
                 }}
-                title={t(lang, 'memoEmojiBtn')}
-              >😀</button>
-
-              {emojiOpen && (
-                <div
-                  style={{
-                    position: 'absolute', left: 0, top: '2.2rem', zIndex: 600,
-                    background: '#1a2336', border: '1px solid rgba(255,255,255,0.15)',
-                    borderRadius: '0.75rem', padding: '0.75rem', width: '268px',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-                  }}
-                >
-                  {EMOJI_CATS.map((cat, ci) => (
-                    <div key={cat.key} style={{ marginBottom: ci < EMOJI_CATS.length - 1 ? '0.55rem' : 0 }}>
-                      <div style={{ fontSize: '0.63rem', color: '#6b7fa0', marginBottom: '0.28rem', fontWeight: 600 }}>
-                        {emojiCatLabels[ci]}
-                      </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
-                        {cat.emojis.map(e => (
-                          <button
-                            key={e}
-                            type="button"
-                            onClick={() => insertEmoji(e)}
-                            style={{
-                              background: 'rgba(255,255,255,0.05)',
-                              border: '1px solid rgba(255,255,255,0.1)',
-                              borderRadius: '5px', cursor: 'pointer',
-                              fontSize: '1.15rem', padding: '0.18rem 0.28rem', lineHeight: 1,
-                            }}
-                            onMouseEnter={ev => ev.currentTarget.style.background = 'rgba(255,255,255,0.16)'}
-                            onMouseLeave={ev => ev.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                          >{e}</button>
-                        ))}
-                      </div>
-                    </div>
+              >
+                {/* 카테고리 탭 */}
+                <div style={{
+                  display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.1)',
+                  overflowX: 'auto',
+                }}>
+                  {emojiCatLabels.map((label, ci) => (
+                    <button
+                      key={ci}
+                      onClick={() => setEmojiCatIdx(ci)}
+                      style={{
+                        flex: '0 0 auto', background: 'none', border: 'none',
+                        cursor: 'pointer', padding: '0.45rem 0.65rem',
+                        fontSize: '0.68rem', fontWeight: emojiCatIdx === ci ? 700 : 400,
+                        color: emojiCatIdx === ci ? '#60a5fa' : '#9aacbf',
+                        borderBottom: emojiCatIdx === ci ? '2px solid #60a5fa' : '2px solid transparent',
+                        whiteSpace: 'nowrap', lineHeight: 1,
+                        transition: 'color 0.12s',
+                      }}
+                    >{label}</button>
                   ))}
                 </div>
-              )}
-            </div>
+
+                {/* 이모지 그리드 */}
+                <div style={{ padding: '0.6rem', display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
+                  {EMOJI_CATS[emojiCatIdx].emojis.map(e => (
+                    <button
+                      key={e}
+                      type="button"
+                      onClick={() => insertEmoji(e)}
+                      style={{
+                        background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: '5px', cursor: 'pointer',
+                        fontSize: '1.25rem', padding: '0.22rem 0.3rem', lineHeight: 1,
+                        transition: 'background 0.1s',
+                      }}
+                      onMouseEnter={ev => ev.currentTarget.style.background = 'rgba(255,255,255,0.18)'}
+                      onMouseLeave={ev => ev.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                    >{e}</button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
         {/* ── 버튼 영역 ── */}
-        <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
           {!editing ? (
             <>
               {!memoData && (
@@ -394,7 +456,6 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
                 display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)',
                 gap: '4px', minWidth: '420px',
               }}>
-                {/* 요일 헤더 */}
                 {(lang === 'ko'
                   ? ['일','월','화','수','목','금','토']
                   : ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
@@ -405,12 +466,10 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
                   }}>{d}</div>
                 ))}
 
-                {/* 빈 칸 offset */}
                 {Array.from({ length: firstDow }).map((_, i) => (
                   <div key={`e${i}`} style={{ height: '90px' }} />
                 ))}
 
-                {/* 날짜 칸 */}
                 {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
                   const dow     = (firstDow + day - 1) % 7
                   const dateStr = `${calYear}-${pad2(calMonth)}-${pad2(day)}`
@@ -446,9 +505,7 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
                       }}>{day}</span>
                       {pp && (
                         <>
-                          {pp.mood && (
-                            <span style={{ fontSize: '1rem', lineHeight: 1, flexShrink: 0 }}>{pp.mood}</span>
-                          )}
+                          {pp.mood && <span style={{ fontSize: '1rem', lineHeight: 1, flexShrink: 0 }}>{pp.mood}</span>}
                           {pp.text && (
                             <span style={{
                               fontSize: '0.65rem', color: '#9aacbf', lineHeight: 1.3,
@@ -466,7 +523,6 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
                 })}
               </div>
 
-              {/* 날짜 상세 팝업 */}
               {dayDetail && (
                 <div style={{
                   marginTop: '1rem', background: 'rgba(255,255,255,0.06)',
