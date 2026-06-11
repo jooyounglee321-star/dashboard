@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, memo } from 'react'
 import { t } from './i18n'
 
 const GRP_COLORS = [
@@ -137,8 +137,14 @@ const btnStyle = {
   fontFamily: 'inherit', textDecoration: 'none',
 }
 
-export default function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSettings, isMobile = false, currencyDisplay, lang = 'ko' }) {
+function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSettings, isMobile = false, currencyDisplay, lang = 'ko' }) {
   const totalMode = currencyDisplay ?? (() => { try { return localStorage.getItem(TOTAL_MODE_KEY) || 'KRW' } catch { return 'KRW' } })()
+
+  const stockCalcMap = useMemo(() => {
+    const map = new Map()
+    groups.forEach(g => { g.stocks?.forEach(s => { map.set(s, calcStock(s, priceMap)) }) })
+    return map
+  }, [groups, priceMap])
   const fxText = fxRate ? `$1 = ₩${fmtKRW(fxRate)}` : ''
   const fxNote = fxRate ? ` (${t(lang, 'stockFxLabel')} ₩${fmtKRW(fxRate)}/$)` : ''
   const rowS = { display: 'flex', justifyContent: 'space-between', alignItems: 'center' }
@@ -194,7 +200,7 @@ export default function StockCard({ groups, priceMap, fxRate, loading, onOpenSta
     let grpTotal = 0
 
     const stockRows = g.stocks.map(s => {
-      const { holdQty, avgCost, cur, chP, val, evalPL, evalPct, realizedPL, totalSellQty, isLive } = calcStock(s, priceMap)
+      const { holdQty, avgCost, cur, chP, val, evalPL, evalPct, realizedPL, totalSellQty, isLive } = stockCalcMap.get(s) ?? calcStock(s, priceMap)
       grpTotal += val
       const cs = chP >= 0 ? 'up' : 'down'; const sg = chP >= 0 ? '▲' : '▼'
       const eps = evalPL != null ? (evalPL >= 0 ? 'up' : 'down') : ''
@@ -394,3 +400,5 @@ export default function StockCard({ groups, priceMap, fxRate, loading, onOpenSta
     </div>
   )
 }
+
+export default memo(StockCard)
