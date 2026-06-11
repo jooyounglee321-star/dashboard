@@ -182,28 +182,49 @@ export default function SuperadminPage() {
     loadUsers({ statusFilter: val })
   }
 
-  function renderMd(text) {
+  const TYPE_BADGE = {
+    feat:     { bg: '#dbeafe', color: '#1d4ed8' },
+    fix:      { bg: '#dcfce7', color: '#166534' },
+    design:   { bg: '#f3e8ff', color: '#6b21a8' },
+    refactor: { bg: '#ffedd5', color: '#9a3412' },
+    perf:     { bg: '#fef9c3', color: '#854d0e' },
+    docs:     { bg: '#e0f2fe', color: '#0369a1' },
+    chore:    { bg: '#f1f5f9', color: '#475569' },
+  }
+  function typeBadge(type) {
+    const s = (type || 'feat').toLowerCase()
+    const { bg, color } = TYPE_BADGE[s] || { bg: '#f1f5f9', color: '#475569' }
+    return (
+      <span style={{ fontSize: '0.68rem', fontWeight: 600, background: bg, color, padding: '0.1em 0.45em', borderRadius: 4, letterSpacing: '0.04em', whiteSpace: 'nowrap', flexShrink: 0 }}>
+        {s}
+      </span>
+    )
+  }
+
+  function renderDesc(text) {
     const parts = []
-    let rest = text
     let key = 0
-    const re = /(\*\*(.+?)\*\*|`([^`]+)`)/g
+    const re = /(`([^`]+)`)/g
     let last = 0, m
     re.lastIndex = 0
-    while ((m = re.exec(rest)) !== null) {
-      if (m.index > last) parts.push(<span key={key++}>{rest.slice(last, m.index)}</span>)
-      if (m[2] != null) parts.push(<strong key={key++}>{m[2]}</strong>)
-      else parts.push(<code key={key++} style={{ background: 'var(--bg2)', padding: '0.1em 0.35em', borderRadius: 3, fontSize: '0.82em', fontFamily: 'monospace' }}>{m[3]}</code>)
+    while ((m = re.exec(text)) !== null) {
+      if (m.index > last) parts.push(<span key={key++}>{text.slice(last, m.index)}</span>)
+      parts.push(<code key={key++} style={{ background: 'var(--bg2)', padding: '0.1em 0.35em', borderRadius: 3, fontSize: '0.82em', fontFamily: 'monospace' }}>{m[2]}</code>)
       last = m.index + m[0].length
     }
-    if (last < rest.length) parts.push(<span key={key++}>{rest.slice(last)}</span>)
+    if (last < text.length) parts.push(<span key={key++}>{text.slice(last)}</span>)
     return parts
   }
 
   const clFiltered = changelog.filter(entry => {
     if (!clSearch.trim()) return true
     const q = clSearch.toLowerCase()
-    return entry.date.includes(q) || (entry.title || '').toLowerCase().includes(q) ||
-      entry.items.some(item => item.toLowerCase().includes(q))
+    return entry.date.includes(q) ||
+      entry.items.some(item =>
+        (item.widget || '').toLowerCase().includes(q) ||
+        (item.desc || '').toLowerCase().includes(q) ||
+        (item.type || '').toLowerCase().includes(q)
+      )
   })
 
   function toggleCl(i) {
@@ -354,8 +375,7 @@ export default function SuperadminPage() {
                     style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.7rem 1rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', gap: '0.75rem' }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', minWidth: 0 }}>
-                      <span style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--ink)', whiteSpace: 'nowrap' }}>{entry.date}</span>
-                      {entry.title && <span style={{ fontSize: '0.82rem', color: 'var(--ink2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.title}</span>}
+                      <span style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--ink)', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>{entry.date}</span>
                       <span style={{ fontSize: '0.72rem', background: 'var(--bg2)', color: 'var(--ink3)', padding: '0.1rem 0.45rem', borderRadius: 10, whiteSpace: 'nowrap' }}>
                         {entry.items.length}{t(lang, 'superadmin.changelogCount')}
                       </span>
@@ -363,11 +383,19 @@ export default function SuperadminPage() {
                     <span style={{ color: 'var(--ink3)', fontSize: '0.8rem', flexShrink: 0 }}>{isOpen ? '▲' : '▼'}</span>
                   </button>
                   {isOpen && (
-                    <ul style={{ margin: 0, padding: '0 1rem 0.85rem 1.8rem', listStyle: 'disc', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                      {entry.items.map((item, j) => (
-                        <li key={j} style={{ fontSize: '0.83rem', color: 'var(--ink)', lineHeight: 1.55 }}>{renderMd(item)}</li>
-                      ))}
-                    </ul>
+                    <div style={{ padding: '0 1rem 0.85rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                      {entry.items.map((item, j) => {
+                        const isLast = j === entry.items.length - 1
+                        return (
+                          <div key={j} style={{ display: 'flex', alignItems: 'baseline', gap: '0.45rem', fontSize: '0.83rem', color: 'var(--ink)', lineHeight: 1.55 }}>
+                            <span style={{ color: 'var(--ink3)', fontFamily: 'monospace', fontSize: '0.78rem', flexShrink: 0, userSelect: 'none' }}>{isLast ? '└──' : '├──'}</span>
+                            {typeBadge(item.type)}
+                            {item.widget && <strong style={{ color: 'var(--ink)', fontWeight: 600, flexShrink: 0 }}>{item.widget}</strong>}
+                            <span style={{ color: 'var(--ink2)' }}>{renderDesc(item.desc)}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
                   )}
                 </div>
               )

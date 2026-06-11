@@ -204,6 +204,42 @@ def reset_password(user_id: int, db: Session = Depends(get_db), _: User = Depend
 
 _CHANGELOG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "CHANGELOG.md")
 
+# 위젯/페이지명 키워드 (순서 중요: 더 긴 이름 먼저)
+_WIDGET_KEYWORDS = [
+    "StockSettingsModal", "StockStatsOverlay", "PinnedMemoCard",
+    "SuperadminPage", "ScheduleCard", "HeroSection", "LayoutEditor",
+    "BookmarkCard", "StockCard", "BudgetPage", "MemoCard", "DietCard",
+    "ExpenseCard", "IndexPage", "AdminPage", "TodoList", "ProfilePage",
+    "LoginPage", "RegisterPage",
+]
+_WIDGET_RE = re.compile(
+    r"\b(" + "|".join(re.escape(w) for w in _WIDGET_KEYWORDS) + r")\b"
+)
+_TYPE_RE = re.compile(r"^(feat|fix|refactor|design|perf|docs|chore|style|test)\b", re.I)
+
+
+def _parse_item(raw: str, block_type: str) -> dict:
+    """bullet 텍스트 → {type, widget, desc} 딕셔너리."""
+    # **Widget.jsx**: 또는 **Widget**: 으로 시작하는 패턴 제거 후 desc 추출
+    prefix_m = re.match(r"^\*\*([^*]+)\*\*[:\s]*(.*)$", raw)
+    if prefix_m:
+        prefix_text = prefix_m.group(1)
+        desc = prefix_m.group(2).strip(" :–—-")
+        # prefix 안에서 위젯명 찾기
+        wm = _WIDGET_RE.search(prefix_text)
+        widget = wm.group(1) if wm else None
+    else:
+        desc = raw
+        wm = _WIDGET_RE.search(raw)
+        widget = wm.group(1) if wm else None
+
+    # desc가 비어 있으면 raw 전체 사용
+    if not desc:
+        desc = raw
+
+    return {"type": block_type, "widget": widget, "desc": desc}
+
+
 @router.get("/superadmin/changelog")
 def get_changelog(_: User = Depends(_require_admin)):
     try:
@@ -212,27 +248,28 @@ def get_changelog(_: User = Depends(_require_admin)):
     except FileNotFoundError:
         return []
 
-    entries = []
-    current_date = None
-    current_title = None
-    current_items: list[str] = []
+    # date → list[item] (같은 날짜 여러 블록 병합)
+    date_map: dict[str, list[dict]] = {}
+    date_order: list[str] = []
+    current_date: str | None = None
+    current_type: str = "feat"
 
     for line in text.splitlines():
-        # ## [YYYY-MM-DD] — 제목
+        # ## [YYYY-MM-DD] — type: 제목
         m = re.match(r"^## \[(\d{4}-\d{2}-\d{2})\]\s*[—-]\s*(.+)$", line)
         if m:
-            if current_date:
-                entries.append({"date": current_date, "title": current_title, "items": current_items})
             current_date = m.group(1)
-            current_title = m.group(2).strip()
-            current_items = []
+            title_rest = m.group(2).strip()
+            tm = _TYPE_RE.match(title_rest)
+            current_type = tm.group(1).lower() if tm else "feat"
+            if current_date not in date_map:
+                date_map[current_date] = []
+                date_order.append(current_date)
             continue
-        # bullet items
-        if current_date and re.match(r"^\s*[-*]\s+", line):
-            current_items.append(re.sub(r"^\s*[-*]\s+", "", line))
+        # 최상위 bullet (들여쓰기 없는 - 또는 *)
+        if current_date and re.match(r"^[-*]\s+", line):
+            raw = re.sub(r"^[-*]\s+", "", line)
+            date_map[current_date].append(_parse_item(raw, current_type))
 
-    if current_date:
-        entries.append({"date": current_date, "title": current_title, "items": current_items})
-
-    entries.sort(key=lambda e: e["date"], reverse=True)
-    return entries
+    date_order.sort(reverse=True)
+    return [{"date": d, "items": date_map[d]} for d in date_order]
