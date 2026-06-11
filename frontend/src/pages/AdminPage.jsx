@@ -9,6 +9,7 @@ const sv = (k, v) => localStorage.setItem(k, JSON.stringify(v))
 const ld = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d } catch { return d } }
 const genId = () => Math.random().toString(36).slice(2, 10)
 const authH = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') })
+const TOTAL_MODE_KEY = 'stock_total_mode'
 
 const ALL_TZ = [
   { labelKey: 'tzSeoul', tz: 'Asia/Seoul' },
@@ -40,6 +41,8 @@ export default function AdminPage() {
   const navigate = useNavigate()
   const { toast, showToast } = useToast()
 
+
+  const [totalMode, setTotalMode] = useState(() => { try { return localStorage.getItem(TOTAL_MODE_KEY) || 'KRW' } catch { return 'KRW' } })
 
   const [ytAccount, setYtAccount] = useState(() => ld('yt_account', { email: '', name: '' }))
   const [ytAccName, setYtAccName] = useState('')
