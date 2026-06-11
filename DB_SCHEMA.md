@@ -18,6 +18,7 @@
 | 6 | `diets` | 식단 기록 (user_id 기준 격리) |
 | 7 | `diet_analyses` | 날짜별 AI 식단 분석 결과 (user_id+date 당 1건 UPSERT) |
 | 8 | `memos` | 일일 메모 (user_id 기준 격리) |
+| 8-1 | `pinned_memos` | 고정(날짜 독립) 메모 (user_id 기준 격리) |
 | 9 | `stocks` | 보유 종목 (user_id 기준 격리) |
 | 10 | `stock_price_history` | 종목별 일별 시세 스냅샷 |
 | 11 | `bookmarks` | 북마크 (user_id 기준 격리) |

@@ -172,6 +172,19 @@ class Memo(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
 
+class PinnedMemo(Base):
+    """날짜 독립적인 고정(핀) 메모."""
+    __tablename__ = "pinned_memos"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    title: Mapped[str | None] = mapped_column(String(200))
+    content: Mapped[str | None] = mapped_column(Text)
+    color: Mapped[str] = mapped_column(String(20), nullable=False, server_default="yellow")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
 class Stock(Base):
     """보유 종목. 카테고리당 최대 10개."""
     __tablename__ = "stocks"
