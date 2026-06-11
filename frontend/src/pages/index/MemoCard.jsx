@@ -338,12 +338,14 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
   const mLabels     = ML[lang] || ML.en
   const daysInMonth = new Date(calYear, calMonth, 0).getDate()
   const firstDow    = new Date(calYear, calMonth - 1, 1).getDay()
+  // 날짜별 메모 배열로 그룹핑 (복수 메모 지원)
   const dayMemoMap  = {}
   allMemos.forEach(m => {
     const d = (m.date || '').slice(0, 10)
     if (d.startsWith(`${calYear}-${pad2(calMonth)}`)) {
       const day = parseInt(d.slice(8), 10)
-      if (!dayMemoMap[day]) dayMemoMap[day] = m // 첫 번째 메모만 표시
+      if (!dayMemoMap[day]) dayMemoMap[day] = []
+      dayMemoMap[day].push(m)
     }
   })
   const todayStr = todayKey()
@@ -506,10 +508,12 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
                 ))}
 
                 {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
-                  const dow     = (firstDow + day - 1) % 7
-                  const dateStr = `${calYear}-${pad2(calMonth)}-${pad2(day)}`
-                  const memo    = dayMemoMap[day]
-                  const pp      = memo ? parseMemo(memo.content) : null
+                  const dow      = (firstDow + day - 1) % 7
+                  const dateStr  = `${calYear}-${pad2(calMonth)}-${pad2(day)}`
+                  const memos    = dayMemoMap[day] || []   // 배열
+                  const first    = memos[0] || null
+                  const pp       = first ? parseMemo(first.content) : null
+                  const extraCnt = memos.length - 1        // 첫 번째 이후 추가 개수
                   const isToday    = dateStr === todayStr
                   const isSun      = dow === 0
                   const isSat      = dow === 6
@@ -517,17 +521,17 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
                   return (
                     <div
                       key={day}
-                      onClick={() => memo ? setDayDetail({ dateStr, memo, pp }) : null}
+                      onClick={() => first ? setDayDetail({ dateStr, memos }) : null}
                       style={{
                         height: '90px', borderRadius: '8px', padding: '5px 7px',
                         background: isSelected ? 'rgba(100,150,255,0.12)' : 'rgba(255,255,255,0.04)',
                         border: isToday ? '2px solid #3b82f6' : isSelected ? '1px solid rgba(100,150,255,0.4)' : '1px solid rgba(255,255,255,0.07)',
-                        cursor: memo ? 'pointer' : 'default',
+                        cursor: first ? 'pointer' : 'default',
                         display: 'flex', flexDirection: 'column', gap: '2px',
                         transition: 'background 0.12s', boxSizing: 'border-box', overflow: 'hidden',
                       }}
-                      onMouseEnter={e => { if (memo) e.currentTarget.style.background = 'rgba(255,255,255,0.09)' }}
-                      onMouseLeave={e => { if (memo) e.currentTarget.style.background = isSelected ? 'rgba(100,150,255,0.12)' : 'rgba(255,255,255,0.04)' }}
+                      onMouseEnter={e => { if (first) e.currentTarget.style.background = 'rgba(255,255,255,0.09)' }}
+                      onMouseLeave={e => { if (first) e.currentTarget.style.background = isSelected ? 'rgba(100,150,255,0.12)' : 'rgba(255,255,255,0.04)' }}
                     >
                       <span style={{ fontSize: '0.75rem', fontWeight: isToday ? 700 : 500, flexShrink: 0, color: isSun ? '#ef4444' : isSat ? '#60a5fa' : '#c8d6e5' }}>{day}</span>
                       {pp && (
@@ -537,9 +541,15 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
                             <span style={{
                               fontSize: '0.65rem', color: '#9aacbf', lineHeight: 1.3,
                               overflow: 'hidden', wordBreak: 'break-all',
-                              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                              display: '-webkit-box', WebkitLineClamp: extraCnt > 0 ? 1 : 2,
+                              WebkitBoxOrient: 'vertical',
                             }}>
                               {pp.text.slice(0, 30)}{pp.text.length > 30 ? '…' : ''}
+                            </span>
+                          )}
+                          {extraCnt > 0 && (
+                            <span style={{ fontSize: '0.6rem', color: 'var(--accent)', fontWeight: 600, flexShrink: 0 }}>
+                              +{extraCnt}{lang === 'ko' ? '개 더' : ' more'}
                             </span>
                           )}
                         </>
@@ -554,16 +564,26 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
                   marginTop: '1rem', background: 'rgba(255,255,255,0.06)',
                   border: '1px solid rgba(255,255,255,0.12)', borderRadius: '0.9rem', padding: '1rem 1.2rem',
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.8rem' }}>
                     <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#c8d6e5' }}>{dayDetail.dateStr}</span>
                     <button onClick={() => setDayDetail(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9aacbf', fontSize: '1.1rem' }}>×</button>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                    {dayDetail.pp?.mood && <span style={{ fontSize: '1.6rem', flexShrink: 0 }}>{dayDetail.pp.mood}</span>}
-                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#c8d6e5', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                      {dayDetail.pp?.text || ''}
-                    </p>
-                  </div>
+                  {dayDetail.memos.map((memo, idx) => {
+                    const pp = parseMemo(memo.content)
+                    return (
+                      <div key={memo.id}>
+                        {idx > 0 && (
+                          <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', margin: '0.7rem 0' }} />
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                          {pp.mood && <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>{pp.mood}</span>}
+                          <p style={{ margin: 0, fontSize: '0.85rem', color: '#c8d6e5', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                            {pp.text || ''}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </div>
