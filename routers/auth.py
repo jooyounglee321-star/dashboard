@@ -1,7 +1,10 @@
 import json
+import logging
 import os
 import re
 from datetime import datetime, timedelta, timezone
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from jose import JWTError, jwt
@@ -22,7 +25,13 @@ EMAIL_RE   = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 ADMIN_EMAIL = "jooyounglee321123@gmail.com"   # 이 이메일로 가입하면 자동 admin
 
 # JWT 설정
-SECRET_KEY = os.getenv("SECRET_KEY", "dashboard-dev-secret-change-in-production")
+_DEFAULT_SECRET = "dashboard-dev-secret-change-in-production"
+SECRET_KEY = os.getenv("SECRET_KEY", _DEFAULT_SECRET)
+if SECRET_KEY == _DEFAULT_SECRET:
+    logger.warning(
+        "[AUTH] SECRET_KEY 환경변수가 설정되지 않았습니다. "
+        "프로덕션 배포 전 반드시 강력한 랜덤 키로 교체하세요."
+    )
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_DAYS = 30
 
