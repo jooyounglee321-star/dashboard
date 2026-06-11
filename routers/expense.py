@@ -538,10 +538,12 @@ def daily_compare(
 
     income_map:  dict[str, float] = {}
     expense_map: dict[str, float] = {}
+    count_map:   dict[str, int]   = {}
 
     for e in rows:
         date_str = e.date.isoformat()
         usd = float(e.converted_amount) if e.converted_amount is not None else float(e.amount)
+        count_map[date_str] = count_map.get(date_str, 0) + 1
         if getattr(e, "type", "expense") == "income":
             income_map[date_str]  = round(income_map.get(date_str,  0.0) + usd, 2)
         else:
@@ -553,6 +555,7 @@ def daily_compare(
             "date":    d,
             "income":  income_map.get(d,  0.0),
             "expense": expense_map.get(d, 0.0),
+            "count":   count_map.get(d,   0),
         }
         for d in all_dates
     ]

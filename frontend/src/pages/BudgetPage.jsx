@@ -194,6 +194,7 @@ const INIT_NEW_FORM = {
 }
 
 function DailyTab({ lang, currency, toDisplay }) {
+  const _now = new Date()
   const [date, setDate]     = useState(todayStr)
   const [items, setItems]   = useState([])
   const [cats, setCats]     = useState([])
@@ -203,6 +204,12 @@ function DailyTab({ lang, currency, toDisplay }) {
   const [newForm, setNewForm] = useState(INIT_NEW_FORM)
   const [submitting, setSubmitting] = useState(false)
   const { toast, showToast } = useToast()
+
+  // 달력 뷰 상태
+  const [calYear, setCalYear]     = useState(_now.getFullYear())
+  const [calMonth, setCalMonth]   = useState(_now.getMonth() + 1)
+  const [monthData, setMonthData] = useState([])
+  const [dayModalOpen, setDayModalOpen] = useState(false)
 
   // 세대 카운터: 날짜가 바뀔 때마다 증가 → 이전 fetch 응답을 무시해 race condition 차단
   const loadGenRef = useRef(0)
@@ -237,6 +244,13 @@ function DailyTab({ lang, currency, toDisplay }) {
         setLoading(false)
       })
   }, [date, lang])
+
+  // 월별 달력 데이터 로드
+  useEffect(() => {
+    apiGet(`/api/expense/daily-compare?year=${calYear}&month=${calMonth}`)
+      .then(d => setMonthData(Array.isArray(d) ? d : []))
+      .catch(() => setMonthData([]))
+  }, [calYear, calMonth])
 
   // date·lang 변경 시 즉시 재조회
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -362,29 +376,173 @@ function DailyTab({ lang, currency, toDisplay }) {
   function doExport() {
     const headers = [t(lang, 'budget.date'), t(lang, 'budget.category'), t(lang, 'budget.subcategory'), t(lang, 'budget.description'), t(lang, 'budget.amount'), 'Currency', '≈ USD']
     const rows = items.map(it => [it.date, it.category_name || '', it.subcategory_name || '', it.description || '', it.amount, it.currency, it.converted_amount ?? it.amount])
-    csvDownload([headers, ...rows], `expenses-${date}.csv`)
+    csvDownload([headers, ...rows], `expenses-${calYear}-${pad2(calMonth)}.csv`)
   }
+
+  // 달력 계산
+  const daysInMonth = new Date(calYear, calMonth, 0).getDate()
+  const firstDow    = new Date(calYear, calMonth - 1, 1).getDay()
+  const dayMap      = {}
+  monthData.forEach(d => {
+    const day = parseInt(d.date.slice(8), 10)
+    dayMap[day] = d
+  })
+  const totalMonthExpense = monthData.reduce((s, d) => s + (d.expense || 0), 0)
+  const monthAvgExpense   = daysInMonth > 0 ? totalMonthExpense / daysInMonth : 0
+
+  function openDayModal(dayStr) {
+    setDate(dayStr)
+    setEditId(null)
+    setDayModalOpen(true)
+  }
+
+  function prevMonth() {
+    if (calMonth === 1) { setCalYear(y => y - 1); setCalMonth(12) }
+    else setCalMonth(m => m - 1)
+  }
+
+  function nextMonth() {
+    if (calMonth === 12) { setCalYear(y => y + 1); setCalMonth(1) }
+    else setCalMonth(m => m + 1)
+  }
+
+  const mLabels = ML[lang] || ML.en
+  const todayDateStr = todayStr()
 
   return (
     <section className="bp-sec">
       <Toast toast={toast} />
-      <div className="bp-toolbar">
-        <input type="date" className="bp-date-inp" value={date}
-          max={todayStr()}
-          onChange={e => {
-            // e.target.value는 항상 로컬 "YYYY-MM-DD" 문자열 — new Date() 변환 절대 금지
-            // split('-')으로 연/월/일을 명시적으로 분해 후 재조합 → UTC 파싱 경로 원천 차단
-            const [yyyy, mm, dd] = e.target.value.split('-')
-            if (yyyy && mm && dd) {
-              const picked = `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`
-              setDate(picked)   // 상태 갱신 → useEffect[date,lang] 즉시 트리거
-            }
-          }} />
+
+      {/* ── 달력 툴바 ── */}
+      <div className="bp-toolbar" style={{ justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <button className="bp-btn-sm" onClick={prevMonth}>‹</button>
+          <span style={{ fontWeight: 600, fontSize: '1rem', minWidth: '8rem', textAlign: 'center' }}>
+            {calYear}{lang === 'ko' ? '년 ' : ' '}{mLabels[calMonth - 1]}{lang === 'ko' ? '' : ''}
+          </span>
+          <button className="bp-btn-sm" onClick={nextMonth}>›</button>
+        </div>
         <button className="bp-btn-sm" onClick={doExport}>📥 {t(lang, 'budget.exportCSV')}</button>
       </div>
 
-      {/* 등록 폼 */}
-      <div className="bp-add-form">
+      {/* ── 달력 그리드 ── */}
+      <div style={{ overflowX: 'auto', marginBottom: '1.5rem' }}>
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)',
+          gap: '4px', minWidth: '560px',
+        }}>
+          {/* 요일 헤더 */}
+          {(lang === 'ko'
+            ? ['일','월','화','수','목','금','토']
+            : ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+          ).map((d, i) => (
+            <div key={d} style={{
+              textAlign: 'center', fontSize: '0.75rem', fontWeight: 600, padding: '0.25rem 0',
+              color: i === 0 ? '#ef4444' : i === 6 ? '#60a5fa' : '#9aacbf',
+            }}>{d}</div>
+          ))}
+
+          {/* 빈 칸 (첫 주 offset) */}
+          {Array.from({ length: firstDow }).map((_, i) => (
+            <div key={`e${i}`} style={{ height: '90px' }} />
+          ))}
+
+          {/* 날짜 칸 */}
+          {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
+            const dow     = (firstDow + day - 1) % 7
+            const dateStr = `${calYear}-${pad2(calMonth)}-${pad2(day)}`
+            const data    = dayMap[day]
+            const isToday = dateStr === todayDateStr
+            const isSun   = dow === 0
+            const isSat   = dow === 6
+            const isOver  = data && data.expense > monthAvgExpense && monthAvgExpense > 0
+            return (
+              <div
+                key={day}
+                onClick={() => openDayModal(dateStr)}
+                style={{
+                  height: '90px', borderRadius: '8px', padding: '6px 8px',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: isToday ? '2px solid #3b82f6' : '1px solid rgba(255,255,255,0.08)',
+                  cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '2px',
+                  transition: 'background 0.12s',
+                  boxSizing: 'border-box',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+              >
+                <span style={{
+                  fontSize: '0.78rem', fontWeight: isToday ? 700 : 500,
+                  color: isSun ? '#ef4444' : isSat ? '#60a5fa' : '#c8d6e5',
+                }}>{day}</span>
+                {data && data.expense > 0 && (
+                  <span style={{
+                    fontSize: '0.7rem', fontWeight: 600, lineHeight: 1.2,
+                    color: isOver ? '#f87171' : '#e8a060',
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  }}>
+                    {fmtAmt(toDisplay(data.expense), currency)}
+                  </span>
+                )}
+                {data && data.income > 0 && (
+                  <span style={{
+                    fontSize: '0.7rem', fontWeight: 500, lineHeight: 1.2,
+                    color: '#4ade80',
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  }}>
+                    +{fmtAmt(toDisplay(data.income), currency)}
+                  </span>
+                )}
+                {data && data.count > 0 && (
+                  <span style={{ fontSize: '0.65rem', color: '#6b7fa0', marginTop: 'auto' }}>
+                    {data.count}{lang === 'ko' ? '건' : ' items'}
+                  </span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ── 날짜 상세 모달 ── */}
+      {dayModalOpen && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1000,
+          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '1rem',
+        }}
+          onClick={e => { if (e.target === e.currentTarget) setDayModalOpen(false) }}
+        >
+          <div style={{
+            background: '#1a2336', borderRadius: '1.25rem',
+            border: '1px solid rgba(255,255,255,0.12)',
+            width: '100%', maxWidth: '720px', maxHeight: '88vh',
+            display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          }}>
+            {/* 모달 헤더 */}
+            <div style={{
+              padding: '1rem 1.25rem 0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem',
+              flexShrink: 0,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontWeight: 700, fontSize: '1.05rem' }}>{date}</span>
+                {dayMap[parseInt(date.slice(8), 10)] && (
+                  <span style={{ fontSize: '0.8rem', color: '#9aacbf' }}>
+                    {dayMap[parseInt(date.slice(8), 10)].count}{lang === 'ko' ? '건' : ' items'}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => setDayModalOpen(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', color: '#9aacbf', lineHeight: 1 }}
+              >×</button>
+            </div>
+
+            {/* 등록 폼 */}
+            <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+              <div className="bp-add-form" style={{ margin: 0 }}>
         {/* 지출 / 수입 토글 */}
         <div className="bp-type-toggle">
           <button type="button"
@@ -453,183 +611,134 @@ function DailyTab({ lang, currency, toDisplay }) {
             {t(lang, 'common.add')}
           </button>
         </div>
-      </div>
+              </div>
+            </div>
 
-      {/* 일별 합계 + 카테고리 칩 */}
-      <div className="bp-daily-top">
-        <div className="bp-daily-total">
-          <span className="bp-total-label">{t(lang, 'budget.totalExpense')}</span>
-          <span className="bp-total-num">{fmtAmt(toDisplay(dayTotal), currency)}</span>
+            {/* 모달 아이템 목록 */}
+            <div style={{ overflowY: 'auto', flex: 1, padding: '0.75rem 1.25rem 1.25rem' }}>
+              {loading ? (
+                <p className="bp-info">{t(lang, 'common.loading')}</p>
+              ) : displayItems.length === 0 ? (
+                <p className="bp-info bp-empty">{t(lang, 'budget.noExpense')}</p>
+              ) : (
+                <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                  {displayItems.map(it => (
+                    <li key={it.id} style={editId === it.id ? {
+                      background: 'rgba(232,160,96,0.06)',
+                      border: '1px solid rgba(232,160,96,0.25)',
+                      borderRadius: '0.75rem',
+                      padding: '0.9rem 1rem',
+                      display: 'flex', flexDirection: 'column', gap: '0.5rem',
+                    } : {
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '0.75rem',
+                      padding: '0.9rem 1rem',
+                      display: 'flex', flexDirection: 'column', gap: '0.5rem',
+                    }}>
+                      {editId === it.id ? (
+                        <div className="bp-edit">
+                          <div className="bp-type-toggle" style={{ marginBottom: '0.4rem' }}>
+                            <button type="button"
+                              className={`bp-type-btn${!isEditIncome ? ' active expense' : ''}`}
+                              onClick={() => setEditForm(f => ({ ...f, type: 'expense', category_id: '', subcategory_id: '', income_main_code: '', income_sub_code: '' }))}>
+                              💸 {t(lang, 'budget.expense')}
+                            </button>
+                            <button type="button"
+                              className={`bp-type-btn${isEditIncome ? ' active income' : ''}`}
+                              onClick={() => setEditForm(f => ({ ...f, type: 'income', category_id: '', subcategory_id: '', income_main_code: INCOME_CATEGORIES[0]?.code ?? '', income_sub_code: '' }))}>
+                              💰 {t(lang, 'budget.income')}
+                            </button>
+                          </div>
+                          <div className="bp-edit-row">
+                            {isEditIncome ? (
+                              <>
+                                <select className="bp-sel" value={editForm.income_main_code || ''}
+                                  onChange={e => setEditForm(f => ({ ...f, income_main_code: e.target.value, income_sub_code: '' }))}>
+                                  <option value="">{t(lang, 'expenseCatPh')}</option>
+                                  {INCOME_CATEGORIES.map(c => (
+                                    <option key={c.code} value={c.code}>{c.icon} {lang === 'ko' ? c.name_ko : c.name_en}</option>
+                                  ))}
+                                </select>
+                                <select className="bp-sel" value={editForm.income_sub_code || ''}
+                                  onChange={e => setEditForm(f => ({ ...f, income_sub_code: e.target.value }))}
+                                  disabled={!editForm.income_main_code}>
+                                  <option value="">{t(lang, 'expenseSubcatPh')}</option>
+                                  {editIncomeSubs.map(s => (
+                                    <option key={s.code} value={s.code}>{s.icon} {lang === 'ko' ? s.name_ko : s.name_en}</option>
+                                  ))}
+                                </select>
+                              </>
+                            ) : (
+                              <>
+                                <select className="bp-sel" value={editForm.category_id}
+                                  onChange={e => setEditForm(f => ({ ...f, category_id: e.target.value, subcategory_id: '' }))}>
+                                  <option value="">{t(lang, 'expenseCatPh')}</option>
+                                  {cats.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+                                </select>
+                                <select className="bp-sel" value={editForm.subcategory_id}
+                                  onChange={e => setEditForm(f => ({ ...f, subcategory_id: e.target.value }))}
+                                  disabled={!editSubs.length}>
+                                  <option value="">{t(lang, 'expenseSubcatPh')}</option>
+                                  {editSubs.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                </select>
+                              </>
+                            )}
+                          </div>
+                          <div className="bp-edit-row">
+                            <input type="number" className="bp-inp" value={editForm.amount}
+                              onChange={e => setEditForm(f => ({ ...f, amount: e.target.value }))} />
+                            <select className="bp-sel bp-sel-sm" value={editForm.currency}
+                              onChange={e => setEditForm(f => ({ ...f, currency: e.target.value }))}>
+                              {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                            <input type="text" className="bp-inp" value={editForm.description}
+                              onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
+                              placeholder={t(lang, 'expenseDescPh')} />
+                          </div>
+                          <div className="bp-edit-btns">
+                            <button className="bp-btn-primary" onClick={() => { saveEdit(); apiGet(`/api/expense/daily-compare?year=${calYear}&month=${calMonth}`).then(d => setMonthData(Array.isArray(d) ? d : [])).catch(() => {}) }}>{t(lang, 'common.save')}</button>
+                            <button className="bp-btn-ghost" onClick={() => setEditId(null)}>{t(lang, 'common.cancel')}</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            {(it.type || 'expense') === 'income' && (
+                              <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#60c080', background: 'rgba(96,192,128,0.12)', borderRadius: '4px', padding: '0.1rem 0.4rem', display: 'inline-block', marginBottom: '0.2rem' }}>
+                                💰 {t(lang, 'budget.income')}
+                              </span>
+                            )}
+                            <div style={{ fontSize: '0.88rem', fontWeight: 500, color: '#e0e6ef', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {it.category_icon && <span style={{ marginRight: '0.2rem' }}>{it.category_icon}</span>}
+                              {it.category_name || '–'}
+                              {it.subcategory_name && <span style={{ color: '#9aacbf', fontWeight: 400 }}> › {it.subcategory_name}</span>}
+                            </div>
+                            {it.description && <div style={{ fontSize: '0.78rem', color: '#8fa0b4' }}>{it.description}</div>}
+                          </div>
+                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                            <div style={{ fontSize: '1rem', fontWeight: 700, color: (it.type || 'expense') === 'income' ? '#60c080' : '#e8a060' }}>
+                              {(it.type || 'expense') === 'income' ? '+' : ''}{fmtAmt(it.amount, it.currency)}
+                            </div>
+                            {it.currency !== currency && (
+                              <div style={{ fontSize: '0.72rem', color: '#7a8fa6' }}>≈ {fmtAmt(toDisplay(it.converted_amount ?? it.amount), currency)}</div>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
+                            <button className="bp-icon-btn" onClick={() => startEdit(it)} title={t(lang, 'common.edit')}>✏️</button>
+                            <button type="button" className="bp-icon-btn del" onClick={ev => { delItem(ev, it.id); apiGet(`/api/expense/daily-compare?year=${calYear}&month=${calMonth}`).then(d => setMonthData(Array.isArray(d) ? d : [])).catch(() => {}) }} title={t(lang, 'common.delete')}>🗑️</button>
+                          </div>
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
         </div>
-        <div className="bp-chips">
-          {Object.entries(catMap).map(([cat, usd]) => (
-            <span key={cat} className="bp-chip">{cat} {fmtAmt(toDisplay(usd), currency)}</span>
-          ))}
-        </div>
-      </div>
+      )}
 
-      {loading
-        ? <p className="bp-info">{t(lang, 'common.loading')}</p>
-        : displayItems.length === 0
-          ? <p className="bp-info bp-empty">{t(lang, 'budget.noExpense')}</p>
-          : (
-            /* ── 반응형 그리드: 인라인 style로 직접 주입 (CSS 캐시 무관) ──
-               auto-fill + minmax로 자동 열 수 계산
-               ~520px → 1열 / 520~820px → 2열 / 820px+ → 3열          */
-            <ul style={{
-              listStyle: 'none', margin: 0, padding: 0,
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-              gap: '1rem',
-              width: '100%',
-            }}>
-              {displayItems.map(it => (
-                <li key={it.id} style={editId === it.id ? {
-                  /* 수정 모드 카드 — 전체 너비 차지 */
-                  gridColumn: '1 / -1',
-                  background: 'rgba(232,160,96,0.06)',
-                  border: '1px solid rgba(232,160,96,0.25)',
-                  borderRadius: '1rem',
-                  padding: '1.1rem 1.25rem',
-                  display: 'flex', flexDirection: 'column', gap: '0.5rem',
-                } : {
-                  /* 일반 카드 */
-                  background: 'rgba(255,255,255,0.07)',
-                  border: '1px solid rgba(255,255,255,0.13)',
-                  borderRadius: '1rem',       /* rounded-2xl 상당 */
-                  padding: '1.25rem',          /* p-5 상당 */
-                  display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                  gap: '0.75rem',
-                  boxShadow: '0 2px 12px rgba(0,0,0,0.22)',
-                  transition: 'box-shadow 0.15s',
-                  minHeight: '96px',
-                }}>
-                  {editId === it.id ? (
-                    <div className="bp-edit">
-                      {/* 수정 모달 — 지출/수입 토글 */}
-                      <div className="bp-type-toggle" style={{ marginBottom: '0.4rem' }}>
-                        <button type="button"
-                          className={`bp-type-btn${!isEditIncome ? ' active expense' : ''}`}
-                          onClick={() => setEditForm(f => ({
-                            ...f, type: 'expense',
-                            category_id: '', subcategory_id: '',
-                            income_main_code: '', income_sub_code: '',
-                          }))}>
-                          💸 {t(lang, 'budget.expense')}
-                        </button>
-                        <button type="button"
-                          className={`bp-type-btn${isEditIncome ? ' active income' : ''}`}
-                          onClick={() => setEditForm(f => ({
-                            ...f, type: 'income',
-                            category_id: '', subcategory_id: '',
-                            income_main_code: INCOME_CATEGORIES[0]?.code ?? '',
-                            income_sub_code: '',
-                          }))}>
-                          💰 {t(lang, 'budget.income')}
-                        </button>
-                      </div>
-                      <div className="bp-edit-row">
-                        {isEditIncome ? (
-                          /* ── 수입 모드: INCOME_CATEGORIES 기반 대분류 / 소분류 ── */
-                          <>
-                            <select className="bp-sel" value={editForm.income_main_code || ''}
-                              onChange={e => setEditForm(f => ({ ...f, income_main_code: e.target.value, income_sub_code: '' }))}>
-                              <option value="">{t(lang, 'expenseCatPh')}</option>
-                              {INCOME_CATEGORIES.map(c => (
-                                <option key={c.code} value={c.code}>{c.icon} {lang === 'ko' ? c.name_ko : c.name_en}</option>
-                              ))}
-                            </select>
-                            <select className="bp-sel" value={editForm.income_sub_code || ''}
-                              onChange={e => setEditForm(f => ({ ...f, income_sub_code: e.target.value }))}
-                              disabled={!editForm.income_main_code}>
-                              <option value="">{t(lang, 'expenseSubcatPh')}</option>
-                              {editIncomeSubs.map(s => (
-                                <option key={s.code} value={s.code}>{s.icon} {lang === 'ko' ? s.name_ko : s.name_en}</option>
-                              ))}
-                            </select>
-                          </>
-                        ) : (
-                          /* ── 지출 모드: expense 카테고리만 (income 완전 격리) ── */
-                          <>
-                            <select className="bp-sel" value={editForm.category_id}
-                              onChange={e => setEditForm(f => ({ ...f, category_id: e.target.value, subcategory_id: '' }))}>
-                              <option value="">{t(lang, 'expenseCatPh')}</option>
-                              {cats.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
-                            </select>
-                            <select className="bp-sel" value={editForm.subcategory_id}
-                              onChange={e => setEditForm(f => ({ ...f, subcategory_id: e.target.value }))}
-                              disabled={!editSubs.length}>
-                              <option value="">{t(lang, 'expenseSubcatPh')}</option>
-                              {editSubs.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                            </select>
-                          </>
-                        )}
-                      </div>
-                      <div className="bp-edit-row">
-                        <input type="number" className="bp-inp" value={editForm.amount}
-                          onChange={e => setEditForm(f => ({ ...f, amount: e.target.value }))} />
-                        <select className="bp-sel bp-sel-sm" value={editForm.currency}
-                          onChange={e => setEditForm(f => ({ ...f, currency: e.target.value }))}>
-                          {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                        <input type="text" className="bp-inp" value={editForm.description}
-                          onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
-                          placeholder={t(lang, 'expenseDescPh')} />
-                      </div>
-                      <div className="bp-edit-btns">
-                        <button className="bp-btn-primary" onClick={saveEdit}>{t(lang, 'common.save')}</button>
-                        <button className="bp-btn-ghost" onClick={() => setEditId(null)}>{t(lang, 'common.cancel')}</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      {/* 카드 상단: 수입/지출 배지 + 카테고리 경로 + 메모 */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', flex: 1, minWidth: 0 }}>
-                        {/* 수입 배지 */}
-                        {(it.type || 'expense') === 'income' && (
-                          <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#60c080',
-                            background: 'rgba(96,192,128,0.12)', borderRadius: '4px',
-                            padding: '0.1rem 0.4rem', display: 'inline-block', width: 'fit-content' }}>
-                            💰 {t(lang, 'budget.income')}
-                          </span>
-                        )}
-                        <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#e0e6ef', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {it.category_icon && <span style={{ marginRight: '0.25rem' }}>{it.category_icon}</span>}
-                          {it.category_name || '–'}
-                          {it.subcategory_name && <span style={{ color: '#9aacbf', fontWeight: 400 }}> › {it.subcategory_name}</span>}
-                        </span>
-                        {it.description && (
-                          <span style={{ fontSize: '0.8rem', color: '#8fa0b4' }}>{it.description}</span>
-                        )}
-                      </div>
-                      {/* 카드 하단: 금액(왼쪽) + 액션 버튼(오른쪽) */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.6rem', borderTop: '1px solid rgba(255,255,255,0.09)', gap: '0.5rem' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.06rem' }}>
-                          {/* 수입: 초록 + 기호 / 지출: 주황 */}
-                          <span style={{
-                            fontSize: '1.05rem', fontWeight: 700, letterSpacing: '-0.01em',
-                            color: (it.type || 'expense') === 'income' ? '#60c080' : '#e8a060',
-                          }}>
-                            {(it.type || 'expense') === 'income' ? '+' : ''}{fmtAmt(it.amount, it.currency)}
-                          </span>
-                          {it.currency !== currency && (
-                            <span style={{ fontSize: '0.76rem', color: '#7a8fa6' }}>
-                              ≈ {(it.type || 'expense') === 'income' ? '+' : ''}{fmtAmt(toDisplay(it.converted_amount ?? it.amount), currency)}
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
-                          <button className="bp-icon-btn" onClick={() => startEdit(it)} title={t(lang, 'common.edit')}>✏️</button>
-                          <button type="button" className="bp-icon-btn del" onClick={(ev) => delItem(ev, it.id)} title={t(lang, 'common.delete')}>🗑️</button>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )
-      }
     </section>
   )
 }
