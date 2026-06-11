@@ -23,7 +23,10 @@ def list_todos(
         db.query(Todo)
         .filter(
             Todo.user_id == current_user.id,
-            (Todo.due_date == None) | (Todo.due_date >= target),  # noqa: E711
+            # start_date 조건: null이거나 start_date <= target
+            (Todo.start_date == None) | (Todo.start_date <= target),  # noqa: E711
+            # due_date 조건: null이거나 due_date >= target
+            (Todo.due_date == None) | (Todo.due_date >= target),      # noqa: E711
         )
         .order_by(Todo.created_at.asc())
         .all()
@@ -37,6 +40,7 @@ def list_todos(
         result.append(TodoOut(
             id=row.id,
             title=row.title,
+            start_date=row.start_date,
             due_date=row.due_date,
             is_done_dates=done_dates,
             created_at=row.created_at,
@@ -53,13 +57,18 @@ def create_todo(
     row = Todo(
         user_id=current_user.id,
         title=body.title.strip(),
+        start_date=body.start_date,
         due_date=body.due_date,
         is_done_dates="[]",
     )
     db.add(row)
     db.commit()
     db.refresh(row)
-    return TodoOut(id=row.id, title=row.title, due_date=row.due_date, is_done_dates=[], created_at=row.created_at)
+    return TodoOut(
+        id=row.id, title=row.title,
+        start_date=row.start_date, due_date=row.due_date,
+        is_done_dates=[], created_at=row.created_at,
+    )
 
 
 @router.put("/{todo_id}/check", response_model=TodoOut)
@@ -83,7 +92,11 @@ def toggle_check(
     row.is_done_dates = json.dumps(done_dates)
     db.commit()
     db.refresh(row)
-    return TodoOut(id=row.id, title=row.title, due_date=row.due_date, is_done_dates=done_dates, created_at=row.created_at)
+    return TodoOut(
+        id=row.id, title=row.title,
+        start_date=row.start_date, due_date=row.due_date,
+        is_done_dates=done_dates, created_at=row.created_at,
+    )
 
 
 @router.delete("/{todo_id}", status_code=204)
