@@ -52,6 +52,10 @@ export default function IndexPage() {
   const [stockLoading, setStockLoading] = useState(true)
   const [stockError, setStockError] = useState(false)
 
+  // localStorage 안전 접근 (Safari Private 모드 등 대비)
+  const getToken  = () => { try { return localStorage.getItem('token')  || '' } catch { return '' } }
+  const getLsItem = (k) => { try { return localStorage.getItem(k) } catch { return null } }
+
   // Stats overlay
   const [statsOpen, setStatsOpen] = useState(false)
   const [stockSettingsOpen, setStockSettingsOpen] = useState(false)
@@ -95,13 +99,13 @@ export default function IndexPage() {
 
   // 포트폴리오 백필 — IndexPage 마운트 시 1회 (로그인 직후 및 페이지 새로고침 모두 커버)
   useEffect(() => {
-    const token = localStorage.getItem('token')
+    const token = getToken()
     if (!token || token.trim() === '' || token === 'undefined' || token === 'null') return
     fetch('/api/portfolio/backfill', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + token },
     })
-      .then(r => r.json())
+      .then(r => r.ok ? r.json() : Promise.reject('HTTP ' + r.status))
       .then(d => { if (d.backfilled > 0) console.log('[BACKFILL] 포트폴리오 백필 완료:', d) })
       .catch(err => console.warn('[BACKFILL] 백필 실패:', err))
   }, [])
@@ -117,10 +121,10 @@ export default function IndexPage() {
 
   // 로그아웃
   async function handleLogout() {
-    const token = localStorage.getItem('token')
-    try { await fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + (token || '') } }).catch(() => {}) } catch {}
-    localStorage.clear()
-    sessionStorage.clear()
+    const token = getToken()
+    try { await fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + token } }).catch(() => {}) } catch {}
+    try { localStorage.clear() } catch {}
+    try { sessionStorage.clear() } catch {}
     navigate('/login', { replace: true })
   }
 
@@ -129,16 +133,16 @@ export default function IndexPage() {
   const [userRole, setUserRole] = useState('')
   const [avatarSrc, setAvatarSrc] = useState(null)
   useEffect(() => {
-    const token = localStorage.getItem('token')
+    const token = getToken()
     if (!token) return
     // 로컬 캐시 우선 표시
     try {
-      const cached = JSON.parse(localStorage.getItem('user') || '{}')
+      const cached = JSON.parse(getLsItem('user') || '{}')
       if (cached.name) setUserName(cached.name)
       if (cached.role) setUserRole(cached.role)
     } catch {}
     // 아바타
-    const av = localStorage.getItem('avatar_data')
+    const av = getLsItem('avatar_data')
     if (av) setAvatarSrc(av)
     // API 최신 닉네임 + role
     fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } })
@@ -152,7 +156,7 @@ export default function IndexPage() {
 
   // Load timezone zones
   useEffect(() => {
-    fetch('/api/timezone', { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } })
+    fetch('/api/timezone', { headers: { Authorization: 'Bearer ' + getToken() } })
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.zones?.length === 3) setZones(d.zones) })
       .catch(() => {})
@@ -160,7 +164,7 @@ export default function IndexPage() {
 
   // 위젯 설정 로드
   useEffect(() => {
-    fetch('/api/auth/widget-config', { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } })
+    fetch('/api/auth/widget-config', { headers: { Authorization: 'Bearer ' + getToken() } })
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         if (d?.config) {
@@ -220,11 +224,11 @@ export default function IndexPage() {
   }, [checkHealth])
 
   // Load stock data
-  const loadStocks = useCallback(async () => {
+  const loadStocks = useCallback(async (signal) => {
     setStockLoading(true)
     setStockError(false)
     try {
-      const dbRes = await fetch('/api/portfolio/groups', { signal: AbortSignal.timeout(8000), headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } })
+      const dbRes = await fetch('/api/portfolio/groups', { signal, headers: { Authorization: 'Bearer ' + getToken() } })
       if (!dbRes.ok) throw new Error('HTTP ' + dbRes.status)
       const dbJson = await dbRes.json()
       const rawGroups = dbJson.data || []
@@ -242,31 +246,32 @@ export default function IndexPage() {
       // Fetch prices + fx in parallel
       const newPriceMap = {}
       let newFxRate = null
-      const ctrl = new AbortController()
-      const abortTimer = setTimeout(() => ctrl.abort(), 7000)
 
-      const [fxResult, ...priceResults] = await Promise.allSettled([
-        fetch('/api/stocks/exchange-rate', { signal: ctrl.signal }).then(r => r.ok ? r.json() : null).catch(() => null),
+      const [fxResult] = await Promise.allSettled([
+        fetch('/api/stocks/exchange-rate', { signal }).then(r => r.ok ? r.json() : null).catch(() => null),
         ...Object.entries(tickerCatMap).map(async ([t, cat]) => {
           try {
-            const r = await fetch(`/api/stocks/price/${encodeURIComponent(t)}?category=${cat}`, { signal: ctrl.signal })
+            const r = await fetch(`/api/stocks/price/${encodeURIComponent(t)}?category=${cat}`, { signal })
             if (r.ok) newPriceMap[t] = await r.json()
           } catch {}
         }),
       ])
-      clearTimeout(abortTimer)
 
       newFxRate = fxResult.status === 'fulfilled' ? (fxResult.value?.usd_krw ?? null) : null
       setPriceMap(newPriceMap)
       setFxRate(newFxRate)
-    } catch {
-      setStockError(true)
+    } catch (err) {
+      if (err?.name !== 'AbortError') setStockError(true)
     } finally {
       setStockLoading(false)
     }
   }, [])
 
-  useEffect(() => { loadStocks() }, [loadStocks])
+  useEffect(() => {
+    const ctrl = new AbortController()
+    loadStocks(ctrl.signal)
+    return () => ctrl.abort()
+  }, [loadStocks])
 
   // Daily snapshot at 23:59
   useEffect(() => {
@@ -278,7 +283,7 @@ export default function IndexPage() {
         if (lastSnapshotDate === today) return
         try {
           // Re-fetch stock data for snapshot
-          const dbRes = await fetch('/api/portfolio/groups', { signal: AbortSignal.timeout(8000), headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } })
+          const dbRes = await fetch('/api/portfolio/groups', { signal: AbortSignal.timeout(8000), headers: { Authorization: 'Bearer ' + getToken() } })
           if (!dbRes.ok) return
           const dbJson = await dbRes.json()
           const groups = (dbJson.data || []).map(g => ({ ...g, stocks: (g.stocks || []).filter(s => !s.is_deleted) }))
@@ -343,7 +348,7 @@ export default function IndexPage() {
 
           const r = await fetch('/api/portfolio/snapshot', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('token') },
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() },
             body: JSON.stringify(payload),
           })
           if (r.ok) {
@@ -366,7 +371,7 @@ export default function IndexPage() {
   function cancelEdit()    { setEditMode(false); setDraftItems([]) }
 
   async function saveEdit() {
-    const token  = localStorage.getItem('token')
+    const token  = getToken()
     const newCfg = { ...(widgetCfg || {}), layout: { items: draftItems } }
     try {
       await fetch('/api/auth/widget-config', {

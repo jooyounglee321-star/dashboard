@@ -905,7 +905,11 @@ def do_refresh_rates(db: Session) -> dict:
             failed.append(target)
 
     if updated:
-        db.commit()
+        try:
+            db.commit()
+        except Exception as exc:
+            db.rollback()
+            logger.error("[RATE] DB 커밋 실패: %s", exc)
 
     # 인메모리 캐시 무효화
     _rate_cache["data"] = None

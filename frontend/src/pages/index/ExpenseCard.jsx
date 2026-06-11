@@ -418,9 +418,10 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
     setSubmitting(true)
     const isIncome = form.type === 'income'
     try {
+      let res
       if (isIncome) {
         /* ── 수입: /api/income (code 기반) ── */
-        await fetch('/api/income', {
+        res = await fetch('/api/income', {
           method: 'POST',
           headers: { ...authH(), 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -434,7 +435,7 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
         })
       } else {
         /* ── 지출: /api/expense (id 기반) ── */
-        await fetch('/api/expense', {
+        res = await fetch('/api/expense', {
           method: 'POST',
           headers: { ...authH(), 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -449,6 +450,7 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
           }),
         })
       }
+      if (!res.ok) throw new Error('HTTP ' + res.status)
       setForm(f => ({
         ...f,
         amount: '', description: '',
@@ -457,6 +459,9 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
       }))
       await loadExpenses(form.date)
       await loadMonthly()
+    } catch (err) {
+      console.error('[ExpenseCard] 저장 실패:', err)
+      showToast(t(lang, 'common.error'), 'err')
     } finally {
       setSubmitting(false)
     }
@@ -489,22 +494,28 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
   }
 
   async function saveEdit() {
-    await fetch('/api/expense/' + editId, {
-      method: 'PUT',
-      headers: { ...authH(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        date:           editForm.date,
-        amount:         Number(editForm.amount),
-        currency:       editForm.currency,
-        category_id:    editForm.category_id    ? Number(editForm.category_id)    : null,
-        subcategory_id: editForm.subcategory_id ? Number(editForm.subcategory_id) : null,
-        description:    editForm.description.trim() || null,
-        lang,
-      }),
-    })
-    setEditId(null)
-    await loadExpenses(form.date)     // 현재 선택된 날짜 기준으로 리스트 갱신
-    await loadMonthly()
+    try {
+      const res = await fetch('/api/expense/' + editId, {
+        method: 'PUT',
+        headers: { ...authH(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date:           editForm.date,
+          amount:         Number(editForm.amount),
+          currency:       editForm.currency,
+          category_id:    editForm.category_id    ? Number(editForm.category_id)    : null,
+          subcategory_id: editForm.subcategory_id ? Number(editForm.subcategory_id) : null,
+          description:    editForm.description.trim() || null,
+          lang,
+        }),
+      })
+      if (!res.ok) throw new Error('HTTP ' + res.status)
+      setEditId(null)
+      await loadExpenses(form.date)
+      await loadMonthly()
+    } catch (err) {
+      console.error('[ExpenseCard] 수정 실패:', err)
+      showToast(t(lang, 'common.error'), 'err')
+    }
   }
 
   /* ── 집계 ─────────────────────────────────────────────────────────── */

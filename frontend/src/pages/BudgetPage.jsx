@@ -253,8 +253,7 @@ function DailyTab({ lang, currency, toDisplay }) {
   }, [calYear, calMonth])
 
   // date·lang 변경 시 즉시 재조회
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load() }, [date, lang])
+  useEffect(() => { load() }, [load])
 
   // 클라이언트 안전 필터: 서버 응답 date 필드가 "YYYY-MM-DD HH:MM:SS" 형태여도
   // 앞 10자리만 잘라 선택된 날짜와 100% 일치하는 항목만 표시 (타임존 왜곡 최종 방어)
