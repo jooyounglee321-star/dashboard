@@ -6,6 +6,7 @@ import { INCOME_CATEGORIES, getSubcategories } from '../data/incomeCategories'
 import { CURRENCY_CODES as CURRENCIES, CURRENCY_SYMBOLS as SYM } from '../data/currencies'
 import { useToast } from '../components/Toast'
 import Toast from '../components/Toast'
+import { pad2, todayStr } from '../utils/date'
 import './BudgetPage.css'
 
 Chart.register(...registerables)
@@ -29,17 +30,6 @@ const EMOJI_TABS = [
 ]
 
 // ── 유틸 ─────────────────────────────────────────────────────────────────────
-const pad2 = n => String(n).padStart(2, '0')
-
-/**
- * 브라우저 로컬 타임존 기준 오늘 날짜를 "YYYY-MM-DD"로 반환.
- * new Date().toISOString()은 UTC 기준이라 UTC+9(한국) 오전 9시 이전에
- * 하루 전 날짜를 반환하는 버그가 있어 로컬 메서드를 직접 사용.
- */
-const todayStr = () => {
-  const d = new Date()
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
-}
 
 /**
  * <input type="date">의 e.target.value("YYYY-MM-DD")를 그대로 반환.
@@ -1257,27 +1247,32 @@ function SummaryTab({ lang, currency, toDisplay }) {
 
   const load = useCallback(() => {
     setLoading(true)
-    // 최근 12개월 계산
+    // 최근 12개월 목록 (연도 경계 포함)
     const months = []
     for (let i = 0; i < 12; i++) {
       let m = month - i, y = year
       while (m <= 0) { m += 12; y-- }
       months.push({ y, m })
     }
+    const years = [...new Set(months.map(({ y }) => y))]
     Promise.all([
       apiGet(`/api/expense/stats?year=${year}&month=${month}&lang=${lang}`),
-      ...months.map(({ y, m }) =>
-        apiGet(`/api/expense/summary/monthly?year=${y}&month=${m}&lang=${lang}`)
-          .catch(() => ({ total_income: 0, total_expense: 0, net: 0 }))
+      ...years.map(y =>
+        apiGet(`/api/expense/summary/yearly?year=${y}&lang=${lang}`)
+          .catch(() => ({ monthly: [] }))
       ),
-    ]).then(([s, ...hist]) => {
+    ]).then(([s, ...yearlyResults]) => {
+      // yearly 응답을 { "YYYY-M": row } 맵으로 변환
+      const rowMap = {}
+      yearlyResults.forEach((res, idx) => {
+        const y = years[idx]
+        ;(res.monthly || []).forEach(row => { rowMap[`${y}-${row.month}`] = row })
+      })
       setStats(s)
-      setHistory(months.map((ym, i) => ({
-        ...ym,
-        total_income:  hist[i]?.total_income  ?? 0,
-        total_expense: hist[i]?.total_expense ?? 0,
-        net:           hist[i]?.net           ?? 0,
-      })))
+      setHistory(months.map(({ y, m }) => {
+        const row = rowMap[`${y}-${m}`] || {}
+        return { y, m, total_income: row.total_income ?? 0, total_expense: row.total_expense ?? 0, net: row.net ?? 0 }
+      }))
     }).catch(() => {}).finally(() => setLoading(false))
   }, [year, month, lang])
 

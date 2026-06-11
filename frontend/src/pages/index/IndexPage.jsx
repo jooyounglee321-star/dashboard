@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { calcStock } from '../../utils/calcStock'
 import './index.css'
 
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
@@ -309,30 +310,14 @@ export default function IndexPage() {
           snapFxRate = fxRes.status === 'fulfilled' ? (fxRes.value?.usd_krw ?? null) : null
 
           // Calculate totals for snapshot
-          const snapToday = new Date().toISOString().split('T')[0]
           let grandUSD = 0, grandKRW = 0
           const snapshotGroups = groups.map(g => {
             const isKRW = g.currency === 'KRW'
             let grpTotal = 0
             const stocks = g.stocks.map(s => {
-              const pp = s.purchases || []; const sl = s.sells || []
-              // 오늘 날짜 기준: date 없으면 항상 포함(하위호환), date 있으면 오늘 이하만
-              const activePP = pp.filter(p => !p.date || p.date <= snapToday)
-              const activeSL = sl.filter(p => !p.date || p.date <= snapToday)
-              const bq = activePP.reduce((a, p) => a + (p.qty || 0), 0)
-              const sq = activeSL.reduce((a, p) => a + (p.qty || 0), 0)
-              const hq = Math.max(0, bq - sq)
-              const validPP = activePP.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
-              const ws = validPP.reduce((a, p) => a + p.price * p.qty, 0)
-              const vqt = validPP.reduce((a, p) => a + p.qty, 0)
-              const avg = vqt > 0 ? ws / vqt : 0
-              const priceObj = snapPriceMap[s.ticker]
-              const cur = priceObj?.current_price ?? avg
-              const val = cur * hq
+              const { holdQty: hq, avgCost: avg, cur, val, evalPL, realizedPL: realPL } = calcStock(s, snapPriceMap)
               grpTotal += val
-              const realPL = activeSL.reduce((a, p) => a + ((p.price || 0) - avg) * (p.qty || 0), 0)
-              const evalPL = avg > 0 ? (cur - avg) * hq : null
-              return { ticker: s.ticker, name: s.name || null, current_price: priceObj?.current_price ?? null, hold_qty: hq, eval_amount: val, avg_buy_price: avg || null, eval_pl: evalPL, realized_pl: realPL }
+              return { ticker: s.ticker, name: s.name || null, current_price: snapPriceMap[s.ticker]?.current_price ?? null, hold_qty: hq, eval_amount: val, avg_buy_price: avg || null, eval_pl: evalPL, realized_pl: realPL }
             })
             if (isKRW) grandKRW += grpTotal; else grandUSD += grpTotal
             return { name: g.name, currency: g.currency, total: grpTotal, stocks }

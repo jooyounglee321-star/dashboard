@@ -5,16 +5,8 @@ import { INCOME_CATEGORIES, getSubcategories } from '../../data/incomeCategories
 import { CURRENCY_LIST as CURRENCIES } from '../../data/currencies'
 import { useToast } from '../../components/Toast'
 import Toast from '../../components/Toast'
-
-// toISOString()은 UTC 기준 → PDT(UTC-7) 오후 5시 이후엔 내일 날짜를 반환하는 버그
-// 로컬 날짜 메서드로 교체하여 어느 타임존에서도 정확한 오늘 날짜 반환
-const todayStr = () => {
-  const d = new Date()
-  const yyyy = d.getFullYear()
-  const mm   = String(d.getMonth() + 1).padStart(2, '0')
-  const dd   = String(d.getDate()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd}`
-}
+import { getToken, authH } from '../../utils/api'
+import { todayStr } from '../../utils/date'
 
 function fmtAmt(amount, currency) {
   const sym = CURRENCIES.find(c => c.code === currency)?.symbol ?? currency
@@ -339,9 +331,6 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
   /* 파생값 */
   const selCat = categories.find(c => c.id === Number(form.category_id))
   const subs   = selCat?.subs ?? []
-
-  const getToken = () => { try { return localStorage.getItem('token') || '' } catch { return '' } }
-  const authH = () => ({ Authorization: 'Bearer ' + getToken() })
 
   /* ── 데이터 로드 ──────────────────────────────────────────────────── */
 

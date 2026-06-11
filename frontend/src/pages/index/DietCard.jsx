@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { t, T } from './i18n'
 import { useToast } from '../../components/Toast'
 import Toast from '../../components/Toast'
+import { authH as authHeader } from '../../utils/api'
 import { Link } from 'react-router-dom'
 
 // 로컬 날짜 (UTC 파싱 금지)
@@ -40,7 +41,6 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mealConfig])
 
-  const authHeader = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') })
 
   // 날짜 변경 시 자동 재조회
   async function loadMeal(d = date) {

@@ -2,11 +2,12 @@ import { useState, useEffect, useRef } from 'react'
 import Toast, { useToast } from '../../components/Toast'
 import { t } from './i18n'
 
+import { authH } from '../../utils/api'
+
 /* ── 유틸 ── */
 const sv = (k, v) => localStorage.setItem(k, JSON.stringify(v))
 const ld = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d } catch { return d } }
 const genId = () => Math.random().toString(36).slice(2, 10)
-const authH = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') })
 const TOTAL_MODE_KEY = 'stock_total_mode'
 const GRP_COLORS = [
   { bg: '#c8deff', tx: '#1a3d7c' }, { bg: '#c0edd8', tx: '#0d4a2a' },

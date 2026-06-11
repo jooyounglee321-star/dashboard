@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { t } from './i18n'
+import { authH as authHdr } from '../../utils/api'
 
 const MAX_MEMOS = 4
 const MAX_CHARS = 500
@@ -279,8 +280,6 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
   const [calYear, setCalYear]     = useState(_now.getFullYear())
   const [calMonth, setCalMonth]   = useState(_now.getMonth() + 1)
   const [dayDetail, setDayDetail] = useState(null)
-
-  const authHdr = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') })
 
   const loadToday = useCallback(async () => {
     const list = await fetch('/api/memos?date=' + todayKey(), { headers: authHdr() })
