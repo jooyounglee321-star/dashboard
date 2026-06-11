@@ -27,6 +27,7 @@
 | 14 | `portfolio_groups` | 포트폴리오 그룹 데이터 (user_id 당 1행) |
 | 15 | `permissions` | 레벨별 권한 매핑 |
 | 16 | `daily_portfolio_snapshot` | 일별 포트폴리오 스냅샷 (user_id 기준 격리) |
+| 17 | `todos` | 수동 할 일 체크리스트 (user_id 기준 격리, 날짜별 체크 독립) |
 
 ---
 

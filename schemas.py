@@ -98,6 +98,28 @@ class PinnedMemoOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# ── Todo ──────────────────────────────────────────────────────────────────────
+
+class TodoCreate(BaseModel):
+    title: str
+    due_date: date | None = None
+
+
+class TodoCheckToggle(BaseModel):
+    date: str   # "YYYY-MM-DD"
+    checked: bool
+
+
+class TodoOut(BaseModel):
+    id: int
+    title: str
+    due_date: date | None
+    is_done_dates: list[str]
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 # ── Stock ─────────────────────────────────────────────────────────────────────
 
 class StockCategory(str, Enum):
