@@ -346,9 +346,12 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
             groups_list = list(groups.values())
             total_usd = sum(g["total"] for g in groups_list if g["currency"] == "USD")
             total_krw = sum(g["total"] for g in groups_list if g["currency"] == "KRW")
-            total_krw_equiv = (
-                round(total_usd * usd_krw + total_krw, 2) if usd_krw else None
-            )
+            if usd_krw:
+                total_krw_equiv = round(total_usd * usd_krw + total_krw, 2)
+            elif total_usd == 0:
+                total_krw_equiv = round(total_krw, 2)
+            else:
+                total_krw_equiv = None
             data_json = json.dumps(groups_list, ensure_ascii=False)
 
             # UPSERT
