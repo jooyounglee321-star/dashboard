@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { t } from './i18n'
 
 const MOODS = [
@@ -8,6 +8,13 @@ const MOODS = [
   { icon: '🔋', key: 'tired' },
   { icon: '🔥', key: 'fire' },
   { icon: '😤', key: 'stress' },
+]
+
+const EMOJI_CATS = [
+  { key: 'emotions', emojis: ['😀','😂','😍','😔','😤','😭','🥰','😎','🤔','😴'] },
+  { key: 'activity', emojis: ['🔥','💪','🏃','📚','💻','🎵','🍎','☕','🛌','✈️'] },
+  { key: 'nature',   emojis: ['☀️','🌧️','❄️','🌸','🌙','⭐'] },
+  { key: 'etc',      emojis: ['❤️','👍','✅','⚡','🎉','💡','📌','🙏'] },
 ]
 
 const pad2 = n => String(n).padStart(2, '0')
@@ -42,14 +49,16 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
   const [editing, setEditing]   = useState(false)
   const [mood, setMood]         = useState('')
   const [text, setText]         = useState('')
+  const [emojiOpen, setEmojiOpen] = useState(false)
 
-  // 달력 상태
   const _now = new Date()
-  const [calOpen, setCalOpen]   = useState(false)
-  const [allMemos, setAllMemos] = useState([])
-  const [calYear, setCalYear]   = useState(_now.getFullYear())
-  const [calMonth, setCalMonth] = useState(_now.getMonth() + 1)
+  const [calOpen, setCalOpen]     = useState(false)
+  const [allMemos, setAllMemos]   = useState([])
+  const [calYear, setCalYear]     = useState(_now.getFullYear())
+  const [calMonth, setCalMonth]   = useState(_now.getMonth() + 1)
   const [dayDetail, setDayDetail] = useState(null)
+
+  const taRef = useRef(null)
 
   const authHdr = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') })
 
@@ -60,14 +69,21 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
     setMemoData(m)
     if (m) {
       const p = parseMemo(m.content)
-      setMood(p.mood)
-      setText(p.text)
+      setMood(p.mood); setText(p.text)
     } else {
       setMood(''); setText('')
     }
   }, [])
 
   useEffect(() => { loadToday() }, [loadToday])
+
+  // textarea auto-resize
+  useEffect(() => {
+    const ta = taRef.current
+    if (!ta) return
+    ta.style.height = 'auto'
+    ta.style.height = ta.scrollHeight + 'px'
+  }, [text, editing])
 
   async function saveMemo() {
     const content = JSON.stringify({ mood, text })
@@ -85,12 +101,12 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
       })
     }
     setEditing(false)
+    setEmojiOpen(false)
     await loadToday()
   }
 
   async function deleteMemo() {
     if (!memoData?.id) return
-    if (!window.confirm(lang === 'ko' ? '메모를 삭제할까요?' : 'Delete this memo?')) return
     await fetch('/api/memos/' + memoData.id, { method: 'DELETE', headers: authHdr() })
     setMemoData(null); setMood(''); setText(''); setEditing(false)
   }
@@ -105,6 +121,20 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
     setEditing(true)
   }
 
+  function insertEmoji(emoji) {
+    const ta = taRef.current
+    if (!ta) { setText(prev => prev + emoji); setEmojiOpen(false); return }
+    const start = ta.selectionStart
+    const end   = ta.selectionEnd
+    const next  = text.slice(0, start) + emoji + text.slice(end)
+    setText(next)
+    requestAnimationFrame(() => {
+      ta.focus()
+      ta.setSelectionRange(start + emoji.length, start + emoji.length)
+    })
+    setEmojiOpen(false)
+  }
+
   async function openCalendar() {
     const list = await fetch('/api/memos', { headers: authHdr() })
       .then(r => r.ok ? r.json() : []).catch(() => [])
@@ -115,7 +145,6 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
 
   function closeCalendar() { setCalOpen(false); setDayDetail(null) }
 
-  // 달력 계산
   const mLabels     = ML[lang] || ML.en
   const daysInMonth = new Date(calYear, calMonth, 0).getDate()
   const firstDow    = new Date(calYear, calMonth - 1, 1).getDay()
@@ -128,20 +157,33 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
     }
   })
   const todayStr = todayKey()
-
-  const parsed = parseMemo(memoData?.content)
+  const parsed   = parseMemo(memoData?.content)
 
   const hdr      = isMobile ? 'm-card-header' : 'card-header'
   const titleCls = isMobile ? 'm-card-title'  : 'card-title'
   const body     = isMobile ? 'm-card-body'   : 'card-body'
   const wrapper  = isMobile ? 'm-card'        : 'card card-memo'
 
+  const emojiCatLabels = lang === 'ko'
+    ? ['표정/감정', '활동', '날씨/자연', '기타']
+    : ['Emotions', 'Activity', 'Nature', 'Others']
+
   return (
     <div className={wrapper}>
-      <div className={hdr}>
+
+      {/* ── 헤더 ── */}
+      <div className={hdr} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <span className="card-icon">📝</span>
         <span className={titleCls}>{t(lang, 'memoTitle')}</span>
+        <button
+          className={isMobile ? 'm-btn' : 'btn-sm'}
+          style={{ marginLeft: 'auto', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+          onClick={openCalendar}
+        >
+          📅 {t(lang, 'memoCalBtn')}
+        </button>
       </div>
+
       <div className={body}>
 
         {/* ── 기분 선택 (편집 모드) ── */}
@@ -155,8 +197,7 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
                   border: mood === m.icon ? '2px solid var(--accent)' : '1px solid var(--border)',
                   borderRadius: '8px',
                   background: mood === m.icon ? 'rgba(100,150,255,0.15)' : 'var(--bg)',
-                  padding: '0.28rem 0.45rem',
-                  cursor: 'pointer',
+                  padding: '0.28rem 0.45rem', cursor: 'pointer',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px',
                   transition: 'border-color 0.12s, background 0.12s',
                 }}
@@ -175,7 +216,9 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
           <div className={isMobile ? 'm-memo-display' : 'memo-display'}>
             {memoData ? (
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
-                {parsed.mood && <span style={{ fontSize: '1.35rem', flexShrink: 0, marginTop: '0.05rem' }}>{parsed.mood}</span>}
+                {parsed.mood && (
+                  <span style={{ fontSize: '1.35rem', flexShrink: 0, marginTop: '0.05rem' }}>{parsed.mood}</span>
+                )}
                 <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{parsed.text}</span>
               </div>
             ) : (
@@ -185,34 +228,92 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
             )}
           </div>
         ) : (
-          <textarea
-            className={isMobile ? 'm-memo-ta' : 'memo-ta'}
-            style={{ display: 'block' }}
-            value={text}
-            onChange={e => setText(e.target.value)}
-            placeholder={t(lang, 'memoTaPlaceholder')}
-            autoFocus
-          />
+          <div style={{ position: 'relative' }}>
+            <textarea
+              ref={taRef}
+              className={isMobile ? 'm-memo-ta' : 'memo-ta'}
+              style={{ display: 'block', minHeight: '96px', resize: 'none', overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}
+              rows={4}
+              value={text}
+              onChange={e => setText(e.target.value)}
+              placeholder={t(lang, 'memoTaPlaceholder')}
+              autoFocus
+            />
+
+            {/* 이모지 피커 */}
+            <div style={{ marginTop: '0.3rem', position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setEmojiOpen(o => !o)}
+                style={{
+                  background: 'var(--bg)', border: '1px solid var(--border)',
+                  borderRadius: '6px', cursor: 'pointer', fontSize: '1rem',
+                  padding: '0.18rem 0.45rem', lineHeight: 1,
+                }}
+                title={t(lang, 'memoEmojiBtn')}
+              >😀</button>
+
+              {emojiOpen && (
+                <div
+                  style={{
+                    position: 'absolute', left: 0, top: '2.2rem', zIndex: 600,
+                    background: '#1a2336', border: '1px solid rgba(255,255,255,0.15)',
+                    borderRadius: '0.75rem', padding: '0.75rem', width: '268px',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                  }}
+                >
+                  {EMOJI_CATS.map((cat, ci) => (
+                    <div key={cat.key} style={{ marginBottom: ci < EMOJI_CATS.length - 1 ? '0.55rem' : 0 }}>
+                      <div style={{ fontSize: '0.63rem', color: '#6b7fa0', marginBottom: '0.28rem', fontWeight: 600 }}>
+                        {emojiCatLabels[ci]}
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
+                        {cat.emojis.map(e => (
+                          <button
+                            key={e}
+                            type="button"
+                            onClick={() => insertEmoji(e)}
+                            style={{
+                              background: 'rgba(255,255,255,0.05)',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              borderRadius: '5px', cursor: 'pointer',
+                              fontSize: '1.15rem', padding: '0.18rem 0.28rem', lineHeight: 1,
+                            }}
+                            onMouseEnter={ev => ev.currentTarget.style.background = 'rgba(255,255,255,0.16)'}
+                            onMouseLeave={ev => ev.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                          >{e}</button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
-        {/* ── 버튼 ── */}
-        <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+        {/* ── 버튼 영역 ── */}
+        <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
           {!editing ? (
             <>
-              <button className={isMobile ? 'm-btn' : 'btn-sm'} onClick={startEdit}>
-                {t(lang, memoData ? 'memoEditBtn' : 'memoNewBtn')}
-              </button>
-              <button className={isMobile ? 'm-btn' : 'btn-sm'} onClick={openCalendar}>
-                📅 {t(lang, 'memoCalBtn')}
-              </button>
-              {memoData && (
-                <button
-                  className={isMobile ? 'm-btn' : 'btn-sm'}
-                  style={{ color: '#f87171' }}
-                  onClick={deleteMemo}
-                >
-                  {t(lang, 'memoDelBtn')}
+              {!memoData && (
+                <button className={isMobile ? 'm-btn' : 'btn-sm'} onClick={startEdit}>
+                  {t(lang, 'memoNewBtn')}
                 </button>
+              )}
+              {memoData && (
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.35rem' }}>
+                  <button className={isMobile ? 'm-btn' : 'btn-sm'} onClick={startEdit}>
+                    {t(lang, 'memoEditBtn')}
+                  </button>
+                  <button
+                    className={isMobile ? 'm-btn' : 'btn-sm'}
+                    style={{ color: '#f87171' }}
+                    onClick={deleteMemo}
+                  >
+                    {t(lang, 'memoDelBtn')}
+                  </button>
+                </div>
               )}
             </>
           ) : (
@@ -220,24 +321,15 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
               <button className={isMobile ? 'm-btn-outline' : 'btn-outline'} onClick={saveMemo}>
                 {t(lang, 'memoSaveBtn')}
               </button>
-              <button className={isMobile ? 'm-btn' : 'btn-sm'} onClick={() => setEditing(false)}>
+              <button
+                className={isMobile ? 'm-btn' : 'btn-sm'}
+                onClick={() => { setEditing(false); setEmojiOpen(false) }}
+              >
                 {t(lang, 'memoCancelBtn')}
               </button>
             </>
           )}
         </div>
-
-        {/* 저장 시각 */}
-        {memoData?.updated_at && !editing && (
-          <div style={{ fontSize: '0.7rem', color: 'var(--ink3)', marginTop: '0.35rem' }}>
-            {(() => {
-              const u = new Date(memoData.updated_at)
-              return lang === 'en'
-                ? `Saved: ${u.getHours()}:${pad2(u.getMinutes())}`
-                : `저장: ${u.getHours()}시 ${pad2(u.getMinutes())}분`
-            })()}
-          </div>
-        )}
       </div>
 
       {/* ══════════════════════════════════════════════
@@ -324,9 +416,9 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
                   const dateStr = `${calYear}-${pad2(calMonth)}-${pad2(day)}`
                   const memo    = dayMemoMap[day]
                   const pp      = memo ? parseMemo(memo.content) : null
-                  const isToday = dateStr === todayStr
-                  const isSun   = dow === 0
-                  const isSat   = dow === 6
+                  const isToday    = dateStr === todayStr
+                  const isSun      = dow === 0
+                  const isSat      = dow === 6
                   const isSelected = dayDetail?.dateStr === dateStr
                   return (
                     <div
@@ -343,16 +435,14 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
                         cursor: memo ? 'pointer' : 'default',
                         display: 'flex', flexDirection: 'column', gap: '2px',
                         transition: 'background 0.12s',
-                        boxSizing: 'border-box',
-                        overflow: 'hidden',
+                        boxSizing: 'border-box', overflow: 'hidden',
                       }}
                       onMouseEnter={e => { if (memo) e.currentTarget.style.background = 'rgba(255,255,255,0.09)' }}
                       onMouseLeave={e => { if (memo) e.currentTarget.style.background = isSelected ? 'rgba(100,150,255,0.12)' : 'rgba(255,255,255,0.04)' }}
                     >
                       <span style={{
-                        fontSize: '0.75rem', fontWeight: isToday ? 700 : 500,
+                        fontSize: '0.75rem', fontWeight: isToday ? 700 : 500, flexShrink: 0,
                         color: isSun ? '#ef4444' : isSat ? '#60a5fa' : '#c8d6e5',
-                        flexShrink: 0,
                       }}>{day}</span>
                       {pp && (
                         <>
