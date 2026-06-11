@@ -356,11 +356,12 @@ function DailyTab({ lang, currency, toDisplay }) {
         type:           editForm.type || 'expense',
         lang,
       })
+      setEditId(null)
+      load()
     } catch (err) {
       console.error('[saveEdit] 수정 실패:', err)
+      showToast(t(lang, 'common.error'), 'err')
     }
-    setEditId(null)
-    load()
   }
 
   async function delItem(e, id) {

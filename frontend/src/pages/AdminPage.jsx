@@ -114,12 +114,18 @@ export default function AdminPage() {
   }
   async function addYT() {
     if (!ytName || !ytUrl) { showToast('이름과 URL을 모두 입력해주세요', 'err'); return }
-    await fetch('/api/youtube-channels', { method: 'POST', headers: { ...authH(), 'Content-Type': 'application/json' }, body: JSON.stringify({ channel_name: ytName, channel_url: ytUrl }) })
-    setYtName(''); setYtUrl(''); await loadYTChannels(); showToast('✓ 채널이 추가되었습니다', 'ok')
+    try {
+      const r = await fetch('/api/youtube-channels', { method: 'POST', headers: { ...authH(), 'Content-Type': 'application/json' }, body: JSON.stringify({ channel_name: ytName, channel_url: ytUrl }) })
+      if (!r.ok) throw new Error('HTTP ' + r.status)
+      setYtName(''); setYtUrl(''); await loadYTChannels(); showToast('✓ 채널이 추가되었습니다', 'ok')
+    } catch { showToast('저장 실패 - 서버 연결을 확인해주세요', 'err') }
   }
   async function delYT(id) {
-    await fetch('/api/youtube-channels/' + id, { method: 'DELETE', headers: authH() })
-    await loadYTChannels(); showToast('삭제되었습니다', 'ok')
+    try {
+      const r = await fetch('/api/youtube-channels/' + id, { method: 'DELETE', headers: authH() })
+      if (!r.ok) throw new Error('HTTP ' + r.status)
+      await loadYTChannels(); showToast('삭제되었습니다', 'ok')
+    } catch { showToast('삭제 실패 - 서버 연결을 확인해주세요', 'err') }
   }
 
   /* ── 사이트 ── */
@@ -132,17 +138,26 @@ export default function AdminPage() {
     if (!url) { showToast('URL을 입력해주세요', 'err'); return }
     if (!url.startsWith('http')) url = 'https://' + url
     if (!name) name = url
-    await fetch('/api/bookmarks', { method: 'POST', headers: { ...authH(), 'Content-Type': 'application/json' }, body: JSON.stringify({ title: name, url }) })
-    setSiteName(''); setSiteUrl(''); await loadSites(); showToast('✓ 사이트가 추가되었습니다', 'ok')
+    try {
+      const r = await fetch('/api/bookmarks', { method: 'POST', headers: { ...authH(), 'Content-Type': 'application/json' }, body: JSON.stringify({ title: name, url }) })
+      if (!r.ok) throw new Error('HTTP ' + r.status)
+      setSiteName(''); setSiteUrl(''); await loadSites(); showToast('✓ 사이트가 추가되었습니다', 'ok')
+    } catch { showToast('저장 실패 - 서버 연결을 확인해주세요', 'err') }
   }
   async function quickSite(name, url) {
     if (sites.find(s => s.url === url)) { showToast('이미 추가된 사이트입니다', 'err'); return }
-    await fetch('/api/bookmarks', { method: 'POST', headers: { ...authH(), 'Content-Type': 'application/json' }, body: JSON.stringify({ title: name, url }) })
-    await loadSites(); showToast(`✓ ${name} 추가!`, 'ok')
+    try {
+      const r = await fetch('/api/bookmarks', { method: 'POST', headers: { ...authH(), 'Content-Type': 'application/json' }, body: JSON.stringify({ title: name, url }) })
+      if (!r.ok) throw new Error('HTTP ' + r.status)
+      await loadSites(); showToast(`✓ ${name} 추가!`, 'ok')
+    } catch { showToast('저장 실패 - 서버 연결을 확인해주세요', 'err') }
   }
   async function delSite(id) {
-    await fetch('/api/bookmarks/' + id, { method: 'DELETE', headers: authH() })
-    await loadSites(); showToast('삭제되었습니다', 'ok')
+    try {
+      const r = await fetch('/api/bookmarks/' + id, { method: 'DELETE', headers: authH() })
+      if (!r.ok) throw new Error('HTTP ' + r.status)
+      await loadSites(); showToast('삭제되었습니다', 'ok')
+    } catch { showToast('삭제 실패 - 서버 연결을 확인해주세요', 'err') }
   }
 
   /* ── 시간대 ── */
@@ -186,7 +201,7 @@ export default function AdminPage() {
 
   /* ── 전체 저장 ── */
   async function saveAll() {
-    await saveTZ()
+    await Promise.all([saveTZ(), saveWidgetCfg()])
     sv('yt_account', ytAccount)
     showToast('✅ 저장 완료! 이동합니다...', 'ok')
     setTimeout(() => navigate('/'), 1000)
