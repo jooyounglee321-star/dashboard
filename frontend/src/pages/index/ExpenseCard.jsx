@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { t } from './i18n'
 import { INCOME_CATEGORIES, getSubcategories } from '../../data/incomeCategories'
@@ -353,25 +353,26 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
   const selCat = categories.find(c => c.id === Number(form.category_id))
   const subs   = selCat?.subs ?? []
 
-  const authH = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') })
+  const getToken = () => { try { return localStorage.getItem('token') || '' } catch { return '' } }
+  const authH = () => ({ Authorization: 'Bearer ' + getToken() })
 
   /* ── 데이터 로드 ──────────────────────────────────────────────────── */
 
-  async function loadCategories() {
+  const loadCategories = useCallback(async () => {
     const data = await fetch(`/api/expense/categories?lang=${lang}`, { headers: authH() })
       .then(r => r.ok ? r.json() : []).catch(() => [])
     setCategories(data)
-  }
+  }, [lang]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function loadExpenses(date = curDate) {
+  const loadExpenses = useCallback(async (date = curDate) => {
     setLoading(true)
     const data = await fetch(`/api/expense?date=${date}&lang=${lang}`, { headers: authH() })
       .then(r => r.ok ? r.json() : []).catch(() => [])
     setExpenses(data)
     setLoading(false)
-  }
+  }, [lang, curDate]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function loadMonthly() {
+  const loadMonthly = useCallback(async () => {
     const now   = new Date()
     const year  = now.getFullYear()
     const month = now.getMonth() + 1
@@ -384,18 +385,18 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
     setMonthlyTotal(summary?.total_usd ?? 0)
     const totalBudget = (budgets ?? []).reduce((s, b) => s + (b.budget_usd ?? 0), 0)
     setMonthlyBudget(totalBudget > 0 ? totalBudget : null)
-  }
+  }, [lang]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     loadCategories()
     loadExpenses(curDate)
     loadMonthly()
-  }, [lang]) // eslint-disable-line
+  }, [loadCategories, loadExpenses, loadMonthly])
 
   /* form.date 변경 시 해당 날짜 지출 목록 즉시 재조회 */
   useEffect(() => {
     if (form.date) loadExpenses(form.date)
-  }, [form.date]) // eslint-disable-line
+  }, [form.date, loadExpenses])
 
   /* 자정 자동 리셋 — 매 1분 날짜 변경 감지 */
   useEffect(() => {
@@ -409,7 +410,7 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
       }
     }, 60_000)
     return () => clearInterval(id)
-  }, [curDate]) // eslint-disable-line
+  }, [curDate, loadExpenses, loadMonthly])
 
   /* ── CRUD ─────────────────────────────────────────────────────────── */
 

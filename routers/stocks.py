@@ -144,7 +144,7 @@ async def get_stock_price(ticker: str, category: str | None = None):
     """Yahoo Finance 실시간 시세 (60초 캐시).
     category 파라미터로 kor-stock / kor-etf 전달 시 .KS/.KQ 접미사를 자동 처리합니다."""
     try:
-        loop   = asyncio.get_event_loop()
+        loop   = asyncio.get_running_loop()
         result = await loop.run_in_executor(
             _executor, _fetch_price, ticker.upper(), category
         )
@@ -158,7 +158,7 @@ async def get_stock_price(ticker: str, category: str | None = None):
 async def get_exchange_rate():
     """USD/KRW 환율 (Yahoo Finance KRW=X, 60초 캐시). 1 USD = X KRW."""
     try:
-        loop   = asyncio.get_event_loop()
+        loop   = asyncio.get_running_loop()
         result = await loop.run_in_executor(_executor, _fetch_price, "KRW=X", None)
         return {
             "ticker":         "KRW=X",
@@ -308,7 +308,7 @@ async def get_stock_history(
         return hist
 
     try:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         hist = await loop.run_in_executor(_executor, _fetch_hist)
         if hist.empty:
             raise HTTPException(
@@ -354,7 +354,7 @@ async def get_stock_news(
         return _fetch_google_rss(query, effective_lang, count)
 
     try:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         items = await loop.run_in_executor(_executor, _fetch)
         if not items:
             raise HTTPException(status_code=404, detail="뉴스를 찾을 수 없습니다")

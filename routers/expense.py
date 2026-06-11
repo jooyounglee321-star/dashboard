@@ -630,9 +630,12 @@ def list_budgets(
         usd = float(e.converted_amount) if e.converted_amount is not None else float(e.amount)
         actual[k] = round(actual.get(k, 0.0) + usd, 2)
 
+    currencies = {b.currency for b in budgets}
+    rate_map   = {c: _get_rate(c, db) for c in currencies}
+
     result = []
     for b in budgets:
-        brate      = _get_rate(b.currency, db)
+        brate      = rate_map.get(b.currency, 1.0)
         budget_usd = round(float(b.amount) / brate, 2)
         spent_usd  = actual.get(b.category_id, 0.0)
         d = _budget_dict(b, db, lang)

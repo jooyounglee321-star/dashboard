@@ -25,6 +25,15 @@ const MON = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9�
 const DAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MON_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
+function buildTickerCatMap(groups) {
+  const map = {}
+  groups.forEach(g => {
+    const cat = g.currency === 'KRW' ? 'kor-stock' : 'us'
+    g.stocks.forEach(s => { if (s.ticker && !map[s.ticker]) map[s.ticker] = cat })
+  })
+  return map
+}
+
 function getHeaderDate(lang = 'ko') {
   const n = new Date()
   if (lang === 'en') {
@@ -237,11 +246,7 @@ export default function IndexPage() {
       setStockGroups(activeGroups)
 
       // Build ticker→category map
-      const tickerCatMap = {}
-      activeGroups.forEach(g => {
-        const cat = g.currency === 'KRW' ? 'kor-stock' : 'us'
-        g.stocks.forEach(s => { if (s.ticker && !tickerCatMap[s.ticker]) tickerCatMap[s.ticker] = cat })
-      })
+      const tickerCatMap = buildTickerCatMap(activeGroups)
 
       // Fetch prices + fx in parallel
       const newPriceMap = {}
@@ -288,11 +293,7 @@ export default function IndexPage() {
           const dbJson = await dbRes.json()
           const groups = (dbJson.data || []).map(g => ({ ...g, stocks: (g.stocks || []).filter(s => !s.is_deleted) }))
 
-          const tickerCatMap = {}
-          groups.forEach(g => {
-            const cat = g.currency === 'KRW' ? 'kor-stock' : 'us'
-            g.stocks.forEach(s => { if (s.ticker) tickerCatMap[s.ticker] = cat })
-          })
+          const tickerCatMap = buildTickerCatMap(groups)
 
           const snapPriceMap = {}
           let snapFxRate = null
