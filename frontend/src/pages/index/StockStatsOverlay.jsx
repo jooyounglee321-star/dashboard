@@ -167,6 +167,12 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   const [histCurrencyFilter, setHistCurrencyFilter] = useState('')
   const HIST_PAGE_SIZE = 20
 
+  // group ID → 이름 매핑 (구형 스냅샷 폴백용)
+  const histGroupNames = useMemo(
+    () => Object.fromEntries((stockData?.groups ?? []).map(g => [g.id, g.name])),
+    [stockData]
+  )
+
   // 회원가입일 로드 (localStorage 우선 → /api/auth/me 폴백)
   useEffect(() => {
     if (!isOpen || userJoinDate) return
@@ -378,10 +384,23 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       if (histGroupFilter) {
         try {
           const parsed = JSON.parse(r.data || '{}')
-          if (!parsed.groups) return 0
-          const grp = parsed.groups[histGroupFilter]
-          if (!grp) return 0
-          return grp.currency === 'USD' ? grp.total * (r.usd_krw || 1) : grp.total
+          if (parsed.groups) {
+            // 신형: group ID 키
+            const grp = parsed.groups[histGroupFilter]
+            if (grp) return grp.currency === 'USD' ? grp.total * (r.usd_krw || 1) : grp.total
+          }
+          // 구형 폴백: 그룹명 키 dict 또는 배열
+          const groupName = histGroupNames[histGroupFilter]
+          if (groupName) {
+            if (Array.isArray(parsed)) {
+              const g = parsed.find(x => x.name?.toLowerCase() === groupName.toLowerCase())
+              if (g) return g.currency === 'USD' ? (g.total ?? 0) * (r.usd_krw || 1) : (g.total ?? 0)
+            } else {
+              const leg = parsed[groupName] ?? parsed[groupName.toLowerCase()]
+              if (leg != null) return typeof leg === 'object' ? (leg.currency === 'USD' ? leg.total * (r.usd_krw || 1) : leg.total) : leg
+            }
+          }
+          return 0
         } catch { return 0 }
       }
       if (histCurrencyFilter === 'USD') return r.total_usd ?? 0
@@ -440,7 +459,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       },
     })
     return () => { if (histChartRef.current) { histChartRef.current.destroy(); histChartRef.current = null } }
-  }, [isOpen, mainTab, histData, histRange, histGroupFilter, histCurrencyFilter, lang])
+  }, [isOpen, mainTab, histData, histRange, histGroupFilter, histCurrencyFilter, histGroupNames, lang])
 
   if (!isOpen) return null
 

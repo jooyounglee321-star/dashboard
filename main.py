@@ -673,7 +673,8 @@ def _migrate_snapshot_data_to_group_id():
     매칭 실패 시 그룹명을 임시 키로 사용(차트에서는 표시되지 않지만 데이터 보존).
     """
     import json as _json
-    with SessionLocal() as db:
+    db = SessionLocal()
+    try:
         try:
             rows = db.execute(
                 text("SELECT DISTINCT user_id FROM daily_portfolio_snapshot WHERE data IS NOT NULL AND user_id IS NOT NULL")
@@ -723,10 +724,10 @@ def _migrate_snapshot_data_to_group_id():
                         gtotal = g.get("total", 0)
 
                         match = name_to_id.get(gname.lower()) or currency_to_id.get(gcur)
-                        if match:
-                            gid, actual_name = match
-                        else:
-                            gid, actual_name = gname, gname  # 매칭 실패 시 이름을 키로 보존
+                        if not match:
+                            logger.warning("[MIGRATE_SNAPSHOT] user=%d 그룹명 매칭 실패: %s - 원본 유지", user_id, gname)
+                            continue
+                        gid, actual_name = match
 
                         new_groups[gid] = {"total": gtotal, "currency": gcur}
                         new_group_names[gid] = actual_name
@@ -745,6 +746,8 @@ def _migrate_snapshot_data_to_group_id():
             logger.info("[MIGRATE_SNAPSHOT] 전체 %d개 스냅샷 변환 완료", total_migrated)
         else:
             logger.info("[MIGRATE_SNAPSHOT] 변환 대상 없음 (이미 최신 형식)")
+    finally:
+        db.close()
 
 
 _DEFAULT_INCOME_CATEGORIES = [
