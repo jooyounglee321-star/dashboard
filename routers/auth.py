@@ -30,12 +30,12 @@ if not ADMIN_EMAIL:
     logger.warning("[AUTH] ADMIN_EMAIL 환경변수가 설정되지 않았습니다. 자동 admin 부여가 비활성화됩니다.")
 
 # JWT 설정
-SECRET_KEY = os.getenv("SECRET_KEY", "")
-if not SECRET_KEY:
-    raise SystemExit(
-        "[AUTH] FATAL: SECRET_KEY 환경변수가 설정되지 않았습니다. "
-        "강력한 랜덤 키를 SECRET_KEY 환경변수로 설정하세요. "
-        "(예: python -c \"import secrets; print(secrets.token_hex(32))\")"
+_DEFAULT_SECRET = "dashboard-dev-secret-change-in-production"
+SECRET_KEY = os.getenv("SECRET_KEY", _DEFAULT_SECRET)
+if SECRET_KEY == _DEFAULT_SECRET:
+    logger.warning(
+        "[AUTH] SECRET_KEY 환경변수가 설정되지 않았습니다. "
+        "개발용 기본값을 사용 중입니다. 운영 배포 전 Railway Variables에서 SECRET_KEY를 반드시 설정하세요."
     )
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_DAYS = 30
