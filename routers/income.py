@@ -65,47 +65,40 @@ def list_income_categories(
     _: User = Depends(get_current_user),
 ):
     """수입 대분류 + 소분류 목록 반환."""
-    parents = (
+    # 한 번의 쿼리로 전체 로드 후 Python에서 계층 구성 (N+1 방지)
+    all_cats = (
         db.query(ExpenseCategory)
         .filter(
-            ExpenseCategory.parent_id == None,    # noqa: E711
             ExpenseCategory.category_type == "income",
             ExpenseCategory.is_active == True,    # noqa: E712
         )
         .order_by(ExpenseCategory.order_num)
         .all()
     )
-    result = []
-    for p in parents:
-        subs = (
-            db.query(ExpenseCategory)
-            .filter(
-                ExpenseCategory.parent_id == p.id,
-                ExpenseCategory.is_active == True,   # noqa: E712
-            )
-            .order_by(ExpenseCategory.order_num)
-            .all()
-        )
-        result.append({
-            "id":       p.id,
-            "code":     p.code,
-            "name":     _cat_name(p, lang),
-            "name_ko":  p.name_ko,
-            "name_en":  p.name_en,
-            "icon":     p.icon,
-            "subs": [
-                {
-                    "id":      s.id,
-                    "code":    s.code,
-                    "name":    _cat_name(s, lang),
-                    "name_ko": s.name_ko,
-                    "name_en": s.name_en,
-                    "icon":    s.icon,
-                }
-                for s in subs
-            ],
-        })
-    return result
+    parents = {c.id: c for c in all_cats if c.parent_id is None}
+    subs_map: dict[int, list] = {pid: [] for pid in parents}
+    for c in all_cats:
+        if c.parent_id is not None and c.parent_id in subs_map:
+            subs_map[c.parent_id].append({
+                "id":      c.id,
+                "code":    c.code,
+                "name":    _cat_name(c, lang),
+                "name_ko": c.name_ko,
+                "name_en": c.name_en,
+                "icon":    c.icon,
+            })
+    return [
+        {
+            "id":      p.id,
+            "code":    p.code,
+            "name":    _cat_name(p, lang),
+            "name_ko": p.name_ko,
+            "name_en": p.name_en,
+            "icon":    p.icon,
+            "subs":    subs_map.get(p.id, []),
+        }
+        for p in sorted(parents.values(), key=lambda x: (x.order_num, x.id))
+    ]
 
 # ── 수입 CRUD ────────────────────────────────────────────────────────────────
 

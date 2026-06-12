@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -26,10 +27,24 @@ function AuthGuard({ children }) {
   return children
 }
 
-/** 어드민 전용 페이지 — role이 admin이 아니면 /로 리다이렉트 */
+/** 어드민 전용 페이지 — /api/auth/me 서버 재검증 후 role 확인 */
 function AdminRoleGuard({ children }) {
+  const [state, setState] = useState('pending') // pending | allowed | denied
+
+  useEffect(() => {
+    if (!hasValidToken()) { setState('denied'); return }
+    const token = localStorage.getItem('token')
+    const ctrl = new AbortController()
+    fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token }, signal: ctrl.signal })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setState(d?.role === 'admin' ? 'allowed' : 'denied'))
+      .catch(err => { if (err?.name !== 'AbortError') setState('denied') })
+    return () => ctrl.abort()
+  }, [])
+
   if (!hasValidToken()) return <Navigate to="/login" replace />
-  if (getStoredRole() !== 'admin') return <Navigate to="/" replace />
+  if (state === 'pending') return null
+  if (state === 'denied') return <Navigate to="/" replace />
   return children
 }
 
