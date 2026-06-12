@@ -13,18 +13,17 @@ const COLOR_KEYS = Object.keys(PASTEL)
 const MAX_MEMOS  = 6
 const INIT_FORM  = { title: '', content: '', color: 'yellow' }
 
-function lsKey(id) { return `pinned_memo_collapsed_${id}` }
-
 // 각 카드 독립 컴포넌트 — 자체 collapsed state 보유
 function MemoCardItem({ memo, lang, onEdit, onDelete }) {
   const [collapsed, setCollapsed] = useState(() => {
-    try { return localStorage.getItem(lsKey(memo.id)) === 'true' } catch { return false }
+    return localStorage.getItem(`pinned_memo_collapsed_${memo.id}`) === 'true'
   })
 
-  const toggleCollapse = () => {
+  const toggleCollapse = (e) => {
+    e.stopPropagation()
     const next = !collapsed
     setCollapsed(next)
-    try { localStorage.setItem(lsKey(memo.id), next) } catch {}
+    localStorage.setItem(`pinned_memo_collapsed_${memo.id}`, String(next))
   }
 
   const scheme = PASTEL[memo.color] || PASTEL.yellow
@@ -34,10 +33,12 @@ function MemoCardItem({ memo, lang, onEdit, onDelete }) {
       className="pinned-card"
       style={{
         background: scheme.bg,
-        padding: collapsed ? '8px 12px' : undefined,
-        transition: 'padding 0.15s ease',
+        padding: collapsed ? '8px 12px' : '0.9rem 1rem',
+        minHeight: collapsed ? 'auto' : undefined,
+        transition: 'padding 0.2s ease',
       }}
     >
+      {/* 제목 + 핀 (항상 표시) */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div className="pinned-card-title" style={{ color: scheme.text, fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {memo.title || ''}
@@ -48,17 +49,21 @@ function MemoCardItem({ memo, lang, onEdit, onDelete }) {
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 0 0.4rem', flexShrink: 0, opacity: collapsed ? 0.4 : 1, fontSize: '1rem', lineHeight: 1 }}
         >📌</button>
       </div>
-      <div style={{ display: collapsed ? 'none' : undefined }}>
-        {memo.content && (
-          <div className="pinned-card-content" style={{ color: scheme.text, marginTop: '0.35rem' }}>
-            {memo.content}
+
+      {/* 내용 + 버튼 (펼침 상태만) */}
+      {!collapsed && (
+        <>
+          {memo.content && (
+            <div className="pinned-card-content" style={{ color: scheme.text, marginTop: '0.35rem' }}>
+              {memo.content}
+            </div>
+          )}
+          <div className="pinned-card-actions">
+            <button onClick={() => onEdit(memo)} className="pinned-card-btn" title={t(lang, 'pinnedMemoEdit')} style={{ color: scheme.text }}>✏️</button>
+            <button onClick={() => onDelete(memo.id)} className="pinned-card-btn" title={t(lang, 'pinnedMemoDelete')} style={{ color: scheme.text }}>🗑️</button>
           </div>
-        )}
-        <div className="pinned-card-actions">
-          <button onClick={() => onEdit(memo)} className="pinned-card-btn" title={t(lang, 'pinnedMemoEdit')} style={{ color: scheme.text }}>✏️</button>
-          <button onClick={() => onDelete(memo.id)} className="pinned-card-btn" title={t(lang, 'pinnedMemoDelete')} style={{ color: scheme.text }}>🗑️</button>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   )
 }
