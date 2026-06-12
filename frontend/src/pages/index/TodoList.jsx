@@ -7,6 +7,7 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
   const [loading, setLoading]   = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [newTitle, setNewTitle] = useState('')
+  const [newType,  setNewType]  = useState('repeat')   // 'repeat' | 'once'
   const [newStart, setNewStart] = useState('')
   const [newDue,   setNewDue]   = useState('')
   const [dateErr,  setDateErr]  = useState(false)
@@ -33,6 +34,10 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
     setDateErr(newStart && val && newStart > val)
   }
 
+  function resetForm() {
+    setNewTitle(''); setNewType('repeat'); setNewStart(''); setNewDue(''); setDateErr(false)
+  }
+
   async function addTodo() {
     if (!newTitle.trim() || dateErr) return
     setSaving(true)
@@ -41,13 +46,14 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
         method: 'POST',
         headers: authHJ(),
         body: JSON.stringify({
-          title: newTitle.trim(),
+          title:      newTitle.trim(),
+          todo_type:  newType,
           start_date: newStart || null,
           due_date:   newDue   || null,
         }),
       })
       if (res.ok) {
-        setNewTitle(''); setNewStart(''); setNewDue(''); setDateErr(false)
+        resetForm()
         setShowForm(false)
         await load()
       }
@@ -61,14 +67,20 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
       headers: authHJ(),
       body: JSON.stringify({ date, checked: !isDone }),
     })
-    setTodos(prev => prev.map(td =>
-      td.id !== todo.id ? td : {
-        ...td,
-        is_done_dates: isDone
-          ? td.is_done_dates.filter(d => d !== date)
-          : [...td.is_done_dates, date],
-      }
-    ))
+    const todoType = todo.todo_type || 'repeat'
+    if (todoType === 'once' && !isDone) {
+      // once 타입 완료 → 즉시 목록에서 제거
+      setTodos(prev => prev.filter(td => td.id !== todo.id))
+    } else {
+      setTodos(prev => prev.map(td =>
+        td.id !== todo.id ? td : {
+          ...td,
+          is_done_dates: isDone
+            ? td.is_done_dates.filter(d => d !== date)
+            : [...td.is_done_dates, date],
+        }
+      ))
+    }
   }
 
   async function deleteTodo(id) {
@@ -78,16 +90,14 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
 
   // 날짜 표시 타입 판별
   function dateDisplay(todo) {
-    const s = todo.start_date   // "YYYY-MM-DD" | null
-    const d = todo.due_date     // "YYYY-MM-DD" | null
-    if (!d) return null         // 영구 — 표시 없음
+    const s = todo.start_date
+    const d = todo.due_date
+    if (!d) return null
     const [, dm, dd] = d.split('-')
     const dLabel = `${parseInt(dm)}/${parseInt(dd)}`
     if (s && s === d) {
-      // 특정 하루
       return { label: dLabel + ' ' + t(lang, 'todoOneDayLabel'), oneDay: true }
     }
-    // 기간 또는 마감일만
     return { label: t(lang, 'todoDueLabel') + ' ' + dLabel, oneDay: false }
   }
 
@@ -95,6 +105,16 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
   function isOverdue(dueStr) { return dueStr && date && dueStr < date }
 
   const fs = isMobile ? { title: '0.82rem', sub: '0.74rem' } : { title: '0.85rem', sub: '0.75rem' }
+
+  // 타입 토글 버튼 스타일
+  function typeBtnStyle(active) {
+    return {
+      fontSize: '0.72rem', padding: '0.25rem 0.5rem', borderRadius: 6, cursor: 'pointer',
+      fontFamily: 'inherit', border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
+      background: active ? 'var(--accent)' : 'var(--bg)',
+      color: active ? '#fff' : 'var(--ink3)', fontWeight: active ? 600 : 400,
+    }
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
@@ -123,11 +143,21 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
             onChange={e => setNewTitle(e.target.value)}
             onKeyDown={e => {
               if (e.key === 'Enter') addTodo()
-              if (e.key === 'Escape') { setShowForm(false); setNewTitle(''); setNewStart(''); setNewDue(''); setDateErr(false) }
+              if (e.key === 'Escape') { setShowForm(false); resetForm() }
             }}
             placeholder={t(lang, 'todoPlaceholder')}
             style={{ fontSize: fs.title, padding: '0.35rem 0.5rem', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit' }}
           />
+
+          {/* 타입 선택 토글 */}
+          <div style={{ display: 'flex', gap: '0.35rem' }}>
+            <button onClick={() => setNewType('repeat')} style={typeBtnStyle(newType === 'repeat')}>
+              {t(lang, 'todoTypeRepeat')}
+            </button>
+            <button onClick={() => setNewType('once')} style={typeBtnStyle(newType === 'once')}>
+              {t(lang, 'todoTypeOnce')}
+            </button>
+          </div>
 
           {/* 날짜 두 필드 나란히 */}
           <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -162,7 +192,7 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
               style={{ fontSize: fs.sub, padding: '0.3rem 0.7rem', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit', opacity: (!newTitle.trim() || saving || dateErr) ? 0.5 : 1 }}
             >{t(lang, 'todoSaveBtn')}</button>
             <button
-              onClick={() => { setShowForm(false); setNewTitle(''); setNewStart(''); setNewDue(''); setDateErr(false) }}
+              onClick={() => { setShowForm(false); resetForm() }}
               style={{ fontSize: fs.sub, padding: '0.3rem 0.5rem', background: 'var(--card2)', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit', color: 'var(--ink3)' }}
             >{t(lang, 'todoCancelBtn')}</button>
           </div>
@@ -176,10 +206,12 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
           <p style={{ fontSize: fs.sub, color: 'var(--ink3)', margin: 0 }}>{t(lang, 'todoEmpty')}</p>
         )}
         {todos.map(todo => {
-          const done = todo.is_done_dates.includes(date)
-          const disp = dateDisplay(todo)
+          const todoType = todo.todo_type || 'repeat'
+          const done     = todo.is_done_dates.includes(date)
+          const disp     = dateDisplay(todo)
           const overdue  = isOverdue(todo.due_date)
           const todayDue = isToday(todo.due_date)
+          const typeIcon = todoType === 'once' ? '✅' : '🔁'
           return (
             <div
               key={todo.id}
@@ -191,6 +223,9 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
                 onChange={() => toggleCheck(todo)}
                 style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--accent)', flexShrink: 0 }}
               />
+              <span style={{ fontSize: '0.7rem', flexShrink: 0, lineHeight: 1 }} title={todoType === 'once' ? t(lang, 'todoTypeOnce') : t(lang, 'todoTypeRepeat')}>
+                {typeIcon}
+              </span>
               <span style={{ flex: 1, fontSize: fs.title, color: 'var(--ink2)', textDecoration: done ? 'line-through' : 'none', wordBreak: 'break-word', lineHeight: 1.4 }}>
                 {todo.title}
               </span>

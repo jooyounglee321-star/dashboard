@@ -12,6 +12,18 @@ from schemas import TodoCheckToggle, TodoCreate, TodoOut
 router = APIRouter(prefix="/todos", tags=["todos"])
 
 
+def _make_out(row: Todo, done_dates: list[str]) -> TodoOut:
+    return TodoOut(
+        id=row.id,
+        title=row.title,
+        todo_type=row.todo_type or "repeat",
+        start_date=row.start_date,
+        due_date=row.due_date,
+        is_done_dates=done_dates,
+        created_at=row.created_at,
+    )
+
+
 @router.get("", response_model=list[TodoOut])
 def list_todos(
     date_str: str = Query(alias="date", default=None),
@@ -23,9 +35,7 @@ def list_todos(
         db.query(Todo)
         .filter(
             Todo.user_id == current_user.id,
-            # start_date 조건: null이거나 start_date <= target
             (Todo.start_date == None) | (Todo.start_date <= target),  # noqa: E711
-            # due_date 조건: null이거나 due_date >= target
             (Todo.due_date == None) | (Todo.due_date >= target),      # noqa: E711
         )
         .order_by(Todo.created_at.asc())
@@ -37,14 +47,11 @@ def list_todos(
             done_dates = json.loads(row.is_done_dates or "[]")
         except (ValueError, TypeError):
             done_dates = []
-        result.append(TodoOut(
-            id=row.id,
-            title=row.title,
-            start_date=row.start_date,
-            due_date=row.due_date,
-            is_done_dates=done_dates,
-            created_at=row.created_at,
-        ))
+        todo_type = row.todo_type or "repeat"
+        # once 타입: is_done_dates에 날짜가 하나라도 있으면 완료 → 목록 제외
+        if todo_type == "once" and done_dates:
+            continue
+        result.append(_make_out(row, done_dates))
     return result
 
 
@@ -57,6 +64,7 @@ def create_todo(
     row = Todo(
         user_id=current_user.id,
         title=body.title.strip(),
+        todo_type=body.todo_type or "repeat",
         start_date=body.start_date,
         due_date=body.due_date,
         is_done_dates="[]",
@@ -64,11 +72,7 @@ def create_todo(
     db.add(row)
     db.commit()
     db.refresh(row)
-    return TodoOut(
-        id=row.id, title=row.title,
-        start_date=row.start_date, due_date=row.due_date,
-        is_done_dates=[], created_at=row.created_at,
-    )
+    return _make_out(row, [])
 
 
 @router.put("/{todo_id}/check", response_model=TodoOut)
@@ -92,11 +96,7 @@ def toggle_check(
     row.is_done_dates = json.dumps(done_dates)
     db.commit()
     db.refresh(row)
-    return TodoOut(
-        id=row.id, title=row.title,
-        start_date=row.start_date, due_date=row.due_date,
-        is_done_dates=done_dates, created_at=row.created_at,
-    )
+    return _make_out(row, done_dates)
 
 
 @router.delete("/{todo_id}", status_code=204)
