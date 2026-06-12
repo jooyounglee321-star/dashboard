@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, memo } from 'react'
+import { useState, useEffect, useMemo, memo, useRef } from 'react'
 import { t } from './i18n'
 import { calcStock } from '../../utils/calcStock'
 import { fmtKRW, fmtUSD } from '../../utils/format'
