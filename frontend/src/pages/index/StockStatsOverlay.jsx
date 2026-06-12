@@ -375,14 +375,15 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       if (histGroupFilter) {
         try {
           const grps = JSON.parse(r.data || '[]')
+          if (!Array.isArray(grps)) return 0
           const grp = grps.find(g => g.name === histGroupFilter)
-          if (!grp) return null
+          if (!grp) return 0   // 해당 그룹 없으면 0 폴백 (차트 빈 상태 방지)
           return grp.currency === 'USD' ? grp.total * (r.usd_krw || 1) : grp.total
-        } catch { return null }
+        } catch { return 0 }   // 파싱 실패 시 0 폴백
       }
-      if (histCurrencyFilter === 'USD') return r.total_usd
-      if (histCurrencyFilter === 'KRW') return r.total_krw
-      return r.total_krw_equiv
+      if (histCurrencyFilter === 'USD') return r.total_usd ?? 0
+      if (histCurrencyFilter === 'KRW') return r.total_krw ?? 0
+      return r.total_krw_equiv ?? 0
     }
 
     const useUSD = histCurrencyFilter === 'USD' && !histGroupFilter
