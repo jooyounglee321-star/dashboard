@@ -662,6 +662,91 @@ def _migrate_todos_todo_type():
             logger.info("[MIGRATE] todos.todo_type — 이미 존재, 건너뜀")
 
 
+def _migrate_snapshot_data_to_group_id():
+    """daily_portfolio_snapshot.data를 배열 형식 → group_id 키 dict 형식으로 변환.
+
+    구형: [{"name": "KOR Stock", "currency": "KRW", "total": 123, "stocks": [...]}]
+    신형: {"groups": {"abc123": {"total": 123, "currency": "KRW"}},
+           "group_names": {"abc123": "KOR Stock"}}
+
+    portfolio_groups.data의 그룹 id를 키로 사용. 이름 매칭(대소문자 무시) → currency 매칭 순으로 시도.
+    매칭 실패 시 그룹명을 임시 키로 사용(차트에서는 표시되지 않지만 데이터 보존).
+    """
+    import json as _json
+    with SessionLocal() as db:
+        try:
+            rows = db.execute(
+                text("SELECT DISTINCT user_id FROM daily_portfolio_snapshot WHERE data IS NOT NULL AND user_id IS NOT NULL")
+            ).fetchall()
+        except Exception as e:
+            logger.warning("[MIGRATE_SNAPSHOT] 사용자 조회 실패: %s", e)
+            return
+
+        total_migrated = 0
+        for (user_id,) in rows:
+            # 사용자 그룹 로드 → 이름/currency 기반 id 매핑
+            name_to_id: dict[str, tuple[str, str]] = {}   # lower(name) → (id, name)
+            currency_to_id: dict[str, tuple[str, str]] = {}  # currency → (id, name) 첫 번째만
+            try:
+                pg = db.query(PortfolioGroups).filter(PortfolioGroups.user_id == user_id).first()
+                if pg and pg.data:
+                    for g in _json.loads(pg.data):
+                        gid = g.get("id", "")
+                        gname = g.get("name", "")
+                        gcur = g.get("currency", "USD")
+                        if gid and gname:
+                            name_to_id[gname.lower()] = (gid, gname)
+                        if gid and gcur and gcur not in currency_to_id:
+                            currency_to_id[gcur] = (gid, gname)
+            except Exception:
+                pass
+
+            snapshots = db.query(DailyPortfolioSnapshot).filter(
+                DailyPortfolioSnapshot.user_id == user_id,
+                DailyPortfolioSnapshot.data.isnot(None),
+            ).all()
+
+            migrated = 0
+            for snap in snapshots:
+                try:
+                    parsed = _json.loads(snap.data)
+                    if isinstance(parsed, dict) and "groups" in parsed:
+                        continue  # 이미 변환됨
+                    if not isinstance(parsed, list):
+                        continue
+
+                    new_groups: dict = {}
+                    new_group_names: dict = {}
+                    for g in parsed:
+                        gname = g.get("name", "")
+                        gcur = g.get("currency", "USD")
+                        gtotal = g.get("total", 0)
+
+                        match = name_to_id.get(gname.lower()) or currency_to_id.get(gcur)
+                        if match:
+                            gid, actual_name = match
+                        else:
+                            gid, actual_name = gname, gname  # 매칭 실패 시 이름을 키로 보존
+
+                        new_groups[gid] = {"total": gtotal, "currency": gcur}
+                        new_group_names[gid] = actual_name
+
+                    snap.data = _json.dumps({"groups": new_groups, "group_names": new_group_names}, ensure_ascii=False)
+                    migrated += 1
+                except Exception as e:
+                    logger.warning("[MIGRATE_SNAPSHOT] user=%d snap=%s 실패: %s", user_id, snap.snapshot_date, e)
+
+            if migrated:
+                db.commit()
+                total_migrated += migrated
+                logger.info("[MIGRATE_SNAPSHOT] user=%d %d개 스냅샷 변환 완료", user_id, migrated)
+
+        if total_migrated:
+            logger.info("[MIGRATE_SNAPSHOT] 전체 %d개 스냅샷 변환 완료", total_migrated)
+        else:
+            logger.info("[MIGRATE_SNAPSHOT] 변환 대상 없음 (이미 최신 형식)")
+
+
 _DEFAULT_INCOME_CATEGORIES = [
     {
         'code': 'REGULAR', 'name_en': 'Regular Income', 'name_ko': '주수입 (정기)',
@@ -805,6 +890,7 @@ async def lifespan(app: FastAPI):
     _migrate_add_category_code_fields()
     _migrate_todos_start_date()
     _migrate_todos_todo_type()
+    _migrate_snapshot_data_to_group_id()
     _seed_admin_email()
     _seed_default_permissions()
     _seed_exchange_rates()

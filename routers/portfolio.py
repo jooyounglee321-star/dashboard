@@ -216,21 +216,11 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
     # 그룹명 → 카테고리 역방향 맵 (기존 _CAT_META 그룹명 하위호환용)
     _name_to_cat = {v[0]: k for k, v in _CAT_META.items()}
 
-    # 카테고리 → 사용자 실제 그룹명 맵 (backfill data JSON에 사용자 그룹명 저장용)
-    # 같은 카테고리에 여러 그룹이 있으면 첫 번째 그룹명을 사용
-    cat_to_user_name: dict[str, str] = {}
-    for grp in pg_data:
-        _gn = grp.get("name", "")
-        _cur = grp.get("currency", "USD")
-        _cat = _name_to_cat.get(_gn, "us" if _cur == "USD" else "kor-stock")
-        if _cat not in cat_to_user_name:
-            cat_to_user_name[_cat] = _gn
-
-    # ticker → {purchases, sells, category, currency} 매핑
-    # 카테고리 판단 기준: currency 필드 우선 ("USD" → "us", "KRW" → "kor-stock")
-    # 단, 기존 _CAT_META 그룹명("Robinhood", "KOR Stock" 등)이 있으면 그걸 우선 사용 (하위호환)
+    # ticker → {group_id, group_name, purchases, sells, category, currency} 매핑
+    # group_id: portfolio_groups의 g.id (genId() 생성 문자열), 없으면 그룹명을 대체 키로 사용
     ticker_history: dict[str, dict] = {}
     for grp in pg_data:
+        grp_id   = grp.get("id") or ""
         grp_name = grp.get("name", "")
         currency = grp.get("currency", "USD")
         cat_by_currency = "us" if currency == "USD" else "kor-stock"
@@ -241,10 +231,12 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
             t = st.get("ticker", "")
             if t:
                 ticker_history[t] = {
-                    "purchases": st.get("purchases") or [],
-                    "sells":     st.get("sells")     or [],
-                    "category":  cat,
-                    "currency":  currency,
+                    "group_id":   grp_id or grp_name,  # id 없으면 이름을 대체 키로 사용
+                    "group_name": grp_name,
+                    "purchases":  st.get("purchases") or [],
+                    "sells":      st.get("sells")     or [],
+                    "category":   cat,
+                    "currency":   currency,
                 }
 
     if not ticker_history:
@@ -277,8 +269,10 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
             total_realized_pl: float = 0.0  # 이 날짜의 전체 실현 손익 누계
 
             for ticker, hist in ticker_history.items():
-                category = hist["category"]
-                currency = hist["currency"]
+                category   = hist["category"]
+                currency   = hist["currency"]
+                group_id   = hist["group_id"]
+                group_name = hist["group_name"]
 
                 # purchases: date 없으면 항상 포함(하위호환), date 있으면 target_date 이하만
                 valid_pp = [
@@ -324,34 +318,19 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
                 if price is None:
                     continue
 
-                meta = _CAT_META.get(category)
-                if not meta:
+                if category not in _CAT_META:
                     continue
-                # 사용자 실제 그룹명 우선 사용 (없으면 _CAT_META 하드코딩명 폴백)
-                grp_name = cat_to_user_name.get(category, meta[0])
 
                 eval_amt = round(qty * price, 2)
-                eval_pl  = round((price - avg) * qty, 2) if avg else None
 
-                if category not in groups:
-                    groups[category] = {
-                        "name":     grp_name,
+                if group_id not in groups:
+                    groups[group_id] = {
+                        "name":     group_name,
                         "currency": currency,
                         "total":    0.0,
-                        "stocks":   [],
                     }
-                groups[category]["stocks"].append({
-                    "ticker":        ticker,
-                    "name":          s_row.name if s_row else ticker,
-                    "current_price": price,
-                    "hold_qty":      qty,
-                    "eval_amount":   eval_amt,
-                    "avg_buy_price": avg,
-                    "eval_pl":       eval_pl,
-                    "realized_pl":   round(ticker_real_pl, 2),
-                })
-                groups[category]["total"] = round(
-                    groups[category]["total"] + eval_amt, 2
+                groups[group_id]["total"] = round(
+                    groups[group_id]["total"] + eval_amt, 2
                 )
 
             # 보유 종목 없어도 realized_pl이 있으면 빈 스냅샷 저장
@@ -359,16 +338,19 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
             if not groups and total_realized_pl == 0.0:
                 continue
 
-            groups_list = list(groups.values())
-            total_usd = sum(g["total"] for g in groups_list if g["currency"] == "USD")
-            total_krw = sum(g["total"] for g in groups_list if g["currency"] == "KRW")
+            groups_vals = list(groups.values())
+            total_usd = sum(g["total"] for g in groups_vals if g["currency"] == "USD")
+            total_krw = sum(g["total"] for g in groups_vals if g["currency"] == "KRW")
             if usd_krw:
                 total_krw_equiv = round(total_usd * usd_krw + total_krw, 2)
             elif total_usd == 0:
                 total_krw_equiv = round(total_krw, 2)
             else:
                 total_krw_equiv = None
-            data_json = json.dumps(groups_list, ensure_ascii=False)
+            data_json = json.dumps({
+                "groups":      {gid: {"total": g["total"], "currency": g["currency"]} for gid, g in groups.items()},
+                "group_names": {gid: g["name"] for gid, g in groups.items()},
+            }, ensure_ascii=False)
 
             # 재계산 후에도 0이면 저장하지 않음 (yfinance 데이터 미반영 상태 방지)
             if not total_krw_equiv:
@@ -455,16 +437,53 @@ def save_groups(
     """현재 사용자의 포트폴리오 그룹 전체 저장 (user_id 단일 행 UPSERT).
 
     body: { "data": [...groups array...] }
+    그룹 이름 변경 시 daily_portfolio_snapshot.data.group_names도 일괄 동기화.
     """
     groups = body.get("data", [])
-    data_json = json.dumps(groups, ensure_ascii=False)
 
+    # 이름 변경된 그룹 감지
+    renamed: dict[str, str] = {}  # group_id → new_name
     row = db.query(PortfolioGroups).filter(PortfolioGroups.user_id == current_user.id).first()
+    if row and row.data:
+        try:
+            old_by_id = {g.get("id", ""): g.get("name", "") for g in json.loads(row.data)}
+            for g in groups:
+                gid = g.get("id", "")
+                new_name = g.get("name", "")
+                old_name = old_by_id.get(gid, "")
+                if gid and old_name and new_name != old_name:
+                    renamed[gid] = new_name
+        except Exception:
+            pass
+
+    data_json = json.dumps(groups, ensure_ascii=False)
     if row:
         row.data = data_json
     else:
         row = PortfolioGroups(user_id=current_user.id, data=data_json)
         db.add(row)
+
+    # 이름 변경된 그룹의 group_names를 스냅샷에도 반영
+    if renamed:
+        snapshots = db.query(DailyPortfolioSnapshot).filter(
+            DailyPortfolioSnapshot.user_id == current_user.id,
+            DailyPortfolioSnapshot.data.isnot(None),
+        ).all()
+        for snap in snapshots:
+            try:
+                parsed = json.loads(snap.data)
+                if not isinstance(parsed, dict) or "group_names" not in parsed:
+                    continue
+                changed = False
+                for gid, new_name in renamed.items():
+                    if parsed["group_names"].get(gid) != new_name:
+                        parsed["group_names"][gid] = new_name
+                        changed = True
+                if changed:
+                    snap.data = json.dumps(parsed, ensure_ascii=False)
+            except Exception:
+                pass
+        logger.info("[PORTFOLIO GROUPS] 이름 변경 스냅샷 동기화 (user=%d, %d개 그룹)", current_user.id, len(renamed))
 
     db.commit()
     logger.info("[PORTFOLIO GROUPS] 저장 완료 (user=%d, 그룹 수: %d)", current_user.id, len(groups))
@@ -479,10 +498,10 @@ def save_snapshot(
     current_user: User = Depends(get_current_user),
 ):
     """프런트엔드가 전송하는 데일리 포트폴리오 스냅샷을 저장(user_id+날짜별 UPSERT)."""
-    data_json = json.dumps(
-        [g.model_dump() for g in body.groups],
-        ensure_ascii=False,
-    )
+    data_json = json.dumps({
+        "groups":      {(g.id or g.name): {"total": g.total, "currency": g.currency} for g in body.groups},
+        "group_names": {(g.id or g.name): g.name for g in body.groups},
+    }, ensure_ascii=False)
     row = db.query(DailyPortfolioSnapshot).filter(
         DailyPortfolioSnapshot.user_id == current_user.id,
         DailyPortfolioSnapshot.snapshot_date == body.snapshot_date,
