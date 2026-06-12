@@ -7,6 +7,9 @@ Chart.register(...registerables)
 
 const CHART_COLORS = ['#2563eb', '#16a34a', '#d97706', '#9333ea', '#dc2626', '#0891b2', '#65a30d', '#c026d3']
 
+// "undefined" 문자열·JS undefined·null·"" 모두 처리 — 첫 번째 유효한 값 반환
+const cleanStr = (...vals) => vals.find(v => v && typeof v === 'string' && v !== 'undefined' && v.trim() !== '') ?? '알 수 없음'
+
 // 차트 y축/tooltip용 축약 포맷터
 const formatKRW = (val) => {
   const abs = Math.abs(val)
@@ -45,7 +48,7 @@ function computeStockStats(stockData, userJoinDate) {
       const avg = vqt > 0 ? ws / vqt : 0
       return a + (livePrice ?? avg) * hq
     }, 0)
-    return { name: g.name || g.id || '알 수 없음', currency: g.currency, total: tot, isKRW }
+    return { name: cleanStr(g.name, g.id), currency: g.currency, total: tot, isKRW }
   })
 
   let grandUSD = 0, grandKRW = 0
@@ -69,9 +72,9 @@ function computeStockStats(stockData, userJoinDate) {
       const avg = vqt > 0 ? ws / vqt : 0
       const cur = priceMap[s.ticker]?.current_price ?? avg
       const evalAmt = cur * hq
-      if (hq > 0) stockValues.push({ ticker: s.ticker, name: s.name || s.ticker || '알 수 없음', evalAmt, groupName: g.name, currency: g.currency, isKRW })
+      if (hq > 0) stockValues.push({ ticker: s.ticker, name: cleanStr(s.name, s.ticker), evalAmt, groupName: cleanStr(g.name, g.id), currency: g.currency, isKRW })
       const evalPL = avg > 0 ? (cur - avg) * hq : null
-      if (evalPL != null) stockEvals.push({ label: s.ticker, name: s.name || s.ticker, evalPL, sym, isKRW })
+      if (evalPL != null) stockEvals.push({ label: s.ticker, name: cleanStr(s.name, s.ticker), evalPL, sym, isKRW })
     })
   })
 
@@ -125,7 +128,7 @@ function computeStockStats(stockData, userJoinDate) {
     if (!pts.length) return
 
     lineDatasets.push({
-      label: g.name,
+      label: cleanStr(g.name, g.id),
       data: pts,
       borderColor: CHART_COLORS[gi % CHART_COLORS.length],
       backgroundColor: 'transparent',
@@ -136,7 +139,7 @@ function computeStockStats(stockData, userJoinDate) {
 
   // 그룹명 → ticker[] 맵
   const groupTickers = {}
-  groups.forEach(g => { groupTickers[g.name] = g.stocks.map(s => s.ticker) })
+  groups.forEach(g => { groupTickers[cleanStr(g.name, g.id)] = g.stocks.map(s => s.ticker) })
 
   return { grpTotals, grandUSD, grandKRW, totalKRW, stockValues, stockEvals, lineDatasets, fxRate, groupTickers }
 }
@@ -233,13 +236,13 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       if (overviewGroup) {
         // 선택 그룹 내 종목별 비중
         const grpStocks = stockValues.filter(s => s.groupName?.toLowerCase() === overviewGroup.toLowerCase())
-        const vals = grpStocks.map(s => ({ name: s.name || s.ticker || '알 수 없음', val: Math.max(0, toDisplay(s.evalAmt, s.isKRW)) }))
+        const vals = grpStocks.map(s => ({ name: cleanStr(s.name, s.ticker), val: Math.max(0, toDisplay(s.evalAmt, s.isKRW)) }))
         const total = vals.reduce((a, x) => a + x.val, 0) || 1
         pieLabels = vals.map(x => `${x.name} (${(x.val / total * 100).toFixed(1)}%)`)
         pieData = vals.map(x => parseFloat(x.val.toFixed(2)))
       } else {
         // 그룹별 비중
-        const vals = grpTotals.map(g => ({ name: g.name || g.id || '알 수 없음', val: Math.max(0, toDisplay(g.total, g.isKRW)) }))
+        const vals = grpTotals.map(g => ({ name: cleanStr(g.name), val: Math.max(0, toDisplay(g.total, g.isKRW)) }))
         const total = vals.reduce((a, x) => a + x.val, 0) || 1
         pieLabels = vals.map(x => `${x.name} (${(x.val / total * 100).toFixed(1)}%)`)
         pieData = vals.map(x => parseFloat(x.val.toFixed(2)))
@@ -462,7 +465,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   if (!isOpen) return null
 
   const { grpTotals, grandUSD, grandKRW, totalKRW, stockEvals, lineDatasets, fxRate, groupTickers, stockValues } = computed || {}
-  const groupNames = stockData?.groups?.map(g => g.name || g.id || '알 수 없음') ?? []
+  const groupNames = stockData?.groups?.map(g => cleanStr(g.name, g.id)) ?? []
 
   // ── 필터 적용 후 유효 데이터 (JSX 조건부 렌더링 + useEffect 공유) ──
   const now = new Date()
