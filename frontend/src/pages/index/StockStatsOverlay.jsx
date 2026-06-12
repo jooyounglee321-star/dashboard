@@ -47,7 +47,7 @@ function computeStockStats(stockData, userJoinDate) {
       const avg = vqt > 0 ? ws / vqt : 0
       return a + (livePrice ?? avg) * hq
     }, 0)
-    return { name: g.name, currency: g.currency, total: tot, isKRW }
+    return { name: g.name || g.id || '알 수 없음', currency: g.currency, total: tot, isKRW }
   })
 
   let grandUSD = 0, grandKRW = 0
@@ -71,7 +71,7 @@ function computeStockStats(stockData, userJoinDate) {
       const avg = vqt > 0 ? ws / vqt : 0
       const cur = priceMap[s.ticker]?.current_price ?? avg
       const evalAmt = cur * hq
-      if (hq > 0) stockValues.push({ ticker: s.ticker, name: s.name || s.ticker, evalAmt, groupName: g.name, currency: g.currency, isKRW })
+      if (hq > 0) stockValues.push({ ticker: s.ticker, name: s.name || s.ticker || '알 수 없음', evalAmt, groupName: g.name, currency: g.currency, isKRW })
       const evalPL = avg > 0 ? (cur - avg) * hq : null
       if (evalPL != null) stockEvals.push({ label: s.ticker, name: s.name || s.ticker, evalPL, sym, isKRW })
     })
