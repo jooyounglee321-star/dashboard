@@ -2,6 +2,7 @@ import json
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import and_, not_, or_
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -37,6 +38,14 @@ def list_todos(
             Todo.user_id == current_user.id,
             (Todo.start_date == None) | (Todo.start_date <= target),  # noqa: E711
             (Todo.due_date == None) | (Todo.due_date >= target),      # noqa: E711
+            # once 타입: DB 레벨에서 완료된 항목 제외 (날짜 이동 시 재표시 방지)
+            not_(
+                and_(
+                    Todo.todo_type == "once",
+                    Todo.is_done_dates != None,      # noqa: E711
+                    Todo.is_done_dates != "[]",
+                )
+            ),
         )
         .order_by(Todo.created_at.asc())
         .all()

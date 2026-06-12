@@ -131,7 +131,7 @@ def get_stock_summary(
 
 # ── GET /api/stocks/price/{ticker} ──────────────────────────────────────────
 @router.get("/price/{ticker}", response_model=StockPrice)
-async def get_stock_price(ticker: str, category: str | None = None):
+async def get_stock_price(ticker: str, category: str | None = None, _: User = Depends(get_current_user)):
     """Yahoo Finance 실시간 시세 (60초 캐시).
     category 파라미터로 kor-stock / kor-etf 전달 시 .KS/.KQ 접미사를 자동 처리합니다."""
     try:
@@ -140,13 +140,13 @@ async def get_stock_price(ticker: str, category: str | None = None):
             _executor, _fetch_price, ticker.upper(), category
         )
         return result
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=404, detail="시세를 가져올 수 없습니다. 티커를 확인해 주세요.")
 
 
 # ── GET /api/stocks/exchange-rate ───────────────────────────────────────────
 @router.get("/exchange-rate")
-async def get_exchange_rate():
+async def get_exchange_rate(_: User = Depends(get_current_user)):
     """USD/KRW 환율 (Yahoo Finance KRW=X, 60초 캐시). 1 USD = X KRW."""
     try:
         loop   = asyncio.get_running_loop()
@@ -156,8 +156,8 @@ async def get_exchange_rate():
             "usd_krw":        result["current_price"],
             "change_percent": result["change_percent"],
         }
-    except Exception as e:
-        raise HTTPException(status_code=503, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=503, detail="환율 정보를 가져올 수 없습니다.")
 
 
 # ── GET /api/stocks ─────────────────────────────────────────────────────────
@@ -242,7 +242,7 @@ _SEARCH_HEADERS = {
 
 
 @router.get("/search")
-def search_stocks(q: str = Query(..., min_length=1)):
+def search_stocks(q: str = Query(..., min_length=1), _: User = Depends(get_current_user)):
     """Yahoo Finance 종목 검색 (티커 또는 회사명으로 조회).
     Returns: [{ticker, name, exchange, type}]
     """
@@ -278,6 +278,7 @@ async def get_stock_history(
     ticker: str,
     date: str = Query(..., description="YYYY-MM-DD 형식"),
     category: str | None = None,
+    _: User = Depends(get_current_user),
 ):
     """특정 날짜의 종가 조회 (매입 내역 자동완성용).
     주말·공휴일이면 이후 첫 거래일 종가를 반환합니다."""
@@ -314,7 +315,7 @@ async def get_stock_history(
         raise
     except Exception as e:
         logger.warning("[STOCK HISTORY] 조회 실패: ticker=%s, date=%s, err=%s", ticker, date, e)
-        raise HTTPException(status_code=503, detail=str(e))
+        raise HTTPException(status_code=503, detail="히스토리 데이터를 가져올 수 없습니다.")
 
 
 def _fetch_google_rss(query: str, lang: str, count: int = 5) -> list[dict]:
@@ -338,6 +339,7 @@ async def get_stock_news(
     source: str = Query("google", description="google 또는 naver"),
     lang: str = Query("ko", description="ko 또는 en"),
     count: int = Query(5, ge=1, le=10, description="반환할 뉴스 수"),
+    _: User = Depends(get_current_user),
 ):
     """종목 관련 최신 뉴스를 반환합니다 (Google RSS, 최대 10건)."""
     def _fetch():
@@ -354,4 +356,4 @@ async def get_stock_news(
         raise
     except Exception as e:
         logger.warning("[STOCK NEWS] 조회 실패: query=%s, err=%s", query, e)
-        raise HTTPException(status_code=503, detail=str(e))
+        raise HTTPException(status_code=503, detail="뉴스를 가져올 수 없습니다.")

@@ -10,7 +10,9 @@
     "error": "Error",
     "success": "Success",
     "processing": "Processing…",
-    "deleteSuccess": "Deleted successfully"
+    "deleteSuccess": "Deleted successfully",
+    "days": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    "months": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
   },
   "auth": {
     "siteTitle": "My Day Dashboard",
@@ -49,6 +51,8 @@
     "errRequiredLogin": "Please enter both email and password.",
     "errRequired": "Please fill in all fields.",
     "errPwLength": "Password must be at least 8 characters.",
+    "errPwDigit": "Password must contain at least one number.",
+    "errPwSpecial": "Password must contain at least one special character.",
     "errPwMatch": "Passwords do not match.",
     "errLogin": "Login failed.",
     "errRegister": "Registration failed.",

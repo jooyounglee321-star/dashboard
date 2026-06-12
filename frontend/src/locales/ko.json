@@ -10,7 +10,9 @@
     "error": "오류",
     "success": "성공",
     "processing": "처리 중…",
-    "deleteSuccess": "삭제되었습니다"
+    "deleteSuccess": "삭제되었습니다",
+    "days": ["일", "월", "화", "수", "목", "금", "토"],
+    "months": ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"]
   },
   "auth": {
     "siteTitle": "나의 하루 대시보드",
@@ -49,6 +51,8 @@
     "errRequiredLogin": "이메일과 비밀번호를 모두 입력해주세요.",
     "errRequired": "모든 항목을 입력해주세요.",
     "errPwLength": "비밀번호는 8자 이상이어야 합니다.",
+    "errPwDigit": "비밀번호에 숫자를 포함해야 합니다.",
+    "errPwSpecial": "비밀번호에 특수문자를 포함해야 합니다.",
     "errPwMatch": "비밀번호가 일치하지 않습니다.",
     "errLogin": "로그인에 실패했습니다.",
     "errRegister": "가입에 실패했습니다.",

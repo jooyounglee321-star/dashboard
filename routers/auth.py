@@ -81,6 +81,16 @@ def register(request: Request, body: UserRegister, db: Session = Depends(get_db)
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="비밀번호는 8자 이상이어야 합니다.",
         )
+    if not re.search(r'\d', body.password):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="비밀번호에 숫자를 포함해야 합니다.",
+        )
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', body.password):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="비밀번호에 특수문자를 포함해야 합니다.",
+        )
     existing = db.query(User).filter(User.email == body.email).first()
     if existing:
         raise HTTPException(
@@ -198,6 +208,16 @@ def update_me(
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="새 비밀번호는 8자 이상이어야 합니다.",
+            )
+        if not re.search(r'\d', body.new_password):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="비밀번호에 숫자를 포함해야 합니다.",
+            )
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', body.new_password):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="비밀번호에 특수문자를 포함해야 합니다.",
             )
         if body.current_password is None:
             raise HTTPException(
