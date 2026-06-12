@@ -13,16 +13,19 @@ function fmtUSD(v) { return Number(v).toLocaleString('en-US', { minimumFractionD
 const formatKRW = (val) => {
   const abs = Math.abs(val)
   const sign = val < 0 ? '-' : ''
-  if (abs >= 100000000) return sign + (abs / 100000000).toFixed(1) + '억'
-  if (abs >= 10000) return sign + (abs / 10000).toFixed(0) + '만'
-  return sign + Math.round(abs).toLocaleString()
+  if (abs >= 100000000) {
+    const uk = Math.round(abs / 10000)
+    return sign + Math.floor(uk / 10000).toLocaleString('ko-KR') + '억 ' + (uk % 10000).toLocaleString('ko-KR') + '만'
+  }
+  if (abs >= 10000) return sign + Math.round(abs / 10000).toLocaleString('ko-KR') + '만'
+  return sign + Math.round(abs).toLocaleString('ko-KR')
 }
 const formatUSD = (val) => {
   const abs = Math.abs(val)
   const sign = val < 0 ? '-' : ''
-  if (abs >= 1000000) return sign + '$' + (abs / 1000000).toFixed(1) + 'M'
-  if (abs >= 1000) return sign + '$' + (abs / 1000).toFixed(1) + 'K'
-  return sign + '$' + abs.toFixed(0)
+  if (abs >= 1000000) return sign + '$' + (abs / 1000000).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'M'
+  if (abs >= 1000) return sign + '$' + Math.round(abs).toLocaleString('en-US')
+  return sign + '$' + abs.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
 const formatAuto = (val, currency) => currency === 'USD' ? formatUSD(val) : formatKRW(val)
 
@@ -243,7 +246,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
           labels: pieLabels,
           datasets: [{ data: pieData, backgroundColor: CHART_COLORS.slice(0, pieData.length), borderWidth: 2, borderColor: '#fffef9' }],
         },
-        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 12 } } } },
+        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 12, generateLabels: (chart) => { const def = Chart.defaults.plugins.legend.labels.generateLabels(chart); def.forEach(l => { if (l.text && l.text.length > 20) l.text = l.text.slice(0, 20) + '...' }); return def } } } } },
       })
       chartsRef.current.push(inst)
     }
@@ -276,7 +279,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               },
             },
             plugins: {
-              legend: { position: 'bottom' },
+              legend: { position: 'bottom', labels: { generateLabels: (chart) => { const def = Chart.defaults.plugins.legend.labels.generateLabels(chart); def.forEach(l => { if (l.text && l.text.length > 20) l.text = l.text.slice(0, 20) + '...' }); return def } } },
               tooltip: {
                 callbacks: {
                   label: ctx => {
