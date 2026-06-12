@@ -2,15 +2,12 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Toast, { useToast } from '../components/Toast'
 import { t, T } from './index/i18n'
-import StockSettingsModal from './index/StockSettingsModal'
-
 import { authH } from '../utils/api'
 
 /* ── 유틸 ── */
 const sv = (k, v) => localStorage.setItem(k, JSON.stringify(v))
 const ld = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d } catch { return d } }
-const genId = () => Math.random().toString(36).slice(2, 10)
-const TOTAL_MODE_KEY = 'stock_total_mode'
+
 
 const ALL_TZ = [
   { labelKey: 'tzSeoul', tz: 'Asia/Seoul' },
@@ -42,8 +39,6 @@ export default function AdminPage() {
   const navigate = useNavigate()
   const { toast, showToast } = useToast()
 
-
-  const [totalMode, setTotalMode] = useState(() => { try { return localStorage.getItem(TOTAL_MODE_KEY) || 'KRW' } catch { return 'KRW' } })
 
   const [ytAccount, setYtAccount] = useState(() => ld('yt_account', { email: '', name: '' }))
   const [ytAccName, setYtAccName] = useState('')
@@ -360,25 +355,6 @@ export default function AdminPage() {
                 </div>
               </div>
             ))}
-          </div>
-        </div>
-
-        {/* ③ 보유 주식 관리 */}
-        <div style={secStyle}>
-          <div style={secHdStyle}>
-            <span style={secTitle}>📈 {t(lang, 'admin.stockMgmt')}</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <label style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>{t(lang, 'admin.totalDisplay')}</label>
-              <select value={totalMode} onChange={e => { setTotalMode(e.target.value); sv(TOTAL_MODE_KEY, e.target.value); showToast('✓ 합계 표시 방식이 저장되었습니다', 'ok') }}
-                style={{ fontSize: '0.78rem', padding: '0.22rem 0.5rem', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit' }}>
-                <option value="KRW">{t(lang, 'admin.krwOnly')}</option>
-                <option value="USD">{t(lang, 'admin.usdOnly')}</option>
-                <option value="BOTH">{t(lang, 'admin.bothFull')}</option>
-              </select>
-            </div>
-          </div>
-          <div style={secBdStyle}>
-            <StockSettingsModal embedded lang={lang} />
           </div>
         </div>
 
