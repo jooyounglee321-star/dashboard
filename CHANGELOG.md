@@ -4,6 +4,15 @@
 
 ---
 
+## [2026-06-12] — fix: SEC-10 확인, BUG-07 cat_map N+1 수정, DUP-04 income 집계 패턴 통일
+
+### 변경 내용
+- **SEC-10** (`main.py`): 확인 결과 모든 f-string SQL이 이미 `text()` 래핑 완료 — 수정 불필요
+- **BUG-07** (`routers/expense.py`): `create_expense`, `update_expense` 반환 시 `_expense_dict` 호출에 `cat_map=_build_cat_map([e], db)` 전달 — 개별 `db.get()` N+1 제거
+- **DUP-04** (`routers/income.py`): `income_monthly_summary` SQL GROUP BY → Python 배치 집계 패턴으로 리팩터링 (`expense.py`의 `_build_cat_map` 패턴과 통일), `lang` 파라미터 추가
+
+---
+
 ## [2026-06-12] — fix/security: SEC-07·12·13, BUG-03, DUP-06 수정
 
 ### 변경 내용

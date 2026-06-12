@@ -202,42 +202,51 @@ def create_income(
 def income_monthly_summary(
     year:  int,
     month: int,
+    lang:  str = Query("ko", pattern="^(ko|en)$"),
     current_user: User = Depends(get_current_user),
     db: Session        = Depends(get_db),
 ):
-    """월별 수입 합계 (USD 환산 기준)."""
-    from sqlalchemy import extract, func as sqlfunc
+    """월별 수입 합계 (USD 환산 기준). expense.py 와 동일한 Python 집계 패턴 사용."""
+    from sqlalchemy import extract
     rows = (
-        db.query(
-            ExpenseCategory.code.label("category_code"),
-            ExpenseCategory.name_ko.label("name_ko"),
-            ExpenseCategory.name_en.label("name_en"),
-            sqlfunc.sum(Expense.converted_amount).label("total_usd"),
-        )
-        .join(ExpenseCategory, Expense.category_id == ExpenseCategory.id, isouter=True)
+        db.query(Expense)
         .filter(
             Expense.user_id == current_user.id,
             Expense.type    == "income",
             extract("year",  Expense.date) == year,
             extract("month", Expense.date) == month,
         )
-        .group_by(ExpenseCategory.id)
         .all()
     )
-    total = sum(float(r.total_usd or 0) for r in rows)
+
+    # 카테고리 배치 조회 (expense.py의 _build_cat_map 패턴과 동일)
+    ids = {e.category_id for e in rows if e.category_id}
+    cat_map = (
+        {c.id: c for c in db.query(ExpenseCategory).filter(ExpenseCategory.id.in_(ids)).all()}
+        if ids else {}
+    )
+
+    totals: dict = {}
+    total = 0.0
+    for e in rows:
+        usd = float(e.converted_amount) if e.converted_amount is not None else float(e.amount)
+        total += usd
+        cat = cat_map.get(e.category_id) if e.category_id else None
+        key = e.category_id
+        if key not in totals:
+            totals[key] = {
+                "category_code": cat.code    if cat else None,
+                "name_ko":       cat.name_ko if cat else None,
+                "name_en":       cat.name_en if cat else None,
+                "total_usd":     0.0,
+            }
+        totals[key]["total_usd"] = round(totals[key]["total_usd"] + usd, 2)
+
     return {
         "year":  year,
         "month": month,
         "total_usd": round(total, 2),
-        "by_category": [
-            {
-                "category_code": r.category_code,
-                "name_ko":       r.name_ko,
-                "name_en":       r.name_en,
-                "total_usd":     round(float(r.total_usd or 0), 2),
-            }
-            for r in rows
-        ],
+        "by_category": sorted(totals.values(), key=lambda x: x["total_usd"], reverse=True),
     }
 
 
