@@ -140,7 +140,10 @@ function DayDetailModal({ date, dateMap, analysisMap, lang, onClose }) {
 // ── 달력 뷰 ─────────────────────────────────────────────────────────────────
 function CalendarView({ year, month, dateMap, analysisMap, lang, onDayClick }) {
   const mealLabel = key => (lang === 'en' ? MEAL_LABEL_EN : MEAL_LABEL_KO)[key] ?? key
-  const today = new Date().toISOString().slice(0, 10)
+  // KST 기준 오늘 날짜 (UTC+9 보정)
+  const _now = new Date()
+  const koreaToday = new Date(_now.getTime() + 9 * 60 * 60 * 1000)
+  const today = koreaToday.toISOString().slice(0, 10)
   const weekdays = lang === 'ko' ? WEEKDAY_KO : WEEKDAY_EN
 
   const firstDay  = new Date(year, month - 1, 1).getDay()   // 0=일
@@ -157,22 +160,25 @@ function CalendarView({ year, month, dateMap, analysisMap, lang, onDayClick }) {
     return `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`
   }
 
-  // 날짜 칸의 식단 미리보기: 끼니별 최대 2개 텍스트
+  // 날짜 칸의 식단 미리보기: 아침/점심/저녁 최대 3줄, 초과 시 "+N개 더"
   function getPreview(d) {
     const dateStr = cellDate(d)
     const items = dateMap[dateStr]
-    if (!items?.length) return []
+    if (!items?.length) return { lines: [], extra: 0 }
     const lines = []
+    let extra = 0
     for (const meal of MORD) {
       const group = items.filter(i => i.meal_type === meal)
       if (!group.length) continue
-      const label = mealLabel(meal)
       const content = group.map(i => i.content).join(', ')
-      const trimmed = content.length > 12 ? content.slice(0, 12) + '…' : content
-      lines.push(`${MEAL_EMOJI[meal]} ${trimmed}`)
-      if (lines.length >= 2) break
+      const trimmed = content.length > 11 ? content.slice(0, 11) + '…' : content
+      if (lines.length < 3) {
+        lines.push(`${MEAL_EMOJI[meal]} ${trimmed}`)
+      } else {
+        extra++
+      }
     }
-    return lines
+    return { lines, extra }
   }
 
   return (
@@ -195,10 +201,12 @@ function CalendarView({ year, month, dateMap, analysisMap, lang, onDayClick }) {
           if (d === null) {
             return (
               <div key={`empty-${idx}`} style={{
-                height: 90, borderRight: '1px solid var(--border, #e5e7eb)',
-                borderBottom: '1px solid var(--border, #e5e7eb)',
-                background: 'var(--bg, #f8fafc)',
-                ...(idx % 7 === 0 ? { borderLeft: '1px solid var(--border, #e5e7eb)' } : {}),
+                height: 110,
+                borderRight: '0.5px solid var(--color-border-tertiary, #e5e7eb)',
+                borderBottom: '0.5px solid var(--color-border-tertiary, #e5e7eb)',
+                background: 'var(--color-background-primary, #fff)',
+                opacity: 0.4,
+                ...(idx % 7 === 0 ? { borderLeft: '0.5px solid var(--color-border-tertiary, #e5e7eb)' } : {}),
               }} />
             )
           }
@@ -210,20 +218,20 @@ function CalendarView({ year, month, dateMap, analysisMap, lang, onDayClick }) {
           const dow      = (firstDay + d - 1) % 7  // 0=일,6=토
           const isSun    = dow === 0
           const isSat    = dow === 6
-          const preview  = getPreview(d)
+          const { lines: preview, extra } = getPreview(d)
 
           return (
             <div
               key={d}
               onClick={() => hasData && onDayClick(dateStr)}
               style={{
-                height: 90,
-                borderRight: '1px solid var(--border, #e5e7eb)',
-                borderBottom: '1px solid var(--border, #e5e7eb)',
-                ...(idx % 7 === 0 ? { borderLeft: '1px solid var(--border, #e5e7eb)' } : {}),
+                height: 110,
+                borderRight: '0.5px solid var(--color-border-tertiary, #e5e7eb)',
+                borderBottom: '0.5px solid var(--color-border-tertiary, #e5e7eb)',
+                ...(idx % 7 === 0 ? { borderLeft: '0.5px solid var(--color-border-tertiary, #e5e7eb)' } : {}),
                 boxSizing: 'border-box',
                 padding: '0.28rem 0.3rem 0.2rem',
-                background: hasData ? 'var(--card-bg, #fff)' : 'var(--bg, #f8fafc)',
+                background: 'var(--color-background-primary, #fff)',
                 cursor: hasData ? 'pointer' : 'default',
                 outline: isToday ? '2px solid #3b82f6' : 'none',
                 outlineOffset: '-2px',
@@ -233,7 +241,7 @@ function CalendarView({ year, month, dateMap, analysisMap, lang, onDayClick }) {
                 overflow: 'hidden',
               }}
               onMouseEnter={e => { if (hasData) e.currentTarget.style.background = 'var(--bg2, #f0f4ff)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = hasData ? 'var(--card-bg, #fff)' : 'var(--bg, #f8fafc)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'var(--color-background-primary, #fff)' }}
             >
               {/* 날짜 숫자 + 분석 뱃지 */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.18rem' }}>
@@ -251,7 +259,7 @@ function CalendarView({ year, month, dateMap, analysisMap, lang, onDayClick }) {
                 )}
               </div>
 
-              {/* 식단 미리보기 (최대 2줄) */}
+              {/* 식단 미리보기 (최대 3줄) */}
               {preview.map((line, i) => (
                 <div key={i} style={{
                   fontSize: '0.6rem', color: 'var(--ink2, #6b7280)',
@@ -261,6 +269,11 @@ function CalendarView({ year, month, dateMap, analysisMap, lang, onDayClick }) {
                   {line}
                 </div>
               ))}
+              {extra > 0 && (
+                <div style={{ fontSize: '0.58rem', color: 'var(--ink3, #9ca3af)', lineHeight: 1.3 }}>
+                  +{extra}개 더
+                </div>
+              )}
             </div>
           )
         })}
@@ -331,7 +344,7 @@ export default function DietStatsPage() {
   const mealLabel = key => (lang === 'en' ? MEAL_LABEL_EN : MEAL_LABEL_KO)[key] ?? key
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg, #f8fafc)', fontFamily: "'Inter','Noto Sans KR',sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: 'var(--color-background-tertiary, #f1f5f9)', fontFamily: "'Inter','Noto Sans KR',sans-serif" }}>
 
       {/* ── 헤더 ── */}
       <div style={{
@@ -380,7 +393,7 @@ export default function DietStatsPage() {
         </div>
       ) : viewMode === 'calendar' ? (
         /* ── 달력 뷰 ── */
-        <div style={{ maxWidth: 780, margin: '0 auto', padding: '0 0.5rem 2rem', background: 'var(--card-bg, #fff)', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border, #e5e7eb)' }}>
+        <div style={{ maxWidth: 780, margin: '0 auto', padding: '0 0.5rem 2rem', background: 'var(--color-background-primary, #fff)', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--color-border-tertiary, #e5e7eb)' }}>
           <CalendarView
             year={year} month={month}
             dateMap={dateMap} analysisMap={analysisMap}
