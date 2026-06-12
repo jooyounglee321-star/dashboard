@@ -258,6 +258,8 @@
   "todoAddBtn": "+ 추가",
   "todoSaveBtn": "저장",
   "todoCancelBtn": "취소",
+  "todoTypeRepeat": "🔁 매일 반복",
+  "todoTypeOnce": "✅ 1회 완료",
   "todoDueLabel": "~",
   "todoOneDayLabel": "하루",
   "todoDateError": "시작일이 마감일보다 늦을 수 없습니다",

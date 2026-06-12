@@ -644,6 +644,24 @@ def _migrate_todos_start_date():
             logger.info("[MIGRATE] todos.start_date — 이미 존재, 건너뜀")
 
 
+def _migrate_todos_todo_type():
+    """todos 테이블에 todo_type 컬럼 추가 (VARCHAR, 기본값 'repeat')."""
+    with engine.connect() as conn:
+        try:
+            existing = {c["name"] for c in inspect(conn).get_columns("todos")}
+        except Exception:
+            return
+        if "todo_type" not in existing:
+            try:
+                conn.execute(text("ALTER TABLE todos ADD COLUMN todo_type VARCHAR(20) NOT NULL DEFAULT 'repeat'"))
+                conn.commit()
+                logger.info("[MIGRATE] todos.todo_type 컬럼 추가")
+            except Exception as e:
+                logger.warning("[MIGRATE] todos.todo_type 컬럼 추가 실패: %s", e)
+        else:
+            logger.info("[MIGRATE] todos.todo_type — 이미 존재, 건너뜀")
+
+
 _DEFAULT_INCOME_CATEGORIES = [
     {
         'code': 'REGULAR', 'name_en': 'Regular Income', 'name_ko': '주수입 (정기)',
@@ -786,6 +804,7 @@ async def lifespan(app: FastAPI):
     _migrate_add_category_icon()           # expense_categories.icon 누락 컬럼 추가
     _migrate_add_category_code_fields()
     _migrate_todos_start_date()
+    _migrate_todos_todo_type()
     _seed_admin_email()
     _seed_default_permissions()
     _seed_exchange_rates()

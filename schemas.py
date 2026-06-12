@@ -102,6 +102,7 @@ class PinnedMemoOut(BaseModel):
 
 class TodoCreate(BaseModel):
     title: str
+    todo_type: str = "repeat"   # 'repeat' | 'once'
     start_date: date | None = None
     due_date: date | None = None
 
@@ -114,6 +115,7 @@ class TodoCheckToggle(BaseModel):
 class TodoOut(BaseModel):
     id: int
     title: str
+    todo_type: str = "repeat"
     start_date: date | None
     due_date: date | None
     is_done_dates: list[str]

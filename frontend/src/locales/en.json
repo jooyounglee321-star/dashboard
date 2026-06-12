@@ -258,6 +258,8 @@
   "todoAddBtn": "+ Add",
   "todoSaveBtn": "Save",
   "todoCancelBtn": "Cancel",
+  "todoTypeRepeat": "🔁 Daily Repeat",
+  "todoTypeOnce": "✅ One-time",
   "todoDueLabel": "~",
   "todoOneDayLabel": "1 day",
   "todoDateError": "Start date cannot be later than due date",

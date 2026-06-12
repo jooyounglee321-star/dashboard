@@ -192,6 +192,7 @@ class Todo(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
+    todo_type: Mapped[str] = mapped_column(String(20), nullable=False, server_default="repeat")  # 'repeat' | 'once'
     start_date: Mapped[date | None] = mapped_column(Date, nullable=True)  # null = 생성일 기준
     due_date: Mapped[date | None] = mapped_column(Date, nullable=True)    # null = 영구 표시
     is_done_dates: Mapped[str] = mapped_column(Text, nullable=False, server_default="[]")  # JSON array of "YYYY-MM-DD"
