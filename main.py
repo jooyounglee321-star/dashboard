@@ -5,10 +5,13 @@ from pathlib import Path
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from sqlalchemy import inspect, text
 
 from database import Base, DATABASE_URL, engine, SessionLocal
@@ -923,15 +926,21 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Dashboard API", version="1.0.0", lifespan=lifespan)
 
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 _cors_origins_env = os.getenv("CORS_ALLOWED_ORIGINS", "")
-_cors_origins = (
-    [o.strip() for o in _cors_origins_env.split(",") if o.strip()]
-    if _cors_origins_env
-    else ["*"]
-)
+_cors_origins = [o.strip() for o in _cors_origins_env.split(",") if o.strip()]
+if not _cors_origins:
+    logger.warning(
+        "[CORS] CORS_ALLOWED_ORIGINS 환경변수가 설정되지 않았습니다. "
+        "모든 출처를 차단합니다. 필요 시 CORS_ALLOWED_ORIGINS=https://yourdomain.com 으로 설정하세요."
+    )
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
