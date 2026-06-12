@@ -173,9 +173,13 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
         max_days = 30
 
     # ② 이미 존재하는 날짜 집합 (범위 내 한 번에 조회, NULL 제외)
+    # total_krw_equiv == 0인 날짜는 제외 → 0원짜리 스냅샷은 재계산 대상으로 취급
     existing = {
         r.snapshot_date
-        for r in db.query(DailyPortfolioSnapshot.snapshot_date)
+        for r in db.query(
+            DailyPortfolioSnapshot.snapshot_date,
+            DailyPortfolioSnapshot.total_krw_equiv,
+        )
         .filter(
             DailyPortfolioSnapshot.user_id == user_id,
             DailyPortfolioSnapshot.snapshot_date.isnot(None),
@@ -183,6 +187,7 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
             DailyPortfolioSnapshot.snapshot_date < today_kst,
         )
         .all()
+        if r.total_krw_equiv and r.total_krw_equiv > 0
     }
 
     # ③ 누락 날짜 목록 (오늘 제외)
@@ -353,6 +358,11 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
             else:
                 total_krw_equiv = None
             data_json = json.dumps(groups_list, ensure_ascii=False)
+
+            # 재계산 후에도 0이면 저장하지 않음 (yfinance 데이터 미반영 상태 방지)
+            if not total_krw_equiv:
+                logger.info("[BACKFILL] user=%d %s total_krw_equiv=0, 저장 건너뜀", user_id, target_date)
+                continue
 
             # UPSERT
             row = db.query(DailyPortfolioSnapshot).filter(
