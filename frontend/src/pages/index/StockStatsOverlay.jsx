@@ -199,7 +199,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       const filteredLine = lineDatasets?.filter(d => d.label === overviewGroup)
       const filteredTickers = new Set(groupTickers?.[overviewGroup] ?? [])
       const filteredBar = stockEvals?.filter(s => filteredTickers.has(s.label))
-      const filteredPie = stockValues?.filter(s => s.groupName === overviewGroup)
+      const filteredPie = stockValues?.filter(s => s.groupName?.toLowerCase() === overviewGroup.toLowerCase())
       console.log('[StockStats] 그룹 필터 후 lineDatasets:', filteredLine?.length, filteredLine?.map(d => d.label))
       console.log('[StockStats] 그룹 필터 후 barEvals:', filteredBar?.length, filteredBar?.map(s => s.label))
       console.log('[StockStats] 그룹 필터 후 pieStocks:', filteredPie?.length, filteredPie?.map(s => s.name))
@@ -225,7 +225,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       let pieLabels, pieData
       if (overviewGroup) {
         // 선택 그룹 내 종목별 비중
-        const grpStocks = stockValues.filter(s => s.groupName === overviewGroup)
+        const grpStocks = stockValues.filter(s => s.groupName?.toLowerCase() === overviewGroup.toLowerCase())
         const vals = grpStocks.map(s => ({ name: s.name, val: Math.max(0, toDisplay(s.evalAmt, s.isKRW)) }))
         const total = vals.reduce((a, x) => a + x.val, 0) || 1
         pieLabels = vals.map(x => `${x.name} (${(x.val / total * 100).toFixed(1)}%)`)
@@ -376,7 +376,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         try {
           const grps = JSON.parse(r.data || '[]')
           if (!Array.isArray(grps)) return 0
-          const grp = grps.find(g => g.name === histGroupFilter)
+          const grp = grps.find(g => g.name?.toLowerCase() === histGroupFilter.toLowerCase())
           if (!grp) return 0   // 해당 그룹 없으면 0 폴백 (차트 빈 상태 방지)
           return grp.currency === 'USD' ? grp.total * (r.usd_krw || 1) : grp.total
         } catch { return 0 }   // 파싱 실패 시 0 폴백
@@ -470,7 +470,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
 
   const effectivePieItems = (() => {
     if (!computed) return []
-    if (overviewGroup) return (stockValues ?? []).filter(s => s.groupName === overviewGroup)
+    if (overviewGroup) return (stockValues ?? []).filter(s => s.groupName?.toLowerCase() === overviewGroup.toLowerCase())
     return grpTotals ?? []
   })()
 
@@ -547,7 +547,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               <div className="stats-section-title">{t(lang, 'statsSummaryTitle')}</div>
               <div className="stats-summary-grid">
                 {(grpTotals ?? [])
-                  .filter(g => !overviewGroup || g.name === overviewGroup)
+                  .filter(g => !overviewGroup || g.name?.toLowerCase() === overviewGroup.toLowerCase())
                   .map((g, i) => {
                     let display
                     if (overviewCurrency === 'USD' && g.isKRW && fxRate) display = formatUSD(g.total / fxRate)
