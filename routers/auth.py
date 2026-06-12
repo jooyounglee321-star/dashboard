@@ -6,7 +6,9 @@ from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
@@ -19,6 +21,7 @@ from schemas import (
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+limiter = Limiter(key_func=get_remote_address)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 EMAIL_RE   = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -65,7 +68,8 @@ def _create_token(user_id: int, email: str, role: str = "free") -> str:
     status_code=status.HTTP_201_CREATED,
     summary="이메일 회원가입",
 )
-def register(body: UserRegister, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def register(request: Request, body: UserRegister, db: Session = Depends(get_db)):
     """이메일·비밀번호로 신규 회원을 등록하고 JWT 토큰을 반환합니다."""
     if not EMAIL_RE.match(body.email):
         raise HTTPException(
@@ -106,7 +110,8 @@ def register(body: UserRegister, db: Session = Depends(get_db)):
     response_model=AuthOut,
     summary="이메일 로그인",
 )
-def login(body: UserLogin, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def login(request: Request, body: UserLogin, db: Session = Depends(get_db)):
     """이메일·비밀번호로 로그인하고 JWT 토큰을 반환합니다."""
     user = db.query(User).filter(User.email == body.email).first()
     if not user or user.provider != "local" or not user.hashed_password:
