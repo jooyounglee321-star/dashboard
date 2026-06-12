@@ -371,15 +371,25 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     if (histChartRef.current) { histChartRef.current.destroy(); histChartRef.current = null }
     if (!histData.length) return
 
+    // 선택한 그룹의 currency 미리 구해둠 (구형 스냅샷 폴백용)
+    const selectedGrpCurrency = stockData?.groups?.find(
+      g => g.name?.toLowerCase() === histGroupFilter?.toLowerCase()
+    )?.currency ?? null
+
     const getValue = (r) => {
       if (histGroupFilter) {
         try {
           const grps = JSON.parse(r.data || '[]')
           if (!Array.isArray(grps)) return 0
-          const grp = grps.find(g => g.name?.toLowerCase() === histGroupFilter.toLowerCase())
-          if (!grp) return 0   // 해당 그룹 없으면 0 폴백 (차트 빈 상태 방지)
+          // 1차: 이름 매칭 (대소문자 무시)
+          let grp = grps.find(g => g.name?.toLowerCase() === histGroupFilter.toLowerCase())
+          // 2차: 이름 불일치 시 같은 currency로 폴백 (구형 backfill 스냅샷 대응)
+          if (!grp && selectedGrpCurrency) {
+            grp = grps.find(g => g.currency === selectedGrpCurrency)
+          }
+          if (!grp) return 0
           return grp.currency === 'USD' ? grp.total * (r.usd_krw || 1) : grp.total
-        } catch { return 0 }   // 파싱 실패 시 0 폴백
+        } catch { return 0 }
       }
       if (histCurrencyFilter === 'USD') return r.total_usd ?? 0
       if (histCurrencyFilter === 'KRW') return r.total_krw ?? 0
