@@ -205,6 +205,49 @@ def create_income(
     return {"id": entry.id, "message": "created"}
 
 
+@income_router.get("/summary/monthly")
+def income_monthly_summary(
+    year:  int,
+    month: int,
+    current_user: User = Depends(get_current_user),
+    db: Session        = Depends(get_db),
+):
+    """월별 수입 합계 (USD 환산 기준)."""
+    from sqlalchemy import extract, func as sqlfunc
+    rows = (
+        db.query(
+            ExpenseCategory.code.label("category_code"),
+            ExpenseCategory.name_ko.label("name_ko"),
+            ExpenseCategory.name_en.label("name_en"),
+            sqlfunc.sum(Expense.converted_amount).label("total_usd"),
+        )
+        .join(ExpenseCategory, Expense.category_id == ExpenseCategory.id, isouter=True)
+        .filter(
+            Expense.user_id == current_user.id,
+            Expense.type    == "income",
+            extract("year",  Expense.date) == year,
+            extract("month", Expense.date) == month,
+        )
+        .group_by(ExpenseCategory.id)
+        .all()
+    )
+    total = sum(float(r.total_usd or 0) for r in rows)
+    return {
+        "year":  year,
+        "month": month,
+        "total_usd": round(total, 2),
+        "by_category": [
+            {
+                "category_code": r.category_code,
+                "name_ko":       r.name_ko,
+                "name_en":       r.name_en,
+                "total_usd":     round(float(r.total_usd or 0), 2),
+            }
+            for r in rows
+        ],
+    }
+
+
 @income_router.put("/{income_id}")
 def update_income(
     income_id: int,
@@ -255,46 +298,3 @@ def delete_income(
         raise HTTPException(status_code=404, detail="Income not found")
     db.delete(entry)
     db.commit()
-
-
-@income_router.get("/summary/monthly")
-def income_monthly_summary(
-    year:  int,
-    month: int,
-    current_user: User = Depends(get_current_user),
-    db: Session        = Depends(get_db),
-):
-    """월별 수입 합계 (USD 환산 기준)."""
-    from sqlalchemy import extract, func as sqlfunc
-    rows = (
-        db.query(
-            ExpenseCategory.code.label("category_code"),
-            ExpenseCategory.name_ko.label("name_ko"),
-            ExpenseCategory.name_en.label("name_en"),
-            sqlfunc.sum(Expense.converted_amount).label("total_usd"),
-        )
-        .join(ExpenseCategory, Expense.category_id == ExpenseCategory.id, isouter=True)
-        .filter(
-            Expense.user_id == current_user.id,
-            Expense.type    == "income",
-            extract("year",  Expense.date) == year,
-            extract("month", Expense.date) == month,
-        )
-        .group_by(ExpenseCategory.id)
-        .all()
-    )
-    total = sum(float(r.total_usd or 0) for r in rows)
-    return {
-        "year":  year,
-        "month": month,
-        "total_usd": round(total, 2),
-        "by_category": [
-            {
-                "category_code": r.category_code,
-                "name_ko":       r.name_ko,
-                "name_en":       r.name_en,
-                "total_usd":     round(float(r.total_usd or 0), 2),
-            }
-            for r in rows
-        ],
-    }

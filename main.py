@@ -214,7 +214,7 @@ def _migrate_cleanup_null_snapshot_dates():
             logger.warning("[MIGRATE] NULL snapshot_date 정리 실패: %s", e)
 
 
-_ADMIN_EMAIL = "jooyounglee321123@gmail.com"
+_ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "")
 
 
 def _migrate_user_roles():

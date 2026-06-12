@@ -22,15 +22,17 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 EMAIL_RE   = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-ADMIN_EMAIL = "jooyounglee321123@gmail.com"   # 이 이메일로 가입하면 자동 admin
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "")   # 이 이메일로 가입하면 자동 admin
+if not ADMIN_EMAIL:
+    logger.warning("[AUTH] ADMIN_EMAIL 환경변수가 설정되지 않았습니다. 자동 admin 부여가 비활성화됩니다.")
 
 # JWT 설정
-_DEFAULT_SECRET = "dashboard-dev-secret-change-in-production"
-SECRET_KEY = os.getenv("SECRET_KEY", _DEFAULT_SECRET)
-if SECRET_KEY == _DEFAULT_SECRET:
-    logger.warning(
-        "[AUTH] SECRET_KEY 환경변수가 설정되지 않았습니다. "
-        "프로덕션 배포 전 반드시 강력한 랜덤 키로 교체하세요."
+SECRET_KEY = os.getenv("SECRET_KEY", "")
+if not SECRET_KEY:
+    raise SystemExit(
+        "[AUTH] FATAL: SECRET_KEY 환경변수가 설정되지 않았습니다. "
+        "강력한 랜덤 키를 SECRET_KEY 환경변수로 설정하세요. "
+        "(예: python -c \"import secrets; print(secrets.token_hex(32))\")"
     )
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_DAYS = 30
