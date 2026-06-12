@@ -4,6 +4,17 @@
 
 ---
 
+## [2026-06-12] — fix/security: SEC-07·12·13, BUG-03, DUP-06 수정
+
+### 변경 내용
+- **SEC-07** (`routers/stocks.py`): `get_stock_history`, `get_stock_news` 엔드포인트에 인증(`Depends(get_current_user)`) 추가 — 모든 stocks API 인증 완료
+- **SEC-12** (`routers/stocks.py`): `detail=str(e)` 내부 에러 노출 → 사용자 친화적 한국어 메시지로 교체 (4곳)
+- **SEC-13** (`routers/auth.py`, `RegisterPage.jsx`, `ko.json`, `en.json`): 비밀번호 복잡도 검증 추가 — 숫자·특수문자 필수 (회원가입·비밀번호 변경 모두 적용)
+- **BUG-03** (`routers/todos.py`): `once` 타입 Todo 날짜 이동 시 재표시 버그 수정 — DB 쿼리 레벨에서 `not_(and_(todo_type=="once", is_done_dates non-empty))` 필터 추가
+- **DUP-06** (`IndexPage.jsx`, `ko.json`, `en.json`): 요일·월 배열 하드코딩 제거 → `common.days`/`common.months` i18n 키로 이전, `T[lang]` 으로 참조
+
+---
+
 ## [2026-06-11] — fix: PinnedMemoCard 접기 높이 축소
 
 ### 변경 내용

@@ -19,12 +19,7 @@ import MemoCard from './MemoCard'
 import PinnedMemoCard from './PinnedMemoCard'
 import NewsCard from './NewsCard'
 import SitesCard from './SitesCard'
-import { t } from './i18n'
-
-const DAYS = ['일', '월', '화', '수', '목', '금', '토']
-const MON = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월']
-const DAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const MON_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+import { t, T } from './i18n'
 
 function buildTickerCatMap(groups) {
   const map = {}
@@ -37,10 +32,12 @@ function buildTickerCatMap(groups) {
 
 function getHeaderDate(lang = 'ko') {
   const n = new Date()
+  const days = T[lang]?.common?.days ?? T.ko.common.days
+  const months = T[lang]?.common?.months ?? T.ko.common.months
   if (lang === 'en') {
-    return `${MON_EN[n.getMonth()]} ${n.getDate()}, ${n.getFullYear()} (${DAYS_EN[n.getDay()]})`
+    return `${months[n.getMonth()]} ${n.getDate()}, ${n.getFullYear()} (${days[n.getDay()]})`
   }
-  return `${n.getFullYear()}년 ${MON[n.getMonth()]} ${n.getDate()}일 (${DAYS[n.getDay()]})`
+  return `${n.getFullYear()}년 ${months[n.getMonth()]} ${n.getDate()}일 (${days[n.getDay()]})`
 }
 
 export default function IndexPage() {

@@ -41,6 +41,12 @@ export default function RegisterPage() {
     if (password.length < 8) {
       setMsg({ type: 'error', text: t(lang, 'auth.errPwLength') }); return
     }
+    if (!/\d/.test(password)) {
+      setMsg({ type: 'error', text: t(lang, 'auth.errPwDigit') }); return
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      setMsg({ type: 'error', text: t(lang, 'auth.errPwSpecial') }); return
+    }
     if (password !== password2) {
       setMsg({ type: 'error', text: t(lang, 'auth.errPwMatch') }); return
     }
