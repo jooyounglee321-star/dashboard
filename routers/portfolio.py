@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import DailyPortfolioSnapshot, ExchangeRate, PortfolioGroups, Stock, User
 from routers.auth import get_current_user
+from routers._shared import resolve_yf_ticker as _backfill_resolve_ticker
 from schemas import PortfolioSnapshotCreate, PortfolioSnapshotOut
 
 logger = logging.getLogger(__name__)
@@ -25,12 +26,6 @@ _CAT_META: dict[str, tuple[str, str]] = {
     "kor-etf":   ("KOR ETF",   "KRW"),
 }
 
-
-def _backfill_resolve_ticker(ticker: str, category: str | None) -> str:
-    """백필용 Yahoo Finance 티커 변환 (.KS 자동 추가)."""
-    if category in ("kor-stock", "kor-etf") and "." not in ticker:
-        return ticker + ".KS"
-    return ticker
 
 
 def _get_historical_prices_batch(
@@ -318,9 +313,6 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
                 if price is None:
                     continue
 
-                if category not in _CAT_META:
-                    continue
-
                 eval_amt = round(qty * price, 2)
 
                 if group_id not in groups:
@@ -385,14 +377,20 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
                 )
                 db.add(row)
 
-            db.commit()
             backfilled_dates.append(str(target_date))
-            logger.info("[BACKFILL] user=%d %s 스냅샷 저장 완료", user_id, target_date)
 
         except Exception as exc:
             logger.error("[BACKFILL] user=%d %s 처리 오류: %s", user_id, target_date, exc)
-            db.rollback()
             continue
+
+    if backfilled_dates:
+        try:
+            db.commit()
+            logger.info("[BACKFILL] user=%d %d개 스냅샷 일괄 저장 완료", user_id, len(backfilled_dates))
+        except Exception as exc:
+            logger.error("[BACKFILL] user=%d 일괄 커밋 실패: %s", user_id, exc)
+            db.rollback()
+            backfilled_dates.clear()
 
     return {"backfilled": len(backfilled_dates), "dates": backfilled_dates, "is_new_user": is_new_user}
 

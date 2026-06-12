@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
-from sqlalchemy import inspect, text
+from sqlalchemy import inspect, text, tuple_
 
 from database import Base, DATABASE_URL, engine, SessionLocal
 
@@ -353,13 +353,17 @@ def _seed_exchange_rates():
     """exchange_rates 테이블에 기본 환율 시드 (존재하지 않는 쌍만 삽입)."""
     db = SessionLocal()
     try:
+        pairs = [(b, t) for b, t, _ in _DEFAULT_EXCHANGE_RATES]
+        existing = {
+            (r.base_currency, r.target_currency)
+            for r in db.query(ExchangeRate.base_currency, ExchangeRate.target_currency)
+            .filter(
+                tuple_(ExchangeRate.base_currency, ExchangeRate.target_currency).in_(pairs)
+            ).all()
+        }
         inserted = 0
         for base, target, rate in _DEFAULT_EXCHANGE_RATES:
-            exists = db.query(ExchangeRate).filter(
-                ExchangeRate.base_currency == base,
-                ExchangeRate.target_currency == target,
-            ).first()
-            if not exists:
+            if (base, target) not in existing:
                 db.add(ExchangeRate(base_currency=base, target_currency=target, rate=rate))
                 inserted += 1
         if inserted:

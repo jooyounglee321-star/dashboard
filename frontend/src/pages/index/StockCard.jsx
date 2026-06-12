@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, memo } from 'react'
 import { t } from './i18n'
 import { calcStock } from '../../utils/calcStock'
+import { fmtKRW, fmtUSD } from '../../utils/format'
 
 const GRP_COLORS = [
   { bg: '#c8deff', tx: '#1a3d7c' }, { bg: '#c0edd8', tx: '#0d4a2a' },
@@ -12,14 +13,12 @@ const GRP_COLORS = [
 
 const TOTAL_MODE_KEY = 'stock_total_mode'
 
-function fmtKRW(v) { return Math.round(v).toLocaleString('ko-KR') }
-function fmtUSD(v) { return Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
-
 
 function StockNewsRow({ newsConfig, lang, onOpenSettings }) {
   // status: 'ready' | 'loading' | 'ok' | 'err'
   const [status,   setStatus]   = useState('ready')
   const [newsList, setNewsList] = useState([]) // 항상 배열
+  const cacheRef = useRef({}) // { [cacheKey]: { data, ts } }
 
   const query  = newsConfig?.query  || ''
   const source = newsConfig?.source || 'google'
@@ -48,8 +47,16 @@ function StockNewsRow({ newsConfig, lang, onOpenSettings }) {
     )
   }
 
+  const NEWS_TTL = 5 * 60 * 1000 // 5분
+
   function fetchNews() {
-    // 캐시 없음 — 항상 새로 fetch
+    const cacheKey = `${query}|${source}|${nLang}`
+    const cached = cacheRef.current[cacheKey]
+    if (cached && Date.now() - cached.ts < NEWS_TTL) {
+      setNewsList(cached.data)
+      setStatus('ok')
+      return
+    }
     setStatus('loading')
     const token = localStorage.getItem('token') || ''
     fetch(`/api/stocks/news?query=${encodeURIComponent(query)}&source=${source}&lang=${nLang}&count=5`, {
@@ -57,7 +64,9 @@ function StockNewsRow({ newsConfig, lang, onOpenSettings }) {
     })
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then(data => {
-        setNewsList(Array.isArray(data) ? data : [data])
+        const list = Array.isArray(data) ? data : [data]
+        cacheRef.current[cacheKey] = { data: list, ts: Date.now() }
+        setNewsList(list)
         setStatus('ok')
       })
       .catch(() => setStatus('err'))

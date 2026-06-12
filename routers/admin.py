@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import RolePermission, User
-from routers.auth import get_current_user
+from routers._shared import require_admin as _require_admin
 from schemas import (
     AdminMemoUpdate, PermissionBulkUpdate, PlanUpdate,
     RoleUpdate, StatusUpdate, UserAdminOut,
@@ -20,12 +20,6 @@ from schemas import (
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
-def _require_admin(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="관리자만 접근할 수 있습니다.")
-    return current_user
 
 ALLOWED_SORT  = {"created_at", "last_login_at", "login_count", "total_payment", "email", "name"}
 ALLOWED_ROLES = {"admin", "premium", "free", "guest"}

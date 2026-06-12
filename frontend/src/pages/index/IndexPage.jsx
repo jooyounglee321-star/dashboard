@@ -111,13 +111,16 @@ export default function IndexPage() {
   useEffect(() => {
     const token = getToken()
     if (!token || token.trim() === '' || token === 'undefined' || token === 'null') return
+    const ctrl = new AbortController()
     fetch('/api/portfolio/backfill', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + token },
+      signal: ctrl.signal,
     })
       .then(r => r.ok ? r.json() : Promise.reject('HTTP ' + r.status))
       .then(d => { if (d.backfilled > 0) console.log('[BACKFILL] 포트폴리오 백필 완료:', d) })
-      .catch(err => console.warn('[BACKFILL] 백필 실패:', err))
+      .catch(err => { if (err?.name !== 'AbortError') console.warn('[BACKFILL] 백필 실패:', err) })
+    return () => ctrl.abort()
   }, [])
 
   // Header date tick (localStorage 캐시 언어로 초기화)
@@ -142,6 +145,8 @@ export default function IndexPage() {
   const [userName, setUserName] = useState('')
   const [userRole, setUserRole] = useState('')
   const [avatarSrc, setAvatarSrc] = useState(null)
+
+  // auth/me + timezone + widget-config 병렬 로드
   useEffect(() => {
     const token = getToken()
     if (!token) return
@@ -151,41 +156,30 @@ export default function IndexPage() {
       if (cached.name) setUserName(cached.name)
       if (cached.role) setUserRole(cached.role)
     } catch {}
-    // 아바타
     const av = getLsItem('avatar_data')
     if (av) setAvatarSrc(av)
-    // API 최신 닉네임 + role
-    fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } })
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        if (d?.name) setUserName(d.name)
-        if (d?.role) setUserRole(d.role)
-      })
-      .catch(() => {})
-  }, [])
 
-  // Load timezone zones
-  useEffect(() => {
-    fetch('/api/timezone', { headers: { Authorization: 'Bearer ' + getToken() } })
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.zones?.length === 3) setZones(d.zones) })
-      .catch(() => {})
-  }, [])
+    const ctrl = new AbortController()
+    const h = { Authorization: 'Bearer ' + token }
+    const sig = { signal: ctrl.signal }
 
-  // 위젯 설정 로드
-  useEffect(() => {
-    fetch('/api/auth/widget-config', { headers: { Authorization: 'Bearer ' + getToken() } })
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        if (d?.config) {
-          setWidgetCfg(d.config)
-          // BudgetPage 등 다른 페이지가 localStorage에서 언어를 읽으므로 동기화
-          if (d.config.language) {
-            try { localStorage.setItem('dashboard_lang', d.config.language) } catch {}
-          }
+    Promise.all([
+      fetch('/api/auth/me',          { headers: h, ...sig }).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch('/api/timezone',         { headers: h, ...sig }).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch('/api/auth/widget-config',{ headers: h, ...sig }).then(r => r.ok ? r.json() : null).catch(() => null),
+    ]).then(([me, tz, wc]) => {
+      if (me?.name) setUserName(me.name)
+      if (me?.role) setUserRole(me.role)
+      if (tz?.zones?.length === 3) setZones(tz.zones)
+      if (wc?.config) {
+        setWidgetCfg(wc.config)
+        if (wc.config.language) {
+          try { localStorage.setItem('dashboard_lang', wc.config.language) } catch {}
         }
-      })
-      .catch(() => {})
+      }
+    }).catch(err => { if (err?.name !== 'AbortError') console.warn('[init fetch]', err) })
+
+    return () => ctrl.abort()
   }, [])
 
   // 언어 변경 시 헤더 날짜 동기화

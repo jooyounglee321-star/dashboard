@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 from database import get_db
 from models import Stock, User
 from routers.auth import get_current_user
+from routers._shared import resolve_yf_ticker as _resolve_yf_ticker
 from schemas import StockCategory, StockCreate, StockOut, StockPrice, StockUpdate
 
 router = APIRouter(prefix="/stocks", tags=["stocks"])
@@ -35,16 +36,6 @@ _CACHE_TTL = 60
 _executor = ThreadPoolExecutor(max_workers=10)
 
 
-def _resolve_yf_ticker(ticker: str, category: str | None) -> str:
-    """카테고리에 따라 Yahoo Finance 조회용 티커를 반환합니다.
-
-    - kor-etf  : 접미사 없으면 .KS 자동 추가 (한국 ETF는 모두 코스피)
-    - kor-stock: 접미사 없으면 .KS 자동 추가 (코스피 우선; 실패 시 .KQ 재시도)
-    - 그 외    : 입력된 티커 그대로 사용
-    """
-    if category in ("kor-stock", "kor-etf") and "." not in ticker:
-        return ticker + ".KS"
-    return ticker
 
 
 def _query_yf(yf_ticker: str) -> tuple[float | None, float | None, object]:

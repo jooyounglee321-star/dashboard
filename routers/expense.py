@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import Expense, ExpenseBudget, ExpenseCategory, ExchangeRate, User
-from routers._shared import get_rate as _get_rate, cat_name as _cat_name
+from routers._shared import get_rate as _get_rate, cat_name as _cat_name, require_admin
 from routers.auth import get_current_user
 
 logger = logging.getLogger(__name__)
@@ -186,12 +186,6 @@ def _group_by_category(
         totals[key]["total_usd"] = round(totals[key]["total_usd"] + usd, 2)
         totals[key]["count"] += 1
     return sorted(totals.values(), key=lambda x: x["total_usd"], reverse=True)
-
-
-def require_admin(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Admin only")
-    return current_user
 
 
 # ════════════════════════════════════════════════════════════════════════════

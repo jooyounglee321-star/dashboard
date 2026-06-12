@@ -2,12 +2,10 @@ import { useEffect, useRef, useMemo, useState } from 'react'
 import { Chart, registerables } from 'chart.js'
 import 'chartjs-adapter-date-fns'
 import { t } from './i18n'
+import { fmtKRW, fmtUSD } from '../../utils/format'
 Chart.register(...registerables)
 
 const CHART_COLORS = ['#2563eb', '#16a34a', '#d97706', '#9333ea', '#dc2626', '#0891b2', '#65a30d', '#c026d3']
-
-function fmtKRW(v) { return Math.round(v).toLocaleString('ko-KR') }
-function fmtUSD(v) { return Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
 
 // 차트 y축/tooltip용 축약 포맷터
 const formatKRW = (val) => {
