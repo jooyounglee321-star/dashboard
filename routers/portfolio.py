@@ -216,6 +216,16 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
     # 그룹명 → 카테고리 역방향 맵 (기존 _CAT_META 그룹명 하위호환용)
     _name_to_cat = {v[0]: k for k, v in _CAT_META.items()}
 
+    # 카테고리 → 사용자 실제 그룹명 맵 (backfill data JSON에 사용자 그룹명 저장용)
+    # 같은 카테고리에 여러 그룹이 있으면 첫 번째 그룹명을 사용
+    cat_to_user_name: dict[str, str] = {}
+    for grp in pg_data:
+        _gn = grp.get("name", "")
+        _cur = grp.get("currency", "USD")
+        _cat = _name_to_cat.get(_gn, "us" if _cur == "USD" else "kor-stock")
+        if _cat not in cat_to_user_name:
+            cat_to_user_name[_cat] = _gn
+
     # ticker → {purchases, sells, category, currency} 매핑
     # 카테고리 판단 기준: currency 필드 우선 ("USD" → "us", "KRW" → "kor-stock")
     # 단, 기존 _CAT_META 그룹명("Robinhood", "KOR Stock" 등)이 있으면 그걸 우선 사용 (하위호환)
@@ -317,7 +327,8 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
                 meta = _CAT_META.get(category)
                 if not meta:
                     continue
-                grp_name, _ = meta
+                # 사용자 실제 그룹명 우선 사용 (없으면 _CAT_META 하드코딩명 폴백)
+                grp_name = cat_to_user_name.get(category, meta[0])
 
                 eval_amt = round(qty * price, 2)
                 eval_pl  = round((price - avg) * qty, 2) if avg else None
