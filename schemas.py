@@ -228,6 +228,7 @@ class SnapshotStockItem(BaseModel):
 
 
 class SnapshotGroup(BaseModel):
+    id: str | None = None   # portfolio_groups의 그룹 ID
     name: str
     currency: str
     total: float = 0

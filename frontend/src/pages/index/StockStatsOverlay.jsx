@@ -371,22 +371,12 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     if (histChartRef.current) { histChartRef.current.destroy(); histChartRef.current = null }
     if (!histData.length) return
 
-    // 선택한 그룹의 currency 미리 구해둠 (구형 스냅샷 폴백용)
-    const selectedGrpCurrency = stockData?.groups?.find(
-      g => g.name?.toLowerCase() === histGroupFilter?.toLowerCase()
-    )?.currency ?? null
-
     const getValue = (r) => {
       if (histGroupFilter) {
         try {
-          const grps = JSON.parse(r.data || '[]')
-          if (!Array.isArray(grps)) return 0
-          // 1차: 이름 매칭 (대소문자 무시)
-          let grp = grps.find(g => g.name?.toLowerCase() === histGroupFilter.toLowerCase())
-          // 2차: 이름 불일치 시 같은 currency로 폴백 (구형 backfill 스냅샷 대응)
-          if (!grp && selectedGrpCurrency) {
-            grp = grps.find(g => g.currency === selectedGrpCurrency)
-          }
+          const parsed = JSON.parse(r.data || '{}')
+          if (!parsed.groups) return 0
+          const grp = parsed.groups[histGroupFilter]
           if (!grp) return 0
           return grp.currency === 'USD' ? grp.total * (r.usd_krw || 1) : grp.total
         } catch { return 0 }
@@ -646,7 +636,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
           const totalPages = Math.ceil(tableRows.length / HIST_PAGE_SIZE)
           const pageRows = tableRows.slice(histPage * HIST_PAGE_SIZE, (histPage + 1) * HIST_PAGE_SIZE)
 
-          const histGroupNames = stockData?.groups?.map(g => g.name) ?? []
+          const histGroupOptions = (stockData?.groups ?? []).map(g => ({ id: g.id, name: g.name }))
 
           return (
             <>
@@ -678,7 +668,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                   <span style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>{t(lang, 'stock.filterByGroup')}:</span>
                   <select value={histGroupFilter} onChange={e => setHistGroupFilter(e.target.value)} style={selStyle}>
                     <option value="">{t(lang, 'stock.allGroups')}</option>
-                    {histGroupNames.map(name => <option key={name} value={name}>{name}</option>)}
+                    {histGroupOptions.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                   </select>
                   <span style={{ fontSize: '0.78rem', color: 'var(--ink3)', marginLeft: '0.3rem' }}>{t(lang, 'stock.filterByCurrency')}:</span>
                   <select

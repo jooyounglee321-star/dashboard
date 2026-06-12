@@ -320,7 +320,7 @@ export default function IndexPage() {
               return { ticker: s.ticker, name: s.name || null, current_price: snapPriceMap[s.ticker]?.current_price ?? null, hold_qty: hq, eval_amount: val, avg_buy_price: avg || null, eval_pl: evalPL, realized_pl: realPL }
             })
             if (isKRW) grandKRW += grpTotal; else grandUSD += grpTotal
-            return { name: g.name, currency: g.currency, total: grpTotal, stocks }
+            return { id: g.id, name: g.name, currency: g.currency, total: grpTotal, stocks }
           })
 
           const payload = {
