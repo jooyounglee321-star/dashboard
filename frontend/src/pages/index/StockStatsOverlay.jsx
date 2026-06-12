@@ -233,13 +233,13 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       if (overviewGroup) {
         // 선택 그룹 내 종목별 비중
         const grpStocks = stockValues.filter(s => s.groupName?.toLowerCase() === overviewGroup.toLowerCase())
-        const vals = grpStocks.map(s => ({ name: s.name, val: Math.max(0, toDisplay(s.evalAmt, s.isKRW)) }))
+        const vals = grpStocks.map(s => ({ name: s.name || s.ticker || '알 수 없음', val: Math.max(0, toDisplay(s.evalAmt, s.isKRW)) }))
         const total = vals.reduce((a, x) => a + x.val, 0) || 1
         pieLabels = vals.map(x => `${x.name} (${(x.val / total * 100).toFixed(1)}%)`)
         pieData = vals.map(x => parseFloat(x.val.toFixed(2)))
       } else {
         // 그룹별 비중
-        const vals = grpTotals.map(g => ({ name: g.name, val: Math.max(0, toDisplay(g.total, g.isKRW)) }))
+        const vals = grpTotals.map(g => ({ name: g.name || g.id || '알 수 없음', val: Math.max(0, toDisplay(g.total, g.isKRW)) }))
         const total = vals.reduce((a, x) => a + x.val, 0) || 1
         pieLabels = vals.map(x => `${x.name} (${(x.val / total * 100).toFixed(1)}%)`)
         pieData = vals.map(x => parseFloat(x.val.toFixed(2)))
@@ -462,7 +462,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   if (!isOpen) return null
 
   const { grpTotals, grandUSD, grandKRW, totalKRW, stockEvals, lineDatasets, fxRate, groupTickers, stockValues } = computed || {}
-  const groupNames = stockData?.groups?.map(g => g.name) ?? []
+  const groupNames = stockData?.groups?.map(g => g.name || g.id || '알 수 없음') ?? []
 
   // ── 필터 적용 후 유효 데이터 (JSX 조건부 렌더링 + useEffect 공유) ──
   const now = new Date()
