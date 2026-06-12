@@ -51,7 +51,7 @@ function useStockSearch() {
   }
   async function yfSearch(q) {
     try {
-      const r = await fetch('/api/stocks/search?q=' + encodeURIComponent(q))
+      const r = await fetch('/api/stocks/search?q=' + encodeURIComponent(q), { headers: authH() })
       if (r.ok) { const d = await r.json(); return d.results || [] }
     } catch {}
     return []
@@ -162,7 +162,7 @@ function StockDetailPanel({ g, s, onUpdate }) {
   async function fetchHistPrice(date) {
     const cat = g.currency === 'KRW' ? 'kor-stock' : 'us'
     try {
-      const r = await fetch(`/api/stocks/history/${encodeURIComponent(s.ticker)}?date=${date}&category=${cat}`)
+      const r = await fetch(`/api/stocks/history/${encodeURIComponent(s.ticker)}?date=${date}&category=${cat}`, { headers: authH() })
       if (r.ok) { const d = await r.json(); return d.close }
     } catch {}
     return null

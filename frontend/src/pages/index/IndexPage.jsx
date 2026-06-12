@@ -245,10 +245,10 @@ export default function IndexPage() {
       let newFxRate = null
 
       const [fxResult] = await Promise.allSettled([
-        fetch('/api/stocks/exchange-rate', { signal }).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/stocks/exchange-rate', { signal, headers: { Authorization: 'Bearer ' + getToken() } }).then(r => r.ok ? r.json() : null).catch(() => null),
         ...Object.entries(tickerCatMap).map(async ([t, cat]) => {
           try {
-            const r = await fetch(`/api/stocks/price/${encodeURIComponent(t)}?category=${cat}`, { signal })
+            const r = await fetch(`/api/stocks/price/${encodeURIComponent(t)}?category=${cat}`, { signal, headers: { Authorization: 'Bearer ' + getToken() } })
             if (r.ok) newPriceMap[t] = await r.json()
           } catch {}
         }),
@@ -290,10 +290,10 @@ export default function IndexPage() {
           const snapPriceMap = {}
           let snapFxRate = null
           const [fxRes, ...priceRes] = await Promise.allSettled([
-            fetch('/api/stocks/exchange-rate').then(r => r.ok ? r.json() : null).catch(() => null),
+            fetch('/api/stocks/exchange-rate', { headers: { Authorization: 'Bearer ' + getToken() } }).then(r => r.ok ? r.json() : null).catch(() => null),
             ...Object.entries(tickerCatMap).map(async ([t, cat]) => {
               try {
-                const r = await fetch(`/api/stocks/price/${encodeURIComponent(t)}?category=${cat}`)
+                const r = await fetch(`/api/stocks/price/${encodeURIComponent(t)}?category=${cat}`, { headers: { Authorization: 'Bearer ' + getToken() } })
                 if (r.ok) snapPriceMap[t] = await r.json()
               } catch {}
             }),
