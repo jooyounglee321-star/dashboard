@@ -733,7 +733,7 @@ def create_expense(
     db.add(e)
     db.commit()
     db.refresh(e)
-    return _expense_dict(e, db, body.lang)
+    return _expense_dict(e, db, body.lang, cat_map=_build_cat_map([e], db))
 
 
 @expense_router.put("/{expense_id}")
@@ -773,7 +773,7 @@ def update_expense(
 
     db.commit()
     db.refresh(e)
-    return _expense_dict(e, db, lang)
+    return _expense_dict(e, db, lang, cat_map=_build_cat_map([e], db))
 
 
 @expense_router.delete("/{expense_id}", status_code=204)
@@ -812,7 +812,7 @@ _CACHE_TTL = 30 * 60  # 30분
 
 
 @exchange_router.get("")
-def list_rates(db: Session = Depends(get_db)):
+def list_rates(db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     """전체 환율 목록 (30분 인메모리 캐시)."""
     now = _time.time()
     if _rate_cache["data"] is not None and now - _rate_cache["ts"] < _CACHE_TTL:
@@ -843,7 +843,7 @@ def refresh_rates(
 
 
 @exchange_router.get("/{currency}")
-def get_rate(currency: str, db: Session = Depends(get_db)):
+def get_rate(currency: str, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     """특정 통화의 USD 기준 환율 반환 (예: /KRW)."""
     currency = currency.upper()
     row = db.query(ExchangeRate).filter_by(
