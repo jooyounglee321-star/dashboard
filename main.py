@@ -1,7 +1,20 @@
 import logging
 import os
+import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
+
+# ── 필수 환경변수 조기 검사 ────────────────────────────────────────────────────
+# routers/auth.py import 전에 검사해야 uvicorn이 앱을 기동하기 전 즉시 중단됨.
+# RuntimeError → uvicorn이 exit code 1로 종료.
+# Railway에서 재시작 루프를 완전히 막으려면 sys.exit(0) 사용 권장.
+_SECRET_KEY = os.environ.get("SECRET_KEY", "")
+if not _SECRET_KEY:
+    sys.stderr.write(
+        "[FATAL] SECRET_KEY 환경변수가 설정되지 않았습니다. "
+        "Railway Variables 탭에서 SECRET_KEY를 설정하세요.\n"
+    )
+    sys.exit(0)  # exit code 0 → Railway가 재시작하지 않음
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
