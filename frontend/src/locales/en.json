@@ -203,6 +203,7 @@
     "colStatus": "Status",
     "colLastLogin": "Last Login",
     "colLogins": "Logins",
+    "colAutoLogins": "Auto",
     "colPayment": "Payments",
     "colDevice": "Device",
     "fieldId": "ID",

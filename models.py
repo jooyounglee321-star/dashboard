@@ -30,6 +30,7 @@ class User(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     login_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    auto_login_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     total_payment: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False, default=0)
     primary_device: Mapped[str | None] = mapped_column(String(20), nullable=True)
     admin_memo: Mapped[str | None] = mapped_column(Text, nullable=True)

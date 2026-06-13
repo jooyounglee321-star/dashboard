@@ -88,6 +88,7 @@ def _migrate_user_columns():
         ("status",          "VARCHAR(20) DEFAULT 'active'"),
         ("last_login_at",   "TIMESTAMP"),
         ("login_count",     "INTEGER DEFAULT 0"),
+        ("auto_login_count", "INTEGER DEFAULT 0"),
         ("total_payment",   "NUMERIC(12,2) DEFAULT 0"),
         ("primary_device",  "VARCHAR(20)"),
         ("admin_memo",      "TEXT"),

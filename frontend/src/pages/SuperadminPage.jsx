@@ -316,6 +316,7 @@ export default function SuperadminPage() {
                   <th>{t(lang, 'superadmin.colStatus')}</th>
                   <th>{t(lang, 'superadmin.colLastLogin')}</th>
                   <th>{t(lang, 'superadmin.colLogins')}</th>
+                  <th>{t(lang, 'superadmin.colAutoLogins')}</th>
                   <th>{t(lang, 'superadmin.colPayment')}</th>
                   <th>{t(lang, 'superadmin.colDevice')}</th>
                 </tr>
@@ -336,7 +337,7 @@ export default function SuperadminPage() {
                     <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(u.plan_expires_at, lang)}</td>
                     <td><span className={`badge badge-${u.status}`}>{statusLabel(u.status)}</span></td>
                     <td style={{ whiteSpace: 'nowrap' }}>{fmtDatetime(u.last_login_at)}</td>
-                    <td style={{ textAlign: 'right' }}>{(u.login_count ?? 0).toLocaleString()}</td>
+                    <td style={{ textAlign: 'right' }}>{(u.login_count ?? 0).toLocaleString()} / {(u.auto_login_count ?? 0).toLocaleString()}</td>
                     <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>₩{Math.round(u.total_payment ?? 0).toLocaleString()}</td>
                     <td>{u.primary_device
                       ? <span className={`badge badge-${u.primary_device.toLowerCase()}`}>{u.primary_device}</span>
@@ -471,7 +472,7 @@ export default function SuperadminPage() {
                   [t(lang, 'superadmin.fieldExpires'), fmtDate(modal.plan_expires_at, lang)],
                   [t(lang, 'superadmin.fieldStatus'), statusLabel(modal.status)],
                   [t(lang, 'superadmin.fieldLastLogin'), fmtDatetime(modal.last_login_at)],
-                  [t(lang, 'superadmin.fieldLoginCount'), (modal.login_count ?? 0).toLocaleString()],
+                  [t(lang, 'superadmin.fieldLoginCount'), `${(modal.login_count ?? 0).toLocaleString()} / ${(modal.auto_login_count ?? 0).toLocaleString()}`],
                   [t(lang, 'superadmin.fieldPayment'), '₩' + Math.round(modal.total_payment ?? 0).toLocaleString()],
                 ].map(([label, val]) => (
                   <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>

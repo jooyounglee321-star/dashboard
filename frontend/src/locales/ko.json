@@ -203,6 +203,7 @@
     "colStatus": "계정 상태",
     "colLastLogin": "마지막 접속",
     "colLogins": "로그인",
+    "colAutoLogins": "자동",
     "colPayment": "누적결제",
     "colDevice": "기기",
     "fieldId": "ID",

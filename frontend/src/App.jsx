@@ -70,6 +70,19 @@ export default function App() {
     }
   }, [])
 
+  // 세션당 한 번만 자동 로그인 카운트
+  useEffect(() => {
+    if (!hasValidToken()) return
+    if (sessionStorage.getItem('session_pinged')) return
+    const token = localStorage.getItem('token')
+    fetch('/api/auth/session-ping', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token },
+    }).then(() => {
+      sessionStorage.setItem('session_pinged', '1')
+    }).catch(() => {})
+  }, [])
+
   return (
     <BrowserRouter>
       <Routes>
