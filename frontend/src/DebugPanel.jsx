@@ -16,6 +16,13 @@ function getLocalStorageSnapshot() {
 export default function DebugPanel() {
   const [open, setOpen] = useState(false)
   const [tick, setTick] = useState(0)
+  const [expandedLog, setExpandedLog] = useState(new Set())
+
+  const toggleLog = (i) => setExpandedLog(prev => {
+    const next = new Set(prev)
+    next.has(i) ? next.delete(i) : next.add(i)
+    return next
+  })
 
   if (localStorage.getItem('dashboard_debug_mode') !== 'true') return null
 
@@ -96,18 +103,49 @@ export default function DebugPanel() {
             </div>
             {apiLog.length === 0
               ? <div style={{ color: '#475569', fontStyle: 'italic' }}>아직 API 호출 없음</div>
-              : apiLog.map((entry, i) => (
-                <div key={i} style={{ marginBottom: '0.3rem', padding: '0.25rem 0.4rem', background: '#1e293b', borderRadius: 4, borderLeft: `2px solid ${statusColor(entry.status)}` }}>
-                  <span style={{ color: '#7dd3fc' }}>{entry.method}</span>{' '}
-                  <span style={{ color: '#e2e8f0', wordBreak: 'break-all' }}>{entry.url}</span>
-                  <div style={{ marginTop: '0.1rem' }}>
-                    <span style={{ color: statusColor(entry.status) }}>{entry.status || 'ERR'}</span>
-                    {' · '}
-                    <span style={{ color: '#94a3b8' }}>{entry.ms}ms</span>
-                    {entry.error && <span style={{ color: '#f87171' }}> · {entry.error}</span>}
+              : apiLog.map((entry, i) => {
+                const expanded = expandedLog.has(i)
+                return (
+                  <div key={i} style={{ marginBottom: '0.3rem', borderRadius: 4, borderLeft: `2px solid ${statusColor(entry.status)}`, overflow: 'hidden' }}>
+                    {/* 헤더 행 — 클릭으로 토글 */}
+                    <div
+                      onClick={() => toggleLog(i)}
+                      style={{ padding: '0.25rem 0.4rem', background: '#1e293b', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: '0.3rem' }}
+                    >
+                      <span style={{ color: '#64748b', flexShrink: 0, marginTop: '0.05rem' }}>{expanded ? '▼' : '▶'}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ color: '#7dd3fc' }}>{entry.method}</span>{' '}
+                        <span style={{ color: '#e2e8f0', wordBreak: 'break-all' }}>{entry.url}</span>
+                        <div style={{ marginTop: '0.1rem' }}>
+                          <span style={{ color: statusColor(entry.status) }}>{entry.status || 'ERR'}</span>
+                          {' · '}
+                          <span style={{ color: '#94a3b8' }}>{entry.ms}ms</span>
+                          {entry.error && <span style={{ color: '#f87171' }}> · {entry.error}</span>}
+                        </div>
+                      </div>
+                    </div>
+                    {/* 상세 패널 */}
+                    {expanded && (
+                      <div style={{ background: '#1a1a2e', padding: '0.4rem 0.5rem' }}>
+                        <div style={{ color: '#64748b', fontSize: '0.68rem', marginBottom: '0.2rem' }}>Response Body</div>
+                        <pre style={{
+                          margin: 0, color: '#a8ff78', fontSize: '0.7rem',
+                          maxHeight: 200, overflowY: 'auto',
+                          whiteSpace: 'pre-wrap', wordBreak: 'break-all',
+                          fontFamily: 'monospace',
+                        }}>
+                          {entry.responseBody === null || entry.responseBody === undefined
+                            ? '(없음)'
+                            : typeof entry.responseBody === 'string'
+                              ? entry.responseBody
+                              : JSON.stringify(entry.responseBody, null, 2)
+                          }
+                        </pre>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))
+                )
+              })
             }
           </div>
         </div>

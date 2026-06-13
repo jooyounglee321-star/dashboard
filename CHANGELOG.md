@@ -4,6 +4,19 @@
 
 ---
 
+## [2026-06-13] — feat: DebugPanel API LOG 아코디언 확장 — responseBody JSON 뷰어
+
+### 변경 내용
+- `api.js`: apiLog 엔트리에 `responseBody` 필드 추가 (JSON 또는 text)
+- `DebugPanel.jsx`: API LOG 각 항목에 ▶/▼ 아코디언 토글 추가
+  - 클릭 시 Response Body를 JSON pretty-print로 표시
+  - 터미널 스타일: 배경 `#1a1a2e`, 글자 `#a8ff78`, 최대 높이 200px 스크롤
+
+### 검증
+- grep: `expandedLog|toggleLog|▶|▼|a8ff78|1a1a2e|responseBody` — 11 hits 확인
+
+---
+
 ## [2026-06-13] — feat: 슈퍼어드민 디버그 모드 토글 추가 (localStorage 기반)
 
 ### 변경 내용
