@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { t } from './i18n'
-import { authH as authHdr } from '../../utils/api'
+import { apiFetch } from '../../api'
 
 const MAX_MEMOS = 4
 const MAX_CHARS = 500
@@ -282,8 +282,7 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
   const [dayDetail, setDayDetail] = useState(null)
 
   const loadToday = useCallback(async () => {
-    const list = await fetch('/api/memos?date=' + todayKey(), { headers: authHdr() })
-      .then(r => r.ok ? r.json() : []).catch(() => [])
+    const list = await apiFetch('/api/memos?date=' + todayKey()).catch(() => [])
     setMemoList(list.slice(0, MAX_MEMOS))
   }, [])
 
@@ -291,9 +290,8 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
 
   async function saveNew(mood, text) {
     if (!text.trim() && !mood) return
-    await fetch('/api/memos', {
+    await apiFetch('/api/memos', {
       method: 'POST',
-      headers: { ...authHdr(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ date: todayKey(), content: JSON.stringify({ mood, text }) }),
     })
     setAddingNew(false)
@@ -302,9 +300,8 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
 
   async function saveEdit(mood, text) {
     if (!editingMemo) return
-    await fetch('/api/memos/' + editingMemo.id, {
+    await apiFetch('/api/memos/' + editingMemo.id, {
       method: 'PUT',
-      headers: { ...authHdr(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ content: JSON.stringify({ mood, text }) }),
     })
     setEditingMemo(null)
@@ -312,7 +309,7 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
   }
 
   async function deleteMemo(id) {
-    await fetch('/api/memos/' + id, { method: 'DELETE', headers: authHdr() })
+    await apiFetch('/api/memos/' + id, { method: 'DELETE' })
     await loadToday()
   }
 
@@ -326,8 +323,7 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
   function cancelNew()  { setAddingNew(false) }
 
   async function openCalendar() {
-    const list = await fetch('/api/memos', { headers: authHdr() })
-      .then(r => r.ok ? r.json() : []).catch(() => [])
+    const list = await apiFetch('/api/memos').catch(() => [])
     setAllMemos(list); setCalOpen(true); setDayDetail(null)
   }
 

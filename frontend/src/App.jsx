@@ -8,6 +8,7 @@ import IndexPage from './pages/index/IndexPage'
 import ProfilePage from './pages/ProfilePage'
 import BudgetPage from './pages/BudgetPage'
 import DietStatsPage from './pages/DietStatsPage'
+import DebugPanel from './DebugPanel'
 
 function hasValidToken() {
   const token = localStorage.getItem('token')
@@ -69,6 +70,7 @@ export default function App() {
         <Route path="/diet-stats"  element={<AuthGuard><DietStatsPage /></AuthGuard>} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
+      <DebugPanel />
     </BrowserRouter>
   )
 }

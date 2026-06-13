@@ -4,6 +4,51 @@
 
 ---
 
+## [2026-06-13] — feat: 디버깅 인프라 구축 (DEBUG_MODE, apiFetch, ErrorBoundary, DebugPanel)
+
+### 변경 내용
+
+- **`main.py`**: `DEBUG_MODE` 환경변수 기반 HTTP 미들웨어 추가
+  - 요청 메서드·경로·상태코드·응답시간 로그 출력
+  - 비밀번호·토큰 등 민감 필드 자동 마스킹 (`_mask_body`)
+  - 평상시 완전 비활성화 (Railway 환경변수 `DEBUG_MODE=true`로만 켜짐)
+
+- **`frontend/src/api.js`** (신규): 공통 API fetch 유틸
+  - `apiFetch(url, options)` — Authorization 헤더 자동 첨부, body 있을 때만 Content-Type 설정
+  - `VITE_DEBUG_MODE=true` 시 `console.group`으로 요청/응답 상세 출력
+  - `apiLog[]` 전역 배열에 최근 50개 호출 이력 보관 (DebugPanel 소비)
+  - 비-2xx 응답은 `{ status, data }` 포함 Error로 throw
+
+- **fetch 호출 교체** (5개 파일, 총 27곳 → apiFetch로 통일):
+  - `StockCard.jsx` (1개) · `StockStatsOverlay.jsx` (2개)
+  - `StockSettingsModal.jsx` (6개) · `MemoCard.jsx` (5개) · `ExpenseCard.jsx` (7개)
+  - `authH()` / `authHJ()` 중복 헤더 코드 제거
+
+- **`frontend/src/ErrorBoundary.jsx`** (신규): React 클래스 기반 에러 경계
+  - `VITE_DEBUG_MODE=true` 시 스택 트레이스 표시, 평상시 간략 메시지
+  - "다시 시도" 버튼으로 상태 초기화
+
+- **`frontend/src/DebugPanel.jsx`** (신규): 🐛 고정 버튼 + 패널
+  - `VITE_DEBUG_MODE=false`(프로덕션)에서 완전 비렌더링
+  - 사용자 정보(id/email/role), 토큰 상태, localStorage 스냅샷, API 호출 이력 표시
+
+- **`frontend/src/App.jsx`**: `<DebugPanel />` 전역 마운트
+
+- **환경변수 파일**:
+  - `frontend/.env.development`: `VITE_DEBUG_MODE=true` (로컬 자동 활성화)
+  - `frontend/.env.production`: `VITE_DEBUG_MODE=false` (빌드 시 비활성화)
+  - `.env.example`: `DEBUG_MODE=false` 항목 추가
+
+- **`README.md`**: 디버깅 가이드 섹션 추가
+
+### 검증
+- `apiFetch` 키워드: api.js 11건 확인
+- 5개 컴포넌트 파일 총 27곳 apiFetch 교체 확인
+- `ErrorBoundary`, `DebugPanel` 파일 생성 확인
+- `npm run build` 성공 (7.08s)
+
+---
+
 ## [2026-06-12] — fix: SEC-10 확인, BUG-07 cat_map N+1 수정, DUP-04 income 집계 패턴 통일
 
 ### 변경 내용

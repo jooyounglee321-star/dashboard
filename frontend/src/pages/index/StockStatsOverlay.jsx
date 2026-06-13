@@ -3,6 +3,7 @@ import { Chart, registerables } from 'chart.js'
 import 'chartjs-adapter-date-fns'
 import { t } from './i18n'
 import { fmtKRW, fmtUSD } from '../../utils/format'
+import { apiFetch } from '../../api'
 Chart.register(...registerables)
 
 const CHART_COLORS = ['#2563eb', '#16a34a', '#d97706', '#9333ea', '#dc2626', '#0891b2', '#65a30d', '#c026d3']
@@ -33,6 +34,12 @@ const formatAuto = (val, currency) => currency === 'USD' ? formatUSD(val) : form
 function computeStockStats(stockData, userJoinDate) {
   if (!stockData) return null
   const { groups, priceMap, fxRate } = stockData
+
+  // ── 진단 로그: 원본 그룹/종목 구조 확인 (버그 원인 파악용) ──
+  console.log('[DEBUG] groups 원본:', JSON.stringify(groups.map(g => ({
+    id: g.id, name: g.name, currency: g.currency,
+    stocks: g.stocks.map(s => ({ id: s.id, ticker: s.ticker, name: s.name, keys: Object.keys(s) }))
+  })), null, 2))
 
   const grpTotals = groups.map(g => {
     const isKRW = g.currency === 'KRW'
@@ -181,9 +188,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       const u = JSON.parse(localStorage.getItem('user') || '{}')
       if (u.created_at) { setUserJoinDate(u.created_at.slice(0, 10)); return }
     } catch {}
-    const token = localStorage.getItem('token')
-    fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } })
-      .then(r => r.ok ? r.json() : null)
+    apiFetch('/api/auth/me')
       .then(d => { if (d?.created_at) setUserJoinDate(d.created_at.slice(0, 10)) })
       .catch(() => {})
   }, [isOpen])
@@ -367,9 +372,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   useEffect(() => {
     if (!isOpen || mainTab !== 'history') return
     setHistLoading(true)
-    const token = localStorage.getItem('token')
-    fetch('/api/portfolio/history', { headers: { Authorization: 'Bearer ' + token } })
-      .then(r => r.ok ? r.json() : [])
+    apiFetch('/api/portfolio/history')
       .then(d => { setHistData(Array.isArray(d) ? d : []); setHistPage(0) })
       .catch(() => setHistData([]))
       .finally(() => setHistLoading(false))
