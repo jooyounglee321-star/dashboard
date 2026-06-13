@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import { apiLog } from './api'
 
-const DEBUG = import.meta.env.VITE_DEBUG_MODE === 'true'
-
 function getLocalStorageSnapshot() {
   const snap = {}
   try {
@@ -19,7 +17,7 @@ export default function DebugPanel() {
   const [open, setOpen] = useState(false)
   const [tick, setTick] = useState(0)
 
-  if (!DEBUG) return null
+  if (localStorage.getItem('dashboard_debug_mode') !== 'true') return null
 
   const refresh = () => setTick(t => t + 1)
 
