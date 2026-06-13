@@ -17,6 +17,7 @@ export default function DebugPanel() {
   const [open, setOpen] = useState(false)
   const [tick, setTick] = useState(0)
   const [expandedLog, setExpandedLog] = useState(new Set())
+  const [copied, setCopied] = useState(false)
 
   const toggleLog = (i) => setExpandedLog(prev => {
     const next = new Set(prev)
@@ -98,7 +99,29 @@ export default function DebugPanel() {
             <div style={{ color: '#94a3b8', marginBottom: '0.3rem', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
               <span>API LOG ({apiLog.length})</span>
               {apiLog.length > 0 && (
-                <button onClick={() => { apiLog.length = 0; refresh() }} style={{ background: 'none', border: '1px solid #334155', borderRadius: 4, color: '#94a3b8', cursor: 'pointer', fontSize: '0.65rem', padding: '0.1rem 0.35rem' }}>지우기</button>
+                <div style={{ display: 'flex', gap: '0.3rem' }}>
+                  <button
+                    onClick={() => {
+                      const ls = {}
+                      try {
+                        const COPY_KEYS = ['dashboard_lang', 'stock_total_mode']
+                        COPY_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v !== null) ls[k] = v })
+                      } catch {}
+                      const payload = {
+                        timestamp: new Date().toISOString().slice(0, 19),
+                        user: { id: user?.id ?? null, email: user?.email ?? null, role: user?.role ?? null },
+                        localStorage: ls,
+                        apiLogs: apiLog.map(e => ({ method: e.method, url: e.url, status: e.status, duration: e.ms, responseBody: e.responseBody ?? null })),
+                      }
+                      navigator.clipboard.writeText(JSON.stringify(payload, null, 2)).then(() => {
+                        setCopied(true)
+                        setTimeout(() => setCopied(false), 1500)
+                      })
+                    }}
+                    style={{ background: 'none', border: '1px solid #334155', borderRadius: 4, color: copied ? '#4ade80' : '#94a3b8', cursor: 'pointer', fontSize: '0.65rem', padding: '0.1rem 0.35rem' }}
+                  >{copied ? '✅ 복사됨!' : '로그 복사'}</button>
+                  <button onClick={() => { apiLog.length = 0; refresh() }} style={{ background: 'none', border: '1px solid #334155', borderRadius: 4, color: '#94a3b8', cursor: 'pointer', fontSize: '0.65rem', padding: '0.1rem 0.35rem' }}>지우기</button>
+                </div>
               )}
             </div>
             {apiLog.length === 0
