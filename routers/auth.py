@@ -171,6 +171,19 @@ def get_current_user(
     return user
 
 
+# ── POST /api/auth/session-ping ──────────────────────────────────────────────
+
+@router.post("/session-ping", summary="세션 자동 로그인 카운트")
+def session_ping(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """앱 최초 로드 시 세션당 한 번 호출 — auto_login_count 증가."""
+    current_user.auto_login_count = (current_user.auto_login_count or 0) + 1
+    db.commit()
+    return {"ok": True}
+
+
 # ── GET /api/auth/me ──────────────────────────────────────────────────────────
 
 @router.get("/me", response_model=ProfileOut, summary="내 프로필 조회")
