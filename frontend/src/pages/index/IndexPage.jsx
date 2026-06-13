@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { calcStock } from '../../utils/calcStock'
+import { apiFetch, getToken } from '../../api'
 import './index.css'
 
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
@@ -60,7 +61,6 @@ export default function IndexPage() {
   const [stockError, setStockError] = useState(false)
 
   // localStorage 안전 접근 (Safari Private 모드 등 대비)
-  const getToken  = () => { try { return localStorage.getItem('token')  || '' } catch { return '' } }
   const getLsItem = (k) => { try { return localStorage.getItem(k) } catch { return null } }
 
   // Stats overlay
@@ -109,12 +109,7 @@ export default function IndexPage() {
     const token = getToken()
     if (!token || token.trim() === '' || token === 'undefined' || token === 'null') return
     const ctrl = new AbortController()
-    fetch('/api/portfolio/backfill', {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + token },
-      signal: ctrl.signal,
-    })
-      .then(r => r.ok ? r.json() : Promise.reject('HTTP ' + r.status))
+    apiFetch('/api/portfolio/backfill', { method: 'POST', signal: ctrl.signal })
       .then(d => { if (d.backfilled > 0) console.log('[BACKFILL] 포트폴리오 백필 완료:', d) })
       .catch(err => { if (err?.name !== 'AbortError') console.warn('[BACKFILL] 백필 실패:', err) })
     return () => ctrl.abort()
@@ -229,9 +224,7 @@ export default function IndexPage() {
     setStockLoading(true)
     setStockError(false)
     try {
-      const dbRes = await fetch('/api/portfolio/groups', { signal, headers: { Authorization: 'Bearer ' + getToken() } })
-      if (!dbRes.ok) throw new Error('HTTP ' + dbRes.status)
-      const dbJson = await dbRes.json()
+      const dbJson = await apiFetch('/api/portfolio/groups', { signal })
       const rawGroups = dbJson.data || []
       // Filter deleted stocks
       const activeGroups = rawGroups.map(g => ({ ...g, stocks: (g.stocks || []).filter(s => !s.is_deleted) }))
@@ -245,11 +238,10 @@ export default function IndexPage() {
       let newFxRate = null
 
       const [fxResult] = await Promise.allSettled([
-        fetch('/api/stocks/exchange-rate', { signal, headers: { Authorization: 'Bearer ' + getToken() } }).then(r => r.ok ? r.json() : null).catch(() => null),
+        apiFetch('/api/stocks/exchange-rate', { signal }).catch(() => null),
         ...Object.entries(tickerCatMap).map(async ([t, cat]) => {
           try {
-            const r = await fetch(`/api/stocks/price/${encodeURIComponent(t)}?category=${cat}`, { signal, headers: { Authorization: 'Bearer ' + getToken() } })
-            if (r.ok) newPriceMap[t] = await r.json()
+            newPriceMap[t] = await apiFetch(`/api/stocks/price/${encodeURIComponent(t)}?category=${cat}`, { signal })
           } catch {}
         }),
       ])
@@ -280,9 +272,7 @@ export default function IndexPage() {
         if (lastSnapshotDate === today) return
         try {
           // Re-fetch stock data for snapshot
-          const dbRes = await fetch('/api/portfolio/groups', { signal: AbortSignal.timeout(8000), headers: { Authorization: 'Bearer ' + getToken() } })
-          if (!dbRes.ok) return
-          const dbJson = await dbRes.json()
+          const dbJson = await apiFetch('/api/portfolio/groups', { signal: AbortSignal.timeout(8000) })
           const groups = (dbJson.data || []).map(g => ({ ...g, stocks: (g.stocks || []).filter(s => !s.is_deleted) }))
 
           const tickerCatMap = buildTickerCatMap(groups)
@@ -290,11 +280,10 @@ export default function IndexPage() {
           const snapPriceMap = {}
           let snapFxRate = null
           const [fxRes, ...priceRes] = await Promise.allSettled([
-            fetch('/api/stocks/exchange-rate', { headers: { Authorization: 'Bearer ' + getToken() } }).then(r => r.ok ? r.json() : null).catch(() => null),
+            apiFetch('/api/stocks/exchange-rate').catch(() => null),
             ...Object.entries(tickerCatMap).map(async ([t, cat]) => {
               try {
-                const r = await fetch(`/api/stocks/price/${encodeURIComponent(t)}?category=${cat}`, { headers: { Authorization: 'Bearer ' + getToken() } })
-                if (r.ok) snapPriceMap[t] = await r.json()
+                snapPriceMap[t] = await apiFetch(`/api/stocks/price/${encodeURIComponent(t)}?category=${cat}`)
               } catch {}
             }),
           ])
@@ -323,15 +312,12 @@ export default function IndexPage() {
             groups: snapshotGroups,
           }
 
-          const r = await fetch('/api/portfolio/snapshot', {
+          await apiFetch('/api/portfolio/snapshot', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() },
             body: JSON.stringify(payload),
           })
-          if (r.ok) {
-            lastSnapshotDate = today
-            console.log('[SNAPSHOT] 저장 완료 →', today)
-          }
+          lastSnapshotDate = today
+          console.log('[SNAPSHOT] 저장 완료 →', today)
         } catch (e) {
           console.warn('[SNAPSHOT] 오류:', e.message)
         }
