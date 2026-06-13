@@ -47,6 +47,18 @@ export default function SuperadminPage() {
   const [clSearch, setClSearch] = useState('')
   const [clOpen, setClOpen] = useState(new Set())
 
+  const [debugMode, setDebugMode] = useState(
+    () => localStorage.getItem('dashboard_debug_mode') === 'true'
+  )
+
+  function toggleDebugMode() {
+    const next = !debugMode
+    if (next) localStorage.setItem('dashboard_debug_mode', 'true')
+    else localStorage.removeItem('dashboard_debug_mode')
+    setDebugMode(next)
+    window.dispatchEvent(new Event('dashboard_debug_toggle'))
+  }
+
   useEffect(() => {
     function handleLangChange() {
       try { setLang(localStorage.getItem('dashboard_lang') || 'ko') } catch {}
@@ -401,6 +413,38 @@ export default function SuperadminPage() {
               )
             })}
           </div>
+        </div>
+
+        {/* ── 디버그 모드 섹션 ── */}
+        <div style={{ marginTop: '2.5rem' }}>
+          <hr style={{ border: 'none', borderTop: '1px solid var(--border)', marginBottom: '2rem' }} />
+          <h2 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 1rem 0', color: 'var(--ink)' }}>🐛 디버그 모드</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+              padding: '0.28rem 0.75rem', borderRadius: 20, fontSize: '0.82rem', fontWeight: 600,
+              background: debugMode ? 'rgba(22,163,74,0.12)' : 'rgba(156,163,175,0.15)',
+              color: debugMode ? '#16a34a' : '#9ca3af',
+              border: `1px solid ${debugMode ? 'rgba(22,163,74,0.3)' : 'rgba(156,163,175,0.3)'}`,
+            }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: debugMode ? '#16a34a' : '#9ca3af', display: 'inline-block' }} />
+              {debugMode ? 'ON' : 'OFF'}
+            </span>
+            <button
+              onClick={toggleDebugMode}
+              style={{
+                padding: '0.42rem 1.1rem', fontSize: '0.85rem', fontWeight: 500,
+                border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit',
+                background: debugMode ? '#dc2626' : '#16a34a',
+                color: '#fff', transition: 'background 0.15s',
+              }}
+            >
+              {debugMode ? '디버그 모드 끄기' : '디버그 모드 켜기'}
+            </button>
+          </div>
+          <p style={{ marginTop: '0.6rem', fontSize: '0.78rem', color: 'var(--ink3)', margin: '0.6rem 0 0' }}>
+            디버그 모드 활성화 시 화면 우측 하단에 🐛 버튼이 표시됩니다.
+          </p>
         </div>
       </div>
 

@@ -4,6 +4,32 @@
 
 ---
 
+## [2026-06-13] — feat: 슈퍼어드민 디버그 모드 토글 추가 (localStorage 기반)
+
+### 변경 내용
+
+- **`SuperadminPage.jsx`**: 하단에 "🐛 디버그 모드" 섹션 추가
+  - 현재 상태 표시 (ON 초록 / OFF 회색 배지)
+  - 토글 버튼 클릭 → localStorage `dashboard_debug_mode` 저장/삭제
+  - `window.dispatchEvent(new Event('dashboard_debug_toggle'))` 로 App.jsx에 즉시 통보
+
+- **`App.jsx`**: DebugPanel 렌더링을 localStorage 기반으로 변경
+  - `debugMode` 상태로 `{debugMode && <DebugPanel />}` 조건부 렌더
+  - `storage` 이벤트(타 탭) + `dashboard_debug_toggle` 이벤트(동일 탭) 모두 감지
+
+- **`DebugPanel.jsx`**: `import.meta.env.VITE_DEBUG_MODE` 환경변수 체크 제거
+  - `localStorage.getItem('dashboard_debug_mode') !== 'true'` 로 변경
+  - Railway 재배포 없이 런타임 토글 가능
+
+### 동작 흐름
+슈퍼어드민 페이지 → 토글 버튼 클릭 → localStorage 업데이트 + 커스텀 이벤트 발생 → App.jsx 상태 갱신 → 🐛 버튼 즉시 표시/숨김
+
+### 검증
+- `dashboard_debug_mode` 키워드: SuperadminPage 3곳, DebugPanel 1곳, App.jsx 2곳 확인
+- `npm run build` 성공 (5.96s)
+
+---
+
 ## [2026-06-13] — feat: 디버깅 인프라 구축 (DEBUG_MODE, apiFetch, ErrorBoundary, DebugPanel)
 
 ### 변경 내용

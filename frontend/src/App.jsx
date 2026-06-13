@@ -56,6 +56,20 @@ function LoginGuard({ children }) {
 }
 
 export default function App() {
+  const [debugMode, setDebugMode] = useState(
+    () => localStorage.getItem('dashboard_debug_mode') === 'true'
+  )
+
+  useEffect(() => {
+    const handler = () => setDebugMode(localStorage.getItem('dashboard_debug_mode') === 'true')
+    window.addEventListener('storage', handler)
+    window.addEventListener('dashboard_debug_toggle', handler)
+    return () => {
+      window.removeEventListener('storage', handler)
+      window.removeEventListener('dashboard_debug_toggle', handler)
+    }
+  }, [])
+
   return (
     <BrowserRouter>
       <Routes>
@@ -70,7 +84,7 @@ export default function App() {
         <Route path="/diet-stats"  element={<AuthGuard><DietStatsPage /></AuthGuard>} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
-      <DebugPanel />
+      {debugMode && <DebugPanel />}
     </BrowserRouter>
   )
 }
