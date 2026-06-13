@@ -35,12 +35,6 @@ function computeStockStats(stockData, userJoinDate) {
   if (!stockData) return null
   const { groups, priceMap, fxRate } = stockData
 
-  // ── 진단 로그: 원본 그룹/종목 구조 확인 (버그 원인 파악용) ──
-  console.log('[DEBUG] groups 원본:', JSON.stringify(groups.map(g => ({
-    id: g.id, name: g.name, currency: g.currency,
-    stocks: g.stocks.map(s => ({ id: s.id, ticker: s.ticker, name: s.name, keys: Object.keys(s) }))
-  })), null, 2))
-
   const grpTotals = groups.map(g => {
     const isKRW = g.currency === 'KRW'
     const tot = g.stocks.reduce((a, s) => {
@@ -204,21 +198,6 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     chartsRef.current = []
 
     const { grpTotals, stockValues, stockEvals, lineDatasets, fxRate, groupTickers } = computed
-
-    // ── 필터 진단 로그 ──
-    console.log('[StockStats] 필터 상태:', { overviewGroup, overviewCurrency, overviewPeriod })
-    console.log('[StockStats] lineDatasets:', lineDatasets?.map(d => ({ label: d.label, pts: d.data?.length })))
-    console.log('[StockStats] stockEvals:', stockEvals?.map(s => ({ label: s.label, groupName: s.groupName })))
-    console.log('[StockStats] groupTickers:', groupTickers)
-    if (overviewGroup) {
-      const filteredLine = lineDatasets?.filter(d => d.label === overviewGroup)
-      const filteredTickers = new Set(groupTickers?.[overviewGroup] ?? [])
-      const filteredBar = stockEvals?.filter(s => filteredTickers.has(s.label))
-      const filteredPie = stockValues?.filter(s => s.groupName?.toLowerCase() === overviewGroup.toLowerCase())
-      console.log('[StockStats] 그룹 필터 후 lineDatasets:', filteredLine?.length, filteredLine?.map(d => d.label))
-      console.log('[StockStats] 그룹 필터 후 barEvals:', filteredBar?.length, filteredBar?.map(s => s.label))
-      console.log('[StockStats] 그룹 필터 후 pieStocks:', filteredPie?.length, filteredPie?.map(s => s.name))
-    }
 
     // 기간 cutoff
     const now = new Date()
