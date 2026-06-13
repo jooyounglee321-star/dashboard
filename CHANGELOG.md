@@ -4,6 +4,18 @@
 
 ---
 
+## [2026-06-13] — feat: DebugPanel 로그 복사 버튼 추가
+
+### 변경 내용
+- `DebugPanel.jsx`: "지우기" 버튼 옆에 "로그 복사" 버튼 추가
+  - 클릭 시 `{ timestamp, user, localStorage, apiLogs }` JSON을 클립보드에 복사
+  - 복사 후 1.5초간 "✅ 복사됨!" 으로 텍스트 변경 후 원복
+
+### 검증
+- grep: `copied|navigator.clipboard|로그 복사|복사됨` — 4 hits 확인
+
+---
+
 ## [2026-06-13] — feat: DebugPanel API LOG 아코디언 확장 — responseBody JSON 뷰어
 
 ### 변경 내용
