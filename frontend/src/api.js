@@ -50,7 +50,7 @@ export async function apiFetch(url, options = {}) {
   const ct = res.headers.get('content-type') || ''
   try { data = ct.includes('application/json') ? await res.json() : await res.text() } catch { data = null }
 
-  const entry = { url, method: options.method || 'GET', status: res.status, ms }
+  const entry = { url, method: options.method || 'GET', status: res.status, ms, responseBody: data }
   apiLog.unshift(entry); if (apiLog.length > MAX_LOG) apiLog.pop()
 
   if (DEBUG) {
