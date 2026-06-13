@@ -4,6 +4,9 @@ import { calcStock } from '../../utils/calcStock'
 import { fmtKRW, fmtUSD } from '../../utils/format'
 import { apiFetch } from '../../api'
 
+// "undefined" 문자열·JS undefined·null·"" 모두 처리
+const safeStr = (v, fallback) => (v && typeof v === 'string' && v !== 'undefined' && v.trim() !== '') ? v : (fallback || '알 수 없음')
+
 const GRP_COLORS = [
   { bg: '#c8deff', tx: '#1a3d7c' }, { bg: '#c0edd8', tx: '#0d4a2a' },
   { bg: '#ffd5c0', tx: '#7a2a00' }, { bg: '#ddd0f5', tx: '#3a1870' },
@@ -215,8 +218,8 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
                 <div style={{
                   fontWeight: 500, fontSize: '0.85rem', color: 'var(--ink)',
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160,
-                }} title={s.name || s.ticker}>
-                  {s.name || s.ticker}
+                }} title={safeStr(s.name, s.ticker)}>
+                  {safeStr(s.name, s.ticker)}
                 </div>
                 <div style={{ fontSize: '0.68rem', color: 'var(--ink3)', marginTop: '0.1rem' }}>
                   {s.ticker}
@@ -250,7 +253,7 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
           <li key={s.ticker} className="m-stock-item">
             <div>
               <div className="m-stock-name">
-                {s.name || s.ticker}
+                {safeStr(s.name, s.ticker)}
                 <span style={{ fontSize: '0.6rem', color: 'var(--ink3)' }}> {s.ticker}</span>
               </div>
               <div className="m-stock-qty">
@@ -280,7 +283,7 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
 
     if (isKRW) grandKRW += grpTotal; else grandUSD += grpTotal
 
-    return { col, isKRW, sym, fmt, grpTotal, stockRows, name: g.name, currency: g.currency }
+    return { col, isKRW, sym, fmt, grpTotal, stockRows, name: safeStr(g.name), currency: g.currency }
   })
 
   // Total bar
