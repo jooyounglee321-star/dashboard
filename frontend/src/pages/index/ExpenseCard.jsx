@@ -5,7 +5,7 @@ import { INCOME_CATEGORIES, getSubcategories } from '../../data/incomeCategories
 import { CURRENCY_LIST as CURRENCIES } from '../../data/currencies'
 import { useToast } from '../../components/Toast'
 import Toast from '../../components/Toast'
-import { getToken, authH } from '../../utils/api'
+import { apiFetch } from '../../api'
 import { todayStr } from '../../utils/date'
 
 function fmtAmt(amount, currency) {
@@ -335,15 +335,13 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
   /* ── 데이터 로드 ──────────────────────────────────────────────────── */
 
   const loadCategories = useCallback(async () => {
-    const data = await fetch(`/api/expense/categories?lang=${lang}`, { headers: authH() })
-      .then(r => r.ok ? r.json() : []).catch(() => [])
+    const data = await apiFetch(`/api/expense/categories?lang=${lang}`).catch(() => [])
     setCategories(data)
   }, [lang]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadExpenses = useCallback(async (date = curDate) => {
     setLoading(true)
-    const data = await fetch(`/api/expense?date=${date}&lang=${lang}`, { headers: authH() })
-      .then(r => r.ok ? r.json() : []).catch(() => [])
+    const data = await apiFetch(`/api/expense?date=${date}&lang=${lang}`).catch(() => [])
     setExpenses(data)
     setLoading(false)
   }, [lang, curDate]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -353,10 +351,8 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
     const year  = now.getFullYear()
     const month = now.getMonth() + 1
     const [summary, budgets] = await Promise.all([
-      fetch(`/api/expense/summary/monthly?year=${year}&month=${month}&lang=${lang}`, { headers: authH() })
-        .then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch(`/api/expense/budget?year=${year}&month=${month}`, { headers: authH() })
-        .then(r => r.ok ? r.json() : []).catch(() => []),
+      apiFetch(`/api/expense/summary/monthly?year=${year}&month=${month}&lang=${lang}`).catch(() => null),
+      apiFetch(`/api/expense/budget?year=${year}&month=${month}`).catch(() => []),
     ])
     setMonthlyTotal(summary?.total_usd ?? 0)
     const totalBudget = (budgets ?? []).reduce((s, b) => s + (b.budget_usd ?? 0), 0)
@@ -395,12 +391,10 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
     setSubmitting(true)
     const isIncome = form.type === 'income'
     try {
-      let res
       if (isIncome) {
         /* ── 수입: /api/income (code 기반) ── */
-        res = await fetch('/api/income', {
+        await apiFetch('/api/income', {
           method: 'POST',
-          headers: { ...authH(), 'Content-Type': 'application/json' },
           body: JSON.stringify({
             category_code:    form.income_main_code || null,
             subcategory_code: form.income_sub_code  || null,
@@ -412,9 +406,8 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
         })
       } else {
         /* ── 지출: /api/expense (id 기반) ── */
-        res = await fetch('/api/expense', {
+        await apiFetch('/api/expense', {
           method: 'POST',
-          headers: { ...authH(), 'Content-Type': 'application/json' },
           body: JSON.stringify({
             date:           form.date,
             amount:         Number(form.amount),
@@ -427,7 +420,6 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
           }),
         })
       }
-      if (!res.ok) throw new Error('HTTP ' + res.status)
       setForm(f => ({
         ...f,
         amount: '', description: '',
@@ -449,7 +441,7 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
     // 즉시 클라이언트 상태에서 제거 (optimistic update)
     setExpenses(prev => prev.filter(item => item.id !== id))
     try {
-      await fetch('/api/expense/' + id, { method: 'DELETE', headers: authH() })
+      await apiFetch('/api/expense/' + id, { method: 'DELETE' })
       showToast(t(lang, 'common.deleteSuccess'), 'ok')
       await loadMonthly()
     } catch {
@@ -472,9 +464,8 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
 
   async function saveEdit() {
     try {
-      const res = await fetch('/api/expense/' + editId, {
+      await apiFetch('/api/expense/' + editId, {
         method: 'PUT',
-        headers: { ...authH(), 'Content-Type': 'application/json' },
         body: JSON.stringify({
           date:           editForm.date,
           amount:         Number(editForm.amount),
@@ -485,7 +476,6 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
           lang,
         }),
       })
-      if (!res.ok) throw new Error('HTTP ' + res.status)
       setEditId(null)
       await loadExpenses(form.date)
       await loadMonthly()

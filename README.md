@@ -122,6 +122,29 @@ npm run build        # 또는 npm run dev (개발용)
 | `SECRET_KEY` | JWT 서명 키 | (필수) |
 | `ALGORITHM` | JWT 알고리즘 | `HS256` |
 | `ACCESS_TOKEN_EXPIRE_DAYS` | JWT 유효 기간 (일) | `30` |
+| `DEBUG_MODE` | 요청/응답 로그 출력 (백엔드) | `false` |
+
+---
+
+## 디버깅 가이드
+
+### 백엔드 디버그 로그 (Railway)
+
+Railway 대시보드 → 프로젝트 → Variables 에서 `DEBUG_MODE=true` 설정 시
+모든 HTTP 요청/응답이 서버 로그에 출력됩니다. (비밀번호·토큰 등 민감 필드는 자동 마스킹)
+
+### 프론트엔드 DebugPanel (로컬 개발)
+
+로컬 `npm run dev` 실행 시 `frontend/.env.development`에 의해 자동 활성화됩니다.
+
+- 화면 우하단 🐛 버튼 클릭
+- 패널에서 확인 가능한 정보:
+  - 현재 로그인 사용자 정보 (id, email, role)
+  - 토큰 존재 여부
+  - localStorage 주요 키 값
+  - API 호출 이력 (URL, 상태코드, 응답시간)
+
+프로덕션 빌드(`npm run build`)에서는 `VITE_DEBUG_MODE=false`가 적용되어 🐛 버튼이 완전히 숨겨집니다.
 
 ---
 

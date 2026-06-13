@@ -49,6 +49,22 @@ from routers.income import income_router
 
 logger = logging.getLogger(__name__)
 
+# ── DEBUG 모드 설정 ───────────────────────────────────────────────────────────
+DEBUG_MODE = os.environ.get("DEBUG_MODE", "false").lower() == "true"
+if DEBUG_MODE:
+    logger.warning("[DEBUG] DEBUG_MODE=true — 요청/응답 로깅 활성화")
+
+_SENSITIVE_KEYS = {"password", "token", "access_token", "secret", "authorization"}
+
+
+def _mask_body(body: dict) -> dict:
+    """민감 필드를 마스킹한 dict 반환."""
+    return {
+        k: "***" if k.lower() in _SENSITIVE_KEYS else v
+        for k, v in body.items()
+    }
+
+
 _scheduler = AsyncIOScheduler(timezone="Asia/Seoul")
 
 
@@ -948,6 +964,38 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+if DEBUG_MODE:
+    import time as _time
+    import json as _json_mod
+
+    @app.middleware("http")
+    async def debug_logging_middleware(request: Request, call_next):
+        t0 = _time.monotonic()
+        # 요청 바디 읽기 (스트림 소비 후 재주입)
+        body_bytes = await request.body()
+        req_summary = ""
+        if body_bytes:
+            try:
+                parsed = _json_mod.loads(body_bytes)
+                if isinstance(parsed, dict):
+                    parsed = _mask_body(parsed)
+                req_summary = str(parsed)[:200]
+            except Exception:
+                req_summary = body_bytes[:200].decode("utf-8", errors="replace")
+
+        async def receive():
+            return {"type": "http.request", "body": body_bytes}
+
+        request = Request(request.scope, receive)
+        response = await call_next(request)
+        elapsed = (_time.monotonic() - t0) * 1000
+        logger.info(
+            "[DEBUG] %s %s → %d | %.0fms | body: %s",
+            request.method, request.url.path, response.status_code, elapsed,
+            req_summary or "(none)",
+        )
+        return response
 
 app.include_router(auth_router.router, prefix="/api")
 app.include_router(expenses.router, prefix="/api")       # 레거시 /api/expenses

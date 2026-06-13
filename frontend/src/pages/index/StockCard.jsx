@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, memo, useRef } from 'react'
 import { t } from './i18n'
 import { calcStock } from '../../utils/calcStock'
 import { fmtKRW, fmtUSD } from '../../utils/format'
+import { apiFetch } from '../../api'
 
 const GRP_COLORS = [
   { bg: '#c8deff', tx: '#1a3d7c' }, { bg: '#c0edd8', tx: '#0d4a2a' },
@@ -58,11 +59,7 @@ function StockNewsRow({ newsConfig, lang, onOpenSettings }) {
       return
     }
     setStatus('loading')
-    const token = localStorage.getItem('token') || ''
-    fetch(`/api/stocks/news?query=${encodeURIComponent(query)}&source=${source}&lang=${nLang}&count=5`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    apiFetch(`/api/stocks/news?query=${encodeURIComponent(query)}&source=${source}&lang=${nLang}&count=5`)
       .then(data => {
         const list = Array.isArray(data) ? data : [data]
         cacheRef.current[cacheKey] = { data: list, ts: Date.now() }

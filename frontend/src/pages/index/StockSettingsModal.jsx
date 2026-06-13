@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import Toast, { useToast } from '../../components/Toast'
 import { t } from './i18n'
 
-import { authH } from '../../utils/api'
+import { apiFetch } from '../../api'
 
 /* ── 유틸 ── */
 const sv = (k, v) => localStorage.setItem(k, JSON.stringify(v))
@@ -51,8 +51,8 @@ function useStockSearch() {
   }
   async function yfSearch(q) {
     try {
-      const r = await fetch('/api/stocks/search?q=' + encodeURIComponent(q), { headers: authH() })
-      if (r.ok) { const d = await r.json(); return d.results || [] }
+      const d = await apiFetch('/api/stocks/search?q=' + encodeURIComponent(q))
+      return d.results || []
     } catch {}
     return []
   }
@@ -162,8 +162,8 @@ function StockDetailPanel({ g, s, onUpdate }) {
   async function fetchHistPrice(date) {
     const cat = g.currency === 'KRW' ? 'kor-stock' : 'us'
     try {
-      const r = await fetch(`/api/stocks/history/${encodeURIComponent(s.ticker)}?date=${date}&category=${cat}`, { headers: authH() })
-      if (r.ok) { const d = await r.json(); return d.close }
+      const d = await apiFetch(`/api/stocks/history/${encodeURIComponent(s.ticker)}?date=${date}&category=${cat}`)
+      return d.close
     } catch {}
     return null
   }
@@ -302,9 +302,7 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
 
   async function loadGroups() {
     try {
-      const res = await fetch('/api/portfolio/groups', { signal: AbortSignal.timeout(8000), headers: authH() })
-      if (!res.ok) throw new Error()
-      const json = await res.json()
+      const json = await apiFetch('/api/portfolio/groups', { signal: AbortSignal.timeout(8000) })
       let data = json.data || []
       data = data.map(g => ({ ...g, stocks: (g.stocks || []).map(s => ({ ...s, purchases: s.purchases || [], sells: s.sells || [] })) }))
       setGroups(data)
@@ -313,8 +311,8 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
 
   async function saveGroupsToDB(newGroups) {
     setGroups(newGroups)
-    await fetch('/api/portfolio/groups', {
-      method: 'POST', headers: { ...authH(), 'Content-Type': 'application/json' },
+    await apiFetch('/api/portfolio/groups', {
+      method: 'POST',
       body: JSON.stringify({ data: newGroups }),
     }).catch(e => console.warn('[saveGroups] DB 저장 실패:', e))
   }
@@ -365,7 +363,7 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
         })
         return { ...g, stocks }
       })
-      fetch('/api/portfolio/groups', { method: 'POST', headers: { ...authH(), 'Content-Type': 'application/json' }, body: JSON.stringify({ data: next }) }).catch(() => {})
+      apiFetch('/api/portfolio/groups', { method: 'POST', body: JSON.stringify({ data: next }) }).catch(() => {})
       return next
     })
     setExpanded(prev => new Set([...prev, sid]))
@@ -395,7 +393,7 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
     setGroups(prev => {
       const next = prev.map(g => g.id !== deleteModal.gid ? g
         : { ...g, stocks: g.stocks.map(s => s.id !== deleteModal.sid ? s : { ...s, is_deleted: true }) })
-      fetch('/api/portfolio/groups', { method: 'POST', headers: { ...authH(), 'Content-Type': 'application/json' }, body: JSON.stringify({ data: next }) }).catch(() => {})
+      apiFetch('/api/portfolio/groups', { method: 'POST', body: JSON.stringify({ data: next }) }).catch(() => {})
       return next
     })
     setExpanded(prev => { const n = new Set(prev); n.delete(deleteModal.sid); return n })
