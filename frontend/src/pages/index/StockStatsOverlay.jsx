@@ -177,7 +177,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
 
   // group ID → 이름 매핑 (구형 스냅샷 폴백용)
   const histGroupNames = useMemo(
-    () => Object.fromEntries((stockData?.groups ?? []).map(g => [g.id, g.name])),
+    () => Object.fromEntries((stockData?.groups ?? []).map(g => [g.id, cleanStr(g.name, g.id)])),
     [stockData]
   )
 
@@ -662,7 +662,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
           const totalPages = Math.ceil(tableRows.length / HIST_PAGE_SIZE)
           const pageRows = tableRows.slice(histPage * HIST_PAGE_SIZE, (histPage + 1) * HIST_PAGE_SIZE)
 
-          const histGroupOptions = (stockData?.groups ?? []).map(g => ({ id: g.id, name: g.name }))
+          const histGroupOptions = (stockData?.groups ?? []).map(g => ({ id: g.id, name: cleanStr(g.name, g.id) }))
 
           return (
             <>
