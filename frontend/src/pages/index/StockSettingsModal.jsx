@@ -290,7 +290,7 @@ function StockDetailPanel({ g, s, onUpdate }) {
 export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embedded = false }) {
   const { toast, showToast } = useToast()
   const [groups,      setGroups]      = useState([])
-  const [totalMode,   setTotalMode]   = useState(() => ld(TOTAL_MODE_KEY, 'KRW'))
+  const [totalMode,   setTotalMode]   = useState(() => { try { return localStorage.getItem(TOTAL_MODE_KEY) || 'KRW' } catch { return 'KRW' } })
   const [expanded,    setExpanded]    = useState(new Set())
   const [deleteModal, setDeleteModal] = useState(null)
   const [newsOpen,    setNewsOpen]    = useState(null) // stock id
@@ -411,7 +411,7 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
       {/* 합계 표시 방식 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
         <label style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>{t(lang, 'admin.totalDisplay')}</label>
-        <select value={totalMode} onChange={e => { setTotalMode(e.target.value); sv(TOTAL_MODE_KEY, e.target.value); showToast('✓ 합계 표시 방식이 저장되었습니다', 'ok') }}
+        <select value={totalMode} onChange={e => { setTotalMode(e.target.value); localStorage.setItem(TOTAL_MODE_KEY, e.target.value); showToast('✓ 합계 표시 방식이 저장되었습니다', 'ok') }}
           style={{ fontSize: '0.78rem', padding: '0.22rem 0.5rem', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit' }}>
           <option value="KRW">{t(lang, 'admin.krwOnly')}</option>
           <option value="USD">{t(lang, 'admin.usdOnly')}</option>
