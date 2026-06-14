@@ -38,7 +38,7 @@ function computeStockStats(stockData, userJoinDate) {
 
   const grpTotals = groups.map(g => {
     const isKRW = g.currency === 'KRW'
-    const tot = g.stocks.reduce((a, s) => {
+    const tot = g.stocks.filter(s => !s.is_deleted).reduce((a, s) => {
       const pp = s.purchases || []; const sl = s.sells || []
       const bq = pp.reduce((x, p) => x + (p.qty || 0), 0)
       const sq = sl.reduce((x, p) => x + (p.qty || 0), 0)
