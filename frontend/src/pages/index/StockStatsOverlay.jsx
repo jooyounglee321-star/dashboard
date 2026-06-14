@@ -36,7 +36,7 @@ function computeStockStats(stockData, userJoinDate) {
   const { groups, priceMap, fxRate } = stockData
   if (!groups || groups.length === 0) return null
 
-  const grpTotals = groups.map((g, i) => {
+  const grpTotals = groups.map(g => {
     const isKRW = g.currency === 'KRW'
     const tot = g.stocks.filter(s => !s.is_deleted).reduce((a, s) => {
       const pp = s.purchases || []; const sl = s.sells || []
@@ -50,7 +50,7 @@ function computeStockStats(stockData, userJoinDate) {
       const avg = vqt > 0 ? ws / vqt : 0
       return a + (livePrice ?? avg) * hq
     }, 0)
-    return { name: cleanStr(g.name, g.id), groupId: String(g.id ?? i), currency: g.currency, total: tot, isKRW }
+    return { name: cleanStr(g.name, g.id), currency: g.currency, total: tot, isKRW }
   })
 
   let grandUSD = 0, grandKRW = 0
@@ -74,13 +74,11 @@ function computeStockStats(stockData, userJoinDate) {
       const avg = vqt > 0 ? ws / vqt : 0
       const cur = priceMap[s.ticker]?.current_price ?? avg
       const evalAmt = cur * hq
-      if (hq > 0) stockValues.push({ ticker: s.ticker, name: cleanStr(s.name, s.ticker), evalAmt, groupName: cleanStr(g.name, g.id), groupId: String(g.id ?? gi), currency: g.currency, isKRW })
+      if (hq > 0) stockValues.push({ ticker: s.ticker, name: cleanStr(s.name, s.ticker), evalAmt, groupName: cleanStr(g.name, g.id), currency: g.currency, isKRW })
       const evalPL = avg > 0 ? (cur - avg) * hq : null
       if (evalPL != null) stockEvals.push({ label: s.ticker, name: cleanStr(s.name, s.ticker), evalPL, sym, isKRW })
     })
   })
-
-  window.__debugStockData = { groups, grpTotals, stockValues }
 
   // startDate부터 오늘까지 연속 날짜 생성
   const today = new Date().toISOString().slice(0, 10)
@@ -133,7 +131,6 @@ function computeStockStats(stockData, userJoinDate) {
 
     lineDatasets.push({
       label: cleanStr(g.name, g.id),
-      groupId: String(g.id ?? gi),
       data: pts,
       borderColor: CHART_COLORS[gi % CHART_COLORS.length],
       backgroundColor: 'transparent',
@@ -142,9 +139,9 @@ function computeStockStats(stockData, userJoinDate) {
     })
   })
 
-  // 그룹ID → ticker[] 맵
+  // 그룹명 → ticker[] 맵
   const groupTickers = {}
-  groups.forEach((g, i) => { groupTickers[String(g.id ?? i)] = g.stocks.map(s => s.ticker) })
+  groups.forEach(g => { groupTickers[cleanStr(g.name, g.id)] = g.stocks.map(s => s.ticker) })
 
   return { grpTotals, grandUSD, grandKRW, totalKRW, stockValues, stockEvals, lineDatasets, fxRate, groupTickers }
 }
@@ -225,7 +222,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       const safeName = (n) => (!n || n === 'undefined' || String(n).trim() === '') ? '알 수 없음' : String(n)
       if (overviewGroup) {
         // 선택 그룹 내 종목별 비중
-        const grpStocks = stockValues.filter(s => s.groupId === overviewGroupId)
+        const grpStocks = stockValues.filter(s => s.groupName?.toLowerCase() === overviewGroup.toLowerCase())
         const vals = grpStocks.map(s => ({ name: safeName(cleanStr(s.name, s.ticker)), val: Math.max(0, toDisplay(s.evalAmt, s.isKRW)) }))
         const total = vals.reduce((a, x) => a + x.val, 0) || 1
         pieLabels = vals.map(x => `${x.name} (${(x.val / total * 100).toFixed(1)}%)`)
@@ -251,7 +248,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     // ── 라인차트 ──
     if (lineRef.current) {
       let datasets = overviewGroup
-        ? lineDatasets.filter(ds => ds.groupId === overviewGroupId)
+        ? lineDatasets.filter(ds => ds.label === overviewGroup)
         : lineDatasets
       if (cutoff) {
         datasets = datasets.map(ds => ({ ...ds, data: ds.data.filter(pt => pt.x >= cutoff) }))
@@ -294,7 +291,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
 
     // ── 바차트 ──
     if (barRef.current && stockEvals.length) {
-      const tickerSet = overviewGroup ? new Set(groupTickers[overviewGroupId] ?? []) : null
+      const tickerSet = overviewGroup ? new Set(groupTickers[overviewGroup] ?? []) : null
       const filtered = tickerSet ? stockEvals.filter(s => tickerSet.has(s.label)) : stockEvals
       if (filtered.length) {
         const converted = filtered.map(s => {
@@ -454,8 +451,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   if (!stockData?.groups?.length) return null
 
   const { grpTotals, grandUSD, grandKRW, totalKRW, stockEvals, lineDatasets, fxRate, groupTickers, stockValues } = computed || {}
-  const groupOptions = (stockData?.groups ?? []).map((g, i) => ({ id: String(g.id ?? i), name: cleanStr(g.name, g.id) }))
-  const overviewGroupId = groupOptions.find(o => o.name === overviewGroup)?.id ?? ''
+  const groupNames = (stockData?.groups ?? []).map(g => cleanStr(g.name, g.id))
 
   // ── 필터 적용 후 유효 데이터 (JSX 조건부 렌더링 + useEffect 공유) ──
   const now = new Date()
@@ -467,7 +463,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
 
   const effectiveLineDatasets = (() => {
     if (!lineDatasets) return []
-    let ds = overviewGroup ? lineDatasets.filter(d => d.groupId === overviewGroupId) : lineDatasets
+    let ds = overviewGroup ? lineDatasets.filter(d => d.label === overviewGroup) : lineDatasets
     if (periodCutoff) {
       ds = ds.map(d => ({ ...d, data: d.data.filter(pt => pt.x >= periodCutoff) })).filter(d => d.data.length > 0)
     }
@@ -477,13 +473,13 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   const effectiveStockEvals = (() => {
     if (!stockEvals) return []
     if (!overviewGroup) return stockEvals
-    const tickers = new Set(groupTickers?.[overviewGroupId] ?? [])
+    const tickers = new Set(groupTickers?.[overviewGroup] ?? [])
     return stockEvals.filter(s => tickers.has(s.label))
   })()
 
   const effectivePieItems = (() => {
     if (!computed) return []
-    if (overviewGroup) return (stockValues ?? []).filter(s => s.groupId === overviewGroupId)
+    if (overviewGroup) return (stockValues ?? []).filter(s => s.groupName?.toLowerCase() === overviewGroup.toLowerCase())
     return grpTotals ?? []
   })()
 
@@ -540,7 +536,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               <span style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>{t(lang, 'stock.filterByGroup')}:</span>
               <select value={overviewGroup} onChange={e => setOverviewGroup(e.target.value)} style={selStyle}>
                 <option value="">{t(lang, 'stock.allGroups')}</option>
-                {groupOptions.map(o => <option key={o.id} value={o.name}>{o.name}</option>)}
+                {groupNames.map((name, i) => <option key={i} value={name}>{name}</option>)}
               </select>
               <span style={{ fontSize: '0.78rem', color: 'var(--ink3)', marginLeft: '0.4rem' }}>{t(lang, 'stock.filterByCurrency')}:</span>
               <select value={overviewCurrency} onChange={e => setOverviewCurrency(e.target.value)} style={selStyle}>
@@ -560,7 +556,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               <div className="stats-section-title">{t(lang, 'statsSummaryTitle')}</div>
               <div className="stats-summary-grid">
                 {(grpTotals ?? [])
-                  .filter(g => !overviewGroup || g.groupId === overviewGroupId)
+                  .filter(g => !overviewGroup || g.name?.toLowerCase() === overviewGroup.toLowerCase())
                   .map((g, i) => {
                     let display
                     if (overviewCurrency === 'USD' && g.isKRW && fxRate) display = formatUSD(g.total / fxRate)
