@@ -451,6 +451,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   }, [isOpen, mainTab, histData, histRange, histGroupFilter, histCurrencyFilter, histGroupNames, lang])
 
   if (!isOpen) return null
+  if (!stockData?.groups?.length) return null
 
   const { grpTotals, grandUSD, grandKRW, totalKRW, stockEvals, lineDatasets, fxRate, groupTickers, stockValues } = computed || {}
   const groupOptions = (stockData?.groups ?? []).map((g, i) => ({ id: String(g.id ?? i), name: cleanStr(g.name, g.id) }))
