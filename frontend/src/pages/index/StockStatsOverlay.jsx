@@ -34,6 +34,7 @@ const formatAuto = (val, currency) => currency === 'USD' ? formatUSD(val) : form
 function computeStockStats(stockData, userJoinDate) {
   if (!stockData) return null
   const { groups, priceMap, fxRate } = stockData
+  if (!groups || groups.length === 0) return null
 
   const grpTotals = groups.map(g => {
     const isKRW = g.currency === 'KRW'
