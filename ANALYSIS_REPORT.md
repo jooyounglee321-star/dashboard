@@ -1,408 +1,341 @@
-﻿# 코드베이스 분석 보고서
-생성일: 2026-06-11
+﻿# Dashboard 프로젝트 전체 소스코드 분석 보고서
 
-## 요약
-- 총 분석 파일 수: 36개 (백엔드 14개, 프론트엔드 22개)
-- 발견된 문제 수: 47건 (높음 14건 / 중간 22건 / 낮음 11건)
-- 예상 전체 수정 소요 시간: 약 10시간 25분
+> 분석 일자: 2026-06-11
+> 분석 범위: 백엔드(main.py, models.py, database.py, schemas.py, routers/ 전체) + 프론트(frontend/src/ 전체)
+> **중요: 이 보고서는 분석 전용이며 코드 수정은 포함되지 않습니다.**
 
 ---
 
-## 1. 예외처리 누락 (14건)
-
-### [HIGH-1] /api/auth/users 엔드포인트 인증 없음
-- **파일**: `routers/auth.py`
-- **위치**: L249-256
-- **내용**: GET /api/auth/users (전체 회원 목록 반환)에 get_current_user 의존성 없음. 누구든 토큰 없이 전체 회원 이메일 조회 가능
-- **코드**: `def list_users(db: Session = Depends(get_db)):` — admin 체크 없음
-- **심각도**: 높음
-- **예상 수정 시간**: 5분
-
-### [HIGH-2] admin 라우터 전체 인증 없음
-- **파일**: `routers/admin.py`
-- **위치**: L29-190 전체
-- **내용**: /api/admin/* 엔드포인트 전체(회원 조회/수정/권한 변경/비밀번호 초기화)에 get_current_user 의존성 없음. 누구든 호출 가능
-- **코드**: `def list_admin_users(... db: Session = Depends(get_db)):` — 인증 없음
-- **심각도**: 높음
-- **예상 수정 시간**: 15분
-
-### [HIGH-3] income 카테고리 조회 인증 없음
-- **파일**: `routers/income.py`
-- **위치**: L71-117
-- **내용**: GET /api/income/categories 엔드포인트에 get_current_user 의존성 없음
-- **코드**: `def list_income_categories(lang: str = ..., db: Session = Depends(get_db)):`
-- **심각도**: 높음
-- **예상 수정 시간**: 5분
-
-### [HIGH-4] ExpenseCard — addExpense fetch에 catch 없음
-- **파일**: `frontend/src/pages/index/ExpenseCard.jsx`
-- **위치**: L416-463
-- **내용**: addExpense() 함수에서 수입/지출 등록 fetch 호출 후 에러 처리 없음. finally만 있고 catch가 없어 실패 시 사용자에게 오류 안내 불가
-- **코드**: `await fetch('/api/income', {...})` — catch 없음
-- **심각도**: 높음
-- **예상 수정 시간**: 10분
-
-### [HIGH-5] ExpenseCard — saveEdit fetch에 catch 없음
-- **파일**: `frontend/src/pages/index/ExpenseCard.jsx`
-- **위치**: L491-508
-- **내용**: saveEdit() 함수에서 PUT 요청 후 에러 핸들링 없음. 저장 실패해도 UI는 editId=null로 복귀
-- **코드**: `await fetch('/api/expense/' + editId, {...})` — catch 없음
-- **심각도**: 높음
-- **예상 수정 시간**: 5분
-
-### [HIGH-6] IndexPage — 백필 fetch response.ok 체크 없음
-- **파일**: `frontend/src/pages/index/IndexPage.jsx`
-- **위치**: L100-107
-- **내용**: 포트폴리오 백필 POST 요청에서 r.json() 전에 r.ok 체크 없음. 에러 응답도 파싱 시도
-- **코드**: `.then(r => r.json())` — r.ok 체크 없음
-- **심각도**: 높음
-- **예상 수정 시간**: 5분
-
-### [HIGH-7] do_refresh_rates 부분 commit 위험
-- **파일**: `routers/expense.py`
-- **위치**: L862-893
-- **내용**: do_refresh_rates()에서 루프 내 개별 통화 실패는 failed 목록에 추가하지만, 성공한 통화만 db.commit()하는 구조. 루프 중간 DB 연결 오류 시 부분 commit 후 예외 전파되어 불일치 상태 발생 가능
-- **심각도**: 높음
-- **예상 수정 시간**: 15분
-
-### [HIGH-8] DB 트랜잭션 롤백 누락 — backfill 함수 외부
-- **파일**: `routers/portfolio.py`
-- **위치**: L382-388
-- **내용**: backfill_portfolio_snapshots 내 루프에서 개별 날짜 처리 실패 시 db.rollback()은 있지만, 루프 외부 최초 조회/처리 단계 예외 시 롤백 없음
-- **심각도**: 높음
-- **예상 수정 시간**: 10분
-
-### [HIGH-9] BudgetPage — DailyTab useEffect 의존성 누락 stale closure
-- **파일**: `frontend/src/pages/BudgetPage.jsx`
-- **위치**: L257
-- **내용**: useEffect(() => { load() }, [date, lang])에 eslint-disable-next-line으로 load가 의존성에서 제외됨. load가 stale closure 참조 가능
-- **심각도**: 높음
-- **예상 수정 시간**: 15분
-
-### [HIGH-10] localStorage 접근 try/catch 누락 — IndexPage 다수 위치
-- **파일**: `frontend/src/pages/index/IndexPage.jsx`
-- **위치**: L98, L136, L141, L163
-- **내용**: localStorage.getItem('token'), localStorage.getItem('user') 등이 try/catch 없이 직접 호출됨. Safari Private 모드 등에서 localStorage 접근 불가 시 앱 크래시
-- **코드**: `const token = localStorage.getItem('token')` — try/catch 없음
-- **심각도**: 높음
-- **예상 수정 시간**: 20분
-
-### [MEDIUM-11] AdminPage — WRITE 작업 response.ok 체크 없음
-- **파일**: `frontend/src/pages/AdminPage.jsx`
-- **위치**: L115-145
-- **내용**: addYT, addSite, quickSite, delYT, delSite 등 WRITE 작업에서 응답 상태 코드 확인 없이 다음 단계 진행
-- **코드**: `await fetch('/api/youtube-channels', {...})` — r.ok 체크 없음
-- **심각도**: 중간
-- **예상 수정 시간**: 20분
-
-### [MEDIUM-12] income.py — db.query().get() deprecated 사용
-- **파일**: `routers/income.py`
-- **위치**: L152
-- **내용**: db.query(ExpenseCategory).get(cat_id)는 SQLAlchemy 2.0에서 deprecated. db.get(ExpenseCategory, cat_id)로 교체 필요
-- **코드**: `c = db.query(ExpenseCategory).get(cat_id)`
-- **심각도**: 중간
-- **예상 수정 시간**: 5분
-
-### [MEDIUM-13] portfolio.py — yfinance 배치 조회 실패 시 빈 dict 반환으로 스냅샷 0원 저장
-- **파일**: `routers/portfolio.py`
-- **위치**: L80-83
-- **내용**: _get_historical_prices_batch에서 예외 발생 시 logger.warning 후 빈 dict 반환. 해당 티커 가격 없음으로 처리되어 스냅샷이 0원으로 저장될 수 있음
-- **심각도**: 중간
-- **예상 수정 시간**: 10분
-
-### [LOW-14] database.py — get_db() 함수에서 명시적 rollback 없음
-- **파일**: `database.py`
-- **위치**: L106-111
-- **내용**: get_db() 의존성 함수가 finally: db.close()만 있고 요청 도중 예외 발생 시 db.rollback()을 명시적으로 호출하지 않음
-- **심각도**: 낮음
-- **예상 수정 시간**: 5분
+## 목차
+1. [보안 이슈 (Critical/High/Medium/Low)](#보안-이슈)
+2. [버그](#버그)
+3. [성능](#성능)
+4. [중복 코드](#중복-코드)
+5. [전체 예상 수정 소요 시간](#전체-예상-수정-소요-시간)
 
 ---
 
-## 2. 중복 코드 (12건)
+## 보안 이슈
 
-### [MED-15] authH() 패턴 다수 파일 중복 정의
-- **파일**: `frontend/src/pages/AdminPage.jsx` L11, `frontend/src/pages/index/ExpenseCard.jsx` L356
-- **위치**: 각 파일 상단
-- **내용**: `const authH = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') })` 가 적어도 2개 파일에 별도 정의. IndexPage 등에서도 인라인으로 중복 작성
-- **심각도**: 중간
-- **예상 수정 시간**: 20분
+### Critical
 
-### [MED-16] todayStr() / pad2() 함수 중복 정의
-- **파일**: `frontend/src/pages/BudgetPage.jsx` L35-44, `frontend/src/pages/index/ExpenseCard.jsx` L24-30
-- **위치**: 각 파일 상단
-- **내용**: todayStr(), pad2() 함수가 두 파일에 각각 별도로 정의됨
-- **심각도**: 중간
-- **예상 수정 시간**: 15분
-
-### [MED-17] _get_rate() 함수 두 라우터에 복사
-- **파일**: `routers/expense.py` L87-94, `routers/income.py` L47-53
-- **위치**: 각 파일 유틸 섹션
-- **내용**: 동일한 _get_rate(currency, db) 함수가 두 라우터에 완전히 동일하게 복사됨
-- **심각도**: 중간
-- **예상 수정 시간**: 15분
-
-### [MED-18] _cat_name() 함수 두 라우터에 중복
-- **파일**: `routers/expense.py` L103-104, `routers/income.py` L66-67
-- **위치**: 각 파일 유틸 섹션
-- **내용**: def _cat_name(cat, lang) 함수가 두 파일에 동일하게 정의
-- **심각도**: 중간
-- **예상 수정 시간**: 10분
-
-### [MED-19] 카테고리 목록 fetch — ExpenseCard와 BudgetPage 각각 별도 호출
-- **파일**: `frontend/src/pages/index/ExpenseCard.jsx` L360-364, `frontend/src/pages/BudgetPage.jsx` L219-228
-- **위치**: loadCategories 함수
-- **내용**: /api/expense/categories를 ExpenseCard, BudgetPage/DailyTab이 각각 독립적으로 fetch함. 공유 context나 캐시 없음
-- **심각도**: 중간
-- **예상 수정 시간**: 30분
-
-### [MED-20] 환율 목록 fetch — BudgetPage와 IndexPage 각각 별도 호출
-- **파일**: `frontend/src/pages/BudgetPage.jsx` L128-133, `frontend/src/pages/index/IndexPage.jsx` L248
-- **위치**: useEffect 내부
-- **내용**: /api/exchange-rates와 /api/stocks/exchange-rate가 여러 컴포넌트에서 각각 별도 fetch됨
-- **심각도**: 중간
-- **예상 수정 시간**: 30분
-
-### [MED-21] calcStock 로직 — IndexPage와 StockCard에 중복 구현
-- **파일**: `frontend/src/pages/index/IndexPage.jsx` L310-329, `frontend/src/pages/index/StockCard.jsx` L17-39
-- **위치**: 주식 평가액 계산 로직
-- **내용**: 매수/매도 수량 계산, 가중평균 매수가, 평가손익 계산 로직이 IndexPage 스냅샷 부분과 StockCard calcStock에 거의 동일하게 중복
-- **심각도**: 중간
-- **예상 수정 시간**: 30분
-
-### [LOW-22] i18n flat 키와 namespace 키 혼재
-- **파일**: `frontend/src/locales/ko.json`, `frontend/src/locales/en.json`
-- **위치**: 최상단 flat 키들
-- **내용**: admin.wMemo 같은 namespace 키 외에 레거시 flat 키가 일부 혼재. 번역 키 체계 불일치
-- **심각도**: 낮음
-- **예상 수정 시간**: 30분
-
-### [LOW-23] CURRENCIES 배열 — BudgetPage와 ExpenseCard에 각각 정의
-- **파일**: `frontend/src/pages/BudgetPage.jsx` L13, `frontend/src/pages/index/ExpenseCard.jsx` L9-20
-- **위치**: 파일 상단 상수
-- **내용**: CURRENCIES 상수 배열이 두 파일에 각각 별도 정의됨 (형태도 약간 다름)
-- **심각도**: 낮음
-- **예상 수정 시간**: 15분
-
-### [LOW-24] IndexPage — tickerCatMap 빌드 코드 2회 복사
-- **파일**: `frontend/src/pages/index/IndexPage.jsx`
-- **위치**: L237-239 (loadStocks), L286-290 (23:59 스냅샷)
-- **내용**: tickerCatMap 빌드 코드가 loadStocks와 23:59 스냅샷 intervalHandler에 완전히 동일하게 2회 복사
-- **심각도**: 낮음
-- **예상 수정 시간**: 15분
-
-### [LOW-25] SYM 통화 심볼 맵 — BudgetPage에서만 별도 정의
-- **파일**: `frontend/src/pages/BudgetPage.jsx` L14
-- **위치**: 파일 상단
-- **내용**: `const SYM = { USD: '$', KRW: '₩', ... }` 이 BudgetPage에서 별도 정의됨
-- **심각도**: 낮음
-- **예상 수정 시간**: 10분
-
-### [LOW-26] 월 이름 배열 — BudgetPage ML과 IndexPage MON/MON_EN 이원화
-- **파일**: `frontend/src/pages/BudgetPage.jsx` L16-19, `frontend/src/pages/index/IndexPage.jsx` L25-26
-- **위치**: 파일 상단 상수
-- **내용**: 월 이름 배열이 BudgetPage의 ML 객체와 IndexPage의 MON/MON_EN 배열로 이원화
-- **심각도**: 낮음
-- **예상 수정 시간**: 10분
+#### SEC-01 | JWT 토큰 localStorage 저장 → XSS 노출
+- **파일**: `frontend/src/utils/api.js` L1-3, `frontend/src/pages/LoginPage.jsx` L55
+- **심각도**: Critical
+- **설명**: JWT Access Token을 `localStorage`에 저장하고 있음. XSS 공격 시 공격자가 JS로 `localStorage.getItem('token')`을 실행하면 토큰 탈취 가능. 전 프론트엔드 17개 파일에서 localStorage로 토큰을 읽는 패턴이 68회 사용됨.
+- **위치 요약**:
+  - `frontend/src/utils/api.js` L1: `localStorage.getItem('token')`
+  - `frontend/src/pages/LoginPage.jsx` L55: `localStorage.setItem('token', jwt)`
+  - 외 16개 파일 전체 참조
+- **권장 수정**: HttpOnly Cookie로 전환 (쿠키는 JS에서 접근 불가)
+- **예상 수정 시간**: 약 3시간
 
 ---
 
-## 3. 비효율적인 로직 (12건)
-
-### [HIGH-27] income.py — list_incomes의 행당 4회 DB 쿼리 (N+1 최심각)
-- **파일**: `routers/income.py`
-- **위치**: L148-176
-- **내용**: 각 expense 행마다 _cat_info(e.category_id)를 2번, _cat_info(e.subcategory_id)를 2번 호출 → 한 행당 4회 DB 쿼리. 100건 조회 시 400회 추가 쿼리 발생
-- **코드**: `"category_code": _cat_info(e.category_id)[1], "category_name": _cat_info(e.category_id)[2]` — 동일 id 2회 조회
-- **심각도**: 높음
-- **예상 수정 시간**: 20분
-
-### [HIGH-28] expense.py — _group_by_category 함수 내 N+1 쿼리
-- **파일**: `routers/expense.py`
-- **위치**: L169
-- **내용**: _group_by_category 함수가 summary_daily, summary_monthly, summary_yearly, expense_stats 등에서 호출되며 내부에서 db.get(ExpenseCategory, e.category_id)를 각 지출 항목마다 호출
-- **코드**: `cat = db.get(ExpenseCategory, e.category_id) if e.category_id else None`
-- **심각도**: 높음
-- **예상 수정 시간**: 30분
-
-### [MED-29] expense.py — _expense_dict 함수 내 N+1 쿼리
-- **파일**: `routers/expense.py`
-- **위치**: L124-125
-- **내용**: _expense_dict 함수 내에서 db.get(ExpenseCategory, e.category_id)와 db.get(ExpenseCategory, e.subcategory_id) 호출. list_expenses, summary_daily 등에서 루프 내 호출됨
-- **심각도**: 중간
-- **예상 수정 시간**: 25분
-
-### [MED-30] portfolio.py — 스냅샷 히스토리 전체 반환 (페이지네이션 없음)
-- **파일**: `routers/portfolio.py`
-- **위치**: L496-508
-- **내용**: GET /api/portfolio/history가 사용자의 전체 스냅샷을 페이지네이션 없이 반환. 1년 이상 사용 시 365건+ 전체 반환
-- **코드**: `db.query(DailyPortfolioSnapshot).filter(...).all()`
-- **심각도**: 중간
-- **예상 수정 시간**: 20분
-
-### [MED-31] ExpenseCard — useEffect 의존성 배열 누락 (eslint-disable 주석)
-- **파일**: `frontend/src/pages/index/ExpenseCard.jsx`
-- **위치**: L389-412
-- **내용**: useEffect 훅 3개에서 eslint-disable-line 주석으로 의존성 경고를 무시. 잠재적 stale closure 버그
-- **코드**: `}, [lang]) // eslint-disable-line`
-- **심각도**: 중간
-- **예상 수정 시간**: 20분
-
-### [MED-32] BudgetPage — SummaryTab에서 최근 12개월 데이터를 12번 개별 fetch
-- **파일**: `frontend/src/pages/BudgetPage.jsx`
-- **위치**: L1270-1284
-- **내용**: SummaryTab의 load() 함수에서 Promise.all로 12개월 데이터를 /api/expense/summary/monthly에 12번 개별 호출. 서버 연도별 집계 엔드포인트(/api/expense/summary/yearly)를 활용하면 2회로 줄일 수 있음
-- **심각도**: 중간
-- **예상 수정 시간**: 30분
-
-### [MED-33] IndexPage — 23:59 스냅샷 핸들러에서 loadStocks 로직 재구현
-- **파일**: `frontend/src/pages/index/IndexPage.jsx`
-- **위치**: L273-358
-- **내용**: 23:59 스냅샷 저장 로직이 loadStocks와 거의 동일한 코드를 독립적으로 재구현. loadStocks 결과를 재활용하거나 공용 함수 추출 필요
-- **심각도**: 중간
-- **예상 수정 시간**: 30분
-
-### [MED-34] AdminPage — saveAll()이 widgetCfg 저장 누락
-- **파일**: `frontend/src/pages/AdminPage.jsx`
-- **위치**: L187-193
-- **내용**: saveAll()이 saveTZ()만 호출하고 saveWidgetCfg()는 별도로 호출해야 함. 단일 저장 버튼이 불완전한 저장 동작을 함
-- **심각도**: 중간
-- **예상 수정 시간**: 10분
-
-### [MED-35] expense.py — list_budgets 루프 내 _get_rate 호출
-- **파일**: `routers/expense.py`
-- **위치**: L614-615
-- **내용**: list_budgets 루프 내에서 각 예산 항목마다 _get_rate(b.currency, db) 호출
-- **심각도**: 중간
-- **예상 수정 시간**: 15분
-
-### [LOW-36] StockCard — calcStock 매 렌더마다 재계산 (useMemo 없음)
-- **파일**: `frontend/src/pages/index/StockCard.jsx`
-- **위치**: L17-39
-- **내용**: calcStock(s, priceMap)이 useMemo 없이 매 렌더마다 호출됨. priceMap/groups 변경 없어도 불필요한 재계산
-- **심각도**: 낮음
-- **예상 수정 시간**: 15분
-
-### [LOW-37] BudgetPage — 삭제 후 load() + 별도 daily-compare 중복 API 호출
-- **파일**: `frontend/src/pages/BudgetPage.jsx`
-- **위치**: L729
-- **내용**: 삭제 버튼 onClick에서 delItem() + 별도 apiGet('/api/expense/daily-compare...') 2번 호출. 이미 load() 내부에서 daily-compare를 포함하므로 중복 API 호출 발생 가능
-- **심각도**: 낮음
-- **예상 수정 시간**: 10분
-
-### [LOW-38] BudgetPage — 차트 useEffect에서 destroyCharts() 중복 호출
-- **파일**: `frontend/src/pages/BudgetPage.jsx`
-- **위치**: L787-924
-- **내용**: 차트 생성 useEffect 첫 줄에서 destroyCharts() 호출 후 마지막에 return () => destroyCharts() 반환. 중복 소멸로 잠재적 Double-destroy 오류
-- **심각도**: 낮음
-- **예상 수정 시간**: 5분
+#### SEC-02 | 하드코딩된 JWT Secret Key (기본값 평문 노출)
+- **파일**: `routers/auth.py` L28-34
+- **심각도**: Critical
+- **설명**: SECRET_KEY 환경변수가 없을 경우 "dashboard-dev-secret-change-in-production" 평문 문자열을 사용. 소스코드에 노출되어 있어 공격자가 임의의 JWT 토큰을 위조할 수 있음. 경고 로그만 출력하고 서버를 정상 기동함.
+- **코드**: `_DEFAULT_SECRET = "dashboard-dev-secret-change-in-production"`
+- **권장 수정**: 환경변수 누락 시 서버 기동 거부 (raise SystemExit)
+- **예상 수정 시간**: 약 10분
 
 ---
 
-## 4. 잠재적 버그 (9건)
-
-### [HIGH-39] IndexPage — loadStocks race condition 가능성
-- **파일**: `frontend/src/pages/index/IndexPage.jsx`
-- **위치**: L223-267
-- **내용**: loadStocks는 useCallback으로 정의되고 useEffect로 마운트 시 호출. 빠른 재마운트나 HMR 시 이전 비동기 fetch가 완료되기 전 새 fetch가 시작되어 priceMap 상태가 이전/최신 데이터 혼재될 수 있음. AbortController가 있으나 dbRes fetch에는 적용 안 됨
-- **심각도**: 높음
-- **예상 수정 시간**: 20분
-
-### [MED-40] portfolio.py — usd_krw None 시 total_krw_equiv None으로 저장
-- **파일**: `routers/portfolio.py`
-- **위치**: L349-351
-- **내용**: `total_krw_equiv = round(total_usd * usd_krw + total_krw, 2) if usd_krw else None` — usd_krw가 None이면 total_krw_equiv도 None으로 저장되어 차트에서 해당 날짜가 공백으로 표시될 수 있음
-- **심각도**: 중간
-- **예상 수정 시간**: 10분
-
-### [MED-41] BudgetPage — monthly.by_category null 체크 불일치
-- **파일**: `frontend/src/pages/BudgetPage.jsx`
-- **위치**: L901 및 각처
-- **내용**: monthly.by_category?.filter(...) optional chaining 있는 곳과 없는 곳이 혼재. null 가능성 있는 값에 일관성 없는 방어 코드
-- **심각도**: 중간
-- **예상 수정 시간**: 10분
-
-### [MED-42] BudgetPage — saveEdit 오류 발생 시 편집 내용 유실
-- **파일**: `frontend/src/pages/BudgetPage.jsx`
-- **위치**: L347-365
-- **내용**: saveEdit()에서 apiReq 실패 시 catch에서 에러 로그만 출력하고 setEditId(null) + load() 진행. 사용자는 저장 실패를 인지 못하고 편집 내용 유실
-- **심각도**: 중간
-- **예상 수정 시간**: 10분
-
-### [MED-43] income.py — 월별 요약 LEFT JOIN에서 null 합산 시 타입 오류 가능
-- **파일**: `routers/income.py`
-- **위치**: L280-299
-- **내용**: income_monthly_summary에서 LEFT JOIN 결과의 total_usd가 None인 경우 float(r.total_usd or 0)으로 처리하지만, sqlfunc.sum()이 None 반환 시 Pydantic 직렬화 오류 가능
-- **심각도**: 중간
-- **예상 수정 시간**: 10분
-
-### [MED-44] IndexPage — 스냅샷 저장 중 5xx 오류 시 조용히 실패
-- **파일**: `frontend/src/pages/index/IndexPage.jsx`
-- **위치**: L344-351
-- **내용**: 23:59 스냅샷 POST 요청에서 r.ok 체크 후 lastSnapshotDate = today 설정은 있으나, 서버 5xx 오류 응답 시 조용히 실패하고 다음 분에 재시도 없음
-- **심각도**: 중간
-- **예상 수정 시간**: 10분
-
-### [LOW-45] auth.py — JWT SECRET_KEY 기본값 하드코딩
-- **파일**: `routers/auth.py`
-- **위치**: L25
-- **내용**: SECRET_KEY = os.getenv("SECRET_KEY", "dashboard-dev-secret-change-in-production") — 프로덕션에서 환경변수 미설정 시 약한 키 사용. 경고 로그 없음
-- **심각도**: 낮음
-- **예상 수정 시간**: 10분
-
-### [LOW-46] main.py — CORS allow_origins=["*"] 프로덕션 위험
-- **파일**: `main.py`
-- **위치**: L797-802
-- **내용**: allow_origins=["*"]로 모든 도메인에서 API 접근 허용. 프로덕션 배포 시 특정 도메인으로 제한 필요
-- **심각도**: 낮음
-- **예상 수정 시간**: 5분
-
-### [LOW-47] stocks.py — asyncio.get_event_loop() deprecated (Python 3.10+)
-- **파일**: `routers/stocks.py`
-- **위치**: L147, L162, L312
-- **내용**: asyncio.get_event_loop()가 Python 3.10+에서 DeprecationWarning 발생. asyncio.get_running_loop()로 교체 권장
-- **코드**: `loop = asyncio.get_event_loop()`
-- **심각도**: 낮음
-- **예상 수정 시간**: 10분
+#### SEC-03 | 하드코딩된 Admin 이메일 (소스코드 노출)
+- **파일**: `routers/auth.py` L25, `main.py` L217
+- **심각도**: Critical
+- **설명**: Admin 계정 이메일 주소가 소스코드에 평문 하드코딩. 이 이메일로 가입하면 자동으로 admin 역할 부여. GitHub 등에 코드가 공개될 경우 공격자가 해당 이메일로 가입 시도 가능.
+- **권장 수정**: 환경변수로 이동 (ADMIN_EMAIL=...)
+- **예상 수정 시간**: 약 15분
 
 ---
 
-## 우선순위 정렬 (TOP 20)
+### High
 
-| 순위 | ID | 파일 | 심각도 | 설명 | 수정시간 |
-|------|-----|------|--------|------|---------|
-| 1 | HIGH-2 | routers/admin.py | 높음 | admin 전체 라우터 인증 없음 | 15분 |
-| 2 | HIGH-1 | routers/auth.py | 높음 | /api/auth/users 인증 없음 — 전체 회원 이메일 노출 | 5분 |
-| 3 | HIGH-3 | routers/income.py | 높음 | /api/income/categories 인증 없음 | 5분 |
-| 4 | HIGH-27 | routers/income.py | 높음 | list_incomes 행당 4회 DB 쿼리 (N+1 최심각) | 20분 |
-| 5 | HIGH-28 | routers/expense.py | 높음 | _group_by_category N+1 쿼리 | 30분 |
-| 6 | HIGH-10 | frontend/IndexPage.jsx | 높음 | localStorage 접근 try/catch 누락 | 20분 |
-| 7 | HIGH-39 | frontend/IndexPage.jsx | 높음 | loadStocks race condition | 20분 |
-| 8 | HIGH-4 | frontend/ExpenseCard.jsx | 높음 | addExpense fetch에 catch 없음 | 10분 |
-| 9 | HIGH-5 | frontend/ExpenseCard.jsx | 높음 | saveEdit fetch에 catch 없음 | 5분 |
-| 10 | HIGH-9 | frontend/BudgetPage.jsx | 높음 | useEffect 의존성 누락 stale closure | 15분 |
-| 11 | HIGH-7 | routers/expense.py | 높음 | do_refresh_rates 부분 commit 위험 | 15분 |
-| 12 | HIGH-6 | frontend/IndexPage.jsx | 높음 | 백필 fetch response.ok 체크 없음 | 5분 |
-| 13 | MED-17 | routers/expense.py, income.py | 중간 | _get_rate 함수 중복 | 15분 |
-| 14 | MED-15 | frontend 다수 | 중간 | authH 패턴 파일별 중복 정의 | 20분 |
-| 15 | MED-30 | routers/portfolio.py | 중간 | 스냅샷 전체 반환 (페이지네이션 없음) | 20분 |
-| 16 | MED-32 | frontend/BudgetPage.jsx | 중간 | SummaryTab 12번 개별 API 호출 | 30분 |
-| 17 | MED-29 | routers/expense.py | 중간 | _expense_dict N+1 쿼리 | 25분 |
-| 18 | MED-33 | frontend/IndexPage.jsx | 중간 | 23:59 스냅샷 핸들러 loadStocks 로직 재구현 | 30분 |
-| 19 | MED-21 | frontend 다수 | 중간 | calcStock 로직 IndexPage+StockCard 중복 | 30분 |
-| 20 | MED-19 | frontend 다수 | 중간 | 카테고리 목록 각 컴포넌트별 중복 fetch | 30분 |
+#### SEC-04 | CORS allow_origins=["*"] — 환경변수 미설정 시
+- **파일**: `main.py` L926-937
+- **심각도**: High
+- **설명**: CORS_ALLOWED_ORIGINS 환경변수가 설정되지 않으면 모든 출처("*")를 허용. 배포 환경에서 환경변수 누락 시 다른 도메인의 악성 사이트가 인증된 사용자의 API를 호출할 수 있음.
+- **권장 수정**: 기본값을 ["*"] 대신 빈 리스트로 하고, 환경변수 필수화
+- **예상 수정 시간**: 약 10분
 
 ---
 
-## 수정 소요 시간 예측
+#### SEC-05 | Rate Limiting 없는 로그인/회원가입 엔드포인트 (브루트포스 가능)
+- **파일**: `routers/auth.py` L60-128
+- **심각도**: High
+- **설명**: POST /api/auth/login, POST /api/auth/register 엔드포인트에 요청 횟수 제한이 전혀 없음. 공격자가 비밀번호 브루트포스 공격을 무제한으로 시도 가능.
+- **권장 수정**: slowapi 등 Rate Limiter 적용 (예: 1분당 최대 10회)
+- **예상 수정 시간**: 약 1시간
 
-| 카테고리 | 건수 | 예상 시간 |
-|---------|------|----------|
-| 예외처리 누락 | 14건 | 2시간 20분 |
-| 중복 코드 | 12건 | 3시간 15분 |
-| 비효율적인 로직 | 12건 | 2시간 50분 |
-| 잠재적 버그 | 9건 | 2시간 0분 |
-| **전체 합계** | **47건** | **약 10시간 25분** |
+---
 
-> 실제 수정 시 일부 항목이 연계 수정되어 실질 작업 시간은 더 줄어들 수 있습니다.
-> 특히 HIGH-1~3 (인증 누락) 및 HIGH-27~28 (N+1 쿼리)는 즉시 우선 수정 권장.
+#### SEC-06 | 환율 조회 API 인증 미적용
+- **파일**: `routers/expense.py` L820-838, L851-865
+- **심각도**: High
+- **설명**: GET /api/exchange-rates 및 GET /api/exchange-rates/{currency} 엔드포인트에 get_current_user 의존성이 없음. 로그인 없이도 환율 데이터 전체 조회 가능.
+- **예상 수정 시간**: 약 15분
+
+---
+
+#### SEC-07 | 주식 가격/뉴스/검색 API 인증 미적용
+- **파일**: `routers/stocks.py` L143, L157, L253, L285, L344
+- **심각도**: High
+- **설명**: 아래 엔드포인트들이 인증 없이 접근 가능:
+  - GET /api/stocks/price/{ticker} — Yahoo Finance 실시간 시세 (L143)
+  - GET /api/stocks/exchange-rate — USD/KRW 환율 (L157)
+  - GET /api/stocks/search — 종목 검색 (L253)
+  - GET /api/stocks/history/{ticker} — 과거 시세 (L285)
+  - GET /api/stocks/news — 뉴스 조회 (L344)
+- **영향**: 외부에서 백엔드를 Yahoo Finance 프록시로 무제한 활용 가능. 서버 부하 및 Yahoo Finance IP 차단 위험.
+- **예상 수정 시간**: 약 30분
+
+---
+
+### Medium
+
+#### SEC-08 | Admin 패스워드 리셋 시 평문 비밀번호 응답 반환
+- **파일**: `routers/admin.py` L189-200
+- **심각도**: Medium
+- **설명**: POST /api/admin/users/{id}/reset-password 엔드포인트가 임시 비밀번호를 API 응답 JSON에 평문으로 반환. 응답이 로그에 기록되거나 중간자 공격에 노출될 경우 비밀번호 탈취 가능.
+- **코드**: `return {"ok": True, "new_password": new_pw}`
+- **권장 수정**: 이메일 발송 또는 일회용 링크 방식으로 전환
+- **예상 수정 시간**: 약 1시간
+
+---
+
+#### SEC-09 | 프론트엔드 역할 검사 localStorage 기반 (클라이언트 신뢰)
+- **파일**: `frontend/src/App.jsx` L16-34
+- **심각도**: Medium
+- **설명**: SuperadminPage 접근 시 localStorage의 user.role 값으로 클라이언트에서만 역할 검사. 공격자가 localStorage 조작 시 어드민 UI 우회 가능. (백엔드 API는 서버에서 재검증하므로 데이터 탈취는 어렵지만 UI 노출 가능)
+- **권장 수정**: 페이지 진입 시 /api/auth/me 호출로 서버에서 role 재확인
+- **예상 수정 시간**: 약 30분
+
+---
+
+#### SEC-10 | f-string을 사용한 동적 DDL (잠재적 SQL Injection 패턴)
+- **파일**: `main.py` L89, L126, L143, L306, L326, L621, L638, L658
+- **심각도**: Medium
+- **설명**: 마이그레이션 함수들에서 테이블명, 컬럼명을 f-string으로 직접 SQL에 삽입. 컬럼명/테이블명은 코드 내 상수이므로 현재는 직접 공격 위험이 낮으나, 패턴 자체가 안전하지 않음.
+- **코드 예시**: conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_def}"))
+- **권장 수정**: 컬럼명/테이블명을 화이트리스트로 검증 후 사용
+- **예상 수정 시간**: 약 1시간
+
+---
+
+#### SEC-11 | JWT 토큰 무효화 메커니즘 없음 (로그아웃 후 토큰 30일간 유효)
+- **파일**: `routers/auth.py` L214-221
+- **심각도**: Medium
+- **설명**: 로그아웃 시 서버에서 토큰을 블랙리스트에 등록하지 않음. 클라이언트에서 localStorage를 삭제해도 해당 토큰을 탈취한 공격자는 30일간 계속 사용 가능 (TOKEN_EXPIRE_DAYS=30).
+- **권장 수정**: Redis 기반 토큰 블랙리스트 구현 또는 토큰 만료 시간 단축
+- **예상 수정 시간**: 약 2시간
+
+---
+
+### Low
+
+#### SEC-12 | 에러 메시지에 내부 예외 정보 노출
+- **파일**: `routers/stocks.py` L280-281, L326
+- **심각도**: Low
+- **설명**: 검색 실패 시 내부 예외 메시지 str(e)를 그대로 HTTP 응답에 포함. 서버 내부 구조, 라이브러리 버전, 경로 등이 노출될 수 있음.
+- **권장 수정**: 사용자용 메시지와 내부 로그를 분리
+- **예상 수정 시간**: 약 30분
+
+---
+
+#### SEC-13 | 비밀번호 복잡도 검증 미흡 (길이만 체크)
+- **파일**: `routers/auth.py` L73-77, L192-198
+- **심각도**: Low
+- **설명**: 회원가입/비밀번호 변경 시 길이(8자 이상)만 검증. 숫자/특수문자 포함 여부 검증 없음.
+- **예상 수정 시간**: 약 20분
+
+---
+
+## 버그
+
+#### BUG-01 | 수입 라우터 경로 순서 문제 (summary/monthly → /{income_id} 우선 매칭)
+- **파일**: `routers/income.py` L260-300
+- **심각도**: High
+- **설명**: GET /api/income/summary/monthly가 GET /api/income/{income_id} 라우터보다 뒤에 선언되어 있음. income_id가 int 타입이라 422 오류 또는 라우팅 오류 발생 가능. 구체적인 경로는 파라미터 경로보다 먼저 선언해야 함.
+- **예상 수정 시간**: 약 10분 (라우터 순서 변경)
+
+---
+
+#### BUG-02 | 인메모리 환율 캐시 멀티 워커 간 공유 안 됨
+- **파일**: `routers/expense.py` L816
+- **심각도**: Medium
+- **설명**: _rate_cache 딕셔너리가 모듈 레벨 변수. Gunicorn/uvicorn 멀티 워커 환경에서 각 워커가 독립된 메모리를 가지므로 30분 캐시 TTL이 워커마다 다르게 동작.
+- **예상 수정 시간**: 약 1시간
+
+---
+
+#### BUG-03 | `once` 타입 Todo 완료 후 다른 날짜 조회 시 재노출
+- **파일**: `routers/todos.py` L51-54
+- **심각도**: Low
+- **설명**: once 타입 Todo는 is_done_dates에 날짜가 하나라도 있으면 목록에서 제외하나, ?date= 파라미터를 변경해 다른 날 조회하면 동일 Todo가 다시 표시됨.
+- **예상 수정 시간**: 약 20분
+
+---
+
+#### BUG-04 | 프론트 useEffect 내 fetch 클린업 없음 (메모리 누수)
+- **파일**: `frontend/src/pages/index/IndexPage.jsx` L111-121, L158-165, L168-173, L177-189
+- **심각도**: Medium
+- **설명**: useEffect 내 fetch() 호출에 AbortController 클린업이 없음. 컴포넌트 언마운트 후 응답이 돌아오면 "Can't perform a React state update on an unmounted component" 경고 및 메모리 누수 발생 가능.
+- **예상 수정 시간**: 약 1시간
+
+---
+
+#### BUG-05 | 포트폴리오 백필 — _CAT_META 외 카테고리 시세 조회 스킵
+- **파일**: `routers/portfolio.py` L321-322
+- **심각도**: Medium
+- **설명**: 백필 루프에서 if category not in _CAT_META: continue로 처리. _CAT_META에 정의되지 않은 커스텀 그룹 카테고리는 백필에서 완전히 제외됨.
+- **예상 수정 시간**: 약 30분
+
+---
+
+#### BUG-06 | 레거시 expenses 라우터와 신규 expense 라우터 기능 중복
+- **파일**: `routers/expenses.py` (레거시), `routers/expense.py` (신규)
+- **심각도**: Low
+- **설명**: /api/expenses (레거시)와 /api/expense (신규) 두 라우터가 공존하며 동일한 Expense 테이블을 다룸. 레거시 라우터는 category_id, converted_amount, type 필드를 지원하지 않아 응답 스키마 불일치 가능.
+- **예상 수정 시간**: 약 30분 (레거시 라우터 폐기 또는 신규로 통일)
+
+---
+
+#### BUG-07 | `_build_cat_map` — cat_map 없이 `_expense_dict` 호출 시 N+1
+- **파일**: `routers/expense.py` L119-142
+- **심각도**: Medium
+- **설명**: _expense_dict에서 cat_map 인자가 None이면 항목마다 db.get(ExpenseCategory, e.category_id)를 2회 호출. 일부 호출 경로에서 cat_map 미전달 가능성 존재.
+- **예상 수정 시간**: 약 30분
+
+---
+
+## 성능
+
+#### PERF-01 | `list_income_categories` — N+1 쿼리 (대분류별 소분류 개별 조회)
+- **파일**: `routers/income.py` L79-107
+- **심각도**: High
+- **설명**: 대분류 부모 목록 조회 후, 각 부모마다 db.query(ExpenseCategory).filter(parent_id == p.id)를 개별 실행. expense.py의 list_categories는 한 번의 쿼리로 처리하지만 income.py에는 미적용.
+- **예상 수정 시간**: 약 30분
+
+---
+
+#### PERF-02 | `backfill_portfolio_snapshots` — 날짜별 개별 DB Commit
+- **파일**: `routers/portfolio.py` L388
+- **심각도**: Medium
+- **설명**: 백필 루프에서 날짜별로 db.commit()을 각각 실행. 신규 유저 최대 365일 백필 시 365번의 커밋 발생.
+- **예상 수정 시간**: 약 30분
+
+---
+
+#### PERF-03 | 포트폴리오 그룹 이름 변경 시 전체 스냅샷 메모리 로드
+- **파일**: `routers/portfolio.py` L467-485
+- **심각도**: Medium
+- **설명**: 그룹 이름 변경 시 DailyPortfolioSnapshot 전체를 메모리에 로드해 JSON 파싱/수정. 스냅샷이 수천 건 이상일 경우 응답 지연 발생 가능.
+- **예상 수정 시간**: 약 1시간
+
+---
+
+#### PERF-04 | IndexPage 마운트 시 다수의 독립 API 호출 병렬화 없음
+- **파일**: `frontend/src/pages/index/IndexPage.jsx` L111, L158, L168, L177, L199
+- **심각도**: Medium
+- **설명**: /api/auth/me, /api/timezone, /api/auth/widget-config, /api/portfolio/backfill 등 독립적인 요청들이 각 useEffect에서 순차 실행됨. Promise.all로 묶으면 초기 로딩 속도 개선 가능.
+- **예상 수정 시간**: 약 1시간
+
+---
+
+#### PERF-05 | 주식 뉴스 — 캐시 없음, 매번 새로 fetch
+- **파일**: `frontend/src/pages/index/StockCard.jsx` L51-63
+- **심각도**: Low
+- **설명**: 뉴스 컴포넌트에서 "캐시 없음 — 항상 새로 fetch" 주석 명시. 버튼 클릭마다 Google RSS를 새로 요청.
+- **예상 수정 시간**: 약 20분
+
+---
+
+#### PERF-06 | `_seed_exchange_rates` — 루프 내 개별 DB 쿼리 (N+1)
+- **파일**: `main.py` L349-370
+- **심각도**: Low
+- **설명**: 기본 환율 시드 시 각 통화 쌍마다 존재 여부를 개별 쿼리로 확인. 10개 통화 쌍 = 10번의 SELECT 쿼리. 한 번의 WHERE IN 쿼리로 최적화 가능.
+- **예상 수정 시간**: 약 20분
+
+---
+
+## 중복 코드
+
+#### DUP-01 | `getToken()` 함수 여러 파일에 중복 정의
+- **파일**: `frontend/src/utils/api.js` L1, `frontend/src/pages/BudgetPage.jsx` L57-65, `frontend/src/pages/index/IndexPage.jsx` L66 외 다수
+- **심각도**: Medium
+- **설명**: localStorage에서 토큰을 읽는 로직이 17개 파일에 분산. utils/api.js에 이미 getToken, authH, authHJ가 정의되어 있으나 일부 파일에서 직접 재구현.
+- **권장 수정**: 전체 파일을 utils/api.js import로 통일
+- **예상 수정 시간**: 약 1시간
+
+---
+
+#### DUP-02 | Admin 권한 검사 함수 두 곳에 중복 정의
+- **파일**: `routers/admin.py` L25-28 (_require_admin), `routers/expense.py` L191-194 (require_admin)
+- **심각도**: Low
+- **설명**: 동일한 역할의 admin 권한 검사 함수가 두 라우터 파일에 각각 구현됨.
+- **권장 수정**: routers/_shared.py에 공통 함수로 이동
+- **예상 수정 시간**: 약 15분
+
+---
+
+#### DUP-03 | 통화 포맷 함수 여러 컴포넌트에 분산
+- **파일**: `frontend/src/pages/index/StockCard.jsx` L15-16, `frontend/src/pages/BudgetPage.jsx` L46-51
+- **심각도**: Low
+- **설명**: 통화 포맷팅 로직(fmtKRW, fmtUSD, fmtAmt)이 여러 컴포넌트에 분산. 포맷 정책 변경 시 모든 파일을 수정해야 함.
+- **권장 수정**: frontend/src/utils/format.js 파일로 통합
+- **예상 수정 시간**: 약 30분
+
+---
+
+#### DUP-04 | 수입 월별 요약 집계 로직이 공통 함수를 재사용하지 않음
+- **파일**: `routers/expense.py` L145-188, `routers/income.py` L260-300
+- **심각도**: Low
+- **설명**: income_monthly_summary가 expense.py의 공통 집계 함수(_split_income_expense 등)를 재사용하지 않고 직접 SQL 집계. 일관성 문제 발생 가능.
+- **예상 수정 시간**: 약 30분
+
+---
+
+#### DUP-05 | Yahoo Finance 티커 변환 함수 두 파일에 중복
+- **파일**: `routers/stocks.py` L38-47 (_resolve_yf_ticker), `routers/portfolio.py` L29-33 (_backfill_resolve_ticker)
+- **심각도**: Low
+- **설명**: Yahoo Finance 티커 변환 로직(.KS 자동 추가)이 동일한 패턴으로 두 파일에 각각 구현됨.
+- **권장 수정**: routers/_shared.py에 공통 함수로 이동
+- **예상 수정 시간**: 약 15분
+
+---
+
+#### DUP-06 | 날짜/월 배열 IndexPage.jsx에 하드코딩 (i18n 미활용)
+- **파일**: `frontend/src/pages/index/IndexPage.jsx` L24-27
+- **심각도**: Low
+- **설명**: 한국어/영어 요일 및 월 배열이 컴포넌트 내부에 직접 하드코딩. locales/ko.json에서 관리해야 할 데이터가 컴포넌트 내부에 존재.
+- **예상 수정 시간**: 약 20분
+
+---
+
+## 전체 예상 수정 소요 시간
+
+| 분류 | 항목 수 | 예상 시간 |
+|------|---------|----------|
+| 보안 (Critical) | 3개 | 약 3시간 25분 |
+| 보안 (High) | 4개 | 약 2시간 5분 |
+| 보안 (Medium) | 4개 | 약 4시간 |
+| 보안 (Low) | 2개 | 약 50분 |
+| 버그 | 7개 | 약 3시간 20분 |
+| 성능 | 6개 | 약 3시간 40분 |
+| 중복 코드 | 6개 | 약 2시간 50분 |
+| **합계** | **32개** | **약 20시간 10분** |
+
+---
+
+### 우선순위 권장 작업 순서
+
+1. **즉시 처리 (당일)**: SEC-02 Secret Key 환경변수 강제화, SEC-03 Admin 이메일 환경변수 이동
+2. **단기 처리 (1주 이내)**: SEC-01 JWT Cookie 전환, SEC-04 CORS 제한, SEC-05 Rate Limiting, SEC-06/07 미인증 API 보호
+3. **중기 처리 (2주 이내)**: 버그 수정 전체 (BUG-01~07), SEC-08/09/10/11 보안 이슈
+4. **장기 처리 (1달 이내)**: 성능 최적화 (PERF-01~06), 중복 코드 정리 (DUP-01~06)
+
+---
+
+*이 보고서는 정적 코드 분석 결과이며, 실제 런타임 동작과 차이가 있을 수 있습니다.*
