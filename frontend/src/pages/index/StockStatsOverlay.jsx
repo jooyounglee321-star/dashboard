@@ -80,6 +80,8 @@ function computeStockStats(stockData, userJoinDate) {
     })
   })
 
+  window.__debugStockData = { groups, grpTotals, stockValues }
+
   // startDate부터 오늘까지 연속 날짜 생성
   const today = new Date().toISOString().slice(0, 10)
   const generateDateRange = (start, end) => {
