@@ -94,6 +94,30 @@ export default function DebugPanel() {
             ))}
           </div>
 
+          {/* STOCK DATA */}
+          {(() => {
+            const sd = window.__debugStockData
+            if (!sd) return null
+            return (
+              <div style={{ padding: '0.6rem 0.9rem', borderBottom: '1px solid #1e293b' }}>
+                <div style={{ color: '#94a3b8', marginBottom: '0.3rem', fontWeight: 600 }}>STOCK DATA</div>
+                <div>groups: <span style={{ color: '#e2e8f0' }}>{sd.groups?.length ?? 0}개</span></div>
+                {sd.groups?.map((g, i) => {
+                  const total = (g.stocks || []).length
+                  const deleted = (g.stocks || []).filter(s => s.is_deleted).length
+                  const active = total - deleted
+                  return (
+                    <div key={i} style={{ color: '#e2e8f0', marginTop: '0.15rem', paddingLeft: '0.5rem' }}>
+                      {g.name || g.id}: 전체{total} / 삭제{deleted} / 활성{active}
+                    </div>
+                  )
+                })}
+                <div style={{ marginTop: '0.3rem' }}>grpTotals: <span style={{ color: '#e2e8f0' }}>{sd.grpTotals?.length ?? 0}개</span></div>
+                <div>stockValues: <span style={{ color: '#e2e8f0' }}>{sd.stockValues?.length ?? 0}개</span></div>
+              </div>
+            )
+          })()}
+
           {/* API 로그 */}
           <div style={{ padding: '0.6rem 0.9rem' }}>
             <div style={{ color: '#94a3b8', marginBottom: '0.3rem', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
