@@ -63,7 +63,7 @@ function computeStockStats(stockData, userJoinDate) {
   groups.forEach(g => {
     const isKRW = g.currency === 'KRW'
     const sym = isKRW ? '₩' : '$'
-    g.stocks.forEach(s => {
+    g.stocks.filter(s => !s.is_deleted).forEach(s => {
       const pp = s.purchases || []; const sl = s.sells || []
       const bq = pp.reduce((a, p) => a + (p.qty || 0), 0)
       const sq = sl.reduce((a, p) => a + (p.qty || 0), 0)
