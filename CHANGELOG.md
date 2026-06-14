@@ -4,6 +4,25 @@
 
 ---
 
+## [2026-06-13] — fix: 파이차트 범례 "undefined (xx.x%)" 완전 차단
+
+### 변경 내용
+- `StockStatsOverlay.jsx`: 파이차트 레이블 생성 2중 방어 추가
+  - `safeName()` 헬퍼: `cleanStr` 결과에 대해 `undefined` 문자열·빈 값 최종 검증
+  - `generateLabels` 체크 강화: 기존 `l.text === 'undefined'` → `l.text.split(' (')[0] === 'undefined'`로 변경
+    → `"undefined (25.0%)"` 형태의 레이블도 포착
+
+### 버그 원인
+- 기존 `generateLabels` 체크가 정확히 `'undefined'` 문자열만 잡았고,
+  실제 차트 레이블은 `"undefined (25.0%)"` 형태여서 체크를 통과하여 범례에 노출됨
+- DB에 name 필드가 없는 그룹 데이터가 있을 경우 cleanStr 이후에도
+  레이블 완성 단계에서 `"undefined"` 가 끼어들 수 있는 경로 존재
+
+### 검증
+- grep: `safeName`, `nameOnly`, `split.*\\(` — 3 hits 확인
+
+---
+
 ## [2026-06-13] — fix: 파이차트 범례 "undefined" 버그 수정 + 진단 로그 제거
 
 ### 변경 내용
