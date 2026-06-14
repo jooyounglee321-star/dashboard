@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { apiLog } from './api'
 
 function getLocalStorageSnapshot() {
@@ -18,6 +18,13 @@ export default function DebugPanel() {
   const [tick, setTick] = useState(0)
   const [expandedLog, setExpandedLog] = useState(new Set())
   const [copied, setCopied] = useState(false)
+  const [stockDbg, setStockDbg] = useState(null)
+
+  useEffect(() => {
+    if (!open) return
+    const id = setInterval(() => setStockDbg(window.__debugStockData ?? null), 1000)
+    return () => clearInterval(id)
+  }, [open])
 
   const toggleLog = (i) => setExpandedLog(prev => {
     const next = new Set(prev)
@@ -93,6 +100,21 @@ export default function DebugPanel() {
               </div>
             ))}
           </div>
+
+          {/* STOCK DATA */}
+          {stockDbg && (
+            <div style={{ padding: '0.6rem 0.9rem', borderBottom: '1px solid #1e293b' }}>
+              <div style={{ color: '#94a3b8', marginBottom: '0.3rem', fontWeight: 600 }}>STOCK DATA</div>
+              <div>groups: <span style={{ color: '#e2e8f0' }}>{stockDbg.groups?.length ?? 0}개</span></div>
+              {stockDbg.groups?.map((g, i) => (
+                <div key={i} style={{ color: '#e2e8f0', marginTop: '0.15rem', paddingLeft: '0.5rem' }}>
+                  {g.name || '(unnamed)'}: 전체{g.total} / 삭제{g.deleted} / 활성{g.active}
+                </div>
+              ))}
+              <div style={{ marginTop: '0.3rem' }}>grpTotals: <span style={{ color: '#e2e8f0' }}>{stockDbg.grpTotals}개</span></div>
+              <div>stockValues: <span style={{ color: '#e2e8f0' }}>{stockDbg.stockValues}개</span></div>
+            </div>
+          )}
 
           {/* API 로그 */}
           <div style={{ padding: '0.6rem 0.9rem' }}>
