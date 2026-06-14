@@ -64,7 +64,8 @@ export default function IndexPage() {
   const getLsItem = (k) => { try { return localStorage.getItem(k) } catch { return null } }
 
   // Stats overlay
-  const [statsOpen, setStatsOpen] = useState(false)
+  const [statsOpen, setStatsOpen] = useState(() => sessionStorage.getItem('statsOpen') === 'true')
+  const setStatsOpenPersist = (v) => { sessionStorage.setItem('statsOpen', String(v)); setStatsOpen(v) }
   const [stockSettingsOpen, setStockSettingsOpen] = useState(false)
 
   // 위젯 설정 (localStorage 캐시로 언어 즉시 반영)
@@ -368,7 +369,7 @@ export default function IndexPage() {
       case 'hero':     return <HeroSection zones={zones} clockCount={widgetCfg?.hero?.clock_count ?? 3} tempUnit={widgetCfg?.hero?.temp_unit ?? 'C'} lang={lang} />
       case 'schedule': return <ScheduleCard lang={lang} />
       case 'youtube':  return <YoutubeCard maxCount={widgetCfg?.youtube?.max_count ?? 10} lang={lang} />
-      case 'stock':    return <StockCard groups={stockGroups} priceMap={priceMap} fxRate={fxRate} loading={stockLoading} onOpenStats={() => setStatsOpen(true)} onOpenSettings={() => setStockSettingsOpen(true)} currencyDisplay={widgetCfg?.stock?.currency_display} lang={lang} />
+      case 'stock':    return <StockCard groups={stockGroups} priceMap={priceMap} fxRate={fxRate} loading={stockLoading} onOpenStats={() => setStatsOpenPersist(true)} onOpenSettings={() => setStockSettingsOpen(true)} currencyDisplay={widgetCfg?.stock?.currency_display} lang={lang} />
       case 'expense':  return <ExpenseCard lang={lang} />
       case 'diet':     return <DietCard mealConfig={widgetCfg?.diet?.meals} lang={lang} />
       case 'memo':        return <MemoCard lang={lang} />
@@ -402,7 +403,7 @@ export default function IndexPage() {
       {/* 주식 통계 전체화면 오버레이 */}
       <StockStatsOverlay
         isOpen={statsOpen}
-        onClose={() => setStatsOpen(false)}
+        onClose={() => setStatsOpenPersist(false)}
         stockData={stockData}
         lang={lang}
       />
@@ -535,7 +536,7 @@ export default function IndexPage() {
               priceMap={priceMap}
               fxRate={fxRate}
               loading={stockLoading}
-              onOpenStats={() => setStatsOpen(true)}
+              onOpenStats={() => setStatsOpenPersist(true)}
               onOpenSettings={() => setStockSettingsOpen(true)}
               currencyDisplay={widgetCfg?.stock?.currency_display}
               isMobile
