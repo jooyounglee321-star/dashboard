@@ -216,6 +216,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
 
     // ── 파이차트 ──
     if (pieRef.current) {
+      Chart.getChart(pieRef.current)?.destroy()
       let pieLabels, pieData
       if (overviewGroup) {
         // 선택 그룹 내 종목별 비중
@@ -226,7 +227,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         pieData = vals.map(x => parseFloat(x.val.toFixed(2)))
       } else {
         // 그룹별 비중
-        const vals = grpTotals.map(g => ({ name: cleanStr(g.name), val: Math.max(0, toDisplay(g.total, g.isKRW)) }))
+        const vals = grpTotals.map(g => ({ name: cleanStr(g.name, g.id), val: Math.max(0, toDisplay(g.total, g.isKRW)) }))
         const total = vals.reduce((a, x) => a + x.val, 0) || 1
         pieLabels = vals.map(x => `${x.name} (${(x.val / total * 100).toFixed(1)}%)`)
         pieData = vals.map(x => parseFloat(x.val.toFixed(2)))
@@ -237,7 +238,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
           labels: pieLabels,
           datasets: [{ data: pieData, backgroundColor: CHART_COLORS.slice(0, pieData.length), borderWidth: 2, borderColor: '#fffef9' }],
         },
-        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 12, generateLabels: (chart) => { const def = Chart.defaults.plugins.legend.labels.generateLabels(chart); def.forEach(l => { if (l.text && l.text.length > 20) l.text = l.text.slice(0, 20) + '...' }); return def } } } } },
+        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 12, generateLabels: (chart) => { const def = Chart.defaults.plugins.legend.labels.generateLabels(chart); def.forEach(l => { if (!l.text || l.text === 'undefined') l.text = '알 수 없음'; else if (l.text.length > 20) l.text = l.text.slice(0, 20) + '...' }); return def } } } } },
       })
       chartsRef.current.push(inst)
     }
