@@ -80,6 +80,17 @@ function computeStockStats(stockData, userJoinDate) {
     })
   })
 
+  window.__debugStockData = {
+    groups: groups.map(g => ({
+      name: g.name,
+      total: g.stocks?.length ?? 0,
+      deleted: g.stocks?.filter(s => s.is_deleted).length ?? 0,
+      active: g.stocks?.filter(s => !s.is_deleted).length ?? 0
+    })),
+    grpTotals: grpTotals.length,
+    stockValues: stockValues.length
+  }
+
   // startDate부터 오늘까지 연속 날짜 생성
   const today = new Date().toISOString().slice(0, 10)
   const generateDateRange = (start, end) => {
