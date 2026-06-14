@@ -225,7 +225,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       const safeName = (n) => (!n || n === 'undefined' || String(n).trim() === '') ? '알 수 없음' : String(n)
       if (overviewGroup) {
         // 선택 그룹 내 종목별 비중
-        const grpStocks = stockValues.filter(s => s.groupId === overviewGroup)
+        const grpStocks = stockValues.filter(s => s.groupId === overviewGroupId)
         const vals = grpStocks.map(s => ({ name: safeName(cleanStr(s.name, s.ticker)), val: Math.max(0, toDisplay(s.evalAmt, s.isKRW)) }))
         const total = vals.reduce((a, x) => a + x.val, 0) || 1
         pieLabels = vals.map(x => `${x.name} (${(x.val / total * 100).toFixed(1)}%)`)
@@ -251,7 +251,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     // ── 라인차트 ──
     if (lineRef.current) {
       let datasets = overviewGroup
-        ? lineDatasets.filter(ds => ds.groupId === overviewGroup)
+        ? lineDatasets.filter(ds => ds.groupId === overviewGroupId)
         : lineDatasets
       if (cutoff) {
         datasets = datasets.map(ds => ({ ...ds, data: ds.data.filter(pt => pt.x >= cutoff) }))
@@ -294,7 +294,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
 
     // ── 바차트 ──
     if (barRef.current && stockEvals.length) {
-      const tickerSet = overviewGroup ? new Set(groupTickers[overviewGroup] ?? []) : null
+      const tickerSet = overviewGroup ? new Set(groupTickers[overviewGroupId] ?? []) : null
       const filtered = tickerSet ? stockEvals.filter(s => tickerSet.has(s.label)) : stockEvals
       if (filtered.length) {
         const converted = filtered.map(s => {
@@ -454,7 +454,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
 
   const { grpTotals, grandUSD, grandKRW, totalKRW, stockEvals, lineDatasets, fxRate, groupTickers, stockValues } = computed || {}
   const groupOptions = (stockData?.groups ?? []).map((g, i) => ({ id: String(g.id ?? i), name: cleanStr(g.name, g.id) }))
-  const overviewGroupName = groupOptions.find(o => o.id === overviewGroup)?.name ?? ''
+  const overviewGroupId = groupOptions.find(o => o.name === overviewGroup)?.id ?? ''
 
   // ── 필터 적용 후 유효 데이터 (JSX 조건부 렌더링 + useEffect 공유) ──
   const now = new Date()
@@ -466,7 +466,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
 
   const effectiveLineDatasets = (() => {
     if (!lineDatasets) return []
-    let ds = overviewGroup ? lineDatasets.filter(d => d.groupId === overviewGroup) : lineDatasets
+    let ds = overviewGroup ? lineDatasets.filter(d => d.groupId === overviewGroupId) : lineDatasets
     if (periodCutoff) {
       ds = ds.map(d => ({ ...d, data: d.data.filter(pt => pt.x >= periodCutoff) })).filter(d => d.data.length > 0)
     }
@@ -476,13 +476,13 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   const effectiveStockEvals = (() => {
     if (!stockEvals) return []
     if (!overviewGroup) return stockEvals
-    const tickers = new Set(groupTickers?.[overviewGroup] ?? [])
+    const tickers = new Set(groupTickers?.[overviewGroupId] ?? [])
     return stockEvals.filter(s => tickers.has(s.label))
   })()
 
   const effectivePieItems = (() => {
     if (!computed) return []
-    if (overviewGroup) return (stockValues ?? []).filter(s => s.groupId === overviewGroup)
+    if (overviewGroup) return (stockValues ?? []).filter(s => s.groupId === overviewGroupId)
     return grpTotals ?? []
   })()
 
@@ -539,7 +539,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               <span style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>{t(lang, 'stock.filterByGroup')}:</span>
               <select value={overviewGroup} onChange={e => setOverviewGroup(e.target.value)} style={selStyle}>
                 <option value="">{t(lang, 'stock.allGroups')}</option>
-                {groupOptions.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                {groupOptions.map(o => <option key={o.id} value={o.name}>{o.name}</option>)}
               </select>
               <span style={{ fontSize: '0.78rem', color: 'var(--ink3)', marginLeft: '0.4rem' }}>{t(lang, 'stock.filterByCurrency')}:</span>
               <select value={overviewCurrency} onChange={e => setOverviewCurrency(e.target.value)} style={selStyle}>
@@ -559,7 +559,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               <div className="stats-section-title">{t(lang, 'statsSummaryTitle')}</div>
               <div className="stats-summary-grid">
                 {(grpTotals ?? [])
-                  .filter(g => !overviewGroup || g.groupId === overviewGroup)
+                  .filter(g => !overviewGroup || g.groupId === overviewGroupId)
                   .map((g, i) => {
                     let display
                     if (overviewCurrency === 'USD' && g.isKRW && fxRate) display = formatUSD(g.total / fxRate)
@@ -584,7 +584,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             {/* ── 파이차트 ── */}
             <div className="stats-section">
               <div className="stats-section-title">
-                {overviewGroup ? `${overviewGroupName} — ${t(lang, 'statsPieTitle')}` : t(lang, 'statsPieTitle')}
+                {overviewGroup ? `${overviewGroup} — ${t(lang, 'statsPieTitle')}` : t(lang, 'statsPieTitle')}
               </div>
               {effectivePieItems.length > 0
                 ? <div className="stats-chart-wrap pie-wrap"><canvas ref={pieRef} /></div>
