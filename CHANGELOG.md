@@ -4,6 +4,23 @@
 
 ---
 
+## [2026-06-13] — fix: 파이차트 범례 "undefined" 버그 수정 + 진단 로그 제거
+
+### 변경 내용
+- `StockStatsOverlay.jsx`: 파이차트 범례 "undefined" 버그 원인 분석 및 수정 완료
+  - `computeStockStats` 내 `grpTotals` 반환 시 `cleanStr(g.name, g.id)` 적용 — 이전 세션 커밋(`823e37b`)
+  - 파이차트 `vals` 매핑에도 `cleanStr(g.name)` 적용 — "undefined" 표시 완전 차단
+  - 진단용 `console.log` 블록 2개 제거 (프로덕션 노이즈 정리)
+
+### 버그 원인
+- 구형 코드에서 `grpTotals[i].name`이 undefined가 되는 경우 파이차트 labels 배열에
+  JS `undefined` 값이 전달 → Chart.js가 범례에 "undefined" 텍스트로 렌더링
+
+### 검증
+- grep: `cleanStr` — computeStockStats line 52, pie chart line 229, stockValues line 76 확인
+
+---
+
 ## [2026-06-13] — feat: DebugPanel 로그 복사 버튼 추가
 
 ### 변경 내용
