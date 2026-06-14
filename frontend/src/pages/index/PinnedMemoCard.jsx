@@ -30,13 +30,8 @@ function MemoCardItem({ memo, lang, onEdit, onDelete }) {
 
   return (
     <div
-      className="pinned-card"
-      style={{
-        background: scheme.bg,
-        padding: collapsed ? '8px 12px' : '0.9rem 1rem',
-        minHeight: collapsed ? 'auto' : undefined,
-        transition: 'padding 0.2s ease',
-      }}
+      className={`pinned-card${collapsed ? ' collapsed' : ''}`}
+      style={{ background: scheme.bg }}
     >
       {/* 제목 + 핀 (항상 표시) */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -50,20 +45,18 @@ function MemoCardItem({ memo, lang, onEdit, onDelete }) {
         >📌</button>
       </div>
 
-      {/* 내용 + 버튼 (펼침 상태만) */}
-      {!collapsed && (
-        <>
-          {memo.content && (
-            <div className="pinned-card-content" style={{ color: scheme.text, marginTop: '0.35rem' }}>
-              {memo.content}
-            </div>
-          )}
-          <div className="pinned-card-actions">
-            <button onClick={() => onEdit(memo)} className="pinned-card-btn" title={t(lang, 'pinnedMemoEdit')} style={{ color: scheme.text }}>✏️</button>
-            <button onClick={() => onDelete(memo.id)} className="pinned-card-btn" title={t(lang, 'pinnedMemoDelete')} style={{ color: scheme.text }}>🗑️</button>
+      {/* 내용 + 버튼 (CSS 트랜지션으로 접힘) */}
+      <div className={`pinned-card-body${collapsed ? ' hidden' : ''}`}>
+        {memo.content && (
+          <div className="pinned-card-content" style={{ color: scheme.text, marginTop: '0.35rem' }}>
+            {memo.content}
           </div>
-        </>
-      )}
+        )}
+        <div className="pinned-card-actions">
+          <button onClick={() => onEdit(memo)} className="pinned-card-btn" title={t(lang, 'pinnedMemoEdit')} style={{ color: scheme.text }}>✏️</button>
+          <button onClick={() => onDelete(memo.id)} className="pinned-card-btn" title={t(lang, 'pinnedMemoDelete')} style={{ color: scheme.text }}>🗑️</button>
+        </div>
+      </div>
     </div>
   )
 }

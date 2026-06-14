@@ -280,7 +280,10 @@
 /* 고정 메모 콘텐츠 */
 .pinned-content{padding:0 24px 0.25rem;}
 .pinned-cards-row{display:flex;flex-wrap:wrap;gap:20px;padding:12px 0 16px;margin-bottom:0.25rem;}
-.pinned-card{flex:1 1 200px;min-width:200px;max-width:240px;border-radius:10px;padding:0.9rem 1rem;display:flex;flex-direction:column;gap:0.3rem;box-shadow:0 2px 6px rgba(0,0,0,0.08);}
+.pinned-card{flex:1 1 200px;min-width:200px;max-width:240px;border-radius:10px;padding:0.9rem 1rem;display:flex;flex-direction:column;gap:0.3rem;box-shadow:0 2px 6px rgba(0,0,0,0.08);transition:padding 0.2s ease;}
+.pinned-card.collapsed{padding:0.5rem 1rem;}
+.pinned-card-body{overflow:hidden;max-height:300px;transition:max-height 0.2s ease,opacity 0.2s ease;opacity:1;}
+.pinned-card-body.hidden{max-height:0;opacity:0;}
 .pinned-card-pin{text-align:center;font-size:1rem;line-height:1;margin-bottom:0.1rem;}
 .pinned-card-title{font-size:0.8rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .pinned-card-content{font-size:0.76rem;line-height:1.55;flex:1;overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;word-break:break-word;max-height:5.4rem;}
