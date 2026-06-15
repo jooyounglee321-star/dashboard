@@ -540,6 +540,7 @@ def daily_compare(
     income_map:  dict[str, float] = {}
     expense_map: dict[str, float] = {}
     count_map:   dict[str, int]   = {}
+    desc_map:    dict[str, list]  = {}
 
     for e in rows:
         date_str = e.date.isoformat()
@@ -549,14 +550,19 @@ def daily_compare(
             income_map[date_str]  = round(income_map.get(date_str,  0.0) + usd, 2)
         else:
             expense_map[date_str] = round(expense_map.get(date_str, 0.0) + usd, 2)
+        if e.description:
+            desc_map.setdefault(date_str, [])
+            if len(desc_map[date_str]) < 3:
+                desc_map[date_str].append(e.description)
 
     all_dates = sorted(set(income_map.keys()) | set(expense_map.keys()))
     return [
         {
-            "date":    d,
-            "income":  income_map.get(d,  0.0),
-            "expense": expense_map.get(d, 0.0),
-            "count":   count_map.get(d,   0),
+            "date":         d,
+            "income":       income_map.get(d,  0.0),
+            "expense":      expense_map.get(d, 0.0),
+            "count":        count_map.get(d,   0),
+            "descriptions": desc_map.get(d, []),
         }
         for d in all_dates
     ]
