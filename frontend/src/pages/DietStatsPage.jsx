@@ -284,8 +284,7 @@ export default function DietStatsPage() {
   const [loading,   setLoading]   = useState(false)
   const [openDates, setOpenDates] = useState({})
   const [viewMode,  setViewMode]  = useState('calendar')   // 'calendar' | 'list'
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-  const [selectedDate, setSelectedDate] = useState(todayStr)   // 달력 클릭 모달 (오늘 기본 선택)
+  const [selectedDate, setSelectedDate] = useState(null)   // 달력 클릭 시에만 모달 표시
 
   useEffect(() => { fetchMonthData() }, [year, month]) // eslint-disable-line
 
