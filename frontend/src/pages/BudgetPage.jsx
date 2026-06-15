@@ -480,6 +480,14 @@ function DailyTab({ lang, currency, toDisplay }) {
                     +{fmtAmt(toDisplay(data.income), currency)}
                   </span>
                 )}
+                {data && data.descriptions && data.descriptions.map((desc, di) => (
+                  <span key={di} style={{
+                    fontSize: '0.62rem', color: '#8fa0b4', lineHeight: 1.2,
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  }}>
+                    {desc}
+                  </span>
+                ))}
                 {data && data.count > 0 && (
                   <span style={{ fontSize: '0.65rem', color: '#6b7fa0', marginTop: 'auto' }}>
                     {data.count}{lang === 'ko' ? '건' : ' items'}
