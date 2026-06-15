@@ -160,25 +160,20 @@ function CalendarView({ year, month, dateMap, analysisMap, lang, onDayClick }) {
     return `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`
   }
 
-  // 날짜 칸의 식단 미리보기: 아침/점심/저녁 최대 3줄, 초과 시 "+N개 더"
+  // 날짜 칸의 식단 미리보기: 아침/점심/저녁/간식 4줄 고정 (저장된 것만 표시)
   function getPreview(d) {
     const dateStr = cellDate(d)
     const items = dateMap[dateStr]
-    if (!items?.length) return { lines: [], extra: 0 }
+    if (!items?.length) return { lines: [] }
     const lines = []
-    let extra = 0
     for (const meal of MORD) {
       const group = items.filter(i => i.meal_type === meal)
       if (!group.length) continue
       const content = group.map(i => i.content).join(', ')
       const trimmed = content.length > 11 ? content.slice(0, 11) + '…' : content
-      if (lines.length < 3) {
-        lines.push(`${MEAL_EMOJI[meal]} ${trimmed}`)
-      } else {
-        extra++
-      }
+      lines.push(`${MEAL_EMOJI[meal]} ${trimmed}`)
     }
-    return { lines, extra }
+    return { lines }
   }
 
   return (
@@ -201,7 +196,7 @@ function CalendarView({ year, month, dateMap, analysisMap, lang, onDayClick }) {
           if (d === null) {
             return (
               <div key={`empty-${idx}`} style={{
-                height: 110,
+                height: 130,
                 borderRight: '0.5px solid var(--color-border-tertiary, #e5e7eb)',
                 borderBottom: '0.5px solid var(--color-border-tertiary, #e5e7eb)',
                 background: 'var(--color-background-primary, #fff)',
@@ -218,14 +213,14 @@ function CalendarView({ year, month, dateMap, analysisMap, lang, onDayClick }) {
           const dow      = (firstDay + d - 1) % 7  // 0=일,6=토
           const isSun    = dow === 0
           const isSat    = dow === 6
-          const { lines: preview, extra } = getPreview(d)
+          const { lines: preview } = getPreview(d)
 
           return (
             <div
               key={d}
               onClick={() => hasData && onDayClick(dateStr)}
               style={{
-                height: 110,
+                height: 130,
                 borderRight: '0.5px solid var(--color-border-tertiary, #e5e7eb)',
                 borderBottom: '0.5px solid var(--color-border-tertiary, #e5e7eb)',
                 ...(idx % 7 === 0 ? { borderLeft: '0.5px solid var(--color-border-tertiary, #e5e7eb)' } : {}),
@@ -259,7 +254,7 @@ function CalendarView({ year, month, dateMap, analysisMap, lang, onDayClick }) {
                 )}
               </div>
 
-              {/* 식단 미리보기 (최대 3줄) */}
+              {/* 식단 미리보기 (아침/점심/저녁/간식 최대 4줄) */}
               {preview.map((line, i) => (
                 <div key={i} style={{
                   fontSize: '0.6rem', color: 'var(--ink2, #6b7280)',
@@ -269,11 +264,6 @@ function CalendarView({ year, month, dateMap, analysisMap, lang, onDayClick }) {
                   {line}
                 </div>
               ))}
-              {extra > 0 && (
-                <div style={{ fontSize: '0.58rem', color: 'var(--ink3, #9ca3af)', lineHeight: 1.3 }}>
-                  +{extra}개 더
-                </div>
-              )}
             </div>
           )
         })}
@@ -295,7 +285,8 @@ export default function DietStatsPage() {
   const [loading,   setLoading]   = useState(false)
   const [openDates, setOpenDates] = useState({})
   const [viewMode,  setViewMode]  = useState('calendar')   // 'calendar' | 'list'
-  const [selectedDate, setSelectedDate] = useState(null)   // 달력 클릭 모달
+  const todayStr = (() => { const d = new Date(now.getTime() + 9 * 60 * 60 * 1000); return d.toISOString().slice(0, 10) })()
+  const [selectedDate, setSelectedDate] = useState(todayStr)   // 달력 클릭 모달 (오늘 기본 선택)
 
   useEffect(() => { fetchMonthData() }, [year, month]) // eslint-disable-line
 
