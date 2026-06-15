@@ -50,7 +50,7 @@ function computeStockStats(stockData, userJoinDate) {
       const avg = vqt > 0 ? ws / vqt : 0
       return a + (livePrice ?? avg) * hq
     }, 0)
-    return { name: cleanStr(g.name, g.id), currency: g.currency, total: tot, isKRW }
+    return { id: g.id, name: cleanStr(g.name, g.id), currency: g.currency, total: tot, isKRW }
   })
 
   let grandUSD = 0, grandKRW = 0
@@ -239,8 +239,10 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         pieLabels = vals.map(x => `${x.name} (${(x.val / total * 100).toFixed(1)}%)`)
         pieData = vals.map(x => parseFloat(x.val.toFixed(2)))
       } else {
-        // 그룹별 비중
-        const vals = grpTotals.map(g => ({ name: safeName(cleanStr(g.name, g.id)), val: Math.max(0, toDisplay(g.total, g.isKRW)) }))
+        // 그룹별 비중 (val=0인 그룹 제외 — 빈/삭제 그룹의 '알 수 없음' 방지)
+        const vals = grpTotals
+          .map(g => ({ name: g.name, val: Math.max(0, toDisplay(g.total, g.isKRW)) }))
+          .filter(x => x.val > 0)
         const total = vals.reduce((a, x) => a + x.val, 0) || 1
         pieLabels = vals.map(x => `${x.name} (${(x.val / total * 100).toFixed(1)}%)`)
         pieData = vals.map(x => parseFloat(x.val.toFixed(2)))
