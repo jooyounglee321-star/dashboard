@@ -4,6 +4,20 @@
 
 ---
 
+## [2026-06-15] — fix: 파이차트 그룹별 비중에서 '알 수 없음' 표시 버그 수정
+
+### 변경 내용
+- `StockStatsOverlay.jsx` line 53: `grpTotals` 반환 객체에 `id: g.id` 필드 누락 수정
+- `StockStatsOverlay.jsx` line 242~245: 파이차트 그룹별 비중 렌더링 시 `val === 0`인 그룹 제외
+  - `.filter(x => x.val > 0)` 추가로 빈 그룹/전량 삭제 그룹이 차트에서 제거됨
+
+### 버그 원인
+- `computeStockStats`가 stocks가 없거나 전량 삭제된 그룹도 `grpTotals`에 포함
+- 해당 그룹의 `name`과 `id`가 모두 비어있으면 `cleanStr` → `'알 수 없음'` 반환
+- StockCard는 `stocks.length` 기준으로 필터하여 화면에 안 보이지만, 파이차트는 필터 없이 노출됨
+
+---
+
 ## [2026-06-13] — fix: 파이차트 범례 "undefined (xx.x%)" 완전 차단
 
 ### 변경 내용
