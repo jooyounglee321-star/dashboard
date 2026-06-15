@@ -462,38 +462,38 @@ function DailyTab({ lang, currency, toDisplay }) {
                   fontSize: '0.78rem', fontWeight: isToday ? 700 : 500,
                   color: isSun ? '#ef4444' : isSat ? '#60a5fa' : '#c8d6e5',
                 }}>{day}</span>
-                {data && data.expense > 0 && (
-                  <span style={{
-                    fontSize: '0.7rem', fontWeight: 600, lineHeight: 1.2,
-                    color: isOver ? '#f87171' : '#e8a060',
-                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                  }}>
-                    {fmtAmt(toDisplay(data.expense), currency)}
-                  </span>
-                )}
-                {data && data.income > 0 && (
-                  <span style={{
-                    fontSize: '0.7rem', fontWeight: 500, lineHeight: 1.2,
-                    color: '#4ade80',
-                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                  }}>
-                    +{fmtAmt(toDisplay(data.income), currency)}
-                  </span>
-                )}
-                {data && data.descriptions && data.descriptions.slice(0, 2).map((desc, di) => (
-                  <span key={di} style={{
-                    fontSize: '0.62rem', color: '#8fa0b4', lineHeight: 1.2,
-                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                    display: 'block', maxWidth: '100%',
-                  }}>
-                    {desc.length > 12 ? desc.slice(0, 12) + '…' : desc}
-                  </span>
-                ))}
-                {data && data.count > 0 && (
-                  <span style={{ fontSize: '0.65rem', color: '#6b7fa0', marginTop: 'auto' }}>
-                    {data.count}{lang === 'ko' ? '건' : ' items'}
-                  </span>
-                )}
+                {(() => {
+                  if (!data) return null
+                  // 표시할 라인 목록 구성 (최대 3줄)
+                  const lines = []
+                  if (data.expense > 0) lines.push(
+                    <span key="exp" style={{ fontSize: '0.7rem', fontWeight: 600, lineHeight: 1.2, color: isOver ? '#f87171' : '#e8a060', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {fmtAmt(toDisplay(data.expense), currency)}
+                    </span>
+                  )
+                  if (data.income > 0) lines.push(
+                    <span key="inc" style={{ fontSize: '0.7rem', fontWeight: 500, lineHeight: 1.2, color: '#4ade80', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      +{fmtAmt(toDisplay(data.income), currency)}
+                    </span>
+                  )
+                  ;(data.descriptions || []).forEach((desc, di) => {
+                    lines.push(
+                      <span key={`d${di}`} style={{ fontSize: '0.62rem', color: '#8fa0b4', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
+                        {desc.length > 12 ? desc.slice(0, 12) + '…' : desc}
+                      </span>
+                    )
+                  })
+                  return (
+                    <>
+                      {lines.slice(0, 3)}
+                      {data.count > 0 && (
+                        <span style={{ fontSize: '0.65rem', color: '#6b7fa0', marginTop: 'auto' }}>
+                          {data.count}{lang === 'ko' ? '건' : ' items'}
+                        </span>
+                      )}
+                    </>
+                  )
+                })()}
               </div>
             )
           })}
