@@ -453,7 +453,7 @@ function DailyTab({ lang, currency, toDisplay }) {
                   border: isToday ? '2px solid #3b82f6' : '1px solid rgba(255,255,255,0.08)',
                   cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '2px',
                   transition: 'background 0.12s',
-                  boxSizing: 'border-box',
+                  boxSizing: 'border-box', overflow: 'hidden',
                 }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
@@ -480,12 +480,13 @@ function DailyTab({ lang, currency, toDisplay }) {
                     +{fmtAmt(toDisplay(data.income), currency)}
                   </span>
                 )}
-                {data && data.descriptions && data.descriptions.map((desc, di) => (
+                {data && data.descriptions && data.descriptions.slice(0, 2).map((desc, di) => (
                   <span key={di} style={{
                     fontSize: '0.62rem', color: '#8fa0b4', lineHeight: 1.2,
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    display: 'block', maxWidth: '100%',
                   }}>
-                    {desc}
+                    {desc.length > 12 ? desc.slice(0, 12) + '…' : desc}
                   </span>
                 ))}
                 {data && data.count > 0 && (
