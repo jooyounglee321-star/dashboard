@@ -43,15 +43,21 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
 
 
   // 날짜 변경 시 자동 재조회
-  async function loadMeal(d = date) {
+  async function loadMeal(d = date, autoAdvance = false) {
     const list = await fetch('/api/diets?date=' + d, { headers: authHeader() })
       .then(r => r.ok ? r.json() : [])
       .catch(() => [])
     setDietList(list)
+    // 이미 저장된 끼니 기반으로 드롭박스 자동 선택
+    if (autoAdvance || d === localToday()) {
+      const savedMeals = new Set(list.map(item => item.meal_type))
+      const next = MORD.find(m => !savedMeals.has(m))
+      if (next) setMtime(next)
+    }
   }
 
   useEffect(() => {
-    loadMeal(date)
+    loadMeal(date, true)
     loadSavedAnalysis(date)
   }, [date]) // eslint-disable-line
 
