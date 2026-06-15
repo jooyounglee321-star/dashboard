@@ -140,10 +140,9 @@ function DayDetailModal({ date, dateMap, analysisMap, lang, onClose }) {
 // ── 달력 뷰 ─────────────────────────────────────────────────────────────────
 function CalendarView({ year, month, dateMap, analysisMap, lang, onDayClick }) {
   const mealLabel = key => (lang === 'en' ? MEAL_LABEL_EN : MEAL_LABEL_KO)[key] ?? key
-  // KST 기준 오늘 날짜 (UTC+9 보정)
+  // 접속 기기의 로컬 날짜 기준
   const _now = new Date()
-  const koreaToday = new Date(_now.getTime() + 9 * 60 * 60 * 1000)
-  const today = koreaToday.toISOString().slice(0, 10)
+  const today = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`
   const weekdays = lang === 'ko' ? WEEKDAY_KO : WEEKDAY_EN
 
   const firstDay  = new Date(year, month - 1, 1).getDay()   // 0=일
@@ -285,7 +284,7 @@ export default function DietStatsPage() {
   const [loading,   setLoading]   = useState(false)
   const [openDates, setOpenDates] = useState({})
   const [viewMode,  setViewMode]  = useState('calendar')   // 'calendar' | 'list'
-  const todayStr = (() => { const d = new Date(now.getTime() + 9 * 60 * 60 * 1000); return d.toISOString().slice(0, 10) })()
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   const [selectedDate, setSelectedDate] = useState(todayStr)   // 달력 클릭 모달 (오늘 기본 선택)
 
   useEffect(() => { fetchMonthData() }, [year, month]) // eslint-disable-line
