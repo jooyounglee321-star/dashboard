@@ -105,6 +105,9 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
     })
     setMtext('')
     setMcal('')
+    // 저장 후 다음 끼니로 자동 이동: 아침→점심→저녁→간식
+    const nextMeal = { '아침': '점심', '점심': '저녁', '저녁': '간식' }
+    if (nextMeal[mtime]) setMtime(nextMeal[mtime])
     await loadMeal(date)
   }
 
