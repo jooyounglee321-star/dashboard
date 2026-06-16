@@ -47,9 +47,7 @@ export default function AdminPage() {
   const [ytName,    setYtName]    = useState('')
   const [ytUrl,     setYtUrl]     = useState('')
 
-  const [sites,     setSites]     = useState([])
-  const [siteName,  setSiteName]  = useState('')
-  const [siteUrl,   setSiteUrl]   = useState('')
+
 
   const [tzData,    setTzData]    = useState(DEFAULT_ZONES)
   const [tzPreviews,setTzPreviews]= useState(['--:--', '--:--', '--:--'])
@@ -85,7 +83,7 @@ export default function AdminPage() {
 
   /* ── 초기 데이터 로드 ── */
   useEffect(() => {
-    loadYTChannels(); loadSites(); loadTZData(); loadWidgetCfg()
+    loadYTChannels(); loadTZData(); loadWidgetCfg()
     setYtAccName(ld('yt_account', { name: '' }).name || '')
     setYtAccEmail(ld('yt_account', { email: '' }).email || '')
   }, [])
@@ -121,38 +119,6 @@ export default function AdminPage() {
       const r = await fetch('/api/youtube-channels/' + id, { method: 'DELETE', headers: authH() })
       if (!r.ok) throw new Error('HTTP ' + r.status)
       await loadYTChannels(); showToast('삭제되었습니다', 'ok')
-    } catch { showToast('삭제 실패 - 서버 연결을 확인해주세요', 'err') }
-  }
-
-  /* ── 사이트 ── */
-  async function loadSites() {
-    const data = await fetch('/api/bookmarks', { headers: authH() }).then(r => r.ok ? r.json() : []).catch(() => [])
-    setSites(data)
-  }
-  async function addSite() {
-    let url = siteUrl.trim(); let name = siteName.trim()
-    if (!url) { showToast('URL을 입력해주세요', 'err'); return }
-    if (!url.startsWith('http')) url = 'https://' + url
-    if (!name) name = url
-    try {
-      const r = await fetch('/api/bookmarks', { method: 'POST', headers: { ...authH(), 'Content-Type': 'application/json' }, body: JSON.stringify({ title: name, url }) })
-      if (!r.ok) throw new Error('HTTP ' + r.status)
-      setSiteName(''); setSiteUrl(''); await loadSites(); showToast('✓ 사이트가 추가되었습니다', 'ok')
-    } catch { showToast('저장 실패 - 서버 연결을 확인해주세요', 'err') }
-  }
-  async function quickSite(name, url) {
-    if (sites.find(s => s.url === url)) { showToast('이미 추가된 사이트입니다', 'err'); return }
-    try {
-      const r = await fetch('/api/bookmarks', { method: 'POST', headers: { ...authH(), 'Content-Type': 'application/json' }, body: JSON.stringify({ title: name, url }) })
-      if (!r.ok) throw new Error('HTTP ' + r.status)
-      await loadSites(); showToast(`✓ ${name} 추가!`, 'ok')
-    } catch { showToast('저장 실패 - 서버 연결을 확인해주세요', 'err') }
-  }
-  async function delSite(id) {
-    try {
-      const r = await fetch('/api/bookmarks/' + id, { method: 'DELETE', headers: authH() })
-      if (!r.ok) throw new Error('HTTP ' + r.status)
-      await loadSites(); showToast('삭제되었습니다', 'ok')
     } catch { showToast('삭제 실패 - 서버 연결을 확인해주세요', 'err') }
   }
 
@@ -425,41 +391,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* ④ 즐겨찾기 */}
-        <div style={secStyle}>
-          <div style={secHdStyle}><span style={secTitle}>🌐 단골 사이트</span></div>
-          <div style={secBdStyle}>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              <div style={formGrp}><label style={lbl}>사이트 이름</label><input type="text" value={siteName} onChange={e => setSiteName(e.target.value)} placeholder="예: 네이버" style={inp} /></div>
-              <div style={{ ...formGrp, flex: 2 }}><label style={lbl}>주소 (URL)</label><input type="url" value={siteUrl} onChange={e => setSiteUrl(e.target.value)} placeholder="예: https://www.naver.com" style={inp} /></div>
-              <button onClick={addSite} style={{ padding: '0.48rem 1.1rem', fontSize: '0.85rem', fontWeight: 500, cursor: 'pointer', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, fontFamily: 'inherit', alignSelf: 'flex-end' }}>+ 추가</button>
-            </div>
-            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.72rem', color: 'var(--ink3)', alignSelf: 'center' }}>빠른 추가 →</span>
-              {[['네이버','https://www.naver.com'],['다음','https://www.daum.net'],['유튜브','https://www.youtube.com'],['카카오','https://www.kakao.com'],['네이버증권','https://finance.naver.com'],['구글','https://www.google.com'],['쿠팡','https://www.coupang.com']].map(([n, u]) => (
-                <button key={n} onClick={() => quickSite(n, u)} style={{ padding: '0.28rem 0.7rem', fontSize: '0.75rem', cursor: 'pointer', background: 'transparent', color: 'var(--blue)', border: '1px solid var(--blue)', borderRadius: 6, fontFamily: 'inherit', transition: 'all 0.15s' }}>{n}</button>
-              ))}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              {!sites.length
-                ? <div style={{ fontSize: '0.82rem', color: 'var(--ink3)', fontStyle: 'italic', textAlign: 'center', padding: '0.5rem' }}>추가된 사이트가 없습니다</div>
-                : sites.map(s => {
-                  const dom = (() => { try { return new URL(s.url).hostname } catch { return '' } })()
-                  return (
-                    <div key={s.id} style={itemRow}>
-                      <div style={{ width: 24, display: 'flex', alignItems: 'center' }}>
-                        {dom && <img src={`https://www.google.com/s2/favicons?domain=${dom}&sz=32`} width={18} height={18} style={{ borderRadius: 3 }} onError={e => { e.target.style.display = 'none' }} alt="" />}
-                      </div>
-                      <div style={itemInfo}><div style={{ fontSize: '0.85rem', color: 'var(--ink)' }}>{s.title}</div><div style={{ fontSize: '0.72rem', color: 'var(--ink3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.url}</div></div>
-                      <button className="btn-danger" onClick={() => delSite(s.id)}>삭제</button>
-                    </div>
-                  )
-                })}
-            </div>
-          </div>
-        </div>
-
-        {/* ⑤ 안내 */}
+        {/* ④ 안내 */}
         <div style={{ ...secStyle, background: 'var(--card2)' }}>
           <div style={secBdStyle}>
             <div style={{ background: 'var(--card2)', borderRadius: 10, padding: '0.8rem 1rem', borderLeft: '3px solid var(--accent)' }}>
