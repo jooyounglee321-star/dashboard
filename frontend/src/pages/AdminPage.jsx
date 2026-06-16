@@ -391,20 +391,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* ④ 안내 */}
-        <div style={{ ...secStyle, background: 'var(--card2)' }}>
-          <div style={secBdStyle}>
-            <div style={{ background: 'var(--card2)', borderRadius: 10, padding: '0.8rem 1rem', borderLeft: '3px solid var(--accent)' }}>
-              <p style={{ fontSize: '0.82rem', color: 'var(--ink2)', lineHeight: 1.7 }}>
-                <strong style={{ color: 'var(--ink)', fontWeight: 500 }}>📌 나중에 Spring Boot 추가 시 확장되는 기능</strong><br />
-                • Google Calendar 실시간 연동<br />• 주식 시세 자동 업데이트 (Yahoo Finance API + @Scheduled)<br />
-                • 지출 → 가계부 앱 연동 (API 확장)<br />• 뉴스 RSS 자동 수집 (한국 · 미국)
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* ⑥ 시간대 설정 */}
+        {/* ⑤ 시간대 설정 */}
         <div style={secStyle}>
           <div style={secHdStyle}>
             <span style={secTitle}>🕐 {t(lang, 'admin.tzTitle')}</span>
