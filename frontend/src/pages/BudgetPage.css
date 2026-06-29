@@ -848,3 +848,165 @@
   .bp-sum-grid { grid-template-columns: repeat(2, 1fr); }
   .bp-edit-row { flex-wrap: wrap; }
 }
+
+/* ─── RecurringPage ──────────────────────────────────────────────────────── */
+
+.rp-add-btn {
+  padding: 0.38rem 0.85rem;
+  background: #e8a060;
+  color: #0d1117;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.rp-add-btn:hover { background: #f0b070; }
+
+.rp-body {
+  max-width: 700px;
+  margin: 1.5rem auto;
+  padding: 0 1rem;
+}
+
+.rp-empty {
+  text-align: center;
+  color: #8892a4;
+  padding: 3rem 0;
+  font-size: 0.9rem;
+}
+
+.rp-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.rp-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+.rp-card.inactive { opacity: 0.45; }
+
+.rp-card-day {
+  min-width: 70px;
+  font-size: 0.82rem;
+  color: #e8a060;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rp-card-info {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.rp-cat { font-size: 0.88rem; color: #c8d0dc; display: flex; align-items: center; gap: 0.3rem; }
+.rp-subcat { color: #8892a4; font-size: 0.82rem; }
+.rp-amount { font-size: 0.95rem; font-weight: 600; color: #60b4e8; }
+.rp-memo { font-size: 0.78rem; color: #8892a4; width: 100%; }
+
+.rp-card-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
+
+.rp-btn {
+  padding: 0.3rem 0.65rem;
+  border-radius: 5px;
+  border: 1px solid rgba(255,255,255,0.12);
+  font-size: 0.78rem;
+  cursor: pointer;
+  background: transparent;
+  color: #c8d0dc;
+}
+.rp-btn:hover { background: rgba(255,255,255,0.07); }
+.rp-btn.edit { border-color: #60b4e8; color: #60b4e8; }
+.rp-btn.del  { border-color: #e86060; color: #e86060; }
+.rp-btn.save { background: #e8a060; color: #0d1117; border-color: transparent; font-weight: 600; }
+.rp-btn.save:hover { background: #f0b070; }
+.rp-btn.cancel { color: #8892a4; }
+.rp-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* overlay/modal */
+.rp-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.65);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200;
+}
+
+.rp-modal {
+  background: #161c25;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  padding: 1.4rem 1.6rem;
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.rp-modal-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #e8a060;
+  margin: 0 0 0.4rem;
+}
+
+.rp-label { font-size: 0.78rem; color: #8892a4; margin-top: 0.2rem; }
+
+.rp-row { display: flex; align-items: center; gap: 0.5rem; }
+
+.rp-input {
+  flex: 1;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 0.42rem 0.65rem;
+  color: #e0e6ef;
+  font-size: 0.88rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+.rp-input:focus { outline: none; border-color: #e8a060; }
+
+.rp-select, .rp-select-sm {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 0.42rem 0.65rem;
+  color: #e0e6ef;
+  font-size: 0.88rem;
+}
+.rp-select { width: 100%; }
+.rp-select-sm { min-width: 90px; }
+.rp-select:focus, .rp-select-sm:focus { outline: none; border-color: #e8a060; }
+
+.rp-unit { font-size: 0.82rem; color: #8892a4; white-space: nowrap; }
+
+.rp-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+/* 정기지출 관리 버튼 (BudgetPage header) */
+.bp-recurring-btn {
+  padding: 0.38rem 0.75rem;
+  background: transparent;
+  border: 1px solid #60b4e8;
+  color: #60b4e8;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+.bp-recurring-btn:hover { background: rgba(96,180,232,0.1); }

@@ -290,6 +290,29 @@ class PortfolioGroups(Base):
     )
 
 
+class RecurringExpense(Base):
+    """정기지출 설정 테이블. 매월 특정 일에 자동 등록할 지출 항목."""
+    __tablename__ = "recurring_expenses"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    day_of_month: Mapped[int] = mapped_column(Integer, nullable=False)            # 1~28
+    category_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("expense_categories.id", ondelete="SET NULL"), nullable=True
+    )
+    subcategory_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("expense_categories.id", ondelete="SET NULL"), nullable=True
+    )
+    amount: Mapped[float] = mapped_column(Numeric(14, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(String(10), nullable=False, default="USD")
+    memo: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
 class RolePermission(Base):
     """레벨(role)별 권한 매핑 테이블.
 

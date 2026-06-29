@@ -28,6 +28,7 @@
 | 15 | `permissions` | 레벨별 권한 매핑 |
 | 16 | `daily_portfolio_snapshot` | 일별 포트폴리오 스냅샷 (user_id 기준 격리) |
 | 17 | `todos` | 수동 할 일 체크리스트 (user_id 기준 격리, start_date~due_date 범위 표시, 날짜별 체크 독립) |
+| 18 | `recurring_expenses` | 정기지출 설정 (매월 특정 일 자동 등록용, user_id 기준 격리) |
 
 ---
 

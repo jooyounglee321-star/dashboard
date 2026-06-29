@@ -25,6 +25,7 @@ from models import (  # noqa: F401  (import side-effect 목적)
     Expense,
     ExpenseBudget,
     ExchangeRate,
+    RecurringExpense,
     Diet,
     DietAnalysis,
     Memo,
@@ -870,6 +871,35 @@ def _seed_income_categories():
         db.close()
 
 
+def _migrate_recurring_expenses_table():
+    """recurring_expenses 테이블이 없으면 생성."""
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS recurring_expenses (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    day_of_month INTEGER NOT NULL,
+                    category_id INTEGER REFERENCES expense_categories(id) ON DELETE SET NULL,
+                    subcategory_id INTEGER REFERENCES expense_categories(id) ON DELETE SET NULL,
+                    amount NUMERIC(14,2) NOT NULL,
+                    currency VARCHAR(10) NOT NULL DEFAULT 'USD',
+                    memo VARCHAR(500),
+                    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW()
+                )
+            """))
+            conn.commit()
+            logger.info("[MIGRATE] recurring_expenses 테이블 확인/생성 완료")
+        except Exception as e:
+            logger.warning("[MIGRATE] recurring_expenses 생성 실패(이미 존재할 수 있음): %s", e)
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+
+
 def _seed_default_permissions():
     """permissions 테이블이 비어 있을 때 기본 권한을 시드."""
     db = SessionLocal()
@@ -926,6 +956,7 @@ async def lifespan(app: FastAPI):
     _migrate_add_realized_pl()
     _migrate_cleanup_null_snapshot_dates()
     _seed_income_categories()
+    _migrate_recurring_expenses_table()
     logger.info("[DB] 테이블 생성/확인 완료")
 
     # APScheduler: 30분마다 환율 자동 갱신

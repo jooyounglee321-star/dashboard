@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 import time as _time
-from datetime import date as Date
+from datetime import date as Date, datetime as DateTime
 from typing import Any
 
 import yfinance as yf
@@ -18,7 +18,7 @@ from sqlalchemy import func as sqlfunc
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Expense, ExpenseBudget, ExpenseCategory, ExchangeRate, User
+from models import Expense, ExpenseBudget, ExpenseCategory, ExchangeRate, RecurringExpense, User
 from routers._shared import get_rate as _get_rate, cat_name as _cat_name, require_admin
 from routers.auth import get_current_user
 
@@ -984,3 +984,193 @@ def do_refresh_rates(db: Session) -> dict:
 
     logger.info("[RATE] 환율 갱신 완료 — 성공: %s / 실패: %s", updated, failed)
     return {"updated": updated, "failed": failed}
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 정기지출 API  /expense/recurring
+# ════════════════════════════════════════════════════════════════════════════
+
+class RecurringExpenseIn(BaseModel):
+    day_of_month:   int
+    category_id:    int | None = None
+    subcategory_id: int | None = None
+    amount:         float
+    currency:       str = "USD"
+    memo:           str | None = None
+
+
+class RecurringExpensePatch(BaseModel):
+    day_of_month:   int | None = None
+    category_id:    int | None = None
+    subcategory_id: int | None = None
+    amount:         float | None = None
+    currency:       str | None = None
+    memo:           str | None = None
+    is_active:      bool | None = None
+
+
+def _recurring_dict(r: RecurringExpense, db: Session, lang: str = "ko") -> dict:
+    cat = db.get(ExpenseCategory, r.category_id)    if r.category_id    else None
+    sub = db.get(ExpenseCategory, r.subcategory_id) if r.subcategory_id else None
+    return {
+        "id":               r.id,
+        "day_of_month":     r.day_of_month,
+        "category_id":      r.category_id,
+        "subcategory_id":   r.subcategory_id,
+        "category_name":    _cat_name(cat, lang) if cat else None,
+        "subcategory_name": _cat_name(sub, lang) if sub else None,
+        "category_icon":    cat.icon if cat else None,
+        "amount":           float(r.amount),
+        "currency":         r.currency,
+        "memo":             r.memo,
+        "is_active":        r.is_active,
+        "created_at":       r.created_at.isoformat(),
+    }
+
+
+@expense_router.get("/recurring")
+def list_recurring(
+    lang: str = Query("ko", pattern="^(ko|en)$"),
+    db:   Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    rows = (
+        db.query(RecurringExpense)
+        .filter(RecurringExpense.user_id == current_user.id)
+        .order_by(RecurringExpense.day_of_month)
+        .all()
+    )
+    return [_recurring_dict(r, db, lang) for r in rows]
+
+
+@expense_router.post("/recurring", status_code=201)
+def create_recurring(
+    body: RecurringExpenseIn,
+    lang: str = Query("ko", pattern="^(ko|en)$"),
+    db:   Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not (1 <= body.day_of_month <= 28):
+        raise HTTPException(status_code=422, detail="day_of_month must be 1-28")
+    r = RecurringExpense(
+        user_id        = current_user.id,
+        day_of_month   = body.day_of_month,
+        category_id    = body.category_id,
+        subcategory_id = body.subcategory_id,
+        amount         = body.amount,
+        currency       = body.currency,
+        memo           = body.memo,
+        is_active      = True,
+    )
+    db.add(r)
+    db.commit()
+    db.refresh(r)
+    return _recurring_dict(r, db, lang)
+
+
+@expense_router.put("/recurring/{rid}")
+def update_recurring(
+    rid:  int,
+    body: RecurringExpensePatch,
+    lang: str = Query("ko", pattern="^(ko|en)$"),
+    db:   Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    r = db.get(RecurringExpense, rid)
+    if not r or r.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Not found")
+    for field, val in body.model_dump(exclude_unset=True).items():
+        if field == "day_of_month" and val is not None and not (1 <= val <= 28):
+            raise HTTPException(status_code=422, detail="day_of_month must be 1-28")
+        setattr(r, field, val)
+    db.commit()
+    db.refresh(r)
+    return _recurring_dict(r, db, lang)
+
+
+@expense_router.delete("/recurring/{rid}", status_code=204)
+def delete_recurring(
+    rid: int,
+    db:  Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    r = db.get(RecurringExpense, rid)
+    if not r or r.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Not found")
+    db.delete(r)
+    db.commit()
+
+
+@expense_router.post("/recurring/apply")
+def apply_recurring(
+    db:           Session = Depends(get_db),
+    current_user: User    = Depends(get_current_user),
+):
+    """로그인 시 호출 — 이번 달 정기지출 항목을 자동 등록. 중복 방지."""
+    today   = DateTime.utcnow().date()
+    year    = today.year
+    month   = today.month
+
+    actives = (
+        db.query(RecurringExpense)
+        .filter(
+            RecurringExpense.user_id   == current_user.id,
+            RecurringExpense.is_active == True,   # noqa: E712
+        )
+        .all()
+    )
+
+    created = []
+    skipped = []
+
+    for rec in actives:
+        # 이번 달 해당 일 날짜 계산 (28일 초과는 월말 클램핑)
+        import calendar as _cal
+        last_day = _cal.monthrange(year, month)[1]
+        target_day = min(rec.day_of_month, last_day)
+        target_date = Date(year, month, target_day)
+
+        # 중복 체크: recurring_id 메모 패턴으로 검사
+        tag = f"[R#{rec.id}]"
+        already = (
+            db.query(Expense)
+            .filter(
+                Expense.user_id     == current_user.id,
+                Expense.description.contains(tag),
+                Expense.date        >= Date(year, month, 1),
+                Expense.date        <= Date(year, month, last_day),
+            )
+            .first()
+        )
+        if already:
+            skipped.append(rec.id)
+            continue
+
+        converted, rate = _to_usd(rec.amount, rec.currency, db)
+        memo_text = (rec.memo or "").strip()
+        full_desc = f"{tag} {memo_text}".strip() if memo_text else tag
+
+        e = Expense(
+            user_id          = current_user.id,
+            date             = target_date,
+            amount           = rec.amount,
+            currency         = rec.currency,
+            converted_amount = converted,
+            exchange_rate    = rate,
+            category_id      = rec.category_id,
+            subcategory_id   = rec.subcategory_id,
+            description      = full_desc,
+            type             = "expense",
+        )
+        db.add(e)
+        created.append(rec.id)
+
+    if created:
+        db.commit()
+
+    return {
+        "year":    year,
+        "month":   month,
+        "created": created,
+        "skipped": skipped,
+    }

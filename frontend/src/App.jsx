@@ -8,6 +8,7 @@ import IndexPage from './pages/index/IndexPage'
 import ProfilePage from './pages/ProfilePage'
 import BudgetPage from './pages/BudgetPage'
 import DietStatsPage from './pages/DietStatsPage'
+import RecurringPage from './pages/RecurringPage'
 import DebugPanel from './DebugPanel'
 
 function hasValidToken() {
@@ -83,6 +84,19 @@ export default function App() {
     }).catch(() => {})
   }, [])
 
+  // 세션당 한 번만 정기지출 자동 등록
+  useEffect(() => {
+    if (!hasValidToken()) return
+    if (sessionStorage.getItem('recurring_applied')) return
+    const token = localStorage.getItem('token')
+    fetch('/api/expense/recurring/apply', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token },
+    }).then(() => {
+      sessionStorage.setItem('recurring_applied', '1')
+    }).catch(() => {})
+  }, [])
+
   return (
     <BrowserRouter>
       <Routes>
@@ -94,6 +108,7 @@ export default function App() {
         <Route path="/admin_users" element={<Navigate to="/superadmin" replace />} />
         <Route path="/superadmin"  element={<AdminRoleGuard><SuperadminPage /></AdminRoleGuard>} />
         <Route path="/budget"      element={<AuthGuard><BudgetPage /></AuthGuard>} />
+        <Route path="/recurring"   element={<AuthGuard><RecurringPage /></AuthGuard>} />
         <Route path="/diet-stats"  element={<AuthGuard><DietStatsPage /></AuthGuard>} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
