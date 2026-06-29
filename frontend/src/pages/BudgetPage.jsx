@@ -751,6 +751,10 @@ function MonthlyTab({ lang, currency, toDisplay }) {
   const [dailyCompare, setDailyCompare] = useState(null)
   const [loading, setLoading] = useState(false)
 
+  const [drillModal, setDrillModal]   = useState(null)  // { category_id, category_name, category_icon }
+  const [drillData, setDrillData]     = useState(null)
+  const [drillLoading, setDrillLoading] = useState(false)
+
   const pieRef      = useRef(null)
   const lineRef     = useRef(null)
   const barRef      = useRef(null)
@@ -779,6 +783,21 @@ function MonthlyTab({ lang, currency, toDisplay }) {
   }, [year, month, lang])
 
   useEffect(() => { load() }, [load])
+
+  function openDrillModal(cat) {
+    setDrillModal({ category_id: cat.category_id, category_name: cat.category_name, category_icon: cat.category_icon })
+    setDrillData(null)
+    setDrillLoading(true)
+    apiGet(`/api/expense/category-detail?year=${year}&month=${month}&category_id=${cat.category_id}&lang=${lang}`)
+      .then(d => setDrillData(d))
+      .catch(() => setDrillData(null))
+      .finally(() => setDrillLoading(false))
+  }
+
+  function closeDrillModal() {
+    setDrillModal(null)
+    setDrillData(null)
+  }
 
   useEffect(() => {
     destroyCharts()
@@ -985,8 +1004,17 @@ function MonthlyTab({ lang, currency, toDisplay }) {
                     const pct    = stats?.by_category?.find(s => s.category_id === c.category_id)?.pct
                     const isOver = c.budget_usd != null && c.total_usd > c.budget_usd
                     return (
-                      <tr key={i} className={isOver ? 'over' : ''}>
-                        <td><span className="bp-cat-icon">{c.category_icon}</span>{c.category_name}</td>
+                      <tr key={i}
+                        className={`${isOver ? 'over' : ''} bp-row-drillable`}
+                        onClick={() => openDrillModal(c)}
+                        title={t(lang, 'budget.clickForDetail')}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <td>
+                          <span className="bp-cat-icon">{c.category_icon}</span>
+                          {c.category_name}
+                          <span style={{ marginLeft: '0.35rem', fontSize: '0.7rem', color: '#5b7fa6', verticalAlign: 'middle' }}>▶</span>
+                        </td>
                         <td>{c.budget_usd != null ? fmtAmt(toDisplay(c.budget_usd), currency) : '–'}</td>
                         <td className={isOver ? 'txt-red' : ''}>{fmtAmt(toDisplay(c.total_usd || 0), currency)}</td>
                         <td className={c.remaining_usd != null ? (c.remaining_usd < 0 ? 'txt-red' : 'txt-green') : ''}>
@@ -1037,6 +1065,130 @@ function MonthlyTab({ lang, currency, toDisplay }) {
             )}
           </div>
         </>
+      )}
+
+      {/* ── 소분류 드릴다운 모달 ── */}
+      {drillModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1100,
+          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
+        }}
+          onClick={e => { if (e.target === e.currentTarget) closeDrillModal() }}
+        >
+          <div style={{
+            background: '#1a2336', borderRadius: '1.25rem',
+            border: '1px solid rgba(255,255,255,0.12)',
+            width: '100%', maxWidth: '680px', maxHeight: '88vh',
+            display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          }}>
+            {/* 헤더 */}
+            <div style={{
+              padding: '1rem 1.25rem 0.75rem',
+              borderBottom: '1px solid rgba(255,255,255,0.08)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
+            }}>
+              <span style={{ fontWeight: 700, fontSize: '1.05rem' }}>
+                {drillModal.category_icon && <span style={{ marginRight: '0.4rem' }}>{drillModal.category_icon}</span>}
+                {drillModal.category_name} — {t(lang, 'budget.drilldownTitle')}
+              </span>
+              <button onClick={closeDrillModal}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', color: '#9aacbf', lineHeight: 1 }}>×</button>
+            </div>
+
+            {/* 바디 */}
+            <div style={{ overflowY: 'auto', padding: '1rem 1.25rem', flex: 1 }}>
+              {drillLoading ? (
+                <p style={{ color: '#9aacbf', textAlign: 'center', padding: '2rem 0' }}>Loading…</p>
+              ) : drillData ? (
+                <>
+                  {/* 소분류별 집계 */}
+                  {drillData.by_subcategory?.length > 0 && (
+                    <div style={{ marginBottom: '1.25rem' }}>
+                      <h4 style={{ color: '#7aadff', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        {t(lang, 'budget.drilldownTitle')}
+                      </h4>
+                      <div className="bp-table-wrap" style={{ margin: 0 }}>
+                        <table className="bp-table">
+                          <thead>
+                            <tr>
+                              <th>{t(lang, 'budget.subcategory')}</th>
+                              <th style={{ textAlign: 'right' }}>{t(lang, 'budget.actual')}</th>
+                              <th style={{ textAlign: 'right' }}>%</th>
+                              <th style={{ textAlign: 'right' }}>{lang === 'ko' ? '건수' : 'Count'}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {drillData.by_subcategory.map((s, i) => {
+                              const pct = drillData.total_usd > 0 ? (s.total_usd / drillData.total_usd * 100).toFixed(1) : '0.0'
+                              return (
+                                <tr key={i}>
+                                  <td>
+                                    {s.subcategory_icon && <span className="bp-cat-icon">{s.subcategory_icon}</span>}
+                                    {s.subcategory_name || t(lang, 'budget.noSubcategory')}
+                                  </td>
+                                  <td style={{ textAlign: 'right' }}>{fmtAmt(toDisplay(s.total_usd), currency)}</td>
+                                  <td style={{ textAlign: 'right', color: '#9aacbf' }}>{pct}%</td>
+                                  <td style={{ textAlign: 'right', color: '#9aacbf' }}>{s.count}{lang === 'ko' ? t(lang, 'budget.drilldownCount') : ''}</td>
+                                </tr>
+                              )
+                            })}
+                            <tr className="bp-total-row">
+                              <td><strong>{t(lang, 'budget.totalExpense')}</strong></td>
+                              <td style={{ textAlign: 'right' }}><strong>{fmtAmt(toDisplay(drillData.total_usd), currency)}</strong></td>
+                              <td style={{ textAlign: 'right' }}>100%</td>
+                              <td style={{ textAlign: 'right' }}>{drillData.items?.length ?? 0}{lang === 'ko' ? t(lang, 'budget.drilldownCount') : ''}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 개별 내역 */}
+                  {drillData.items?.length > 0 && (
+                    <div>
+                      <h4 style={{ color: '#7aadff', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        {t(lang, 'budget.drilldownItems')}
+                      </h4>
+                      <div className="bp-table-wrap" style={{ margin: 0 }}>
+                        <table className="bp-table">
+                          <thead>
+                            <tr>
+                              <th>{t(lang, 'budget.date')}</th>
+                              <th>{t(lang, 'budget.subcategory')}</th>
+                              <th>{t(lang, 'budget.description')}</th>
+                              <th style={{ textAlign: 'right' }}>{t(lang, 'budget.actual')}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {drillData.items.map((it, i) => (
+                              <tr key={i}>
+                                <td style={{ whiteSpace: 'nowrap', color: '#9aacbf' }}>{it.date}</td>
+                                <td>
+                                  {it.subcategory_icon && <span className="bp-cat-icon">{it.subcategory_icon}</span>}
+                                  {it.subcategory_name || <span style={{ color: '#5b7fa6' }}>–</span>}
+                                </td>
+                                <td style={{ color: '#cdd6e0' }}>{it.description || <span style={{ color: '#5b7fa6' }}>–</span>}</td>
+                                <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{fmtAmt(toDisplay(it.total_usd), currency)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {!drillData.by_subcategory?.length && !drillData.items?.length && (
+                    <p style={{ color: '#9aacbf', textAlign: 'center', padding: '2rem 0' }}>{t(lang, 'budget.noExpense')}</p>
+                  )}
+                </>
+              ) : (
+                <p style={{ color: '#9aacbf', textAlign: 'center', padding: '2rem 0' }}>{t(lang, 'budget.noExpense')}</p>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </section>
   )

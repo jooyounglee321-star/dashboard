@@ -1,3 +1,4 @@
+from __future__ import annotations
 """포트폴리오 데일리 스냅샷 API."""
 import json
 import logging

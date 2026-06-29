@@ -1,3 +1,4 @@
+from __future__ import annotations
 """라우터 공통 유틸 — expense.py / income.py / admin.py 등 공유."""
 
 from fastapi import Depends, HTTPException
