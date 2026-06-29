@@ -4,6 +4,21 @@
 
 ---
 
+## [2026-06-29] — feat: Python 3.9 호환성 수정 + 가계부 대분류 드릴다운 모달
+
+### 변경 내용
+- `models.py`: `str | None` → `Optional[str]` 변환 (Python 3.9 호환), 중복 import 제거
+- `routers/*.py` (13개): `from __future__ import annotations` 추가 (Python 3.9 호환)
+- `schemas.py`: `from __future__ import annotations` 추가
+- `routers/expense.py`: `GET /api/expense/category-detail` 엔드포인트 추가
+  - 특정 대분류의 소분류별 집계(total_usd, count) + 개별 지출 내역 반환
+- `frontend/src/pages/BudgetPage.jsx` (MonthlyTab):
+  - 월별 요약 테이블 행 클릭 → 소분류 드릴다운 모달 표시
+  - 소분류별 합계 테이블 + 개별 지출 내역 테이블 표시
+- `frontend/src/locales/ko.json`, `en.json`: 드릴다운 관련 i18n 키 5개 추가
+
+---
+
 ## [2026-06-15] — refactor: 관리자 페이지 단골 사이트 섹션 제거
 
 ### 변경 내용

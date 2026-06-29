@@ -1,3 +1,4 @@
+from __future__ import annotations
 """수입(Income) API — 카테고리 조회 + 수입 항목 CRUD.
 
 라우터:

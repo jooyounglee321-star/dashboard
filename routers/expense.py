@@ -1,3 +1,4 @@
+from __future__ import annotations
 """가계부 Phase 3 — 카테고리·지출·통계·예산·환율 API.
 
 라우터 두 개:
@@ -512,6 +513,82 @@ def expense_stats(
         "top_category":   by_cat[0] if by_cat else None,
         "over_budget":    over_budget,
         "daily_trend":    daily_trend,
+    }
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 대분류 → 소분류 드릴다운 API
+# ════════════════════════════════════════════════════════════════════════════
+
+@expense_router.get("/category-detail")
+def category_detail(
+    year:        int = Query(...),
+    month:       int = Query(...),
+    category_id: int = Query(...),
+    lang:        str = Query("ko", pattern="^(ko|en)$"),
+    db:          Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """특정 대분류의 소분류별 집계 + 개별 지출 내역 반환."""
+    rows = (
+        db.query(Expense)
+        .filter(
+            Expense.user_id     == current_user.id,
+            Expense.category_id == category_id,
+            sqlfunc.extract("year",  Expense.date) == year,
+            sqlfunc.extract("month", Expense.date) == month,
+        )
+        .all()
+    )
+    expense_rows = [e for e in rows if getattr(e, "type", "expense") == "expense"]
+
+    cat_map = _build_cat_map(rows, db)
+    cat = db.get(ExpenseCategory, category_id)
+
+    # 소분류별 집계
+    sub_totals: dict[Any, dict] = {}
+    for e in expense_rows:
+        key  = e.subcategory_id
+        sub  = cat_map.get(key) if key else None
+        name = _cat_name(sub, lang) if sub else ("기타" if lang == "ko" else "Other")
+        icon = sub.icon if sub else None
+        usd  = float(e.converted_amount) if e.converted_amount is not None else float(e.amount)
+        if key not in sub_totals:
+            sub_totals[key] = {
+                "subcategory_id":   key,
+                "subcategory_name": name,
+                "subcategory_icon": icon,
+                "total_usd": 0.0,
+                "count":     0,
+            }
+        sub_totals[key]["total_usd"] = round(sub_totals[key]["total_usd"] + usd, 2)
+        sub_totals[key]["count"] += 1
+
+    by_subcategory = sorted(sub_totals.values(), key=lambda x: x["total_usd"], reverse=True)
+
+    # 개별 내역 (날짜 역순)
+    items = []
+    for e in sorted(expense_rows, key=lambda x: x.date, reverse=True):
+        sub = cat_map.get(e.subcategory_id) if e.subcategory_id else None
+        usd = float(e.converted_amount) if e.converted_amount is not None else float(e.amount)
+        items.append({
+            "id":               e.id,
+            "date":             str(e.date),
+            "subcategory_name": _cat_name(sub, lang) if sub else None,
+            "subcategory_icon": sub.icon if sub else None,
+            "description":      e.description,
+            "amount":           float(e.amount),
+            "currency":         e.currency,
+            "total_usd":        usd,
+        })
+
+    return {
+        "category_id":    category_id,
+        "category_name":  _cat_name(cat, lang) if cat else ("기타" if lang == "ko" else "Other"),
+        "category_icon":  cat.icon if cat else "📦",
+        "by_subcategory": by_subcategory,
+        "items":          items,
+        "total_usd":      round(sum(c["total_usd"] for c in by_subcategory), 2),
     }
 
 

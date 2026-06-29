@@ -513,7 +513,12 @@
     "vsLastYear":    "전년 대비",
     "catNameKo":     "한국어",
     "catNameEn":     "English",
-    "saveError":     "저장에 실패했습니다. 다시 시도해 주세요."
+    "saveError":        "저장에 실패했습니다. 다시 시도해 주세요.",
+    "drilldownTitle":   "소분류 내역",
+    "drilldownItems":   "지출 내역",
+    "drilldownCount":   "건",
+    "noSubcategory":    "소분류 없음",
+    "clickForDetail":   "클릭하면 소분류 내역을 볼 수 있습니다"
   },
 
   "category": {

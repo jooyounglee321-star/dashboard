@@ -513,7 +513,12 @@
     "vsLastYear":    "vs Last Year",
     "catNameKo":     "Korean name",
     "catNameEn":     "English name",
-    "saveError":     "Failed to save. Please try again."
+    "saveError":        "Failed to save. Please try again.",
+    "drilldownTitle":   "Subcategory Breakdown",
+    "drilldownItems":   "Expense Items",
+    "drilldownCount":   "items",
+    "noSubcategory":    "No Subcategory",
+    "clickForDetail":   "Click to view subcategory details"
   },
 
   "category": {
