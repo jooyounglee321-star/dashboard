@@ -58,7 +58,7 @@ export default function RecurringPage() {
   const [editId, setEditId]     = useState(null)
   const [form, setForm]         = useState(EMPTY_FORM)
   const [saving, setSaving]     = useState(false)
-  const { toasts, showToast } = useToast()
+  const { toast, showToast } = useToast()
 
   useEffect(() => {
     const onChange = () => setLang(localStorage.getItem('dashboard_lang') || 'ko')
@@ -285,7 +285,7 @@ export default function RecurringPage() {
         </div>
       )}
 
-      <Toast toasts={toasts} />
+      <Toast toast={toast} />
     </div>
   )
 }
