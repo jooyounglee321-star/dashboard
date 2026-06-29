@@ -617,5 +617,31 @@
     "monthlyTitle":        "Monthly Expense",
     "dailyCompareTitle":   "Daily Income vs Expense",
     "monthlyCompareTitle": "Monthly Income vs Expense"
+  },
+  "recurring": {
+    "title":               "Recurring Expenses",
+    "manage":              "Recurring",
+    "add":                 "Add",
+    "addTitle":            "Add Recurring Expense",
+    "editTitle":           "Edit Recurring Expense",
+    "empty":               "No recurring expenses registered.",
+    "everyMonthDay":       "Every {day}th",
+    "noCategory":          "No Category",
+    "dayLabel":            "Day of Month",
+    "dayUnit":             "day",
+    "dayRange":            "Day must be between 1 and 28.",
+    "categoryLabel":       "Category",
+    "subcategoryLabel":    "Subcategory",
+    "selectCategory":      "Select category",
+    "selectSubcategory":   "Select subcategory",
+    "amountLabel":         "Amount",
+    "amountRequired":      "Please enter a valid amount.",
+    "memoLabel":           "Memo",
+    "memoPlaceholder":     "Memo (optional)",
+    "confirmDelete":       "Delete this recurring expense?",
+    "saveSuccess":         "Saved successfully.",
+    "saveError":           "Error saving.",
+    "deleteError":         "Error deleting.",
+    "loadError":           "Error loading data."
   }
 }

@@ -4,6 +4,25 @@
 
 ---
 
+## [2026-06-29] — feat: 정기지출 자동저장 기능
+
+### 변경 내용
+- `models.py`: `RecurringExpense` 테이블 모델 추가 (user_id, day_of_month, category_id, subcategory_id, amount, currency, memo, is_active)
+- `main.py`: `_migrate_recurring_expenses_table()` 마이그레이션 함수 추가, `RecurringExpense` 임포트
+- `routers/expense.py`:
+  - `GET /api/expense/recurring` — 정기지출 목록
+  - `POST /api/expense/recurring` — 정기지출 추가
+  - `PUT /api/expense/recurring/{id}` — 수정
+  - `DELETE /api/expense/recurring/{id}` — 삭제
+  - `POST /api/expense/recurring/apply` — 이번 달 자동 등록 (중복 방지: `[R#id]` 태그 기준)
+- `frontend/src/pages/RecurringPage.jsx`: 정기지출 관리 페이지 신규 생성 (목록/추가/수정/삭제 CRUD)
+- `frontend/src/pages/BudgetPage.jsx`: 헤더에 "🔄 정기지출 관리" 버튼 추가
+- `frontend/src/App.jsx`: `/recurring` 라우트 추가, 로그인 시 `/api/expense/recurring/apply` 자동 호출
+- `frontend/src/pages/BudgetPage.css`: RecurringPage 스타일 추가 (rp-* 클래스)
+- `frontend/src/locales/ko.json`, `en.json`: `recurring.*` 네임스페이스 키 추가
+
+---
+
 ## [2026-06-29] — feat: Python 3.9 호환성 수정 + 가계부 대분류 드릴다운 모달
 
 ### 변경 내용

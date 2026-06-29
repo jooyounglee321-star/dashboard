@@ -617,5 +617,31 @@
     "monthlyTitle":        "월별 지출",
     "dailyCompareTitle":   "일별 수입 / 지출 비교",
     "monthlyCompareTitle": "월별 수입 / 지출 비교"
+  },
+  "recurring": {
+    "title":               "정기지출 관리",
+    "manage":              "정기지출 관리",
+    "add":                 "추가",
+    "addTitle":            "정기지출 추가",
+    "editTitle":           "정기지출 수정",
+    "empty":               "등록된 정기지출이 없습니다.",
+    "everyMonthDay":       "매월 {day}일",
+    "noCategory":          "카테고리 없음",
+    "dayLabel":            "결제일 (몇 일)",
+    "dayUnit":             "일",
+    "dayRange":            "날짜는 1~28 사이로 입력하세요.",
+    "categoryLabel":       "카테고리",
+    "subcategoryLabel":    "소분류",
+    "selectCategory":      "카테고리 선택",
+    "selectSubcategory":   "소분류 선택",
+    "amountLabel":         "금액",
+    "amountRequired":      "올바른 금액을 입력하세요.",
+    "memoLabel":           "메모",
+    "memoPlaceholder":     "메모 (선택)",
+    "confirmDelete":       "이 정기지출을 삭제하시겠습니까?",
+    "saveSuccess":         "저장되었습니다.",
+    "saveError":           "저장 중 오류가 발생했습니다.",
+    "deleteError":         "삭제 중 오류가 발생했습니다.",
+    "loadError":           "불러오기 중 오류가 발생했습니다."
   }
 }

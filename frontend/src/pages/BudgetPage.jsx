@@ -142,6 +142,7 @@ export default function BudgetPage() {
         <Link to="/" className="bp-back">← {t(lang, 'budgetBack')}</Link>
         <h1 className="bp-title">{t(lang, 'budget.budget')}</h1>
         <div className="bp-header-r">
+          <Link to="/recurring" className="bp-recurring-btn">🔄 {t(lang, 'recurring.manage')}</Link>
           <span className="bp-cur-label">{t(lang, 'budget.currency')}</span>
           <select className="bp-cur-sel" value={currency} onChange={e => setCurrency(e.target.value)}>
             {CURRENCIES.map(c => (
