@@ -373,6 +373,7 @@ function DailyTab({ lang, currency, toDisplay }) {
     try {
       await apiReq('POST', '/api/expense/recurring', {
         day_of_month:   day,
+        type:           item.type || 'expense',
         category_id:    item.category_id ?? null,
         subcategory_id: item.subcategory_id ?? null,
         amount:         item.amount,
@@ -746,9 +747,7 @@ function DailyTab({ lang, currency, toDisplay }) {
                             )}
                           </div>
                           <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
-                            {(it.type || 'expense') === 'expense' && (
-                              <button className="bp-icon-btn" onClick={() => registerRecurring(it)} title={t(lang, 'recurring.addFromExpense')}>🔁</button>
-                            )}
+                            <button className="bp-icon-btn" onClick={() => registerRecurring(it)} title={t(lang, 'recurring.addFromExpense')}>🔁</button>
                             <button className="bp-icon-btn" onClick={() => startEdit(it)} title={t(lang, 'common.edit')}>✏️</button>
                             <button type="button" className="bp-icon-btn del" onClick={ev => { delItem(ev, it.id); apiGet(`/api/expense/daily-compare?year=${calYear}&month=${calMonth}`).then(d => setMonthData(Array.isArray(d) ? d : [])).catch(() => {}) }} title={t(lang, 'common.delete')}>🗑️</button>
                           </div>

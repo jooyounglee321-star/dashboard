@@ -4,6 +4,15 @@
 
 ---
 
+## [2026-06-29] — fix: 수입 항목에도 정기등록 버튼 추가
+
+### 변경 내용
+- `frontend/src/pages/BudgetPage.jsx`:
+  - 날짜 클릭 모달에서 수입 항목에도 🔁 정기등록 버튼 표시 (기존에는 지출 항목에만 표시)
+  - `registerRecurring()` 함수에 `type: item.type || 'expense'` 필드 추가하여 POST `/api/expense/recurring` 에 income 타입으로 전송
+
+---
+
 ## [2026-06-29] — feat: 정기지출 자동저장 기능
 
 ### 변경 내용
