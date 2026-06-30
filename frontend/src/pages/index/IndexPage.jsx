@@ -129,7 +129,7 @@ export default function IndexPage() {
   async function handleLogout() {
     const token = getToken()
     try { await fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + token } }).catch(() => {}) } catch {}
-    try { localStorage.clear() } catch {}
+    try { localStorage.removeItem('token'); localStorage.removeItem('user') } catch {}
     try { sessionStorage.clear() } catch {}
     navigate('/login', { replace: true })
   }

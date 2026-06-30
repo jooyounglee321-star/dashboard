@@ -192,7 +192,7 @@ def reset_password(user_id: int, db: Session = Depends(get_db), _: User = Depend
     new_pw = "".join(secrets.choice(alphabet) for _ in range(12))
     user.hashed_password = pwd_context.hash(new_pw)
     db.commit()
-    return {"ok": True, "new_password": new_pw}
+    return {"ok": True, "message": "비밀번호가 초기화되었습니다."}
 
 
 # ── GET /api/superadmin/changelog ─────────────────────────────────────────────
