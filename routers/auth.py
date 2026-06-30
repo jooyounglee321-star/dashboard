@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import User
+from routers._shared import require_admin
 from schemas import (
     AuthOut, ProfileOut, ProfileUpdate, UserLogin, UserOut, UserRegister,
     WidgetConfigOut, WidgetConfigUpdate, DEFAULT_WIDGET_CONFIG,
@@ -31,13 +32,9 @@ if not ADMIN_EMAIL:
     logger.warning("[AUTH] ADMIN_EMAIL 환경변수가 설정되지 않았습니다. 자동 admin 부여가 비활성화됩니다.")
 
 # JWT 설정
-_DEFAULT_SECRET = "dashboard-dev-secret-change-in-production"
-SECRET_KEY = os.getenv("SECRET_KEY", _DEFAULT_SECRET)
-if SECRET_KEY == _DEFAULT_SECRET:
-    logger.warning(
-        "[AUTH] SECRET_KEY 환경변수가 설정되지 않았습니다. "
-        "개발용 기본값을 사용 중입니다. 운영 배포 전 Railway Variables에서 SECRET_KEY를 반드시 설정하세요."
-    )
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("[AUTH] SECRET_KEY 환경변수가 설정되지 않았습니다. Railway Variables에서 SECRET_KEY를 반드시 설정하세요.")
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_DAYS = 30
 
@@ -303,9 +300,7 @@ def update_widget_config(
 )
 def list_users(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    _: User = Depends(require_admin),
 ):
     """가입된 전체 회원 목록을 반환합니다. (관리자 전용)"""
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="관리자만 접근할 수 있습니다.")
     return db.query(User).order_by(User.created_at.desc()).all()

@@ -104,7 +104,7 @@ export default function App() {
         <Route path="/register" element={<LoginGuard><RegisterPage /></LoginGuard>} />
         <Route path="/"           element={<AuthGuard><IndexPage /></AuthGuard>} />
         <Route path="/profile"    element={<AuthGuard><ProfilePage /></AuthGuard>} />
-        <Route path="/admin"      element={<AuthGuard><AdminPage /></AuthGuard>} />
+        <Route path="/admin"      element={<AdminRoleGuard><AdminPage /></AdminRoleGuard>} />
         <Route path="/admin_users" element={<Navigate to="/superadmin" replace />} />
         <Route path="/superadmin"  element={<AdminRoleGuard><SuperadminPage /></AdminRoleGuard>} />
         <Route path="/budget"      element={<AuthGuard><BudgetPage /></AuthGuard>} />
