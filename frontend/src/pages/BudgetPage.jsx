@@ -8,6 +8,7 @@ import { CURRENCY_CODES as CURRENCIES, CURRENCY_SYMBOLS as SYM } from '../data/c
 import { useToast } from '../components/Toast'
 import Toast from '../components/Toast'
 import { pad2, todayStr } from '../utils/date'
+import SharedCalendar from '../components/SharedCalendar'
 import './BudgetPage.css'
 
 Chart.register(...registerables)
@@ -429,111 +430,57 @@ function DailyTab({ lang, currency, toDisplay }) {
     else setCalMonth(m => m + 1)
   }
 
-  const mLabels = ML[lang] || ML.en
   const todayDateStr = todayStr()
 
   return (
     <section className="bp-sec">
       <Toast toast={toast} />
 
-      {/* ── 달력 툴바 ── */}
-      <div className="bp-toolbar" style={{ justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <button className="bp-btn-sm" onClick={prevMonth}>‹</button>
-          <span style={{ fontWeight: 600, fontSize: '1rem', minWidth: '8rem', textAlign: 'center' }}>
-            {calYear}{lang === 'ko' ? '년 ' : ' '}{mLabels[calMonth - 1]}{lang === 'ko' ? '' : ''}
-          </span>
-          <button className="bp-btn-sm" onClick={nextMonth}>›</button>
-        </div>
-        <button className="bp-btn-sm" onClick={doExport}>📥 {t(lang, 'budget.exportCSV')}</button>
-      </div>
-
-      {/* ── 달력 그리드 ── */}
-      <div style={{ overflowX: 'auto', marginBottom: '1.5rem' }}>
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)',
-          gap: '4px', minWidth: '560px',
-        }}>
-          {/* 요일 헤더 */}
-          {(lang === 'ko'
-            ? ['일','월','화','수','목','금','토']
-            : ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
-          ).map((d, i) => (
-            <div key={d} style={{
-              textAlign: 'center', fontSize: '0.75rem', fontWeight: 600, padding: '0.25rem 0',
-              color: i === 0 ? '#ef4444' : i === 6 ? '#60a5fa' : 'var(--ink3)',
-            }}>{d}</div>
-          ))}
-
-          {/* 빈 칸 (첫 주 offset) */}
-          {Array.from({ length: firstDow }).map((_, i) => (
-            <div key={`e${i}`} style={{ height: '90px' }} />
-          ))}
-
-          {/* 날짜 칸 */}
-          {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
-            const dow     = (firstDow + day - 1) % 7
-            const dateStr = `${calYear}-${pad2(calMonth)}-${pad2(day)}`
-            const data    = dayMap[day]
-            const isToday = dateStr === todayDateStr
-            const isSun   = dow === 0
-            const isSat   = dow === 6
-            const isOver  = data && data.expense > monthAvgExpense && monthAvgExpense > 0
-            return (
-              <div
-                key={day}
-                onClick={() => openDayModal(dateStr)}
-                style={{
-                  height: '90px', borderRadius: '8px', padding: '6px 8px',
-                  background: 'var(--card)',
-                  border: isToday ? '2px solid #3b82f6' : '1px solid var(--border)',
-                  cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '2px',
-                  transition: 'background 0.12s',
-                  boxSizing: 'border-box', overflow: 'hidden',
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.04)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'var(--card)'}
-              >
-                <span style={{
-                  fontSize: '0.78rem', fontWeight: isToday ? 700 : 500,
-                  color: isSun ? '#ef4444' : isSat ? '#60a5fa' : '#c8d6e5',
-                }}>{day}</span>
-                {(() => {
-                  if (!data) return null
-                  // 표시할 라인 목록 구성 (최대 3줄)
-                  const lines = []
-                  if (data.expense > 0) lines.push(
-                    <span key="exp" style={{ fontSize: '0.7rem', fontWeight: 600, lineHeight: 1.2, color: isOver ? '#f87171' : '#e8a060', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {fmtAmt(toDisplay(data.expense), currency)}
-                    </span>
-                  )
-                  if (data.income > 0) lines.push(
-                    <span key="inc" style={{ fontSize: '0.7rem', fontWeight: 500, lineHeight: 1.2, color: '#4ade80', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      +{fmtAmt(toDisplay(data.income), currency)}
-                    </span>
-                  )
-                  ;(data.descriptions || []).forEach((desc, di) => {
-                    lines.push(
-                      <span key={`d${di}`} style={{ fontSize: '0.62rem', color: 'var(--ink3)', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
-                        {desc.length > 12 ? desc.slice(0, 12) + '…' : desc}
-                      </span>
-                    )
-                  })
-                  return (
-                    <>
-                      {lines.slice(0, 3)}
-                      {data.count > 0 && (
-                        <span style={{ fontSize: '0.65rem', color: '#6b7fa0', marginTop: 'auto' }}>
-                          {data.count}{lang === 'ko' ? '건' : ' items'}
-                        </span>
-                      )}
-                    </>
-                  )
-                })()}
-              </div>
+      {/* ── 달력 (SharedCalendar) ── */}
+      <div style={{ maxWidth: 800, margin: '0 auto 1.5rem', padding: '0.75rem 0.75rem 1rem', background: 'var(--card)', borderRadius: 12, border: '1px solid var(--border)', overflow: 'auto' }}>
+        <SharedCalendar
+          year={calYear} month={calMonth} lang={lang}
+          onPrevMonth={prevMonth} onNextMonth={nextMonth}
+          onDayClick={openDayModal}
+          minWidth="560px"
+          rightSlot={
+            <button className="bp-btn-sm" onClick={doExport}>📥 {t(lang, 'budget.exportCSV')}</button>
+          }
+          renderCell={(dateStr, _day, _meta) => {
+            const day  = parseInt(dateStr.slice(8), 10)
+            const data = dayMap[day]
+            if (!data) return null
+            const isOver = data.expense > monthAvgExpense && monthAvgExpense > 0
+            const lines = []
+            if (data.expense > 0) lines.push(
+              <span key="exp" style={{ fontSize: '0.7rem', fontWeight: 600, lineHeight: 1.2, color: isOver ? '#ef4444' : '#f97316', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {fmtAmt(toDisplay(data.expense), currency)}
+              </span>
             )
-          })}
-        </div>
+            if (data.income > 0) lines.push(
+              <span key="inc" style={{ fontSize: '0.7rem', fontWeight: 500, lineHeight: 1.2, color: '#16a34a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                +{fmtAmt(toDisplay(data.income), currency)}
+              </span>
+            )
+            ;(data.descriptions || []).forEach((desc, di) => {
+              lines.push(
+                <span key={`d${di}`} style={{ fontSize: '0.62rem', color: 'var(--ink3)', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
+                  {desc.length > 12 ? desc.slice(0, 12) + '...' : desc}
+                </span>
+              )
+            })
+            return (
+              <>
+                {lines.slice(0, 3)}
+                {data.count > 0 && (
+                  <span style={{ fontSize: '0.65rem', color: 'var(--ink3)', marginTop: 'auto' }}>
+                    {data.count}{lang === 'ko' ? '건' : ' items'}
+                  </span>
+                )}
+              </>
+            )
+          }}
+        />
       </div>
 
       {/* ── 날짜 상세 모달 ── */}
