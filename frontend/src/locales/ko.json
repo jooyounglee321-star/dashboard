@@ -489,7 +489,7 @@
     "other_income":     "기타수입",
     "totalIncome":   "총 수입",
     "totalExpense":  "총 지출",
-    "net":           "순수지",
+    "net":           "잔액",
     "todayTotal":    "오늘 합계",
     "thisMonth":     "이번달",
     "actual":        "실지출",

@@ -489,7 +489,7 @@
     "other_income":     "Other Income",
     "totalIncome":   "Total Income",
     "totalExpense":  "Total Expense",
-    "net":           "Net",
+    "net":           "Balance",
     "todayTotal":    "Today's Total",
     "thisMonth":     "This Month",
     "actual":        "Actual",
