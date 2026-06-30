@@ -16,7 +16,6 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import User
-from routers._shared import require_admin
 from schemas import (
     AuthOut, ProfileOut, ProfileUpdate, UserLogin, UserOut, UserRegister,
     WidgetConfigOut, WidgetConfigUpdate, DEFAULT_WIDGET_CONFIG,
