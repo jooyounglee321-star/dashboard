@@ -8,12 +8,12 @@ from __future__ import annotations
 
 import logging
 import time as _time
-from datetime import date as Date, datetime as DateTime
+from datetime import date as Date, datetime as DateTime, timezone
 from typing import Any
 
 import yfinance as yf
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func as sqlfunc
 from sqlalchemy.orm import Session
 
@@ -52,7 +52,7 @@ class ExpenseIn(BaseModel):
     currency:       str = "USD"
     category_id:    int | None = None
     subcategory_id: int | None = None
-    description:    str | None = None
+    description:    str | None = Field(default=None, max_length=2000)
     lang:           str = "ko"
     type:           str = "expense"   # 'expense' | 'income'
 
@@ -63,7 +63,7 @@ class ExpensePatch(BaseModel):
     currency:       str | None = None
     category_id:    int | None = None
     subcategory_id: int | None = None
-    description:    str | None = None
+    description:    str | None = Field(default=None, max_length=2000)
     lang:           str = "ko"
     type:           str | None = None  # 'expense' | 'income'
 
@@ -1128,7 +1128,7 @@ def apply_recurring(
     current_user: User    = Depends(get_current_user),
 ):
     """로그인 시 호출 — 이번 달 정기지출 항목을 자동 등록. 중복 방지."""
-    today   = DateTime.utcnow().date()
+    today   = DateTime.now(timezone.utc).date()
     year    = today.year
     month   = today.month
 

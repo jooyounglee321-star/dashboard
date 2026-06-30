@@ -2,7 +2,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 # ── Expense ──────────────────────────────────────────────────────────────────
@@ -57,13 +57,13 @@ class DietAnalysisOut(DietAnalysisCreate):
 
 class MemoCreate(BaseModel):
     date: date
-    title: str | None = None
-    content: str | None = None
+    title: str | None = Field(default=None, max_length=200)
+    content: str | None = Field(default=None, max_length=2000)
 
 
 class MemoUpdate(BaseModel):
-    title: str | None = None
-    content: str | None = None
+    title: str | None = Field(default=None, max_length=200)
+    content: str | None = Field(default=None, max_length=2000)
 
 
 class MemoOut(MemoCreate):
