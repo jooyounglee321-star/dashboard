@@ -40,6 +40,7 @@ function apiReq(method, url, body) {
 
 const EMPTY_FORM = {
   day_of_month: 1,
+  type: 'expense',
   category_id: '',
   subcategory_id: '',
   amount: '',
@@ -47,17 +48,25 @@ const EMPTY_FORM = {
   memo: '',
 }
 
+/* day_of_month 표시 레이블 */
+function dayLabel(day, lang) {
+  if (day === 0) return lang === 'ko' ? '매월 말일' : 'Every last day'
+  return lang === 'ko' ? `매월 ${day}일` : `Every ${day}th`
+}
+
 export default function RecurringPage() {
   const [lang, setLang] = useState(() => {
     try { return localStorage.getItem('dashboard_lang') || 'ko' } catch { return 'ko' }
   })
-  const [items, setItems]       = useState([])
-  const [cats, setCats]         = useState([])
-  const [loading, setLoading]   = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [editId, setEditId]     = useState(null)
-  const [form, setForm]         = useState(EMPTY_FORM)
-  const [saving, setSaving]     = useState(false)
+  const [items, setItems]             = useState([])
+  const [cats, setCats]               = useState([])      // expense categories
+  const [incomeCats, setIncomeCats]   = useState([])      // income categories
+  const [loading, setLoading]         = useState(true)
+  const [showForm, setShowForm]       = useState(false)
+  const [editId, setEditId]           = useState(null)
+  const [form, setForm]               = useState(EMPTY_FORM)
+  const [saving, setSaving]           = useState(false)
+  const [activeTab, setActiveTab]     = useState('expense')  // 목록 탭
   const { toast, showToast } = useToast()
 
   useEffect(() => {
@@ -70,19 +79,23 @@ export default function RecurringPage() {
     Promise.all([
       apiGet(`/api/expense/recurring?lang=${lang}`),
       apiGet(`/api/expense/categories?lang=${lang}`),
-    ]).then(([recList, catList]) => {
+      apiGet(`/api/income/categories?lang=${lang}`),
+    ]).then(([recList, catList, incCatList]) => {
       setItems(recList)
       setCats(catList)
+      setIncomeCats(incCatList)
     }).catch(() => {
       showToast(t(lang, 'recurring.loadError'), 'error')
     }).finally(() => setLoading(false))
   }, [lang])
 
-  const subcats = cats.find(c => c.id === Number(form.category_id))?.subs || []
+  /* 현재 폼의 type에 따라 카테고리 목록 결정 */
+  const formCats = form.type === 'income' ? incomeCats : cats
+  const subcats  = formCats.find(c => c.id === Number(form.category_id))?.subs || []
 
   function openAdd() {
     setEditId(null)
-    setForm(EMPTY_FORM)
+    setForm({ ...EMPTY_FORM, type: activeTab })
     setShowForm(true)
   }
 
@@ -90,6 +103,7 @@ export default function RecurringPage() {
     setEditId(item.id)
     setForm({
       day_of_month:   item.day_of_month,
+      type:           item.type || 'expense',
       category_id:    item.category_id ?? '',
       subcategory_id: item.subcategory_id ?? '',
       amount:         item.amount,
@@ -109,11 +123,12 @@ export default function RecurringPage() {
     const amt = parseFloat(form.amount)
     if (!amt || amt <= 0) { showToast(t(lang, 'recurring.amountRequired'), 'error'); return }
     const day = parseInt(form.day_of_month, 10)
-    if (!day || day < 1 || day > 28) { showToast(t(lang, 'recurring.dayRange'), 'error'); return }
+    if (isNaN(day) || day < 0 || day > 31) { showToast(t(lang, 'recurring.dayRange'), 'error'); return }
 
     setSaving(true)
     const body = {
       day_of_month:   day,
+      type:           form.type || 'expense',
       category_id:    form.category_id ? Number(form.category_id) : null,
       subcategory_id: form.subcategory_id ? Number(form.subcategory_id) : null,
       amount:         amt,
@@ -149,6 +164,9 @@ export default function RecurringPage() {
     }
   }
 
+  /* 목록 탭 필터 */
+  const filteredItems = items.filter(x => (x.type || 'expense') === activeTab)
+
   return (
     <div className="bp-wrap">
       <header className="bp-header">
@@ -161,17 +179,33 @@ export default function RecurringPage() {
         </div>
       </header>
 
+      {/* 지출/수입 탭 */}
+      <div style={{ display: 'flex', gap: '0.5rem', padding: '0.75rem 1rem 0' }}>
+        <button
+          className={`bp-tab${activeTab === 'expense' ? ' active' : ''}`}
+          onClick={() => setActiveTab('expense')}
+        >
+          💸 {t(lang, 'recurring.expense')}
+        </button>
+        <button
+          className={`bp-tab${activeTab === 'income' ? ' active' : ''}`}
+          onClick={() => setActiveTab('income')}
+        >
+          💰 {t(lang, 'recurring.income')}
+        </button>
+      </div>
+
       <div className="rp-body">
         {loading ? (
           <p className="rp-empty">{t(lang, 'common.loading')}</p>
-        ) : items.length === 0 ? (
+        ) : filteredItems.length === 0 ? (
           <p className="rp-empty">{t(lang, 'recurring.empty')}</p>
         ) : (
           <div className="rp-list">
-            {items.map(item => (
+            {filteredItems.map(item => (
               <div key={item.id} className={`rp-card${!item.is_active ? ' inactive' : ''}`}>
                 <div className="rp-card-day">
-                  {lang === 'ko' ? `매월 ${item.day_of_month}일` : `Every ${item.day_of_month}th`}
+                  {dayLabel(item.day_of_month, lang)}
                 </div>
                 <div className="rp-card-info">
                   <span className="rp-cat">
@@ -205,15 +239,36 @@ export default function RecurringPage() {
               {editId ? t(lang, 'recurring.editTitle') : t(lang, 'recurring.addTitle')}
             </h2>
 
+            {/* 지출/수입 타입 토글 */}
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+              <button
+                type="button"
+                className={`bp-type-btn${form.type === 'expense' ? ' active expense' : ''}`}
+                onClick={() => setForm(f => ({ ...f, type: 'expense', category_id: '', subcategory_id: '' }))}
+              >
+                💸 {t(lang, 'recurring.expense')}
+              </button>
+              <button
+                type="button"
+                className={`bp-type-btn${form.type === 'income' ? ' active income' : ''}`}
+                onClick={() => setForm(f => ({ ...f, type: 'income', category_id: '', subcategory_id: '' }))}
+              >
+                💰 {t(lang, 'recurring.income')}
+              </button>
+            </div>
+
             <label className="rp-label">{t(lang, 'recurring.dayLabel')}</label>
             <div className="rp-row">
-              <input
-                type="number" min="1" max="28"
-                className="rp-input"
+              <select
+                className="rp-select"
                 value={form.day_of_month}
                 onChange={e => setForm(f => ({ ...f, day_of_month: e.target.value }))}
-              />
-              <span className="rp-unit">{t(lang, 'recurring.dayUnit')}</span>
+              >
+                <option value={0}>{t(lang, 'recurring.lastDay')}</option>
+                {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                  <option key={d} value={d}>{d}{lang === 'ko' ? '일' : ''}</option>
+                ))}
+              </select>
             </div>
 
             <label className="rp-label">{t(lang, 'recurring.categoryLabel')}</label>
@@ -223,7 +278,7 @@ export default function RecurringPage() {
               onChange={e => setForm(f => ({ ...f, category_id: e.target.value, subcategory_id: '' }))}
             >
               <option value="">{t(lang, 'recurring.selectCategory')}</option>
-              {cats.map(c => (
+              {formCats.map(c => (
                 <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
               ))}
             </select>

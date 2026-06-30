@@ -644,6 +644,9 @@
     "deleteError":         "삭제 중 오류가 발생했습니다.",
     "loadError":           "불러오기 중 오류가 발생했습니다.",
     "addFromExpense":      "정기지출 등록",
-    "addedFromExpense":    "정기지출 등록됨"
+    "addedFromExpense":    "정기지출 등록됨",
+    "lastDay":             "말일",
+    "expense":             "지출",
+    "income":              "수입"
   }
 }
