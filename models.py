@@ -309,6 +309,12 @@ class RecurringExpense(Base):
     amount: Mapped[float] = mapped_column(Numeric(14, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(10), nullable=False, default="USD")
     memo: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    frequency: Mapped[str] = mapped_column(String(20), nullable=False, default='monthly')
+    # 'monthly' | 'semi-monthly' | 'weekly' | 'biweekly'
+    day_of_week: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # weekly/biweekly용: 0=월, 1=화, 2=수, 3=목, 4=금, 5=토, 6=일
+    day_of_month_2: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # semi-monthly용: 두 번째 날짜 (0=말일, 1~31)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())

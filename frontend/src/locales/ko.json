@@ -647,6 +647,13 @@
     "addedFromExpense":    "정기지출 등록됨",
     "lastDay":             "말일",
     "expense":             "지출",
-    "income":              "수입"
+    "income":              "수입",
+    "frequencyLabel":      "결제 주기",
+    "monthly":             "매월",
+    "semiMonthly":         "반월 (월 2회)",
+    "weekly":              "매주",
+    "biweekly":            "격주 (2주마다)",
+    "dayOfWeekLabel":      "요일",
+    "secondDayLabel":      "두 번째 날"
   }
 }

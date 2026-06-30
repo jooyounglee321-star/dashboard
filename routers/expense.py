@@ -1072,13 +1072,16 @@ def do_refresh_rates(db: Session) -> dict:
 # ════════════════════════════════════════════════════════════════════════════
 
 class RecurringExpenseIn(BaseModel):
-    day_of_month:   int
+    day_of_month:   int = 1
     type:           str = "expense"   # 'expense' | 'income'
     category_id:    int | None = None
     subcategory_id: int | None = None
     amount:         float
     currency:       str = "USD"
     memo:           str | None = None
+    frequency:      str = "monthly"   # 'monthly' | 'semi-monthly' | 'weekly' | 'biweekly'
+    day_of_week:    int | None = None  # 0=월 ~ 6=일
+    day_of_month_2: int | None = None  # semi-monthly 두 번째 날짜 (0=말일, 1~31)
 
 
 class RecurringExpensePatch(BaseModel):
@@ -1090,6 +1093,9 @@ class RecurringExpensePatch(BaseModel):
     currency:       str | None = None
     memo:           str | None = None
     is_active:      bool | None = None
+    frequency:      str | None = None
+    day_of_week:    int | None = None
+    day_of_month_2: int | None = None
 
 
 def _recurring_dict(r: RecurringExpense, cat_map: dict, lang: str = "ko") -> dict:
@@ -1109,6 +1115,9 @@ def _recurring_dict(r: RecurringExpense, cat_map: dict, lang: str = "ko") -> dic
         "memo":             r.memo,
         "is_active":        r.is_active,
         "created_at":       r.created_at.isoformat(),
+        "frequency":        getattr(r, "frequency", "monthly") or "monthly",
+        "day_of_week":      getattr(r, "day_of_week", None),
+        "day_of_month_2":   getattr(r, "day_of_month_2", None),
     }
 
 
@@ -1137,8 +1146,22 @@ def create_recurring(
     db:   Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if not (0 <= body.day_of_month <= 31):
-        raise HTTPException(status_code=422, detail="day_of_month must be 0-31 (0=last day)")
+    freq = body.frequency or "monthly"
+    if freq not in ("monthly", "semi-monthly", "weekly", "biweekly"):
+        raise HTTPException(status_code=422, detail="frequency must be monthly|semi-monthly|weekly|biweekly")
+    if freq == "monthly":
+        if not (0 <= body.day_of_month <= 31):
+            raise HTTPException(status_code=422, detail="day_of_month must be 0-31 (0=last day)")
+    elif freq == "semi-monthly":
+        if not (0 <= body.day_of_month <= 31):
+            raise HTTPException(status_code=422, detail="day_of_month must be 0-31")
+        if body.day_of_month_2 is None or not (0 <= body.day_of_month_2 <= 31):
+            raise HTTPException(status_code=422, detail="day_of_month_2 must be 0-31 for semi-monthly")
+        if body.day_of_month == body.day_of_month_2:
+            raise HTTPException(status_code=422, detail="day_of_month and day_of_month_2 must differ")
+    elif freq in ("weekly", "biweekly"):
+        if body.day_of_week is None or not (0 <= body.day_of_week <= 6):
+            raise HTTPException(status_code=422, detail="day_of_week must be 0-6 for weekly/biweekly")
     existing = (
         db.query(RecurringExpense)
         .filter(
@@ -1164,6 +1187,9 @@ def create_recurring(
         currency       = body.currency,
         memo           = body.memo,
         is_active      = True,
+        frequency      = freq,
+        day_of_week    = body.day_of_week,
+        day_of_month_2 = body.day_of_month_2,
     )
     db.add(r)
     db.commit()
@@ -1183,9 +1209,17 @@ def update_recurring(
     r = db.get(RecurringExpense, rid)
     if not r or r.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Not found")
-    for field, val in body.model_dump(exclude_unset=True).items():
+    updates = body.model_dump(exclude_unset=True)
+    freq = updates.get("frequency", r.frequency or "monthly")
+    if "frequency" in updates and freq not in ("monthly", "semi-monthly", "weekly", "biweekly"):
+        raise HTTPException(status_code=422, detail="frequency must be monthly|semi-monthly|weekly|biweekly")
+    for field, val in updates.items():
         if field == "day_of_month" and val is not None and not (0 <= val <= 31):
             raise HTTPException(status_code=422, detail="day_of_month must be 0-31 (0=last day)")
+        if field == "day_of_month_2" and val is not None and not (0 <= val <= 31):
+            raise HTTPException(status_code=422, detail="day_of_month_2 must be 0-31")
+        if field == "day_of_week" and val is not None and not (0 <= val <= 6):
+            raise HTTPException(status_code=422, detail="day_of_week must be 0-6")
         setattr(r, field, val)
     db.commit()
     db.refresh(r)
