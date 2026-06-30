@@ -193,7 +193,7 @@ export default function RecurringPage({ onClose }) {
     <div className="bp-wrap">
       <header className="bp-header">
         {onClose ? (
-          <button className="bp-back" onClick={onClose}>✕ {t(lang, 'common.cancel')}</button>
+          <button className="rp-btn cancel" onClick={onClose}>{t(lang, 'common.cancel')}</button>
         ) : (
           <Link to="/budget" className="bp-back">← {t(lang, 'budgetBack')}</Link>
         )}
