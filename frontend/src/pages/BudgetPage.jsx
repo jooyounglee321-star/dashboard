@@ -485,14 +485,14 @@ function DailyTab({ lang, currency, toDisplay }) {
                 onClick={() => openDayModal(dateStr)}
                 style={{
                   height: '90px', borderRadius: '8px', padding: '6px 8px',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: isToday ? '2px solid #3b82f6' : '1px solid rgba(255,255,255,0.08)',
+                  background: 'var(--card)',
+                  border: isToday ? '2px solid #3b82f6' : '1px solid var(--border)',
                   cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '2px',
                   transition: 'background 0.12s',
                   boxSizing: 'border-box', overflow: 'hidden',
                 }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.04)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'var(--card)'}
               >
                 <span style={{
                   fontSize: '0.78rem', fontWeight: isToday ? 700 : 500,
