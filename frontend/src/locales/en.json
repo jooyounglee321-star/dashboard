@@ -642,6 +642,8 @@
     "saveSuccess":         "Saved successfully.",
     "saveError":           "Error saving.",
     "deleteError":         "Error deleting.",
-    "loadError":           "Error loading data."
+    "loadError":           "Error loading data.",
+    "addFromExpense":      "Add Recurring",
+    "addedFromExpense":    "Added to recurring expenses"
   }
 }

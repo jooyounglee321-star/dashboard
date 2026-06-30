@@ -364,6 +364,27 @@ function DailyTab({ lang, currency, toDisplay }) {
     showToast(t(lang, 'common.deleteSuccess'), 'ok')
   }
 
+  async function registerRecurring(item) {
+    const day = parseInt(date.split('-')[2], 10)
+    if (day > 28) {
+      showToast(t(lang, 'recurring.dayRange'), 'err')
+      return
+    }
+    try {
+      await apiReq('POST', '/api/expense/recurring', {
+        day_of_month:   day,
+        category_id:    item.category_id ?? null,
+        subcategory_id: item.subcategory_id ?? null,
+        amount:         item.amount,
+        currency:       item.currency ?? 'USD',
+        memo:           item.description ?? null,
+      })
+      showToast(t(lang, 'recurring.addedFromExpense'), 'ok')
+    } catch {
+      showToast(t(lang, 'common.error'), 'err')
+    }
+  }
+
   function doExport() {
     const headers = [t(lang, 'budget.date'), t(lang, 'budget.category'), t(lang, 'budget.subcategory'), t(lang, 'budget.description'), t(lang, 'budget.amount'), 'Currency', '≈ USD']
     const rows = items.map(it => [it.date, it.category_name || '', it.subcategory_name || '', it.description || '', it.amount, it.currency, it.converted_amount ?? it.amount])
@@ -725,6 +746,9 @@ function DailyTab({ lang, currency, toDisplay }) {
                             )}
                           </div>
                           <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
+                            {(it.type || 'expense') === 'expense' && (
+                              <button className="bp-icon-btn" onClick={() => registerRecurring(it)} title={t(lang, 'recurring.addFromExpense')}>🔁</button>
+                            )}
                             <button className="bp-icon-btn" onClick={() => startEdit(it)} title={t(lang, 'common.edit')}>✏️</button>
                             <button type="button" className="bp-icon-btn del" onClick={ev => { delItem(ev, it.id); apiGet(`/api/expense/daily-compare?year=${calYear}&month=${calMonth}`).then(d => setMonthData(Array.isArray(d) ? d : [])).catch(() => {}) }} title={t(lang, 'common.delete')}>🗑️</button>
                           </div>
