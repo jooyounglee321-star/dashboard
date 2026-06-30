@@ -187,13 +187,21 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
     let grpTotal = 0
 
     const stockRows = g.stocks.map(s => {
-      const { holdQty, avgCost, cur, chP, val, evalPL, evalPct, realizedPL, totalSellQty, isLive } = stockCalcMap.get(s) ?? calcStock(s, priceMap)
+      const { holdQty, avgCost, cur, chP, val, evalPL, evalPct, realizedPL, totalSellQty, isLive, marketState } = stockCalcMap.get(s) ?? calcStock(s, priceMap)
       grpTotal += val
       const cs = chP >= 0 ? 'up' : 'down'; const sg = chP >= 0 ? '▲' : '▼'
       const eps = evalPL != null ? (evalPL >= 0 ? 'up' : 'down') : ''
       const rps = realizedPL >= 0 ? 'up' : 'down'
-      const liveBadge = isLive
-        ? <span style={{ fontSize: '0.52rem', background: '#4a7c59', color: '#fff', padding: '0.05rem 0.38rem', borderRadius: 8, verticalAlign: 'middle', marginLeft: '0.25rem' }}>LIVE</span>
+      const marketBadge = (() => {
+        if (!isLive) return null
+        if (marketState === 'REGULAR') return { label: 'LIVE',   bg: '#4a7c59' }
+        if (marketState === 'PRE')     return { label: 'PRE',    bg: '#2563eb' }
+        if (marketState === 'POST')    return { label: 'POST',   bg: '#7c3aed' }
+        if (marketState === 'CLOSED')  return { label: 'CLOSED', bg: '#6b7280' }
+        return { label: 'LIVE', bg: '#4a7c59' }
+      })()
+      const liveBadge = marketBadge
+        ? <span style={{ fontSize: '0.52rem', background: marketBadge.bg, color: '#fff', padding: '0.05rem 0.38rem', borderRadius: 8, verticalAlign: 'middle', marginLeft: '0.25rem' }}>{marketBadge.label}</span>
         : <span style={{ fontSize: '0.52rem', background: '#a89880', color: '#fff', padding: '0.05rem 0.38rem', borderRadius: 8, verticalAlign: 'middle', marginLeft: '0.25rem' }}>{t(lang, 'stockAvgBadge')}</span>
 
       if (!isMobile) {
@@ -246,8 +254,8 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
           </li>
         )
       } else {
-        const liveBadgeM = isLive
-          ? <span style={{ fontSize: '0.5rem', background: '#4a7c59', color: '#fff', padding: '0.04rem 0.3rem', borderRadius: 6, marginLeft: '0.2rem' }}>LIVE</span>
+        const liveBadgeM = marketBadge
+          ? <span style={{ fontSize: '0.5rem', background: marketBadge.bg, color: '#fff', padding: '0.04rem 0.3rem', borderRadius: 6, marginLeft: '0.2rem' }}>{marketBadge.label}</span>
           : <span style={{ fontSize: '0.5rem', background: '#a89880', color: '#fff', padding: '0.04rem 0.3rem', borderRadius: 6, marginLeft: '0.2rem' }}>{t(lang, 'stockAvgBadge')}</span>
         return (
           <li key={s.ticker} className="m-stock-item">
