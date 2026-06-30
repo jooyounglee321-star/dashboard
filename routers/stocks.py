@@ -96,6 +96,7 @@ def _fetch_price(ticker: str, category: str | None = None) -> dict:
         "change_amount":  round(float(change_amount),   4),
         "change_percent": round(float(change_percent),  4),
         "currency":       getattr(fi, "currency", None) or "USD",
+        "market_state":   getattr(fi, "market_state",  None),  # 'REGULAR'|'PRE'|'POST'|'CLOSED'|None
     }
     logger.info(
         "[STOCK OK] %s → %s %.4f (%+.2f%%)",
