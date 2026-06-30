@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import Expense, ExpenseCategory, ExchangeRate, User
 from routers.auth import get_current_user
-from routers._shared import get_rate as _get_rate, cat_name as _cat_name
+from routers._shared import get_rate as _get_rate, cat_name as _cat_name, monthly_aggregate
 
 logger = logging.getLogger(__name__)
 
@@ -207,18 +207,9 @@ def income_monthly_summary(
     current_user: User = Depends(get_current_user),
     db: Session        = Depends(get_db),
 ):
-    """월별 수입 합계 (USD 환산 기준). expense.py 와 동일한 Python 집계 패턴 사용."""
-    from sqlalchemy import extract
-    rows = (
-        db.query(Expense)
-        .filter(
-            Expense.user_id == current_user.id,
-            Expense.type    == "income",
-            extract("year",  Expense.date) == year,
-            extract("month", Expense.date) == month,
-        )
-        .all()
-    )
+    """월별 수입 합계 (USD 환산 기준)."""
+    all_rows = monthly_aggregate(db, Expense, current_user.id, year)
+    rows = [e for e in all_rows if e.date.month == month and e.type == "income"]
 
     # 카테고리 배치 조회 (expense.py의 _build_cat_map 패턴과 동일)
     ids = {e.category_id for e in rows if e.category_id}
