@@ -261,9 +261,7 @@ function ExpItem({ e, editId, editForm, setEditForm, categories, lang, saveEdit,
           )}
         </div>
         <div className="exp-item-btns">
-          {(e.type || 'expense') === 'expense' && (
-            <button className="btn-edit" title={t(lang, 'recurring.addFromExpense')} onClick={() => registerRecurring(e)}>🔁</button>
-          )}
+          <button className="btn-edit" title={t(lang, 'recurring.addFromExpense')} onClick={() => registerRecurring(e)}>🔁</button>
           <button className="btn-edit" title={t(lang, 'common.edit')} onClick={() => startEdit(e)}>✎</button>
           <button type="button" className="btn-del" title={t(lang, 'common.delete')} onClick={(ev) => delExpense(ev, e.id)}>✕</button>
         </div>
@@ -441,7 +439,7 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
 
   async function registerRecurring(expense) {
     const day = parseInt((expense.date || form.date).split('-')[2], 10)
-    if (day > 28) {
+    if (day < 1 || day > 31) {
       showToast(t(lang, 'recurring.dayRange'), 'err')
       return
     }
@@ -450,6 +448,7 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
         method: 'POST',
         body: JSON.stringify({
           day_of_month:   day,
+          type:           expense.type || 'expense',
           category_id:    expense.category_id ?? null,
           subcategory_id: expense.subcategory_id ?? null,
           amount:         expense.amount,
