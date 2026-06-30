@@ -366,7 +366,7 @@ function DailyTab({ lang, currency, toDisplay }) {
 
   async function registerRecurring(item) {
     const day = parseInt(date.split('-')[2], 10)
-    if (day > 28) {
+    if (day < 1 || day > 31) {
       showToast(t(lang, 'recurring.dayRange'), 'err')
       return
     }
