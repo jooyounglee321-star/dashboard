@@ -1066,47 +1066,7 @@ app.include_router(admin_router.router, prefix="/api")
 
 @app.get("/api/health")
 def health_check():
-    """서버 + DB 상태 확인 (Railway 디버깅 포함)."""
-    import os
-    from database import DATABASE_URL, _found_var, _mask_url
-
-    # 어떤 환경변수가 잡혔는지 응답에 포함 (비밀번호 마스킹)
-    db_var  = _found_var or "none"
-    db_url  = _mask_url(DATABASE_URL)
-    db_type = "sqlite" if DATABASE_URL.startswith("sqlite") else "postgresql"
-
-    # Railway 환경변수 탐색 결과 (설정 여부만 확인, 값은 노출 안 함)
-    env_found = {
-        v: ("set" if os.environ.get(v) else "not_set")
-        for v in ["DATABASE_URL", "DATABASE_PRIVATE_URL", "POSTGRES_URL",
-                  "POSTGRESQL_URL", "DATABASE_PUBLIC_URL"]
-    }
-
-    try:
-        from sqlalchemy import inspect as sa_inspect, text as sa_text
-        db = SessionLocal()
-        db.execute(sa_text("SELECT 1"))
-        # 실제 DB에 존재하는 테이블 목록 조회
-        actual_tables = sorted(sa_inspect(engine).get_table_names())
-        db.close()
-        db_status = "ok"
-    except Exception as e:
-        db_status = f"error: {e}"
-        actual_tables = []
-
-    # Base.metadata가 알고 있는 모델 테이블 (코드 기준)
-    expected_tables = sorted(Base.metadata.tables.keys())
-
-    return {
-        "status": "ok",
-        "db": db_status,
-        "db_type": db_type,
-        "db_var_used": db_var,
-        "db_url_masked": db_url,
-        "env_vars": env_found,
-        "tables_expected": expected_tables,   # 코드에 정의된 테이블
-        "tables_actual": actual_tables,        # DB에 실제 존재하는 테이블
-    }
+    return {"status": "ok"}
 
 
 _DIST   = Path("frontend/dist")
