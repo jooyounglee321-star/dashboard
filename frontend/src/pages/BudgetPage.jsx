@@ -1193,8 +1193,8 @@ function MonthlyTab({ lang, currency, toDisplay }) {
                           <thead>
                             <tr>
                               <th>{t(lang, 'budget.date')}</th>
-                              <th>{t(lang, 'budget.subcategory')}</th>
-                              <th>{t(lang, 'budget.description')}</th>
+                              <th style={{ whiteSpace: 'nowrap', width: '110px' }}>{t(lang, 'budget.subcategory')}</th>
+                              <th style={{ width: '55%' }}>{t(lang, 'budget.description')}</th>
                               <th style={{ textAlign: 'right' }}>{t(lang, 'budget.actual')}</th>
                             </tr>
                           </thead>
@@ -1202,7 +1202,7 @@ function MonthlyTab({ lang, currency, toDisplay }) {
                             {drillData.items.map((it, i) => (
                               <tr key={i}>
                                 <td style={{ whiteSpace: 'nowrap', color: '#9aacbf' }}>{it.date}</td>
-                                <td>
+                                <td style={{ whiteSpace: 'nowrap' }}>
                                   {it.subcategory_icon && <span className="bp-cat-icon">{it.subcategory_icon}</span>}
                                   {it.subcategory_name || <span style={{ color: '#5b7fa6' }}>–</span>}
                                 </td>
@@ -1537,8 +1537,8 @@ function YearlyTab({ lang, currency, toDisplay }) {
                           <thead>
                             <tr>
                               <th>{t(lang, 'budget.date')}</th>
-                              <th>{t(lang, 'budget.subcategory')}</th>
-                              <th>{t(lang, 'budget.description')}</th>
+                              <th style={{ whiteSpace: 'nowrap', width: '110px' }}>{t(lang, 'budget.subcategory')}</th>
+                              <th style={{ width: '55%' }}>{t(lang, 'budget.description')}</th>
                               <th style={{ textAlign: 'right' }}>{t(lang, 'budget.actual')}</th>
                             </tr>
                           </thead>
@@ -1546,7 +1546,7 @@ function YearlyTab({ lang, currency, toDisplay }) {
                             {yearlyDrillData.items.map((it, i) => (
                               <tr key={i}>
                                 <td style={{ whiteSpace: 'nowrap', color: '#9aacbf' }}>{it.date}</td>
-                                <td>
+                                <td style={{ whiteSpace: 'nowrap' }}>
                                   {it.subcategory_icon && <span className="bp-cat-icon">{it.subcategory_icon}</span>}
                                   {it.subcategory_name || <span style={{ color: '#5b7fa6' }}>–</span>}
                                 </td>
