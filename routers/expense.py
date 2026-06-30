@@ -593,6 +593,78 @@ def category_detail(
 
 
 # ════════════════════════════════════════════════════════════════════════════
+# 대분류 연간 전체 드릴다운 API
+# ════════════════════════════════════════════════════════════════════════════
+
+@expense_router.get("/category-yearly-detail")
+def category_yearly_detail(
+    year:        int = Query(...),
+    category_id: int = Query(...),
+    lang:        str = Query("ko", pattern="^(ko|en)$"),
+    db:          Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """특정 대분류의 연간 전체 소분류별 집계 + 개별 지출 내역 반환."""
+    rows = (
+        db.query(Expense)
+        .filter(
+            Expense.user_id     == current_user.id,
+            Expense.category_id == category_id,
+            sqlfunc.extract("year", Expense.date) == year,
+        )
+        .all()
+    )
+    expense_rows = [e for e in rows if getattr(e, "type", "expense") == "expense"]
+
+    cat_map = _build_cat_map(rows, db)
+    cat = db.get(ExpenseCategory, category_id)
+
+    sub_totals: dict[Any, dict] = {}
+    for e in expense_rows:
+        key  = e.subcategory_id
+        sub  = cat_map.get(key) if key else None
+        name = _cat_name(sub, lang) if sub else ("기타" if lang == "ko" else "Other")
+        icon = sub.icon if sub else None
+        usd  = float(e.converted_amount) if e.converted_amount is not None else float(e.amount)
+        if key not in sub_totals:
+            sub_totals[key] = {
+                "subcategory_id":   key,
+                "subcategory_name": name,
+                "subcategory_icon": icon,
+                "total_usd": 0.0,
+                "count":     0,
+            }
+        sub_totals[key]["total_usd"] = round(sub_totals[key]["total_usd"] + usd, 2)
+        sub_totals[key]["count"] += 1
+
+    by_subcategory = sorted(sub_totals.values(), key=lambda x: x["total_usd"], reverse=True)
+
+    items = []
+    for e in sorted(expense_rows, key=lambda x: x.date, reverse=True):
+        sub = cat_map.get(e.subcategory_id) if e.subcategory_id else None
+        usd = float(e.converted_amount) if e.converted_amount is not None else float(e.amount)
+        items.append({
+            "id":               e.id,
+            "date":             str(e.date),
+            "subcategory_name": _cat_name(sub, lang) if sub else None,
+            "subcategory_icon": sub.icon if sub else None,
+            "description":      e.description,
+            "amount":           float(e.amount),
+            "currency":         e.currency,
+            "total_usd":        usd,
+        })
+
+    return {
+        "category_id":    category_id,
+        "category_name":  _cat_name(cat, lang) if cat else ("기타" if lang == "ko" else "Other"),
+        "category_icon":  cat.icon if cat else "📦",
+        "by_subcategory": by_subcategory,
+        "items":          items,
+        "total_usd":      round(sum(c["total_usd"] for c in by_subcategory), 2),
+    }
+
+
+# ════════════════════════════════════════════════════════════════════════════
 # 일별 수입/지출 비교 API  (Grouped Bar Chart용)
 # ════════════════════════════════════════════════════════════════════════════
 
@@ -649,8 +721,15 @@ def daily_compare(
 # 예산 API
 # ════════════════════════════════════════════════════════════════════════════
 
-def _budget_dict(b: ExpenseBudget, db: Session, lang: str = "ko") -> dict:
-    cat = db.get(ExpenseCategory, b.category_id) if b.category_id else None
+def _fetch_cat_map(ids, db: Session) -> dict:
+    ids_set = {i for i in ids if i}
+    if not ids_set:
+        return {}
+    return {c.id: c for c in db.query(ExpenseCategory).filter(ExpenseCategory.id.in_(ids_set)).all()}
+
+
+def _budget_dict(b: ExpenseBudget, cat_map: dict, lang: str = "ko") -> dict:
+    cat = cat_map.get(b.category_id) if b.category_id else None
     return {
         "id":            b.id,
         "category_id":   b.category_id,
@@ -697,12 +776,14 @@ def list_budgets(
     currencies = {b.currency for b in budgets}
     rate_map   = {c: _get_rate(c, db) for c in currencies}
 
+    cat_map = _fetch_cat_map([b.category_id for b in budgets], db)
+
     result = []
     for b in budgets:
         brate      = rate_map.get(b.currency, 1.0)
         budget_usd = round(float(b.amount) / brate, 2)
         spent_usd  = actual.get(b.category_id, 0.0)
-        d = _budget_dict(b, db, lang)
+        d = _budget_dict(b, cat_map, lang)
         d["budget_usd"]    = budget_usd
         d["spent_usd"]     = spent_usd
         d["remaining_usd"] = round(budget_usd - spent_usd, 2)
@@ -727,7 +808,7 @@ def create_budget(
     db.add(b)
     db.commit()
     db.refresh(b)
-    return _budget_dict(b, db)
+    return _budget_dict(b, _fetch_cat_map([b.category_id], db))
 
 
 @expense_router.put("/budget/{budget_id}")
@@ -744,7 +825,7 @@ def update_budget(
         setattr(b, field, val)
     db.commit()
     db.refresh(b)
-    return _budget_dict(b, db)
+    return _budget_dict(b, _fetch_cat_map([b.category_id], db))
 
 
 @expense_router.delete("/budget/{budget_id}", status_code=204)
@@ -1011,9 +1092,9 @@ class RecurringExpensePatch(BaseModel):
     is_active:      bool | None = None
 
 
-def _recurring_dict(r: RecurringExpense, db: Session, lang: str = "ko") -> dict:
-    cat = db.get(ExpenseCategory, r.category_id)    if r.category_id    else None
-    sub = db.get(ExpenseCategory, r.subcategory_id) if r.subcategory_id else None
+def _recurring_dict(r: RecurringExpense, cat_map: dict, lang: str = "ko") -> dict:
+    cat = cat_map.get(r.category_id)    if r.category_id    else None
+    sub = cat_map.get(r.subcategory_id) if r.subcategory_id else None
     return {
         "id":               r.id,
         "day_of_month":     r.day_of_month,
@@ -1043,7 +1124,9 @@ def list_recurring(
         .order_by(RecurringExpense.day_of_month)
         .all()
     )
-    return [_recurring_dict(r, db, lang) for r in rows]
+    cat_ids = [i for r in rows for i in (r.category_id, r.subcategory_id)]
+    cat_map = _fetch_cat_map(cat_ids, db)
+    return [_recurring_dict(r, cat_map, lang) for r in rows]
 
 
 @expense_router.post("/recurring")
@@ -1070,7 +1153,7 @@ def create_recurring(
     )
     if existing:
         response.status_code = 200
-        return _recurring_dict(existing, db, lang)
+        return _recurring_dict(existing, _fetch_cat_map([existing.category_id, existing.subcategory_id], db), lang)
     r = RecurringExpense(
         user_id        = current_user.id,
         day_of_month   = body.day_of_month,
@@ -1086,7 +1169,7 @@ def create_recurring(
     db.commit()
     db.refresh(r)
     response.status_code = 201
-    return _recurring_dict(r, db, lang)
+    return _recurring_dict(r, _fetch_cat_map([r.category_id, r.subcategory_id], db), lang)
 
 
 @expense_router.put("/recurring/{rid}")
@@ -1106,7 +1189,7 @@ def update_recurring(
         setattr(r, field, val)
     db.commit()
     db.refresh(r)
-    return _recurring_dict(r, db, lang)
+    return _recurring_dict(r, _fetch_cat_map([r.category_id, r.subcategory_id], db), lang)
 
 
 @expense_router.delete("/recurring/{rid}", status_code=204)
