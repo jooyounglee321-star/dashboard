@@ -884,7 +884,7 @@
 .rp-card-day {
   min-width: 70px;
   font-size: 0.82rem;
-  color: var(--accent2);
+  color: var(--accent);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -899,7 +899,7 @@
 
 .rp-cat    { font-size: 0.88rem; color: var(--ink); display: flex; align-items: center; gap: 0.3rem; }
 .rp-subcat { color: var(--ink3); font-size: 0.82rem; }
-.rp-amount { font-size: 0.95rem; font-weight: 600; color: var(--blue); }
+.rp-amount { font-size: 0.95rem; font-weight: 600; color: var(--accent); }
 .rp-memo   { font-size: 0.78rem; color: var(--ink3); width: 100%; }
 
 .rp-card-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
@@ -916,8 +916,8 @@
 .rp-btn:hover { background: rgba(0,0,0,0.05); }
 .rp-btn.edit   { border-color: var(--blue); color: var(--blue); }
 .rp-btn.del    { border-color: #e86060; color: #e86060; }
-.rp-btn.save   { background: var(--accent2); color: #fff; border-color: transparent; font-weight: 600; }
-.rp-btn.save:hover { background: #f0b070; }
+.rp-btn.save   { background: var(--accent); color: #fff; border-color: transparent; font-weight: 600; }
+.rp-btn.save:hover { background: #b05518; }
 .rp-btn.cancel { color: var(--ink3); }
 .rp-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -925,8 +925,10 @@
 .rp-overlay {
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.45);
-  display: flex; align-items: center; justify-content: center;
+  display: flex; align-items: flex-start; justify-content: center;
   z-index: 200;
+  overflow-y: auto;
+  padding: 1rem;
 }
 
 .rp-modal {
@@ -939,6 +941,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
+  margin: auto;
 }
 
 .rp-modal-full {
@@ -947,16 +950,15 @@
   border-radius: 16px;
   width: 100%;
   max-width: 560px;
-  max-height: 85vh;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
+  margin: auto;
 }
 
 .rp-modal-title {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--accent2);
+  color: var(--accent);
   margin: 0 0 0.4rem;
 }
 
@@ -976,7 +978,7 @@
   box-sizing: border-box;
   font-family: inherit;
 }
-.rp-input:focus { outline: none; border-color: var(--accent2); }
+.rp-input:focus { outline: none; border-color: var(--accent); }
 
 .rp-select, .rp-select-sm {
   background: var(--card2);
@@ -989,7 +991,7 @@
 }
 .rp-select { width: 100%; }
 .rp-select-sm { min-width: 90px; }
-.rp-select:focus, .rp-select-sm:focus { outline: none; border-color: var(--accent2); }
+.rp-select:focus, .rp-select-sm:focus { outline: none; border-color: var(--accent); }
 
 .rp-unit { font-size: 0.82rem; color: var(--ink3); white-space: nowrap; }
 
