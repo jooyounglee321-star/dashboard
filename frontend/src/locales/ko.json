@@ -619,12 +619,12 @@
     "monthlyCompareTitle": "월별 수입 / 지출 비교"
   },
   "recurring": {
-    "title":               "정기지출 관리",
-    "manage":              "정기지출 관리",
+    "title":               "정기등록 관리",
+    "manage":              "정기등록 관리",
     "add":                 "추가",
-    "addTitle":            "정기지출 추가",
-    "editTitle":           "정기지출 수정",
-    "empty":               "등록된 정기지출이 없습니다.",
+    "addTitle":            "정기등록 추가",
+    "editTitle":           "정기등록 수정",
+    "empty":               "등록된 정기항목이 없습니다.",
     "everyMonthDay":       "매월 {day}일",
     "noCategory":          "카테고리 없음",
     "dayLabel":            "결제일 (몇 일)",

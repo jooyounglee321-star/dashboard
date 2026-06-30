@@ -48,25 +48,23 @@ const EMPTY_FORM = {
   memo: '',
 }
 
-/* day_of_month 표시 레이블 */
 function dayLabel(day, lang) {
   if (day === 0) return lang === 'ko' ? '매월 말일' : 'Every last day'
   return lang === 'ko' ? `매월 ${day}일` : `Every ${day}th`
 }
 
-export default function RecurringPage() {
+export default function RecurringPage({ onClose }) {
   const [lang, setLang] = useState(() => {
     try { return localStorage.getItem('dashboard_lang') || 'ko' } catch { return 'ko' }
   })
-  const [items, setItems]             = useState([])
-  const [cats, setCats]               = useState([])      // expense categories
-  const [incomeCats, setIncomeCats]   = useState([])      // income categories
-  const [loading, setLoading]         = useState(true)
-  const [showForm, setShowForm]       = useState(false)
-  const [editId, setEditId]           = useState(null)
-  const [form, setForm]               = useState(EMPTY_FORM)
-  const [saving, setSaving]           = useState(false)
-  const [activeTab, setActiveTab]     = useState('expense')  // 목록 탭
+  const [items, setItems]           = useState([])
+  const [cats, setCats]             = useState([])
+  const [incomeCats, setIncomeCats] = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [showForm, setShowForm]     = useState(false)
+  const [editId, setEditId]         = useState(null)
+  const [form, setForm]             = useState(EMPTY_FORM)
+  const [saving, setSaving]         = useState(false)
   const { toast, showToast } = useToast()
 
   useEffect(() => {
@@ -89,13 +87,12 @@ export default function RecurringPage() {
     }).finally(() => setLoading(false))
   }, [lang])
 
-  /* 현재 폼의 type에 따라 카테고리 목록 결정 */
   const formCats = form.type === 'income' ? incomeCats : cats
   const subcats  = formCats.find(c => c.id === Number(form.category_id))?.subs || []
 
   function openAdd() {
     setEditId(null)
-    setForm({ ...EMPTY_FORM, type: activeTab })
+    setForm(EMPTY_FORM)
     setShowForm(true)
   }
 
@@ -164,13 +161,14 @@ export default function RecurringPage() {
     }
   }
 
-  /* 목록 탭 필터 */
-  const filteredItems = items.filter(x => (x.type || 'expense') === activeTab)
-
   return (
     <div className="bp-wrap">
       <header className="bp-header">
-        <Link to="/budget" className="bp-back">← {t(lang, 'budgetBack')}</Link>
+        {onClose ? (
+          <button className="bp-back" onClick={onClose}>✕ {t(lang, 'common.cancel')}</button>
+        ) : (
+          <Link to="/budget" className="bp-back">← {t(lang, 'budgetBack')}</Link>
+        )}
         <h1 className="bp-title">{t(lang, 'recurring.title')}</h1>
         <div className="bp-header-r">
           <button className="rp-add-btn" onClick={openAdd}>
@@ -179,35 +177,26 @@ export default function RecurringPage() {
         </div>
       </header>
 
-      {/* 지출/수입 탭 */}
-      <div style={{ display: 'flex', gap: '0.5rem', padding: '0.75rem 1rem 0' }}>
-        <button
-          className={`bp-tab${activeTab === 'expense' ? ' active' : ''}`}
-          onClick={() => setActiveTab('expense')}
-        >
-          💸 {t(lang, 'recurring.expense')}
-        </button>
-        <button
-          className={`bp-tab${activeTab === 'income' ? ' active' : ''}`}
-          onClick={() => setActiveTab('income')}
-        >
-          💰 {t(lang, 'recurring.income')}
-        </button>
-      </div>
-
       <div className="rp-body">
         {loading ? (
           <p className="rp-empty">{t(lang, 'common.loading')}</p>
-        ) : filteredItems.length === 0 ? (
+        ) : items.length === 0 ? (
           <p className="rp-empty">{t(lang, 'recurring.empty')}</p>
         ) : (
           <div className="rp-list">
-            {filteredItems.map(item => (
+            {items.map(item => (
               <div key={item.id} className={`rp-card${!item.is_active ? ' inactive' : ''}`}>
                 <div className="rp-card-day">
                   {dayLabel(item.day_of_month, lang)}
                 </div>
                 <div className="rp-card-info">
+                  <span style={{ fontSize: '0.68rem', fontWeight: 600, borderRadius: '4px', padding: '0.1rem 0.4rem', display: 'inline-block', marginBottom: '0.2rem', ...(
+                    (item.type || 'expense') === 'income'
+                      ? { color: '#60c080', background: 'rgba(96,192,128,0.12)' }
+                      : { color: '#e8a060', background: 'rgba(232,160,96,0.12)' }
+                  ) }}>
+                    {(item.type || 'expense') === 'income' ? `💰 ${t(lang, 'recurring.income')}` : `💸 ${t(lang, 'recurring.expense')}`}
+                  </span>
                   <span className="rp-cat">
                     {item.category_icon && <span>{item.category_icon}</span>}
                     {item.category_name || t(lang, 'recurring.noCategory')}

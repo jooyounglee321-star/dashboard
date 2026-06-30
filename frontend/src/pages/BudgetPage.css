@@ -956,6 +956,18 @@
   gap: 0.55rem;
 }
 
+.rp-modal-full {
+  background: #0f1520;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 85vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
 .rp-modal-title {
   font-size: 1rem;
   font-weight: 700;
