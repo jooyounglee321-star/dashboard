@@ -1,12 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { t } from '../i18n'
-import { getToken, apiFetch } from '../api'
-import { fmtAmt, SYM } from '../utils/format'
 import RecurringPage from './RecurringPage'
 import { Chart, registerables } from 'chart.js'
 import { INCOME_CATEGORIES, getSubcategories } from '../data/incomeCategories'
-import { CURRENCY_CODES as CURRENCIES } from '../data/currencies'
+import { CURRENCY_CODES as CURRENCIES, CURRENCY_SYMBOLS as SYM } from '../data/currencies'
 import { useToast } from '../components/Toast'
 import Toast from '../components/Toast'
 import { pad2, todayStr } from '../utils/date'
@@ -46,6 +44,55 @@ const toLocalDateStr = (inputValue) => {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
 }
 
+function fmtAmt(amt, cur) {
+  const s = SYM[cur] || '$'
+  const n = amt || 0
+  if (cur === 'KRW' || cur === 'JPY') return s + Math.round(n).toLocaleString()
+  return s + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
+
+/**
+ * localStorage에서 JWT를 읽어 유효성 검증 후 반환.
+ * null / 'null' / 'undefined' / 빈 문자열이면 로그인 페이지로 강제 이동.
+ */
+function getToken() {
+  const raw = localStorage.getItem('token')
+  if (!raw || raw === 'null' || raw === 'undefined' || raw.trim() === '') {
+    // 토큰 없음 → 로그인 페이지로 이동
+    window.location.href = '/login'
+    return ''
+  }
+  return raw.trim()
+}
+
+/** GET 요청 — JWT 자동 첨부, 401 시 로그인 리다이렉트 */
+function apiGet(url) {
+  const token = getToken()
+  return fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(r => {
+    if (r.status === 401) { window.location.href = '/login'; throw new Error('401') }
+    if (!r.ok) throw new Error(r.status)
+    return r.json()
+  })
+}
+
+/** POST / PUT / DELETE 요청 — JWT 자동 첨부, 401 시 로그인 리다이렉트 */
+function apiReq(method, url, body) {
+  const token = getToken()
+  return fetch(url, {
+    method,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  }).then(r => {
+    if (r.status === 401) { window.location.href = '/login'; throw new Error('401') }
+    if (!r.ok) throw new Error(r.status)
+    return r.json().catch(() => null)
+  })
+}
 
 function csvDownload(rows, filename) {
   const csv = rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')
@@ -67,7 +114,7 @@ export default function BudgetPage() {
   useEffect(() => {
     const onChange = () => setLang(localStorage.getItem('dashboard_lang') || 'ko')
     window.addEventListener('languageChanged', onChange)
-    apiFetch('/api/exchange-rates')
+    apiGet('/api/exchange-rates')
       .then(list => {
         const map = {}
         if (Array.isArray(list)) list.forEach(r => { map[r.target] = r.rate })
@@ -170,11 +217,11 @@ function DailyTab({ lang, currency, toDisplay }) {
 
   useEffect(() => {
     // 카테고리 로드 실패 시 1회 재시도
-    apiFetch(`/api/expense/categories?lang=${lang}`)
+    apiGet(`/api/expense/categories?lang=${lang}`)
       .then(d => { if (Array.isArray(d) && d.length) setCats(d) })
       .catch(() => {
         setTimeout(() => {
-          apiFetch(`/api/expense/categories?lang=${lang}`)
+          apiGet(`/api/expense/categories?lang=${lang}`)
             .then(d => setCats(d || []))
             .catch(err => console.error('[DailyTab] 카테고리 로드 실패:', err))
         }, 1500)
@@ -184,7 +231,7 @@ function DailyTab({ lang, currency, toDisplay }) {
   const load = useCallback(() => {
     const gen = ++loadGenRef.current          // 이 요청의 세대 번호를 캡처
     setLoading(true)
-    apiFetch(`/api/expense?date=${date}&lang=${lang}`)
+    apiGet(`/api/expense?date=${date}&lang=${lang}`)
       .then(d => {
         if (gen !== loadGenRef.current) return // 더 최신 요청이 생겼으면 결과 버림
         setItems(d || [])
@@ -201,7 +248,7 @@ function DailyTab({ lang, currency, toDisplay }) {
 
   // 월별 달력 데이터 로드
   useEffect(() => {
-    apiFetch(`/api/expense/daily-compare?year=${calYear}&month=${calMonth}`)
+    apiGet(`/api/expense/daily-compare?year=${calYear}&month=${calMonth}`)
       .then(d => setMonthData(Array.isArray(d) ? d : []))
       .catch(() => setMonthData([]))
   }, [calYear, calMonth])
@@ -245,17 +292,17 @@ function DailyTab({ lang, currency, toDisplay }) {
     try {
       if (isNewIncome) {
         /* ── 수입: /api/income (code 기반) ── */
-        await apiFetch('/api/income', { method: 'POST', body: JSON.stringify({
+        await apiReq('POST', '/api/income', {
           category_code:    newForm.income_main_code || null,
           subcategory_code: newForm.income_sub_code  || null,
           description:      newForm.description.trim() || null,
           currency:         newForm.currency || 'USD',
           amount:           amt,
           date,
-        }) })
+        })
       } else {
         /* ── 지출: /api/expense (id 기반) ── */
-        const saved = await apiFetch('/api/expense', { method: 'POST', body: JSON.stringify({
+        const saved = await apiReq('POST', '/api/expense', {
           date,
           amount:         amt,
           currency:       newForm.currency || 'USD',
@@ -264,7 +311,7 @@ function DailyTab({ lang, currency, toDisplay }) {
           description:    newForm.description.trim() || null,
           type:           'expense',
           lang,
-        }) })
+        })
         if (saved) setItems(prev => [saved, ...prev])
       }
       setNewForm(f => ({
@@ -301,7 +348,7 @@ function DailyTab({ lang, currency, toDisplay }) {
     const amt = parseFloat(editForm.amount)
     if (isNaN(amt) || amt <= 0) return
     try {
-      await apiFetch(`/api/expense/${editId}`, { method: 'PUT', body: JSON.stringify({
+      await apiReq('PUT', `/api/expense/${editId}`, {
         amount:         amt,
         currency:       editForm.currency    || 'USD',
         description:    editForm.description || null,
@@ -309,7 +356,7 @@ function DailyTab({ lang, currency, toDisplay }) {
         subcategory_id: !isEditIncome && editForm.subcategory_id ? Number(editForm.subcategory_id) : null,
         type:           editForm.type || 'expense',
         lang,
-      }) })
+      })
       setEditId(null)
       load()
     } catch (err) {
@@ -323,7 +370,7 @@ function DailyTab({ lang, currency, toDisplay }) {
     if (!window.confirm(t(lang, 'budgetConfirmDel'))) return
     // 즉시 클라이언트 상태에서 제거 (optimistic update)
     setItems(prev => prev.filter(it => it.id !== id))
-    await apiFetch(`/api/expense/${id}`, { method: 'DELETE' }).catch(() => { load() })
+    await apiReq('DELETE', `/api/expense/${id}`).catch(() => { load() })
     showToast(t(lang, 'common.deleteSuccess'), 'ok')
   }
 
@@ -334,7 +381,7 @@ function DailyTab({ lang, currency, toDisplay }) {
       return
     }
     try {
-      await apiFetch('/api/expense/recurring', { method: 'POST', body: JSON.stringify({
+      await apiReq('POST', '/api/expense/recurring', {
         day_of_month:   day,
         type:           item.type || 'expense',
         category_id:    item.category_id ?? null,
@@ -342,7 +389,7 @@ function DailyTab({ lang, currency, toDisplay }) {
         amount:         item.amount,
         currency:       item.currency ?? 'USD',
         memo:           item.description ?? null,
-      }) })
+      })
       showToast(t(lang, 'recurring.addedFromExpense'), 'ok')
     } catch {
       showToast(t(lang, 'common.error'), 'err')
@@ -682,7 +729,7 @@ function DailyTab({ lang, currency, toDisplay }) {
                               placeholder={t(lang, 'expenseDescPh')} />
                           </div>
                           <div className="bp-edit-btns">
-                            <button className="bp-btn-primary" onClick={() => { saveEdit(); apiFetch(`/api/expense/daily-compare?year=${calYear}&month=${calMonth}`).then(d => setMonthData(Array.isArray(d) ? d : [])).catch(() => {}) }}>{t(lang, 'common.save')}</button>
+                            <button className="bp-btn-primary" onClick={() => { saveEdit(); apiGet(`/api/expense/daily-compare?year=${calYear}&month=${calMonth}`).then(d => setMonthData(Array.isArray(d) ? d : [])).catch(() => {}) }}>{t(lang, 'common.save')}</button>
                             <button className="bp-btn-ghost" onClick={() => setEditId(null)}>{t(lang, 'common.cancel')}</button>
                           </div>
                         </div>
@@ -712,7 +759,7 @@ function DailyTab({ lang, currency, toDisplay }) {
                           <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
                             <button className="bp-icon-btn" onClick={() => registerRecurring(it)} title={t(lang, 'recurring.addFromExpense')}>🔁</button>
                             <button className="bp-icon-btn" onClick={() => startEdit(it)} title={t(lang, 'common.edit')}>✏️</button>
-                            <button type="button" className="bp-icon-btn del" onClick={ev => { delItem(ev, it.id); apiFetch(`/api/expense/daily-compare?year=${calYear}&month=${calMonth}`).then(d => setMonthData(Array.isArray(d) ? d : [])).catch(() => {}) }} title={t(lang, 'common.delete')}>🗑️</button>
+                            <button type="button" className="bp-icon-btn del" onClick={ev => { delItem(ev, it.id); apiGet(`/api/expense/daily-compare?year=${calYear}&month=${calMonth}`).then(d => setMonthData(Array.isArray(d) ? d : [])).catch(() => {}) }} title={t(lang, 'common.delete')}>🗑️</button>
                           </div>
                         </div>
                       )}
@@ -761,13 +808,13 @@ function MonthlyTab({ lang, currency, toDisplay }) {
     // 기존 차트 데이터와 daily-compare를 독립적으로 호출.
     // daily-compare 실패 시에도 기존 차트는 정상 렌더링되도록 분리.
     Promise.all([
-      apiFetch(`/api/expense/summary/monthly?year=${year}&month=${month}&lang=${lang}`),
-      apiFetch(`/api/expense/stats?year=${year}&month=${month}&lang=${lang}`),
+      apiGet(`/api/expense/summary/monthly?year=${year}&month=${month}&lang=${lang}`),
+      apiGet(`/api/expense/stats?year=${year}&month=${month}&lang=${lang}`),
     ]).then(([m, s]) => { setMonthly(m); setStats(s) })
       .catch(() => {})
       .finally(() => setLoading(false))
 
-    apiFetch(`/api/expense/daily-compare?year=${year}&month=${month}`)
+    apiGet(`/api/expense/daily-compare?year=${year}&month=${month}`)
       .then(dc => setDailyCompare(dc))
       .catch(() => setDailyCompare([]))
   }, [year, month, lang])
@@ -778,7 +825,7 @@ function MonthlyTab({ lang, currency, toDisplay }) {
     setDrillModal({ category_id: cat.category_id, category_name: cat.category_name, category_icon: cat.category_icon })
     setDrillData(null)
     setDrillLoading(true)
-    apiFetch(`/api/expense/category-detail?year=${year}&month=${month}&category_id=${cat.category_id}&lang=${lang}`)
+    apiGet(`/api/expense/category-detail?year=${year}&month=${month}&category_id=${cat.category_id}&lang=${lang}`)
       .then(d => setDrillData(d))
       .catch(() => setDrillData(null))
       .finally(() => setDrillLoading(false))
@@ -1202,7 +1249,7 @@ function YearlyTab({ lang, currency, toDisplay }) {
 
   const load = useCallback(() => {
     setLoading(true)
-    apiFetch(`/api/expense/summary/yearly?year=${year}&lang=${lang}`)
+    apiGet(`/api/expense/summary/yearly?year=${year}&lang=${lang}`)
       .then(d => setData(d)).catch(() => {})
       .finally(() => setLoading(false))
   }, [year, lang])
@@ -1407,9 +1454,9 @@ function SummaryTab({ lang, currency, toDisplay }) {
     }
     const years = [...new Set(months.map(({ y }) => y))]
     Promise.all([
-      apiFetch(`/api/expense/stats?year=${year}&month=${month}&lang=${lang}`),
+      apiGet(`/api/expense/stats?year=${year}&month=${month}&lang=${lang}`),
       ...years.map(y =>
-        apiFetch(`/api/expense/summary/yearly?year=${y}&lang=${lang}`)
+        apiGet(`/api/expense/summary/yearly?year=${y}&lang=${lang}`)
           .catch(() => ({ monthly: [] }))
       ),
     ]).then(([s, ...yearlyResults]) => {
@@ -1639,13 +1686,13 @@ function SettingTab({ lang, currency, toDisplay }) {
 
   const loadBudgets = useCallback(() => {
     setLoadingB(true)
-    apiFetch(`/api/expense/budget?year=${year}&month=${month}&lang=${lang}`)
+    apiGet(`/api/expense/budget?year=${year}&month=${month}&lang=${lang}`)
       .then(d => setBudgets(d || [])).catch(() => setBudgets([]))
       .finally(() => setLoadingB(false))
   }, [year, month, lang])
 
   const loadCats = useCallback(() => {
-    apiFetch(`/api/expense/categories?lang=${lang}`).then(d => setCats(d || [])).catch(() => {})
+    apiGet(`/api/expense/categories?lang=${lang}`).then(d => setCats(d || [])).catch(() => {})
   }, [lang])
 
   useEffect(() => { loadBudgets() }, [loadBudgets])
@@ -1653,20 +1700,20 @@ function SettingTab({ lang, currency, toDisplay }) {
 
   async function addBudget() {
     if (!newB.amount) return
-    await apiFetch('/api/expense/budget', { method: 'POST', body: JSON.stringify({
+    await apiReq('POST', '/api/expense/budget', {
       category_id: newB.category_id ? Number(newB.category_id) : null,
       year, month,
       amount: Number(newB.amount),
       currency: newB.currency,
-    }) }).catch(() => {})
+    }).catch(() => {})
     setNewB(f => ({ ...f, category_id: '', amount: '' }))
     loadBudgets()
   }
 
   async function saveBudget() {
-    await apiFetch(`/api/expense/budget/${editId}`, { method: 'PUT', body: JSON.stringify({
+    await apiReq('PUT', `/api/expense/budget/${editId}`, {
       amount: Number(editForm.amount), currency: editForm.currency,
-    }) }).catch(() => {})
+    }).catch(() => {})
     setEditId(null)
     loadBudgets()
   }
@@ -1675,7 +1722,7 @@ function SettingTab({ lang, currency, toDisplay }) {
     if (e && e.preventDefault) e.preventDefault()
     if (!window.confirm(t(lang, 'budgetConfirmDel'))) return
     setBudgets(prev => prev.filter(b => b.id !== id))
-    await apiFetch(`/api/expense/budget/${id}`, { method: 'DELETE' }).catch(() => { loadBudgets() })
+    await apiReq('DELETE', `/api/expense/budget/${id}`).catch(() => { loadBudgets() })
     showToast(t(lang, 'common.deleteSuccess'), 'ok')
   }
 
@@ -1684,9 +1731,9 @@ function SettingTab({ lang, currency, toDisplay }) {
     const en   = newParent.name_en.trim()
     const icon = newParent.icon.trim() || null   // 빈 문자열·공백 → null
     if (!ko && !en) return
-    await apiFetch('/api/expense/categories', { method: 'POST', body: JSON.stringify({
+    await apiReq('POST', '/api/expense/categories', {
       name_ko: ko || en, name_en: en || ko, icon, parent_id: null,
-    }) }).catch(() => {})
+    }).catch(() => {})
     setNewParent({ name_ko: '', name_en: '', icon: '' })
     loadCats()
   }
@@ -1697,9 +1744,9 @@ function SettingTab({ lang, currency, toDisplay }) {
     const en   = newSub.name_en.trim()
     const icon = newSub.icon.trim() || null      // state에서 읽도록 수정 (기존: 하드코딩 null)
     if (!ko && !en) return
-    await apiFetch('/api/expense/categories', { method: 'POST', body: JSON.stringify({
+    await apiReq('POST', '/api/expense/categories', {
       name_ko: ko || en, name_en: en || ko, icon, parent_id: Number(newSub.parent_id),
-    }) }).catch(() => {})
+    }).catch(() => {})
     setNewSub(f => ({ ...f, name_ko: '', name_en: '', icon: '' }))
     loadCats()
   }
@@ -1711,7 +1758,7 @@ function SettingTab({ lang, currency, toDisplay }) {
       ...c,
       subs: c.subs ? c.subs.filter(s => s.id !== id) : c.subs,
     })))
-    await apiFetch(`/api/expense/categories/${id}`, { method: 'DELETE' }).catch(() => { loadCats() })
+    await apiReq('DELETE', `/api/expense/categories/${id}`).catch(() => { loadCats() })
     showToast(t(lang, 'common.deleteSuccess'), 'ok')
   }
 

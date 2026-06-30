@@ -29,16 +29,6 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
     return current_user
 
 
-def monthly_aggregate(db: Session, model, user_id: int, year: int) -> list:
-    """연도별 전체 항목 조회 — 월별·연간 집계 공통 기반."""
-    from sqlalchemy import extract
-    return (
-        db.query(model)
-        .filter(model.user_id == user_id, extract("year", model.date) == year)
-        .all()
-    )
-
-
 def resolve_yf_ticker(ticker: str, category: str | None) -> str:
     """카테고리에 따라 Yahoo Finance 조회용 티커를 반환합니다.
 
