@@ -461,7 +461,7 @@ function DailyTab({ lang, currency, toDisplay }) {
           ).map((d, i) => (
             <div key={d} style={{
               textAlign: 'center', fontSize: '0.75rem', fontWeight: 600, padding: '0.25rem 0',
-              color: i === 0 ? '#ef4444' : i === 6 ? '#60a5fa' : '#9aacbf',
+              color: i === 0 ? '#ef4444' : i === 6 ? '#60a5fa' : 'var(--ink3)',
             }}>{d}</div>
           ))}
 
@@ -514,7 +514,7 @@ function DailyTab({ lang, currency, toDisplay }) {
                   )
                   ;(data.descriptions || []).forEach((desc, di) => {
                     lines.push(
-                      <span key={`d${di}`} style={{ fontSize: '0.62rem', color: '#8fa0b4', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
+                      <span key={`d${di}`} style={{ fontSize: '0.62rem', color: 'var(--ink3)', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
                         {desc.length > 12 ? desc.slice(0, 12) + '…' : desc}
                       </span>
                     )
@@ -547,33 +547,33 @@ function DailyTab({ lang, currency, toDisplay }) {
           onClick={e => { if (e.target === e.currentTarget) setDayModalOpen(false) }}
         >
           <div style={{
-            background: '#1a2336', borderRadius: '1.25rem',
-            border: '1px solid rgba(255,255,255,0.12)',
+            background: 'var(--card, #fffef9)', borderRadius: '1.25rem',
+            border: '1px solid var(--border)',
             width: '100%', maxWidth: '720px', maxHeight: '88vh',
             display: 'flex', flexDirection: 'column', overflow: 'hidden',
           }}>
             {/* 모달 헤더 */}
             <div style={{
-              padding: '1rem 1.25rem 0.75rem', borderBottom: '1px solid rgba(255,255,255,0.08)',
+              padding: '1rem 1.25rem 0.75rem', borderBottom: '1px solid var(--border)',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem',
               flexShrink: 0,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <span style={{ fontWeight: 700, fontSize: '1.05rem' }}>{date}</span>
                 {dayMap[parseInt(date.slice(8), 10)] && (
-                  <span style={{ fontSize: '0.8rem', color: '#9aacbf' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--ink3)' }}>
                     {dayMap[parseInt(date.slice(8), 10)].count}{lang === 'ko' ? '건' : ' items'}
                   </span>
                 )}
               </div>
               <button
                 onClick={() => setDayModalOpen(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', color: '#9aacbf', lineHeight: 1 }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', color: 'var(--ink3)', lineHeight: 1 }}
               >×</button>
             </div>
 
             {/* 등록 폼 */}
-            <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+            <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
               <div className="bp-add-form" style={{ margin: 0 }}>
         {/* 지출 / 수입 토글 */}
         <div className="bp-type-toggle">
@@ -662,8 +662,8 @@ function DailyTab({ lang, currency, toDisplay }) {
                       padding: '0.9rem 1rem',
                       display: 'flex', flexDirection: 'column', gap: '0.5rem',
                     } : {
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.1)',
+                      background: 'var(--card2)',
+                      border: '1px solid var(--border)',
                       borderRadius: '0.75rem',
                       padding: '0.9rem 1rem',
                       display: 'flex', flexDirection: 'column', gap: '0.5rem',
@@ -741,19 +741,19 @@ function DailyTab({ lang, currency, toDisplay }) {
                                 💰 {t(lang, 'budget.income')}
                               </span>
                             )}
-                            <div style={{ fontSize: '0.88rem', fontWeight: 500, color: '#e0e6ef', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 500, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {it.category_icon && <span style={{ marginRight: '0.2rem' }}>{it.category_icon}</span>}
                               {it.category_name || '–'}
-                              {it.subcategory_name && <span style={{ color: '#9aacbf', fontWeight: 400 }}> › {it.subcategory_name}</span>}
+                              {it.subcategory_name && <span style={{ color: 'var(--ink3)', fontWeight: 400 }}> › {it.subcategory_name}</span>}
                             </div>
-                            {it.description && <div style={{ fontSize: '0.78rem', color: '#8fa0b4' }}>{it.description}</div>}
+                            {it.description && <div style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>{it.description}</div>}
                           </div>
                           <div style={{ textAlign: 'right', flexShrink: 0 }}>
                             <div style={{ fontSize: '1rem', fontWeight: 700, color: (it.type || 'expense') === 'income' ? '#60c080' : '#e8a060' }}>
                               {(it.type || 'expense') === 'income' ? '+' : ''}{fmtAmt(it.amount, it.currency)}
                             </div>
                             {it.currency !== currency && (
-                              <div style={{ fontSize: '0.72rem', color: '#7a8fa6' }}>≈ {fmtAmt(toDisplay(it.converted_amount ?? it.amount), currency)}</div>
+                              <div style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>≈ {fmtAmt(toDisplay(it.converted_amount ?? it.amount), currency)}</div>
                             )}
                           </div>
                           <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
@@ -1050,7 +1050,7 @@ function MonthlyTab({ lang, currency, toDisplay }) {
                         <td>
                           <span className="bp-cat-icon">{c.category_icon}</span>
                           {c.category_name}
-                          <span style={{ marginLeft: '0.35rem', fontSize: '0.7rem', color: '#5b7fa6', verticalAlign: 'middle' }}>▶</span>
+                          <span style={{ marginLeft: '0.35rem', fontSize: '0.7rem', color: 'var(--ink3)', verticalAlign: 'middle' }}>▶</span>
                         </td>
                         <td>{c.budget_usd != null ? fmtAmt(toDisplay(c.budget_usd), currency) : '–'}</td>
                         <td className={isOver ? 'txt-red' : ''}>{fmtAmt(toDisplay(c.total_usd || 0), currency)}</td>
@@ -1114,15 +1114,15 @@ function MonthlyTab({ lang, currency, toDisplay }) {
           onClick={e => { if (e.target === e.currentTarget) closeDrillModal() }}
         >
           <div style={{
-            background: '#1a2336', borderRadius: '1.25rem',
-            border: '1px solid rgba(255,255,255,0.12)',
+            background: 'var(--card, #fffef9)', borderRadius: '1.25rem',
+            border: '1px solid var(--border)',
             width: '100%', maxWidth: '680px', maxHeight: '88vh',
             display: 'flex', flexDirection: 'column', overflow: 'hidden',
           }}>
             {/* 헤더 */}
             <div style={{
               padding: '1rem 1.25rem 0.75rem',
-              borderBottom: '1px solid rgba(255,255,255,0.08)',
+              borderBottom: '1px solid var(--border)',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
             }}>
               <span style={{ fontWeight: 700, fontSize: '1.05rem' }}>
@@ -1130,19 +1130,19 @@ function MonthlyTab({ lang, currency, toDisplay }) {
                 {drillModal.category_name} — {t(lang, 'budget.drilldownTitle')}
               </span>
               <button onClick={closeDrillModal}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', color: '#9aacbf', lineHeight: 1 }}>×</button>
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', color: 'var(--ink3)', lineHeight: 1 }}>×</button>
             </div>
 
             {/* 바디 */}
             <div style={{ overflowY: 'auto', padding: '1rem 1.25rem', flex: 1 }}>
               {drillLoading ? (
-                <p style={{ color: '#9aacbf', textAlign: 'center', padding: '2rem 0' }}>Loading…</p>
+                <p style={{ color: 'var(--ink3)', textAlign: 'center', padding: '2rem 0' }}>Loading…</p>
               ) : drillData ? (
                 <>
                   {/* 소분류별 집계 */}
                   {drillData.by_subcategory?.length > 0 && (
                     <div style={{ marginBottom: '1.25rem' }}>
-                      <h4 style={{ color: '#7aadff', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      <h4 style={{ color: 'var(--blue)', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                         {t(lang, 'budget.drilldownTitle')}
                       </h4>
                       <div className="bp-table-wrap" style={{ margin: 0 }}>
@@ -1165,8 +1165,8 @@ function MonthlyTab({ lang, currency, toDisplay }) {
                                     {s.subcategory_name || t(lang, 'budget.noSubcategory')}
                                   </td>
                                   <td style={{ textAlign: 'right' }}>{fmtAmt(toDisplay(s.total_usd), currency)}</td>
-                                  <td style={{ textAlign: 'right', color: '#9aacbf' }}>{pct}%</td>
-                                  <td style={{ textAlign: 'right', color: '#9aacbf' }}>{s.count}{lang === 'ko' ? t(lang, 'budget.drilldownCount') : ''}</td>
+                                  <td style={{ textAlign: 'right', color: 'var(--ink3)' }}>{pct}%</td>
+                                  <td style={{ textAlign: 'right', color: 'var(--ink3)' }}>{s.count}{lang === 'ko' ? t(lang, 'budget.drilldownCount') : ''}</td>
                                 </tr>
                               )
                             })}
@@ -1185,7 +1185,7 @@ function MonthlyTab({ lang, currency, toDisplay }) {
                   {/* 개별 내역 */}
                   {drillData.items?.length > 0 && (
                     <div>
-                      <h4 style={{ color: '#7aadff', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      <h4 style={{ color: 'var(--blue)', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                         {t(lang, 'budget.drilldownItems')}
                       </h4>
                       <div className="bp-table-wrap" style={{ margin: 0 }}>
@@ -1201,12 +1201,12 @@ function MonthlyTab({ lang, currency, toDisplay }) {
                           <tbody>
                             {drillData.items.map((it, i) => (
                               <tr key={i}>
-                                <td style={{ whiteSpace: 'nowrap', color: '#9aacbf' }}>{it.date}</td>
+                                <td style={{ whiteSpace: 'nowrap', color: 'var(--ink3)' }}>{it.date}</td>
                                 <td style={{ whiteSpace: 'nowrap' }}>
                                   {it.subcategory_icon && <span className="bp-cat-icon">{it.subcategory_icon}</span>}
-                                  {it.subcategory_name || <span style={{ color: '#5b7fa6' }}>–</span>}
+                                  {it.subcategory_name || <span style={{ color: 'var(--ink3)' }}>–</span>}
                                 </td>
-                                <td style={{ color: '#cdd6e0' }}>{it.description || <span style={{ color: '#5b7fa6' }}>–</span>}</td>
+                                <td style={{ color: 'var(--ink2)' }}>{it.description || <span style={{ color: 'var(--ink3)' }}>–</span>}</td>
                                 <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{fmtAmt(toDisplay(it.total_usd), currency)}</td>
                               </tr>
                             ))}
@@ -1217,11 +1217,11 @@ function MonthlyTab({ lang, currency, toDisplay }) {
                   )}
 
                   {!drillData.by_subcategory?.length && !drillData.items?.length && (
-                    <p style={{ color: '#9aacbf', textAlign: 'center', padding: '2rem 0' }}>{t(lang, 'budget.noExpense')}</p>
+                    <p style={{ color: 'var(--ink3)', textAlign: 'center', padding: '2rem 0' }}>{t(lang, 'budget.noExpense')}</p>
                   )}
                 </>
               ) : (
-                <p style={{ color: '#9aacbf', textAlign: 'center', padding: '2rem 0' }}>{t(lang, 'budget.noExpense')}</p>
+                <p style={{ color: 'var(--ink3)', textAlign: 'center', padding: '2rem 0' }}>{t(lang, 'budget.noExpense')}</p>
               )}
             </div>
           </div>
@@ -1436,7 +1436,7 @@ function YearlyTab({ lang, currency, toDisplay }) {
                 <tbody>
                   {data.by_category.map((c, i) => (
                     <tr key={i} onClick={() => openYearlyDrillModal(c)} style={{ cursor: 'pointer' }} className="bp-row-drillable" title={t(lang, 'budget.clickForDetail')}>
-                      <td><span className="bp-cat-icon">{c.category_icon}</span>{c.category_name}<span style={{ marginLeft: '0.35rem', fontSize: '0.7rem', color: '#5b7fa6', verticalAlign: 'middle' }}>▶</span></td>
+                      <td><span className="bp-cat-icon">{c.category_icon}</span>{c.category_name}<span style={{ marginLeft: '0.35rem', fontSize: '0.7rem', color: 'var(--ink3)', verticalAlign: 'middle' }}>▶</span></td>
                       <td>{fmtAmt(toDisplay(c.total_usd || 0), currency)}</td>
                       <td>{c.count}</td>
                     </tr>
@@ -1458,15 +1458,15 @@ function YearlyTab({ lang, currency, toDisplay }) {
           onClick={e => { if (e.target === e.currentTarget) closeYearlyDrillModal() }}
         >
           <div style={{
-            background: '#1a2336', borderRadius: '1.25rem',
-            border: '1px solid rgba(255,255,255,0.12)',
+            background: 'var(--card, #fffef9)', borderRadius: '1.25rem',
+            border: '1px solid var(--border)',
             width: '100%', maxWidth: '680px', maxHeight: '88vh',
             display: 'flex', flexDirection: 'column', overflow: 'hidden',
           }}>
             {/* 헤더 */}
             <div style={{
               padding: '1rem 1.25rem 0.75rem',
-              borderBottom: '1px solid rgba(255,255,255,0.08)',
+              borderBottom: '1px solid var(--border)',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
             }}>
               <span style={{ fontWeight: 700, fontSize: '1.05rem' }}>
@@ -1474,19 +1474,19 @@ function YearlyTab({ lang, currency, toDisplay }) {
                 {yearlyDrillModal.category_name} — {year}년 전체
               </span>
               <button onClick={closeYearlyDrillModal}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', color: '#9aacbf', lineHeight: 1 }}>×</button>
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', color: 'var(--ink3)', lineHeight: 1 }}>×</button>
             </div>
 
             {/* 바디 */}
             <div style={{ overflowY: 'auto', padding: '1rem 1.25rem', flex: 1 }}>
               {yearlyDrillLoading ? (
-                <p style={{ color: '#9aacbf', textAlign: 'center', padding: '2rem 0' }}>Loading…</p>
+                <p style={{ color: 'var(--ink3)', textAlign: 'center', padding: '2rem 0' }}>Loading…</p>
               ) : yearlyDrillData ? (
                 <>
                   {/* 소분류별 집계 */}
                   {yearlyDrillData.by_subcategory?.length > 0 && (
                     <div style={{ marginBottom: '1.25rem' }}>
-                      <h4 style={{ color: '#7aadff', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      <h4 style={{ color: 'var(--blue)', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                         {t(lang, 'budget.drilldownTitle')}
                       </h4>
                       <div className="bp-table-wrap" style={{ margin: 0 }}>
@@ -1509,8 +1509,8 @@ function YearlyTab({ lang, currency, toDisplay }) {
                                     {s.subcategory_name || t(lang, 'budget.noSubcategory')}
                                   </td>
                                   <td style={{ textAlign: 'right' }}>{fmtAmt(toDisplay(s.total_usd), currency)}</td>
-                                  <td style={{ textAlign: 'right', color: '#9aacbf' }}>{pct}%</td>
-                                  <td style={{ textAlign: 'right', color: '#9aacbf' }}>{s.count}{lang === 'ko' ? t(lang, 'budget.drilldownCount') : ''}</td>
+                                  <td style={{ textAlign: 'right', color: 'var(--ink3)' }}>{pct}%</td>
+                                  <td style={{ textAlign: 'right', color: 'var(--ink3)' }}>{s.count}{lang === 'ko' ? t(lang, 'budget.drilldownCount') : ''}</td>
                                 </tr>
                               )
                             })}
@@ -1529,7 +1529,7 @@ function YearlyTab({ lang, currency, toDisplay }) {
                   {/* 개별 내역 */}
                   {yearlyDrillData.items?.length > 0 && (
                     <div>
-                      <h4 style={{ color: '#7aadff', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      <h4 style={{ color: 'var(--blue)', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                         {t(lang, 'budget.drilldownItems')}
                       </h4>
                       <div className="bp-table-wrap" style={{ margin: 0 }}>
@@ -1545,12 +1545,12 @@ function YearlyTab({ lang, currency, toDisplay }) {
                           <tbody>
                             {yearlyDrillData.items.map((it, i) => (
                               <tr key={i}>
-                                <td style={{ whiteSpace: 'nowrap', color: '#9aacbf' }}>{it.date}</td>
+                                <td style={{ whiteSpace: 'nowrap', color: 'var(--ink3)' }}>{it.date}</td>
                                 <td style={{ whiteSpace: 'nowrap' }}>
                                   {it.subcategory_icon && <span className="bp-cat-icon">{it.subcategory_icon}</span>}
-                                  {it.subcategory_name || <span style={{ color: '#5b7fa6' }}>–</span>}
+                                  {it.subcategory_name || <span style={{ color: 'var(--ink3)' }}>–</span>}
                                 </td>
-                                <td style={{ color: '#cdd6e0' }}>{it.description || <span style={{ color: '#5b7fa6' }}>–</span>}</td>
+                                <td style={{ color: 'var(--ink2)' }}>{it.description || <span style={{ color: 'var(--ink3)' }}>–</span>}</td>
                                 <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{fmtAmt(toDisplay(it.total_usd), currency)}</td>
                               </tr>
                             ))}
@@ -1561,11 +1561,11 @@ function YearlyTab({ lang, currency, toDisplay }) {
                   )}
 
                   {!yearlyDrillData.by_subcategory?.length && !yearlyDrillData.items?.length && (
-                    <p style={{ color: '#9aacbf', textAlign: 'center', padding: '2rem 0' }}>{t(lang, 'budget.noExpense')}</p>
+                    <p style={{ color: 'var(--ink3)', textAlign: 'center', padding: '2rem 0' }}>{t(lang, 'budget.noExpense')}</p>
                   )}
                 </>
               ) : (
-                <p style={{ color: '#9aacbf', textAlign: 'center', padding: '2rem 0' }}>{t(lang, 'budget.noExpense')}</p>
+                <p style={{ color: 'var(--ink3)', textAlign: 'center', padding: '2rem 0' }}>{t(lang, 'budget.noExpense')}</p>
               )}
             </div>
           </div>
