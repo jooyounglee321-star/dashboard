@@ -644,6 +644,9 @@
     "deleteError":         "Error deleting.",
     "loadError":           "Error loading data.",
     "addFromExpense":      "Add Recurring",
-    "addedFromExpense":    "Added to recurring expenses"
+    "addedFromExpense":    "Added to recurring expenses",
+    "lastDay":             "Last day",
+    "expense":             "Expense",
+    "income":              "Income"
   }
 }

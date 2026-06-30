@@ -900,6 +900,23 @@ def _migrate_recurring_expenses_table():
                 pass
 
 
+def _migrate_recurring_type_column():
+    """recurring_expenses에 type 컬럼 추가 (없는 경우)."""
+    with engine.connect() as conn:
+        try:
+            conn.execute(text(
+                "ALTER TABLE recurring_expenses ADD COLUMN IF NOT EXISTS type VARCHAR(10) NOT NULL DEFAULT 'expense'"
+            ))
+            conn.commit()
+            logger.info("[MIGRATE] recurring_expenses.type 컬럼 확인/추가 완료")
+        except Exception as e:
+            logger.warning("[MIGRATE] recurring_expenses.type 추가 실패(이미 존재할 수 있음): %s", e)
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+
+
 def _seed_default_permissions():
     """permissions 테이블이 비어 있을 때 기본 권한을 시드."""
     db = SessionLocal()
@@ -957,6 +974,7 @@ async def lifespan(app: FastAPI):
     _migrate_cleanup_null_snapshot_dates()
     _seed_income_categories()
     _migrate_recurring_expenses_table()
+    _migrate_recurring_type_column()
     logger.info("[DB] 테이블 생성/확인 완료")
 
     # APScheduler: 30분마다 환율 자동 갱신

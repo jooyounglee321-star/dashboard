@@ -291,14 +291,15 @@ class PortfolioGroups(Base):
 
 
 class RecurringExpense(Base):
-    """정기지출 설정 테이블. 매월 특정 일에 자동 등록할 지출 항목."""
+    """정기지출/수입 설정 테이블. 매월 특정 일에 자동 등록할 항목. day_of_month=0은 말일."""
     __tablename__ = "recurring_expenses"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    day_of_month: Mapped[int] = mapped_column(Integer, nullable=False)            # 1~28
+    day_of_month: Mapped[int] = mapped_column(Integer, nullable=False)            # 0=말일, 1~31
+    type: Mapped[str] = mapped_column(String(10), nullable=False, default="expense")  # 'expense'|'income'
     category_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("expense_categories.id", ondelete="SET NULL"), nullable=True
     )

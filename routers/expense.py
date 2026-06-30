@@ -992,6 +992,7 @@ def do_refresh_rates(db: Session) -> dict:
 
 class RecurringExpenseIn(BaseModel):
     day_of_month:   int
+    type:           str = "expense"   # 'expense' | 'income'
     category_id:    int | None = None
     subcategory_id: int | None = None
     amount:         float
@@ -1001,6 +1002,7 @@ class RecurringExpenseIn(BaseModel):
 
 class RecurringExpensePatch(BaseModel):
     day_of_month:   int | None = None
+    type:           str | None = None
     category_id:    int | None = None
     subcategory_id: int | None = None
     amount:         float | None = None
@@ -1015,6 +1017,7 @@ def _recurring_dict(r: RecurringExpense, db: Session, lang: str = "ko") -> dict:
     return {
         "id":               r.id,
         "day_of_month":     r.day_of_month,
+        "type":             getattr(r, "type", "expense"),
         "category_id":      r.category_id,
         "subcategory_id":   r.subcategory_id,
         "category_name":    _cat_name(cat, lang) if cat else None,
@@ -1051,8 +1054,8 @@ def create_recurring(
     db:   Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if not (1 <= body.day_of_month <= 28):
-        raise HTTPException(status_code=422, detail="day_of_month must be 1-28")
+    if not (0 <= body.day_of_month <= 31):
+        raise HTTPException(status_code=422, detail="day_of_month must be 0-31 (0=last day)")
     existing = (
         db.query(RecurringExpense)
         .filter(
@@ -1071,6 +1074,7 @@ def create_recurring(
     r = RecurringExpense(
         user_id        = current_user.id,
         day_of_month   = body.day_of_month,
+        type           = body.type,
         category_id    = body.category_id,
         subcategory_id = body.subcategory_id,
         amount         = body.amount,
@@ -1097,8 +1101,8 @@ def update_recurring(
     if not r or r.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Not found")
     for field, val in body.model_dump(exclude_unset=True).items():
-        if field == "day_of_month" and val is not None and not (1 <= val <= 28):
-            raise HTTPException(status_code=422, detail="day_of_month must be 1-28")
+        if field == "day_of_month" and val is not None and not (0 <= val <= 31):
+            raise HTTPException(status_code=422, detail="day_of_month must be 0-31 (0=last day)")
         setattr(r, field, val)
     db.commit()
     db.refresh(r)
@@ -1140,11 +1144,11 @@ def apply_recurring(
     created = []
     skipped = []
 
+    import calendar as _cal
     for rec in actives:
-        # 이번 달 해당 일 날짜 계산 (28일 초과는 월말 클램핑)
-        import calendar as _cal
+        # day_of_month=0 → 말일, 그 외는 월말 클램핑
         last_day = _cal.monthrange(year, month)[1]
-        target_day = min(rec.day_of_month, last_day)
+        target_day = last_day if rec.day_of_month == 0 else min(rec.day_of_month, last_day)
         target_date = Date(year, month, target_day)
 
         # 중복 체크: recurring_id 메모 패턴으로 검사
@@ -1167,6 +1171,7 @@ def apply_recurring(
         memo_text = (rec.memo or "").strip()
         full_desc = f"{tag} {memo_text}".strip() if memo_text else tag
 
+        rec_type = getattr(rec, "type", "expense") or "expense"
         e = Expense(
             user_id          = current_user.id,
             date             = target_date,
@@ -1177,7 +1182,7 @@ def apply_recurring(
             category_id      = rec.category_id,
             subcategory_id   = rec.subcategory_id,
             description      = full_desc,
-            type             = "expense",
+            type             = rec_type,
         )
         db.add(e)
         created.append(rec.id)
