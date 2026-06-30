@@ -169,7 +169,7 @@ function ExpForm({ compact, form, setForm, categories, subs, lang, submitting, a
   )
 }
 
-function ExpItem({ e, editId, editForm, setEditForm, categories, lang, saveEdit, setEditId, startEdit, delExpense }) {
+function ExpItem({ e, editId, editForm, setEditForm, categories, lang, saveEdit, setEditId, startEdit, delExpense, registerRecurring }) {
   const isEditing = editId === e.id
   if (isEditing) {
     const ec  = categories.find(c => c.id === Number(editForm.category_id))
@@ -261,6 +261,9 @@ function ExpItem({ e, editId, editForm, setEditForm, categories, lang, saveEdit,
           )}
         </div>
         <div className="exp-item-btns">
+          {(e.type || 'expense') === 'expense' && (
+            <button className="btn-edit" title={t(lang, 'recurring.addFromExpense')} onClick={() => registerRecurring(e)}>🔁</button>
+          )}
           <button className="btn-edit" title={t(lang, 'common.edit')} onClick={() => startEdit(e)}>✎</button>
           <button type="button" className="btn-del" title={t(lang, 'common.delete')} onClick={(ev) => delExpense(ev, e.id)}>✕</button>
         </div>
@@ -436,6 +439,30 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
     }
   }
 
+  async function registerRecurring(expense) {
+    const day = parseInt((expense.date || form.date).split('-')[2], 10)
+    if (day > 28) {
+      showToast(t(lang, 'recurring.dayRange'), 'err')
+      return
+    }
+    try {
+      await apiFetch('/api/expense/recurring', {
+        method: 'POST',
+        body: JSON.stringify({
+          day_of_month:   day,
+          category_id:    expense.category_id ?? null,
+          subcategory_id: expense.subcategory_id ?? null,
+          amount:         expense.amount,
+          currency:       expense.currency ?? 'USD',
+          memo:           expense.description ?? null,
+        }),
+      })
+      showToast(t(lang, 'recurring.addedFromExpense'), 'ok')
+    } catch {
+      showToast(t(lang, 'common.error'), 'err')
+    }
+  }
+
   async function delExpense(e, id) {
     if (e && e.preventDefault) e.preventDefault()
     // 즉시 클라이언트 상태에서 제거 (optimistic update)
@@ -550,6 +577,7 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
                     setEditId={setEditId}
                     startEdit={startEdit}
                     delExpense={delExpense}
+                    registerRecurring={registerRecurring}
                   />
                 ))
             }
@@ -614,6 +642,7 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
                   setEditId={setEditId}
                   startEdit={startEdit}
                   delExpense={delExpense}
+                  registerRecurring={registerRecurring}
                 />
               ))
           }

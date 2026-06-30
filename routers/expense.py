@@ -12,7 +12,7 @@ from datetime import date as Date, datetime as DateTime
 from typing import Any
 
 import yfinance as yf
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel
 from sqlalchemy import func as sqlfunc
 from sqlalchemy.orm import Session
@@ -1043,15 +1043,31 @@ def list_recurring(
     return [_recurring_dict(r, db, lang) for r in rows]
 
 
-@expense_router.post("/recurring", status_code=201)
+@expense_router.post("/recurring")
 def create_recurring(
     body: RecurringExpenseIn,
+    response: Response,
     lang: str = Query("ko", pattern="^(ko|en)$"),
     db:   Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     if not (1 <= body.day_of_month <= 28):
         raise HTTPException(status_code=422, detail="day_of_month must be 1-28")
+    existing = (
+        db.query(RecurringExpense)
+        .filter(
+            RecurringExpense.user_id        == current_user.id,
+            RecurringExpense.day_of_month   == body.day_of_month,
+            RecurringExpense.category_id    == body.category_id,
+            RecurringExpense.subcategory_id == body.subcategory_id,
+            RecurringExpense.amount         == body.amount,
+            RecurringExpense.currency       == body.currency,
+        )
+        .first()
+    )
+    if existing:
+        response.status_code = 200
+        return _recurring_dict(existing, db, lang)
     r = RecurringExpense(
         user_id        = current_user.id,
         day_of_month   = body.day_of_month,
@@ -1065,6 +1081,7 @@ def create_recurring(
     db.add(r)
     db.commit()
     db.refresh(r)
+    response.status_code = 201
     return _recurring_dict(r, db, lang)
 
 

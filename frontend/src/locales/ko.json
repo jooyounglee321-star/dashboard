@@ -642,6 +642,8 @@
     "saveSuccess":         "저장되었습니다.",
     "saveError":           "저장 중 오류가 발생했습니다.",
     "deleteError":         "삭제 중 오류가 발생했습니다.",
-    "loadError":           "불러오기 중 오류가 발생했습니다."
+    "loadError":           "불러오기 중 오류가 발생했습니다.",
+    "addFromExpense":      "정기지출 등록",
+    "addedFromExpense":    "정기지출 등록됨"
   }
 }
