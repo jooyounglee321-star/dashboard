@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import Expense, ExpenseBudget, ExpenseCategory, ExchangeRate, RecurringExpense, User
-from routers._shared import get_rate as _get_rate, cat_name as _cat_name, require_admin, monthly_aggregate
+from routers._shared import get_rate as _get_rate, cat_name as _cat_name, require_admin
 from routers.auth import get_current_user
 
 logger = logging.getLogger(__name__)
@@ -390,8 +390,18 @@ def summary_yearly(
     current_user: User = Depends(get_current_user),
 ):
     """연간 월별 합계 + 카테고리별 합계 + 전년 대비 비교."""
-    rows      = monthly_aggregate(db, Expense, current_user.id, year)
-    prev_rows = monthly_aggregate(db, Expense, current_user.id, year - 1)
+    def _fetch(y: int) -> list[Expense]:
+        return (
+            db.query(Expense)
+            .filter(
+                Expense.user_id == current_user.id,
+                sqlfunc.extract("year", Expense.date) == y,
+            )
+            .all()
+        )
+
+    rows      = _fetch(year)
+    prev_rows = _fetch(year - 1)
 
     def _monthly_totals(expense_rows: list[Expense]) -> list[dict]:
         inc_map: dict[int, float] = {}
