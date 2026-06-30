@@ -45,7 +45,7 @@ const ML = {
 }
 
 const NAV_BTN = {
-  background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
+  background: 'var(--card)', border: '1px solid var(--border)',
   borderRadius: '6px', color: '#c8d6e5', cursor: 'pointer', fontSize: '1rem',
   padding: '0.25rem 0.6rem', lineHeight: 1,
 }
@@ -191,7 +191,7 @@ function MemoForm({ lang, initMood = '', initText = '', onSave, onCancel, isMobi
           ref={pickerRef}
           style={{
             position: 'fixed', top: emojiPos.top, left: emojiPos.left, zIndex: 2000,
-            background: '#1a2336', border: '1px solid rgba(255,255,255,0.18)',
+            background: 'var(--card)', border: '1px solid rgba(255,255,255,0.18)',
             borderRadius: '0.85rem', width: '300px',
             boxShadow: '0 8px 32px rgba(0,0,0,0.6)', overflow: 'hidden',
           }}
@@ -219,7 +219,7 @@ function MemoForm({ lang, initMood = '', initText = '', onSave, onCancel, isMobi
                 type="button"
                 onClick={() => insertEmoji(e)}
                 style={{
-                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+                  background: 'var(--card)', border: '1px solid var(--border)',
                   borderRadius: '5px', cursor: 'pointer', fontSize: '1.25rem',
                   padding: '0.22rem 0.3rem', lineHeight: 1, transition: 'background 0.1s',
                 }}
@@ -447,14 +447,14 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
         <div
           style={{
             position: 'fixed', inset: 0, zIndex: 1000,
-            background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+            background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
           }}
           onClick={e => { if (e.target === e.currentTarget) closeCalendar() }}
         >
           <div style={{
-            background: '#1a2336', borderRadius: '1.25rem',
-            border: '1px solid rgba(255,255,255,0.12)',
+            background: 'var(--card)', borderRadius: '1.25rem',
+            border: '1px solid var(--border)',
             width: '100%', maxWidth: '780px', maxHeight: '90vh',
             display: 'flex', flexDirection: 'column', overflow: 'hidden',
           }}>
@@ -482,7 +482,7 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
               <span style={{ fontWeight: 600, fontSize: '0.95rem', color: '#c8d6e5' }}>
                 {t(lang, 'memoCalTitle')}
               </span>
-              <button onClick={closeCalendar} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', color: '#9aacbf', lineHeight: 1 }}>×</button>
+              <button onClick={closeCalendar} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', color: 'var(--ink3)', lineHeight: 1 }}>×</button>
             </div>
 
             {/* 달력 그리드 */}
@@ -534,7 +534,7 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
                           {pp.mood && <span style={{ fontSize: '1rem', lineHeight: 1, flexShrink: 0 }}>{pp.mood}</span>}
                           {pp.text && (
                             <span style={{
-                              fontSize: '0.65rem', color: '#9aacbf', lineHeight: 1.3,
+                              fontSize: '0.65rem', color: 'var(--ink3)', lineHeight: 1.3,
                               overflow: 'hidden', wordBreak: 'break-all',
                               display: '-webkit-box', WebkitLineClamp: extraCnt > 0 ? 1 : 2,
                               WebkitBoxOrient: 'vertical',
@@ -556,12 +556,12 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
 
               {dayDetail && (
                 <div style={{
-                  marginTop: '1rem', background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.12)', borderRadius: '0.9rem', padding: '1rem 1.2rem',
+                  marginTop: '1rem', background: 'var(--card)',
+                  border: '1px solid var(--border)', borderRadius: '0.9rem', padding: '1rem 1.2rem',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.8rem' }}>
                     <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#c8d6e5' }}>{dayDetail.dateStr}</span>
-                    <button onClick={() => setDayDetail(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9aacbf', fontSize: '1.1rem' }}>×</button>
+                    <button onClick={() => setDayDetail(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink3)', fontSize: '1.1rem' }}>×</button>
                   </div>
                   {dayDetail.memos.map((memo, idx) => {
                     const pp = parseMemo(memo.content)
