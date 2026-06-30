@@ -1435,8 +1435,8 @@ function YearlyTab({ lang, currency, toDisplay }) {
                 </thead>
                 <tbody>
                   {data.by_category.map((c, i) => (
-                    <tr key={i} onClick={() => openYearlyDrillModal(c)} style={{ cursor: 'pointer' }}>
-                      <td><span className="bp-cat-icon">{c.category_icon}</span>{c.category_name}</td>
+                    <tr key={i} onClick={() => openYearlyDrillModal(c)} style={{ cursor: 'pointer' }} className="bp-row-drillable" title={t(lang, 'budget.clickForDetail')}>
+                      <td><span className="bp-cat-icon">{c.category_icon}</span>{c.category_name}<span style={{ marginLeft: '0.35rem', fontSize: '0.7rem', color: '#5b7fa6', verticalAlign: 'middle' }}>▶</span></td>
                       <td>{fmtAmt(toDisplay(c.total_usd || 0), currency)}</td>
                       <td>{c.count}</td>
                     </tr>
