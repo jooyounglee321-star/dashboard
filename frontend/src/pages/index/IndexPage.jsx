@@ -22,6 +22,19 @@ import NewsCard from './NewsCard'
 import SitesCard from './SitesCard'
 import { t, T } from './i18n'
 
+const CACHE_TTL = 30000
+function ssGet(key) {
+  try {
+    const raw = sessionStorage.getItem(key)
+    if (!raw) return null
+    const { data, ts } = JSON.parse(raw)
+    return Date.now() - ts < CACHE_TTL ? data : null
+  } catch { return null }
+}
+function ssSet(key, data) {
+  try { sessionStorage.setItem(key, JSON.stringify({ data, ts: Date.now() })) } catch {}
+}
+
 function buildTickerCatMap(groups) {
   const map = {}
   groups.forEach(g => {
@@ -156,10 +169,17 @@ export default function IndexPage() {
     const h = { Authorization: 'Bearer ' + token }
     const sig = { signal: ctrl.signal }
 
+    const meCache = ssGet('cache_me')
+    const tzCache = ssGet('cache_timezone')
+    const wcCache = ssGet('cache_widget_config')
+
     Promise.all([
-      fetch('/api/auth/me',          { headers: h, ...sig }).then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch('/api/timezone',         { headers: h, ...sig }).then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch('/api/auth/widget-config',{ headers: h, ...sig }).then(r => r.ok ? r.json() : null).catch(() => null),
+      meCache ? Promise.resolve(meCache)
+        : fetch('/api/auth/me', { headers: h, ...sig }).then(r => r.ok ? r.json() : null).catch(() => null).then(d => { if (d) ssSet('cache_me', d); return d }),
+      tzCache ? Promise.resolve(tzCache)
+        : fetch('/api/timezone', { headers: h, ...sig }).then(r => r.ok ? r.json() : null).catch(() => null).then(d => { if (d) ssSet('cache_timezone', d); return d }),
+      wcCache ? Promise.resolve(wcCache)
+        : fetch('/api/auth/widget-config', { headers: h, ...sig }).then(r => r.ok ? r.json() : null).catch(() => null).then(d => { if (d) ssSet('cache_widget_config', d); return d }),
     ]).then(([me, tz, wc]) => {
       if (me?.name) setUserName(me.name)
       if (me?.role) setUserRole(me.role)
