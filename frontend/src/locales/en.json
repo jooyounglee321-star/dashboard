@@ -647,6 +647,13 @@
     "addedFromExpense":    "Added to recurring expenses",
     "lastDay":             "Last day",
     "expense":             "Expense",
-    "income":              "Income"
+    "income":              "Income",
+    "frequencyLabel":      "Payment Cycle",
+    "monthly":             "Monthly",
+    "semiMonthly":         "Semi-monthly (2x/month)",
+    "weekly":              "Weekly",
+    "biweekly":            "Bi-weekly (every 2 weeks)",
+    "dayOfWeekLabel":      "Day of Week",
+    "secondDayLabel":      "Second Day"
   }
 }

@@ -1,6 +1,6 @@
 # DB Schema Documentation
 
-> 최종 업데이트: 2026-06-08  
+> 최종 업데이트: 2026-06-30  
 > 데이터베이스: PostgreSQL (Railway) / SQLite (로컬 개발)  
 > ORM: SQLAlchemy 2.x (`Mapped` / `mapped_column`)
 
@@ -28,7 +28,7 @@
 | 15 | `permissions` | 레벨별 권한 매핑 |
 | 16 | `daily_portfolio_snapshot` | 일별 포트폴리오 스냅샷 (user_id 기준 격리) |
 | 17 | `todos` | 수동 할 일 체크리스트 (user_id 기준 격리, start_date~due_date 범위 표시, 날짜별 체크 독립) |
-| 18 | `recurring_expenses` | 정기지출 설정 (매월 특정 일 자동 등록용, user_id 기준 격리) |
+| 18 | `recurring_expenses` | 정기지출/수입 설정 (monthly·semi-monthly·weekly·biweekly, user_id 기준 격리) |
 
 ---
 
@@ -398,6 +398,35 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 
 ---
 
+## 18. `recurring_expenses`
+
+정기지출/수입 설정 테이블. 사용자가 등록한 주기별 자동 등록 항목.
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+|--------|------|----------|------|
+| `id` | INTEGER | PK, INDEX | 자동 증가 고유 ID |
+| `user_id` | INTEGER | NOT NULL, FK → `users.id` CASCADE, INDEX | 소유 사용자 ID |
+| `day_of_month` | INTEGER | NOT NULL | 월 기준 날짜 (0=말일, 1~31). weekly/biweekly 시 무시 |
+| `type` | VARCHAR(10) | NOT NULL, DEFAULT `'expense'` | `'expense'` / `'income'` |
+| `category_id` | INTEGER | NULLABLE, FK → `expense_categories.id` SET NULL | 대분류 카테고리 |
+| `subcategory_id` | INTEGER | NULLABLE, FK → `expense_categories.id` SET NULL | 소분류 카테고리 |
+| `amount` | NUMERIC(14,2) | NOT NULL | 금액 |
+| `currency` | VARCHAR(10) | NOT NULL, DEFAULT `'USD'` | 통화 코드 |
+| `memo` | VARCHAR(500) | NULLABLE | 메모 |
+| `frequency` | VARCHAR(20) | NOT NULL, DEFAULT `'monthly'` | 결제 주기: `monthly` / `semi-monthly` / `weekly` / `biweekly` |
+| `day_of_week` | INTEGER | NULLABLE | 요일 (weekly/biweekly용): 0=월 ~ 6=일 |
+| `day_of_month_2` | INTEGER | NULLABLE | 두 번째 날짜 (semi-monthly용): 0=말일, 1~31 |
+| `is_active` | BOOLEAN | NOT NULL, DEFAULT `true` | 활성 여부 |
+| `created_at` | DATETIME | DEFAULT `now()` (서버) | 생성 일시 |
+| `updated_at` | DATETIME | DEFAULT `now()`, ON UPDATE `now()` | 수정 일시 |
+
+**비고:**
+- `frequency='monthly'`: `day_of_month` 필수 (0~31)
+- `frequency='semi-monthly'`: `day_of_month` + `day_of_month_2` 둘 다 필수, 서로 달라야 함
+- `frequency='weekly'` / `'biweekly'`: `day_of_week` 필수 (0~6), `day_of_month` 무시
+
+---
+
 ## Foreign Key 관계 요약
 
 ```
@@ -440,3 +469,6 @@ permissions     — 독립 테이블 (FK 없음)
 | 7 | `_seed_default_permissions()` | `permissions` 테이블이 비어 있으면 기본 28개 권한 행 삽입 |
 | 8 | `_seed_exchange_rates()` | `exchange_rates` 테이블에 USD 기준 기본 환율 10쌍 삽입 (없는 쌍만) |
 | 9 | `_seed_expense_categories()` | `expense_categories` 테이블이 비어 있으면 기본 10대분류 44소분류 삽입 (`is_default=True`, `user_id=NULL`) |
+| 10 | `_migrate_recurring_expenses_table()` | `recurring_expenses` 테이블 없으면 생성 |
+| 11 | `_migrate_recurring_type_column()` | `recurring_expenses.type` 컬럼 누락 시 `ALTER TABLE`로 추가 |
+| 12 | `_migrate_recurring_frequency_columns()` | `recurring_expenses`에 `frequency` / `day_of_week` / `day_of_month_2` 컬럼 누락 시 추가 |
