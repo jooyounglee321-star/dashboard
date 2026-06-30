@@ -4,6 +4,22 @@
 
 ---
 
+## [2026-06-29] — feat: 정기등록관리 팝업 전환 및 지출수입 통합 화면
+
+### 변경 내용
+- `frontend/src/locales/ko.json` & `en.json`: `recurring.manage` / `recurring.title` / `recurring.addTitle` / `recurring.editTitle` / `recurring.empty` 텍스트를 "정기등록 관리" 계열로 변경
+- `frontend/src/pages/BudgetPage.jsx`:
+  - "정기등록 관리" 버튼을 `<Link>` 에서 `<button>` 으로 교체
+  - `showRecurring` state 추가
+  - 버튼 클릭 시 `/recurring` 페이지 이동 대신 `rp-modal-full` 오버레이 팝업으로 `RecurringPage` 표시
+- `frontend/src/pages/RecurringPage.jsx`:
+  - `onClose` prop 추가 — 팝업 모드 시 닫기 버튼 표시, 독립 페이지 모드 시 뒤로가기 링크 표시
+  - 지출/수입 탭 완전 제거 (`activeTab` state 삭제)
+  - 전체 목록을 한 화면에 통합 표시, 각 카드에 지출(💸)/수입(💰) 타입 배지 추가
+- `frontend/src/pages/BudgetPage.css`: `.rp-modal-full` 스타일 추가 (560px 폭, 85vh 높이 스크롤 컨테이너)
+
+---
+
 ## [2026-06-29] — fix: 수입 항목에도 정기등록 버튼 추가
 
 ### 변경 내용

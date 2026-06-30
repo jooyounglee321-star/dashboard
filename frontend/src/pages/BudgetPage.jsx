@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { t } from '../i18n'
+import RecurringPage from './RecurringPage'
 import { Chart, registerables } from 'chart.js'
 import { INCOME_CATEGORIES, getSubcategories } from '../data/incomeCategories'
 import { CURRENCY_CODES as CURRENCIES, CURRENCY_SYMBOLS as SYM } from '../data/currencies'
@@ -108,6 +109,7 @@ export default function BudgetPage() {
   const [tab, setTab] = useState(0)
   const [currency, setCurrency] = useState('USD')
   const [rateMap, setRateMap] = useState({})
+  const [showRecurring, setShowRecurring] = useState(false)
 
   useEffect(() => {
     const onChange = () => setLang(localStorage.getItem('dashboard_lang') || 'ko')
@@ -152,7 +154,7 @@ export default function BudgetPage() {
       </header>
 
       <div className="bp-recurring-wrap">
-        <Link to="/recurring" className="bp-recurring-btn">🔄 {t(lang, 'recurring.manage')}</Link>
+        <button className="bp-recurring-btn" onClick={() => setShowRecurring(true)}>🔄 {t(lang, 'recurring.manage')}</button>
       </div>
 
       <nav className="bp-tabs">
@@ -170,6 +172,14 @@ export default function BudgetPage() {
         {tab === 3 && <SummaryTab lang={lang} currency={currency} toDisplay={toDisplay} />}
         {tab === 4 && <SettingTab lang={lang} currency={currency} toDisplay={toDisplay} />}
       </div>
+
+      {showRecurring && (
+        <div className="rp-overlay" onClick={() => setShowRecurring(false)}>
+          <div className="rp-modal-full" onClick={e => e.stopPropagation()}>
+            <RecurringPage onClose={() => setShowRecurring(false)} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

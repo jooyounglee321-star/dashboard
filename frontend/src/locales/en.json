@@ -619,12 +619,12 @@
     "monthlyCompareTitle": "Monthly Income vs Expense"
   },
   "recurring": {
-    "title":               "Recurring Expenses",
-    "manage":              "Recurring",
+    "title":               "Recurring Management",
+    "manage":              "Recurring Management",
     "add":                 "Add",
-    "addTitle":            "Add Recurring Expense",
-    "editTitle":           "Edit Recurring Expense",
-    "empty":               "No recurring expenses registered.",
+    "addTitle":            "Add Recurring",
+    "editTitle":           "Edit Recurring",
+    "empty":               "No recurring items registered.",
     "everyMonthDay":       "Every {day}th",
     "noCategory":          "No Category",
     "dayLabel":            "Day of Month",
