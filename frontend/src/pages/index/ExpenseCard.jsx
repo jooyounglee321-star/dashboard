@@ -240,15 +240,16 @@ function ExpItem({ e, editId, editForm, setEditForm, categories, lang, saveEdit,
     <li className="exp-item">
       {/* 왼쪽: 카테고리 경로 + 메모 (한 줄) */}
       <div className="exp-item-info">
-        <span className="exp-item-path" title={
-          `${e.category_icon ? e.category_icon + ' ' : ''}${e.category_name ?? ''}` +
-          (e.subcategory_name ? ` › ${e.subcategory_icon ? e.subcategory_icon + ' ' : ''}${e.subcategory_name}` : '') +
-          (e.description ? ` - ${e.description}` : '')
-        }>
+        <span className="exp-item-path" title={(() => {
+          const memo = (e.description ?? '').replace(/\[R#\d+\]\s*/g, '').trim()
+          return `${e.category_icon ? e.category_icon + ' ' : ''}${e.category_name ?? ''}` +
+            (e.subcategory_name ? ` › ${e.subcategory_icon ? e.subcategory_icon + ' ' : ''}${e.subcategory_name}` : '') +
+            (memo ? ` - ${memo}` : '')
+        })()}>
           {e.category_icon ? `${e.category_icon} ` : ''}
           {e.category_name ?? ''}
           {e.subcategory_name ? ` › ${e.subcategory_icon ? e.subcategory_icon + ' ' : ''}${e.subcategory_name}` : ''}
-          {e.description ? ` - ${e.description}` : ''}
+          {(() => { const memo = (e.description ?? '').replace(/\[R#\d+\]\s*/g, '').trim(); return memo ? ` - ${memo}` : '' })()}
         </span>
       </div>
 
