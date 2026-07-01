@@ -3,6 +3,8 @@ import asyncio
 import datetime as dt
 import logging
 import time
+from datetime import datetime
+import pytz
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 
@@ -37,6 +39,30 @@ _CACHE_TTL = 60
 _executor = ThreadPoolExecutor(max_workers=10)
 
 
+
+
+def _get_market_state(currency: str) -> str:
+    """현재 시간 기준 장 상태: REGULAR / PRE / POST / CLOSED"""
+    now = datetime.now(pytz.utc)
+    dow = now.weekday()  # 0=월 ~ 6=일
+    if currency == 'KRW':
+        local = now.astimezone(pytz.timezone('Asia/Seoul'))
+        h, m = local.hour, local.minute
+        total = h * 60 + m
+        if dow >= 5: return 'CLOSED'
+        if 480 <= total < 540:  return 'PRE'      # 08:00-09:00
+        if 540 <= total < 930:  return 'REGULAR'  # 09:00-15:30
+        if 930 <= total < 1080: return 'POST'      # 15:30-18:00
+        return 'CLOSED'
+    else:
+        local = now.astimezone(pytz.timezone('America/New_York'))
+        h, m = local.hour, local.minute
+        total = h * 60 + m
+        if dow >= 5: return 'CLOSED'
+        if 240 <= total < 570:  return 'PRE'      # 04:00-09:30
+        if 570 <= total < 960:  return 'REGULAR'  # 09:30-16:00
+        if 960 <= total < 1200: return 'POST'      # 16:00-20:00
+        return 'CLOSED'
 
 
 def _query_yf(yf_ticker: str) -> tuple[float | None, float | None, object]:
@@ -96,7 +122,7 @@ def _fetch_price(ticker: str, category: str | None = None) -> dict:
         "change_amount":  round(float(change_amount),   4),
         "change_percent": round(float(change_percent),  4),
         "currency":       getattr(fi, "currency", None) or "USD",
-        "market_state":   getattr(fi, "market_state",  None),  # 'REGULAR'|'PRE'|'POST'|'CLOSED'|None
+        "market_state":   _get_market_state(getattr(fi, "currency", None) or "USD"),
     }
     logger.info(
         "[STOCK OK] %s → %s %.4f (%+.2f%%)",
