@@ -201,7 +201,7 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
       })()
       const liveBadge = marketBadge
         ? <span style={{ fontSize: '0.52rem', background: marketBadge.bg, color: '#fff', padding: '0.05rem 0.38rem', borderRadius: 8, verticalAlign: 'middle', marginLeft: '0.25rem' }}>{marketBadge.label}</span>
-        : <span style={{ fontSize: '0.52rem', background: '#a89880', color: '#fff', padding: '0.05rem 0.38rem', borderRadius: 8, verticalAlign: 'middle', marginLeft: '0.25rem' }}>{t(lang, 'stockAvgBadge')}</span>
+        : null
 
       if (!isMobile) {
         const upColor = 'var(--up, #16a34a)'
