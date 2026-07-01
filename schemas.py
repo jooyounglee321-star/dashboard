@@ -199,6 +199,7 @@ class StockPrice(BaseModel):
     change_amount: float
     change_percent: float
     currency: str
+    market_state: str | None = None
 
 
 class StockPriceHistoryOut(BaseModel):
