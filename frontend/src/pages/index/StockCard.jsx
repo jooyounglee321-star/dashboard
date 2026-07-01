@@ -187,18 +187,17 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
     let grpTotal = 0
 
     const stockRows = g.stocks.map(s => {
-      const { holdQty, avgCost, cur, chP, val, evalPL, evalPct, realizedPL, totalSellQty, isLive, marketState } = stockCalcMap.get(s) ?? calcStock(s, priceMap)
+      const { holdQty, avgCost, cur, chP, val, evalPL, evalPct, realizedPL, totalSellQty, isLive, hasPrice, marketState } = stockCalcMap.get(s) ?? calcStock(s, priceMap)
       grpTotal += val
       const cs = chP >= 0 ? 'up' : 'down'; const sg = chP >= 0 ? '▲' : '▼'
       const eps = evalPL != null ? (evalPL >= 0 ? 'up' : 'down') : ''
       const rps = realizedPL >= 0 ? 'up' : 'down'
       const marketBadge = (() => {
-        if (!isLive) return null
-        if (marketState === 'REGULAR') return { label: 'LIVE',   bg: '#4a7c59' }
-        if (marketState === 'PRE')     return { label: 'PRE',    bg: '#2563eb' }
-        if (marketState === 'POST')    return { label: 'POST',   bg: '#7c3aed' }
-        if (marketState === 'CLOSED')  return { label: 'CLOSED', bg: '#6b7280' }
-        return { label: 'LIVE', bg: '#4a7c59' }
+        if (!hasPrice) return null
+        if (marketState === 'REGULAR') return { label: 'LIVE', bg: '#4a7c59' }
+        if (marketState === 'PRE')     return { label: 'PRE',  bg: '#2563eb' }
+        if (marketState === 'POST')    return { label: 'POST', bg: '#7c3aed' }
+        return null
       })()
       const liveBadge = marketBadge
         ? <span style={{ fontSize: '0.52rem', background: marketBadge.bg, color: '#fff', padding: '0.05rem 0.38rem', borderRadius: 8, verticalAlign: 'middle', marginLeft: '0.25rem' }}>{marketBadge.label}</span>
