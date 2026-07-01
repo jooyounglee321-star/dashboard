@@ -1027,27 +1027,13 @@ function MonthlyTab({ lang, currency, toDisplay }) {
           )}
 
           <div className="bp-charts">
-            {/* 일별 수입/지출 비교 — Grouped Bar Chart (전체 너비) */}
-            {dailyCompare?.length > 0 && (
-              <div className="bp-chart-box bp-chart-full">
-                <h3 className="bp-chart-title">{t(lang, 'chart.dailyCompareTitle')}</h3>
-                <canvas ref={groupBarRef} />
-              </div>
-            )}
-
             {stats?.by_category?.length > 0 && (
               <div className="bp-chart-box">
                 <h3 className="bp-chart-title">{t(lang, 'chart.pieTitle')}</h3>
                 <canvas ref={pieRef} />
               </div>
             )}
-            {stats?.daily_trend?.length > 0 && (
-              <div className="bp-chart-box">
-                <h3 className="bp-chart-title">{t(lang, 'chart.lineTitle')}</h3>
-                <canvas ref={lineRef} />
-              </div>
-            )}
-            {monthly.by_category?.some(c => c.budget_usd != null) && (
+{monthly.by_category?.some(c => c.budget_usd != null) && (
               <div className="bp-chart-box">
                 <h3 className="bp-chart-title">{t(lang, 'chart.barTitle')}</h3>
                 <canvas ref={barRef} />
