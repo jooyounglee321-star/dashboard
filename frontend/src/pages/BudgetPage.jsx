@@ -465,7 +465,7 @@ function DailyTab({ lang, currency, toDisplay }) {
             ;(data.descriptions || []).forEach((desc, di) => {
               lines.push(
                 <span key={`d${di}`} style={{ fontSize: '0.62rem', color: 'var(--ink3)', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
-                  {desc.length > 12 ? desc.slice(0, 12) + '...' : desc}
+                  {(() => { const d = desc.replace(/\[R#\d+\]\s*/g, '').trim(); return d.length > 12 ? d.slice(0, 12) + '...' : d })()}
                 </span>
               )
             })
