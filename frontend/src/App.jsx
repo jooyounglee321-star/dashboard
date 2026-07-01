@@ -84,16 +84,17 @@ export default function App() {
     }).catch(() => {})
   }, [])
 
-  // 세션당 한 번만 정기지출 자동 등록
+  // 월별 1회 정기지출 자동 등록 (월이 바뀌면 재실행, 500 실패 시 재시도)
   useEffect(() => {
     if (!hasValidToken()) return
-    if (sessionStorage.getItem('recurring_applied')) return
+    const ym = new Date().toISOString().slice(0, 7)
+    if (sessionStorage.getItem(`recurring_applied_${ym}`)) return
     const token = localStorage.getItem('token')
     fetch('/api/expense/recurring/apply', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + token },
-    }).then(() => {
-      sessionStorage.setItem('recurring_applied', '1')
+    }).then(r => {
+      if (r.ok) sessionStorage.setItem(`recurring_applied_${ym}`, '1')
     }).catch(() => {})
   }, [])
 
