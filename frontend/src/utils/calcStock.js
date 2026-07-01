@@ -20,5 +20,5 @@ export function calcStock(s, priceMap) {
   const val      = cur * holdQty
   const evalPL   = avgCost > 0 ? (cur - avgCost) * holdQty : null
   const evalPct  = avgCost > 0 ? ((cur - avgCost) / avgCost * 100) : null
-  return { holdQty, avgCost, cur, chP, val, evalPL, evalPct, realizedPL, totalSellQty, isLive, marketState }
+  return { holdQty, avgCost, cur, chP, val, evalPL, evalPct, realizedPL, totalSellQty, isLive, hasPrice, marketState }
 }
