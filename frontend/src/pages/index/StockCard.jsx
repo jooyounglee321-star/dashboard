@@ -256,7 +256,7 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
       } else {
         const liveBadgeM = marketBadge
           ? <span style={{ fontSize: '0.5rem', background: marketBadge.bg, color: '#fff', padding: '0.04rem 0.3rem', borderRadius: 6, marginLeft: '0.2rem' }}>{marketBadge.label}</span>
-          : <span style={{ fontSize: '0.5rem', background: '#a89880', color: '#fff', padding: '0.04rem 0.3rem', borderRadius: 6, marginLeft: '0.2rem' }}>{t(lang, 'stockAvgBadge')}</span>
+          : null
         return (
           <li key={s.ticker} className="m-stock-item">
             <div>
