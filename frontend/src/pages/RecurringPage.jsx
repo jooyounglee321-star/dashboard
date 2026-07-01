@@ -99,6 +99,11 @@ export default function RecurringPage({ onClose }) {
       apiGet(`/api/expense/categories?lang=${lang}`),
       apiGet(`/api/income/categories?lang=${lang}`),
     ]).then(([recList, catList, incCatList]) => {
+      recList.sort((a, b) => {
+        const ca = (a.category_name || ''); const cb = (b.category_name || '')
+        if (ca !== cb) return ca.localeCompare(cb)
+        return (a.subcategory_name || '').localeCompare(b.subcategory_name || '')
+      })
       setItems(recList)
       setCats(catList)
       setIncomeCats(incCatList)

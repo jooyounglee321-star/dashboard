@@ -345,8 +345,10 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
     setLoading(true)
     const data = await apiFetch(`/api/expense?date=${date}&lang=${lang}`).catch(() => [])
     const sorted = [...(data || [])].sort((a, b) => {
-      if (a.type === b.type) return 0
-      return a.type === 'income' ? -1 : 1
+      if (a.type !== b.type) return a.type === 'income' ? -1 : 1
+      const ca = (a.category_name || ''); const cb = (b.category_name || '')
+      if (ca !== cb) return ca.localeCompare(cb)
+      return (a.subcategory_name || '').localeCompare(b.subcategory_name || '')
     })
     setExpenses(sorted)
     setLoading(false)
