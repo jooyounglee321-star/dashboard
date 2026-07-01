@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { t } from '../i18n'
+import SharedCalendar from '../components/SharedCalendar'
 
 const MORD = ['아침', '점심', '저녁', '간식']
 const MEAL_EMOJI = { '아침': '🌅', '점심': '☀️', '저녁': '🌙', '간식': '🍎' }
@@ -29,7 +30,6 @@ function monthLabel(year, month, lang) {
   return lang === 'ko' ? `${year}년 ${month}월` : `${MONTH_EN[month - 1]} ${year}`
 }
 
-// ── 날짜별 상세 모달 ─────────────────────────────────────────────────────────
 function DayDetailModal({ date, dateMap, analysisMap, lang, onClose }) {
   const mealLabel = key => (lang === 'en' ? MEAL_LABEL_EN : MEAL_LABEL_KO)[key] ?? key
   const items    = dateMap[date] || []
@@ -54,7 +54,6 @@ function DayDetailModal({ date, dateMap, analysisMap, lang, onClose }) {
         style={{ background: 'var(--card-bg, #fff)', borderRadius: 16, width: '100%', maxWidth: 480, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 8px 40px rgba(0,0,0,0.22)' }}
         onClick={e => e.stopPropagation()}
       >
-        {/* 모달 헤더 */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.2rem', borderBottom: '1px solid var(--border, #e5e7eb)', position: 'sticky', top: 0, background: 'var(--card-bg, #fff)', zIndex: 1 }}>
           <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--ink, #111)' }}>
             {formatDateHeader(date, lang)}
@@ -70,7 +69,6 @@ function DayDetailModal({ date, dateMap, analysisMap, lang, onClose }) {
         </div>
 
         <div style={{ padding: '1rem 1.2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {/* 식단 목록 */}
           <div>
             <div style={{ fontSize: '0.74rem', fontWeight: 600, color: 'var(--ink2, #6b7280)', marginBottom: '0.5rem' }}>
               🍽 {t(lang, 'diet.mealsOfDay')}
@@ -94,7 +92,6 @@ function DayDetailModal({ date, dateMap, analysisMap, lang, onClose }) {
             )}
           </div>
 
-          {/* 분석 결과 */}
           {analysis && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
               {analysis.nutrition_analysis && (
@@ -137,141 +134,6 @@ function DayDetailModal({ date, dateMap, analysisMap, lang, onClose }) {
   )
 }
 
-// ── 달력 뷰 ─────────────────────────────────────────────────────────────────
-function CalendarView({ year, month, dateMap, analysisMap, lang, onDayClick }) {
-  const mealLabel = key => (lang === 'en' ? MEAL_LABEL_EN : MEAL_LABEL_KO)[key] ?? key
-  // 접속 기기의 로컬 날짜 기준
-  const _now = new Date()
-  const today = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`
-  const weekdays = lang === 'ko' ? WEEKDAY_KO : WEEKDAY_EN
-
-  const firstDay  = new Date(year, month - 1, 1).getDay()   // 0=일
-  const daysInMonth = new Date(year, month, 0).getDate()
-
-  // 달력 셀 배열: null(빈칸) 또는 날짜 숫자
-  const cells = []
-  for (let i = 0; i < firstDay; i++) cells.push(null)
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d)
-  // 마지막 행 채우기
-  while (cells.length % 7 !== 0) cells.push(null)
-
-  function cellDate(d) {
-    return `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-  }
-
-  // 날짜 칸의 식단 미리보기: 아침/점심/저녁/간식 4줄 고정 (저장된 것만 표시)
-  function getPreview(d) {
-    const dateStr = cellDate(d)
-    const items = dateMap[dateStr]
-    if (!items?.length) return { lines: [] }
-    const lines = []
-    for (const meal of MORD) {
-      const group = items.filter(i => i.meal_type === meal)
-      if (!group.length) continue
-      const content = group.map(i => i.content).join(', ')
-      const trimmed = content.length > 11 ? content.slice(0, 11) + '…' : content
-      lines.push(`${MEAL_EMOJI[meal]} ${trimmed}`)
-    }
-    return { lines }
-  }
-
-  return (
-    <div>
-      {/* 요일 헤더 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '2px solid var(--border, #e5e7eb)', marginBottom: 0 }}>
-        {weekdays.map((wd, i) => (
-          <div key={i} style={{
-            textAlign: 'center', padding: '0.4rem 0', fontSize: '0.72rem', fontWeight: 700,
-            color: i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : 'var(--ink2, #6b7280)',
-          }}>
-            {wd}
-          </div>
-        ))}
-      </div>
-
-      {/* 날짜 그리드 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
-        {cells.map((d, idx) => {
-          if (d === null) {
-            return (
-              <div key={`empty-${idx}`} style={{
-                height: 130,
-                borderRight: '0.5px solid var(--color-border-tertiary, #e5e7eb)',
-                borderBottom: '0.5px solid var(--color-border-tertiary, #e5e7eb)',
-                background: 'var(--color-background-primary, #fff)',
-                opacity: 0.4,
-                ...(idx % 7 === 0 ? { borderLeft: '0.5px solid var(--color-border-tertiary, #e5e7eb)' } : {}),
-              }} />
-            )
-          }
-
-          const dateStr  = cellDate(d)
-          const hasData  = !!dateMap[dateStr]?.length
-          const hasAnal  = !!analysisMap[dateStr]
-          const isToday  = dateStr === today
-          const dow      = (firstDay + d - 1) % 7  // 0=일,6=토
-          const isSun    = dow === 0
-          const isSat    = dow === 6
-          const { lines: preview } = getPreview(d)
-
-          return (
-            <div
-              key={d}
-              onClick={() => hasData && onDayClick(dateStr)}
-              style={{
-                height: 130,
-                borderRight: '0.5px solid var(--color-border-tertiary, #e5e7eb)',
-                borderBottom: '0.5px solid var(--color-border-tertiary, #e5e7eb)',
-                ...(idx % 7 === 0 ? { borderLeft: '0.5px solid var(--color-border-tertiary, #e5e7eb)' } : {}),
-                boxSizing: 'border-box',
-                padding: '0.28rem 0.3rem 0.2rem',
-                background: 'var(--color-background-primary, #fff)',
-                cursor: hasData ? 'pointer' : 'default',
-                outline: isToday ? '2px solid #3b82f6' : 'none',
-                outlineOffset: '-2px',
-                borderRadius: isToday ? 4 : 0,
-                transition: 'background 0.1s',
-                position: 'relative',
-                overflow: 'hidden',
-              }}
-              onMouseEnter={e => { if (hasData) e.currentTarget.style.background = 'var(--bg2, #f0f4ff)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'var(--color-background-primary, #fff)' }}
-            >
-              {/* 날짜 숫자 + 분석 뱃지 */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.18rem' }}>
-                <span style={{
-                  fontSize: '0.72rem', fontWeight: isToday ? 700 : 500,
-                  color: isSun ? '#ef4444' : isSat ? '#3b82f6' : 'var(--ink, #374151)',
-                  lineHeight: 1,
-                }}>
-                  {d}
-                </span>
-                {hasAnal && (
-                  <span style={{ fontSize: '0.52rem', background: 'rgba(124,58,237,0.12)', color: '#5b21b6', borderRadius: 4, padding: '0.06rem 0.28rem', fontWeight: 700, lineHeight: 1.4 }}>
-                    📊
-                  </span>
-                )}
-              </div>
-
-              {/* 식단 미리보기 (아침/점심/저녁/간식 최대 4줄) */}
-              {preview.map((line, i) => (
-                <div key={i} style={{
-                  fontSize: '0.6rem', color: 'var(--ink2, #6b7280)',
-                  lineHeight: 1.3, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
-                  marginBottom: '0.05rem',
-                }}>
-                  {line}
-                </div>
-              ))}
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-// ── 메인 페이지 ──────────────────────────────────────────────────────────────
 export default function DietStatsPage() {
   const lang     = getLang()
   const navigate = useNavigate()
@@ -283,8 +145,8 @@ export default function DietStatsPage() {
   const [analyses,  setAnalyses]  = useState([])
   const [loading,   setLoading]   = useState(false)
   const [openDates, setOpenDates] = useState({})
-  const [viewMode,  setViewMode]  = useState('calendar')   // 'calendar' | 'list'
-  const [selectedDate, setSelectedDate] = useState(null)   // 달력 클릭 시에만 모달 표시
+  const [viewMode,  setViewMode]  = useState('calendar')
+  const [selectedDate, setSelectedDate] = useState(null)
 
   useEffect(() => { fetchMonthData() }, [year, month]) // eslint-disable-line
 
@@ -307,7 +169,6 @@ export default function DietStatsPage() {
     setLoading(false)
   }
 
-  // 날짜별 맵
   const dateMap = {}
   diets.forEach(d => {
     if (!dateMap[d.date]) dateMap[d.date] = []
@@ -333,30 +194,28 @@ export default function DietStatsPage() {
   const mealLabel = key => (lang === 'en' ? MEAL_LABEL_EN : MEAL_LABEL_KO)[key] ?? key
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--color-background-tertiary, #f1f5f9)', fontFamily: "'Inter','Noto Sans KR',sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', fontFamily: "'Inter','Noto Sans KR',sans-serif" }}>
 
-      {/* ── 헤더 ── */}
       <div style={{
         position: 'sticky', top: 0, zIndex: 100,
-        background: 'var(--card-bg, #fff)',
-        borderBottom: '1px solid var(--border, #e5e7eb)',
+        background: 'var(--card)',
+        borderBottom: '1px solid var(--border)',
         padding: '0.85rem 1.2rem',
         display: 'flex', alignItems: 'center', gap: '0.75rem',
       }}>
         <button type="button" onClick={() => navigate('/')}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', color: 'var(--ink2, #6b7280)', padding: 0 }}>
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', color: 'var(--ink2)', padding: 0 }}>
           ← {lang === 'en' ? 'Back' : '뒤로'}
         </button>
-        <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--ink, #111)' }}>
+        <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--ink)' }}>
           🥗 {t(lang, 'diet.statsTitle')}
         </span>
-        {/* 뷰 토글 */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.3rem' }}>
           {[['calendar', '📅'], ['list', '📋']].map(([mode, icon]) => (
             <button key={mode} type="button" onClick={() => setViewMode(mode)}
               style={{
                 padding: '0.28rem 0.65rem', fontSize: '0.78rem', cursor: 'pointer',
-                border: `1.5px solid ${viewMode === mode ? 'var(--accent, #2563eb)' : 'var(--border, #e5e7eb)'}`,
+                border: `1.5px solid ${viewMode === mode ? 'var(--accent, #2563eb)' : 'var(--border)'}`,
                 borderRadius: 7, background: viewMode === mode ? 'var(--accent, #2563eb)' : 'transparent',
                 color: viewMode === mode ? '#fff' : 'var(--ink3)', fontFamily: 'inherit',
               }}>
@@ -366,35 +225,52 @@ export default function DietStatsPage() {
         </div>
       </div>
 
-      {/* ── 년/월 선택기 ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', padding: '0.85rem 1rem' }}>
-        <button type="button" onClick={prevMonth} style={navBtnStyle}>←</button>
-        <span style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--ink, #111)', minWidth: 110, textAlign: 'center' }}>
-          {monthLabel(year, month, lang)}
-        </span>
-        <button type="button" onClick={nextMonth} style={navBtnStyle}>→</button>
-      </div>
-
-      {/* ── 본문 ── */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--ink2, #6b7280)', fontSize: '0.9rem' }}>
+        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--ink2)', fontSize: '0.9rem' }}>
           {t(lang, 'common.loading')}
         </div>
       ) : viewMode === 'calendar' ? (
-        /* ── 달력 뷰 ── */
-        <div style={{ maxWidth: 780, margin: '0 auto', padding: '0 0.5rem 2rem', background: 'var(--color-background-primary, #fff)', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--color-border-tertiary, #e5e7eb)' }}>
-          <CalendarView
-            year={year} month={month}
-            dateMap={dateMap} analysisMap={analysisMap}
-            lang={lang}
+        <div style={{ maxWidth: 800, margin: '0 auto', padding: '0.75rem 0.75rem 2rem', background: 'var(--card)', borderRadius: 12, border: '1px solid var(--border)', overflow: 'auto' }}>
+          <SharedCalendar
+            year={year} month={month} lang={lang}
+            onPrevMonth={prevMonth} onNextMonth={nextMonth}
             onDayClick={date => setSelectedDate(date)}
+            isCellClickable={dateStr => !!dateMap[dateStr]?.length}
+            cellHeight={110}
+            minWidth="560px"
+            renderCell={(dateStr, _day, _meta) => {
+              const hasAnal = !!analysisMap[dateStr]
+              const items   = dateMap[dateStr]
+              if (!items?.length) return null
+              const lines = []
+              for (const meal of MORD) {
+                const group = items.filter(i => i.meal_type === meal)
+                if (!group.length) continue
+                const content = group.map(i => i.content).join(', ')
+                const trimmed = content.length > 11 ? content.slice(0, 11) + '...' : content
+                lines.push(`${MEAL_EMOJI[meal]} ${trimmed}`)
+              }
+              return (
+                <>
+                  {hasAnal && (
+                    <span style={{ position: 'absolute', top: '0.28rem', right: '0.35rem', fontSize: '0.52rem', background: 'rgba(124,58,237,0.12)', color: '#5b21b6', borderRadius: 4, padding: '0.06rem 0.28rem', fontWeight: 700, lineHeight: 1.4 }}>
+                      📊
+                    </span>
+                  )}
+                  {lines.map((line, i) => (
+                    <div key={i} style={{ fontSize: '0.6rem', color: 'var(--ink2)', lineHeight: 1.3, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', marginBottom: '0.05rem' }}>
+                      {line}
+                    </div>
+                  ))}
+                </>
+              )
+            }}
           />
         </div>
       ) : (
-        /* ── 리스트 뷰 ── */
         <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 1rem 2rem' }}>
           {sortedDates.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--ink2, #6b7280)', fontSize: '0.9rem' }}>
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--ink2)', fontSize: '0.9rem' }}>
               {t(lang, 'dietEmpty')}
             </div>
           ) : (
@@ -413,9 +289,9 @@ export default function DietStatsPage() {
                 catch { parsedRecs = [analysis.recommendations] }
               }
               return (
-                <div key={date} style={{ background: 'var(--card-bg, #fff)', border: '1px solid var(--border, #e5e7eb)', borderRadius: 14, marginBottom: '1rem', overflow: 'hidden' }}>
-                  <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border, #e5e7eb)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink, #111)' }}>
+                <div key={date} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, marginBottom: '1rem', overflow: 'hidden' }}>
+                  <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)' }}>
                       {formatDateHeader(date, lang)}
                     </span>
                     {!analysis ? (
@@ -429,16 +305,16 @@ export default function DietStatsPage() {
                     )}
                   </div>
                   <div style={{ padding: '0.75rem 1rem' }}>
-                    <div style={{ fontSize: '0.74rem', fontWeight: 600, color: 'var(--ink2, #6b7280)', marginBottom: '0.5rem' }}>
+                    <div style={{ fontSize: '0.74rem', fontWeight: 600, color: 'var(--ink2)', marginBottom: '0.5rem' }}>
                       🍽 {t(lang, 'diet.mealsOfDay')}
                     </div>
                     {MORD.filter(m => grouped[m]?.length).map(m => (
                       <div key={m} style={{ marginBottom: '0.4rem' }}>
-                        <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--ink, #374151)', marginRight: '0.4rem' }}>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--ink)', marginRight: '0.4rem' }}>
                           {MEAL_EMOJI[m]} {mealLabel(m)}
                         </span>
                         {grouped[m].map((item, i) => (
-                          <span key={item.id} style={{ fontSize: '0.78rem', color: 'var(--ink2, #6b7280)' }}>
+                          <span key={item.id} style={{ fontSize: '0.78rem', color: 'var(--ink2)' }}>
                             {item.content}{item.calories != null ? ` (${item.calories}kcal)` : ''}{i < grouped[m].length - 1 ? ', ' : ''}
                           </span>
                         ))}
@@ -457,14 +333,14 @@ export default function DietStatsPage() {
                           {analysis.nutrition_analysis && (
                             <div>
                               <div style={{ fontSize: '0.74rem', fontWeight: 600, color: '#5b21b6', marginBottom: '0.25rem' }}>📊 {t(lang, 'diet.nutritionAnalysis')}</div>
-                              <p style={{ fontSize: '0.78rem', color: 'var(--ink2, #6b7280)', margin: 0, lineHeight: 1.6 }}>{analysis.nutrition_analysis}</p>
+                              <p style={{ fontSize: '0.78rem', color: 'var(--ink2)', margin: 0, lineHeight: 1.6 }}>{analysis.nutrition_analysis}</p>
                             </div>
                           )}
                           {parsedRecs.length > 0 && (
                             <div>
                               <div style={{ fontSize: '0.74rem', fontWeight: 600, color: '#5b21b6', marginBottom: '0.25rem' }}>🍽️ {t(lang, 'diet.menuRecommendation')}</div>
                               <ul style={{ margin: 0, paddingLeft: '1rem', display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                                {parsedRecs.map((rec, i) => <li key={i} style={{ fontSize: '0.78rem', color: 'var(--ink2, #6b7280)', lineHeight: 1.5 }}>{rec}</li>)}
+                                {parsedRecs.map((rec, i) => <li key={i} style={{ fontSize: '0.78rem', color: 'var(--ink2)', lineHeight: 1.5 }}>{rec}</li>)}
                               </ul>
                             </div>
                           )}
@@ -485,7 +361,6 @@ export default function DietStatsPage() {
         </div>
       )}
 
-      {/* ── 날짜 상세 모달 ── */}
       {selectedDate && (
         <DayDetailModal
           date={selectedDate}
@@ -497,15 +372,4 @@ export default function DietStatsPage() {
       )}
     </div>
   )
-}
-
-const navBtnStyle = {
-  background: 'none',
-  border: '1px solid var(--border, #e5e7eb)',
-  borderRadius: 8,
-  padding: '0.3rem 0.75rem',
-  cursor: 'pointer',
-  fontFamily: "'Inter','Noto Sans KR',sans-serif",
-  fontSize: '0.85rem',
-  color: 'var(--ink, #374151)',
 }
