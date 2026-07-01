@@ -343,7 +343,11 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
   const loadExpenses = useCallback(async (date = curDate) => {
     setLoading(true)
     const data = await apiFetch(`/api/expense?date=${date}&lang=${lang}`).catch(() => [])
-    setExpenses(data)
+    const sorted = [...(data || [])].sort((a, b) => {
+      if (a.type === b.type) return 0
+      return a.type === 'income' ? -1 : 1
+    })
+    setExpenses(sorted)
     setLoading(false)
   }, [lang, curDate]) // eslint-disable-line react-hooks/exhaustive-deps
 
