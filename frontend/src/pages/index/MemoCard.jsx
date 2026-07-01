@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { t } from './i18n'
 import { apiFetch } from '../../api'
+import SharedCalendar from '../../components/SharedCalendar'
 
 const MAX_MEMOS = 4
 const MAX_CHARS = 500
@@ -39,16 +40,6 @@ function parseMemo(content) {
   return { mood: '', text: content }
 }
 
-const ML = {
-  ko: ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],
-  en: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
-}
-
-const NAV_BTN = {
-  background: 'var(--card)', border: '1px solid var(--border)',
-  borderRadius: '6px', color: '#c8d6e5', cursor: 'pointer', fontSize: '1rem',
-  padding: '0.25rem 0.6rem', lineHeight: 1,
-}
 
 // ── 메모 입력 폼 컴포넌트 ──────────────────────────────────────
 function MemoForm({ lang, initMood = '', initText = '', onSave, onCancel, isMobile }) {
@@ -330,9 +321,6 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
   function closeCalendar() { setCalOpen(false); setDayDetail(null) }
 
   // 달력 계산
-  const mLabels     = ML[lang] || ML.en
-  const daysInMonth = new Date(calYear, calMonth, 0).getDate()
-  const firstDow    = new Date(calYear, calMonth - 1, 1).getDay()
   // 날짜별 메모 배열로 그룹핑 (복수 메모 지원)
   const dayMemoMap  = {}
   allMemos.forEach(m => {
@@ -343,7 +331,6 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
       dayMemoMap[day].push(m)
     }
   })
-  const todayStr = todayKey()
 
   const hdr      = isMobile ? 'm-card-header' : 'card-header'
   const titleCls = isMobile ? 'm-card-title'  : 'card-title'
@@ -445,136 +432,53 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
       ══════════════════════════════════════════════ */}
       {calOpen && (
         <div
-          style={{
-            position: 'fixed', inset: 0, zIndex: 1000,
-            background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
-          }}
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
           onClick={e => { if (e.target === e.currentTarget) closeCalendar() }}
         >
-          <div style={{
-            background: 'var(--card)', borderRadius: '1.25rem',
-            border: '1px solid var(--border)',
-            width: '100%', maxWidth: '780px', maxHeight: '90vh',
-            display: 'flex', flexDirection: 'column', overflow: 'hidden',
-          }}>
-            {/* 모달 헤더 */}
-            <div style={{
-              padding: '0.9rem 1.25rem 0.7rem',
-              borderBottom: '1px solid rgba(255,255,255,0.08)',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <button style={NAV_BTN} onClick={() => {
-                  setDayDetail(null)
-                  if (calMonth === 1) { setCalYear(y => y - 1); setCalMonth(12) }
-                  else setCalMonth(m => m - 1)
-                }}>‹</button>
-                <span style={{ fontWeight: 700, fontSize: '1rem', minWidth: '8rem', textAlign: 'center' }}>
-                  {calYear}{lang === 'ko' ? '년 ' : ' '}{mLabels[calMonth - 1]}
-                </span>
-                <button style={NAV_BTN} onClick={() => {
-                  setDayDetail(null)
-                  if (calMonth === 12) { setCalYear(y => y + 1); setCalMonth(1) }
-                  else setCalMonth(m => m + 1)
-                }}>›</button>
-              </div>
-              <span style={{ fontWeight: 600, fontSize: '0.95rem', color: '#c8d6e5' }}>
-                {t(lang, 'memoCalTitle')}
+          <div style={{ background: 'var(--card)', borderRadius: '1.25rem', border: '1px solid var(--border)', width: '100%', maxWidth: '780px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 8px 40px rgba(0,0,0,0.15)' }}>
+            <div style={{ padding: '0.9rem 1.25rem 0.7rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--ink)' }}>
+                📅 {t(lang, 'memoCalTitle')}
               </span>
               <button onClick={closeCalendar} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', color: 'var(--ink3)', lineHeight: 1 }}>×</button>
             </div>
-
-            {/* 달력 그리드 */}
             <div style={{ overflowY: 'auto', flex: 1, padding: '1rem 1.25rem 1.25rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', minWidth: '420px' }}>
-                {(lang === 'ko'
-                  ? ['일','월','화','수','목','금','토']
-                  : ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
-                ).map((d, i) => (
-                  <div key={d} style={{
-                    textAlign: 'center', fontSize: '0.72rem', fontWeight: 600, padding: '0.2rem 0',
-                    color: i === 0 ? '#ef4444' : i === 6 ? '#60a5fa' : '#9aacbf',
-                  }}>{d}</div>
-                ))}
-
-                {Array.from({ length: firstDow }).map((_, i) => (
-                  <div key={`e${i}`} style={{ height: '90px' }} />
-                ))}
-
-                {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
-                  const dow      = (firstDow + day - 1) % 7
-                  const dateStr  = `${calYear}-${pad2(calMonth)}-${pad2(day)}`
-                  const memos    = dayMemoMap[day] || []   // 배열
-                  const first    = memos[0] || null
-                  const pp       = first ? parseMemo(first.content) : null
-                  const extraCnt = memos.length - 1        // 첫 번째 이후 추가 개수
-                  const isToday    = dateStr === todayStr
-                  const isSun      = dow === 0
-                  const isSat      = dow === 6
+              <SharedCalendar
+                year={calYear} month={calMonth} lang={lang}
+                onPrevMonth={() => { setDayDetail(null); if (calMonth === 1) { setCalYear(y => y - 1); setCalMonth(12) } else setCalMonth(m => m - 1) }}
+                onNextMonth={() => { setDayDetail(null); if (calMonth === 12) { setCalYear(y => y + 1); setCalMonth(1) } else setCalMonth(m => m + 1) }}
+                onDayClick={dateStr => { const day = parseInt(dateStr.slice(8), 10); const memos = dayMemoMap[day] || []; if (memos.length) setDayDetail({ dateStr, memos }) }}
+                isCellClickable={dateStr => { const day = parseInt(dateStr.slice(8), 10); return !!(dayMemoMap[day]?.length) }}
+                renderCell={(dateStr, day, _meta) => {
+                  const memos = dayMemoMap[day] || []
+                  const first = memos[0] || null
+                  const pp = first ? parseMemo(first.content) : null
+                  const extraCnt = memos.length - 1
                   const isSelected = dayDetail?.dateStr === dateStr
+                  if (!pp) return null
                   return (
-                    <div
-                      key={day}
-                      onClick={() => first ? setDayDetail({ dateStr, memos }) : null}
-                      style={{
-                        height: '90px', borderRadius: '8px', padding: '5px 7px',
-                        background: isSelected ? 'rgba(100,150,255,0.12)' : 'rgba(255,255,255,0.04)',
-                        border: isToday ? '2px solid #3b82f6' : isSelected ? '1px solid rgba(100,150,255,0.4)' : '1px solid rgba(255,255,255,0.07)',
-                        cursor: first ? 'pointer' : 'default',
-                        display: 'flex', flexDirection: 'column', gap: '2px',
-                        transition: 'background 0.12s', boxSizing: 'border-box', overflow: 'hidden',
-                      }}
-                      onMouseEnter={e => { if (first) e.currentTarget.style.background = 'rgba(255,255,255,0.09)' }}
-                      onMouseLeave={e => { if (first) e.currentTarget.style.background = isSelected ? 'rgba(100,150,255,0.12)' : 'rgba(255,255,255,0.04)' }}
-                    >
-                      <span style={{ fontSize: '0.75rem', fontWeight: isToday ? 700 : 500, flexShrink: 0, color: isSun ? '#ef4444' : isSat ? '#60a5fa' : '#c8d6e5' }}>{day}</span>
-                      {pp && (
-                        <>
-                          {pp.mood && <span style={{ fontSize: '1rem', lineHeight: 1, flexShrink: 0 }}>{pp.mood}</span>}
-                          {pp.text && (
-                            <span style={{
-                              fontSize: '0.65rem', color: 'var(--ink3)', lineHeight: 1.3,
-                              overflow: 'hidden', wordBreak: 'break-all',
-                              display: '-webkit-box', WebkitLineClamp: extraCnt > 0 ? 1 : 2,
-                              WebkitBoxOrient: 'vertical',
-                            }}>
-                              {pp.text.slice(0, 30)}{pp.text.length > 30 ? '…' : ''}
-                            </span>
-                          )}
-                          {extraCnt > 0 && (
-                            <span style={{ fontSize: '0.6rem', color: 'var(--accent)', fontWeight: 600, flexShrink: 0 }}>
-                              +{extraCnt}{lang === 'ko' ? '개 더' : ' more'}
-                            </span>
-                          )}
-                        </>
-                      )}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, overflow: 'hidden', ...(isSelected ? { background: 'rgba(59,130,246,0.08)', borderRadius: 4 } : {}) }}>
+                      {pp.mood && <span style={{ fontSize: '1rem', lineHeight: 1, flexShrink: 0 }}>{pp.mood}</span>}
+                      {pp.text && <span style={{ fontSize: '0.62rem', color: 'var(--ink2)', lineHeight: 1.3, overflow: 'hidden', wordBreak: 'break-all', display: '-webkit-box', WebkitLineClamp: extraCnt > 0 ? 1 : 2, WebkitBoxOrient: 'vertical' }}>{pp.text.slice(0, 30)}{pp.text.length > 30 ? '...' : ''}</span>}
+                      {extraCnt > 0 && <span style={{ fontSize: '0.6rem', color: 'var(--accent)', fontWeight: 600 }}>+{extraCnt}{lang === 'ko' ? '개 더' : ' more'}</span>}
                     </div>
                   )
-                })}
-              </div>
-
+                }}
+              />
               {dayDetail && (
-                <div style={{
-                  marginTop: '1rem', background: 'var(--card)',
-                  border: '1px solid var(--border)', borderRadius: '0.9rem', padding: '1rem 1.2rem',
-                }}>
+                <div style={{ marginTop: '1rem', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '0.9rem', padding: '1rem 1.2rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.8rem' }}>
-                    <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#c8d6e5' }}>{dayDetail.dateStr}</span>
+                    <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--ink)' }}>{dayDetail.dateStr}</span>
                     <button onClick={() => setDayDetail(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink3)', fontSize: '1.1rem' }}>×</button>
                   </div>
                   {dayDetail.memos.map((memo, idx) => {
                     const pp = parseMemo(memo.content)
                     return (
                       <div key={memo.id}>
-                        {idx > 0 && (
-                          <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', margin: '0.7rem 0' }} />
-                        )}
+                        {idx > 0 && <div style={{ borderTop: '1px solid var(--border)', margin: '0.7rem 0' }} />}
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
                           {pp.mood && <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>{pp.mood}</span>}
-                          <p style={{ margin: 0, fontSize: '0.85rem', color: '#c8d6e5', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                            {pp.text || ''}
-                          </p>
+                          <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--ink)', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{pp.text || ''}</p>
                         </div>
                       </div>
                     )
