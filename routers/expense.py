@@ -1263,9 +1263,10 @@ def apply_recurring(
 
     import calendar as _cal
     for rec in actives:
+        dom = rec.day_of_month if rec.day_of_month is not None else 1
         # day_of_month=0 → 말일, 그 외는 월말 클램핑
         last_day = _cal.monthrange(year, month)[1]
-        target_day = last_day if rec.day_of_month == 0 else min(rec.day_of_month, last_day)
+        target_day = last_day if dom == 0 else min(dom, last_day)
         target_date = Date(year, month, target_day)
 
         # 중복 체크: recurring_id 메모 패턴으로 검사
