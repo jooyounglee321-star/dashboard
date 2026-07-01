@@ -184,12 +184,18 @@ def _migrate_add_user_id():
             except Exception as e:
                 logger.warning("[MIGRATE] uq_snapshot_date 삭제 실패: %s", e)
             try:
-                conn.execute(text(
-                    f"ALTER TABLE {snap} ADD CONSTRAINT IF NOT EXISTS uq_user_snapshot_date "
-                    f"UNIQUE (user_id, snapshot_date)"
-                ))
-                conn.commit()
-                logger.info("[MIGRATE] uq_user_snapshot_date 제약 추가 (이미 있으면 무시)")
+                exists = conn.execute(text(
+                    "SELECT 1 FROM pg_constraint WHERE conname = 'uq_user_snapshot_date'"
+                )).fetchone()
+                if not exists:
+                    conn.execute(text(
+                        f"ALTER TABLE {snap} ADD CONSTRAINT uq_user_snapshot_date "
+                        f"UNIQUE (user_id, snapshot_date)"
+                    ))
+                    conn.commit()
+                    logger.info("[MIGRATE] uq_user_snapshot_date 제약 추가")
+                else:
+                    logger.info("[MIGRATE] uq_user_snapshot_date 제약 이미 존재, 스킵")
             except Exception as e:
                 logger.warning("[MIGRATE] uq_user_snapshot_date 추가 실패: %s", e)
                 try:
