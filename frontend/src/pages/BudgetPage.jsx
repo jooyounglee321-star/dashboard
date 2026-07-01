@@ -235,7 +235,13 @@ function DailyTab({ lang, currency, toDisplay }) {
     apiGet(`/api/expense?date=${date}&lang=${lang}`)
       .then(d => {
         if (gen !== loadGenRef.current) return // 더 최신 요청이 생겼으면 결과 버림
-        setItems(d || [])
+        const raw = d || []
+        raw.sort((a, b) => {
+          const ca = (a.category_name || ''); const cb = (b.category_name || '')
+          if (ca !== cb) return ca.localeCompare(cb)
+          return (a.subcategory_name || '').localeCompare(b.subcategory_name || '')
+        })
+        setItems(raw)
       })
       .catch(err => {
         if (gen !== loadGenRef.current) return
