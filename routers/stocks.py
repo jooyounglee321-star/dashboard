@@ -3,8 +3,6 @@ import asyncio
 import datetime as dt
 import logging
 import time
-from datetime import datetime
-import pytz
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 
