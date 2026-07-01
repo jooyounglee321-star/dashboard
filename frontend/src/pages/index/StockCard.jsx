@@ -196,7 +196,8 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
         if (!hasPrice) return null
         if (marketState === 'REGULAR') return { label: 'LIVE', bg: '#4a7c59' }
         if (marketState === 'PRE')     return { label: 'PRE',  bg: '#2563eb' }
-        if (marketState === 'POST')    return { label: 'AFTER', bg: '#7c3aed' }
+        if (marketState === 'POST')    return { label: 'AFTER',  bg: '#7c3aed' }
+        if (marketState === 'CLOSED')  return { label: 'CLOSED', bg: '#6b7280' }
         return null
       })()
       const liveBadge = marketBadge
