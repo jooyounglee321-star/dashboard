@@ -693,7 +693,7 @@ function DailyTab({ lang, currency, toDisplay }) {
                               {it.category_name || '–'}
                               {it.subcategory_name && <span style={{ color: 'var(--ink3)', fontWeight: 400 }}> › {it.subcategory_name}</span>}
                             </div>
-                            {it.description && <div style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>{it.description}</div>}
+                            {it.description && <div style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>{it.description.replace(/\[R#\d+\]\s*/g, '').trim()}</div>}
                           </div>
                           <div style={{ textAlign: 'right', flexShrink: 0 }}>
                             <div style={{ fontSize: '1rem', fontWeight: 700, color: (it.type || 'expense') === 'income' ? '#60c080' : '#e8a060' }}>
@@ -1153,7 +1153,7 @@ function MonthlyTab({ lang, currency, toDisplay }) {
                                   {it.subcategory_icon && <span className="bp-cat-icon">{it.subcategory_icon}</span>}
                                   {it.subcategory_name || <span style={{ color: 'var(--ink3)' }}>–</span>}
                                 </td>
-                                <td style={{ color: 'var(--ink2)' }}>{it.description || <span style={{ color: 'var(--ink3)' }}>–</span>}</td>
+                                <td style={{ color: 'var(--ink2)' }}>{(it.description || '').replace(/\[R#\d+\]\s*/g, '').trim() || <span style={{ color: 'var(--ink3)' }}>–</span>}</td>
                                 <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{fmtAmt(toDisplay(it.total_usd), currency)}</td>
                               </tr>
                             ))}
@@ -1497,7 +1497,7 @@ function YearlyTab({ lang, currency, toDisplay }) {
                                   {it.subcategory_icon && <span className="bp-cat-icon">{it.subcategory_icon}</span>}
                                   {it.subcategory_name || <span style={{ color: 'var(--ink3)' }}>–</span>}
                                 </td>
-                                <td style={{ color: 'var(--ink2)' }}>{it.description || <span style={{ color: 'var(--ink3)' }}>–</span>}</td>
+                                <td style={{ color: 'var(--ink2)' }}>{(it.description || '').replace(/\[R#\d+\]\s*/g, '').trim() || <span style={{ color: 'var(--ink3)' }}>–</span>}</td>
                                 <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{fmtAmt(toDisplay(it.total_usd), currency)}</td>
                               </tr>
                             ))}
