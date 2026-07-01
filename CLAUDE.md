@@ -10,7 +10,8 @@
 
 ## GitHub Push 규칙
 - 작업 완료 후 git add, git commit, git push까지 자동으로 할 것.
-- 커밋 및 푸시 완료 후 사용자에게 완료 사실을 알릴 것.
+- 푸시 후 Railway 배포 완료까지 확인할 것 (health check: GET /api/health → {"status":"ok"} 응답 확인).
+- 배포 확인 완료 후 사용자에게 완료 사실을 알릴 것.
 
 ## 프론트엔드 빌드 규칙
 - React 소스 파일(frontend/src/) 수정 후 반드시 npm run build 실행할 것.
