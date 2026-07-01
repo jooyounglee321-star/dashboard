@@ -86,10 +86,10 @@ class BudgetPatch(BaseModel):
 
 # ── 내부 유틸 ────────────────────────────────────────────────────────────────
 
-def _to_usd(amount: float, currency: str, db: Session) -> tuple[float, float]:
+def _to_usd(amount, currency: str, db: Session) -> tuple[float, float]:
     """금액을 USD로 환산. (converted_usd, applied_rate) 반환."""
     rate = _get_rate(currency, db)
-    return round(amount / rate, 2), rate
+    return round(float(amount) / rate, 2), rate
 
 
 def _cat_dict(cat: ExpenseCategory, lang: str, subs: list[dict]) -> dict:
