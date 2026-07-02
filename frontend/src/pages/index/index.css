@@ -55,7 +55,7 @@
 /* ── 위젯 등장 애니메이션 ── */
 @keyframes widget-in{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 .card{animation:widget-in 0.25s ease;}
-.hero-inner{display:grid;min-height:180px;}
+.hero-inner{display:grid;min-height:180px;gap:8px;padding:8px;}
 .hero-inner--1{grid-template-columns:2fr 1fr;}
 .hero-inner--2{grid-template-columns:1fr 1fr 0.85fr;}
 .hero-inner--3{grid-template-columns:1fr 1fr 1fr 0.85fr;}
@@ -428,7 +428,7 @@
 
 /* ── 하늘 배경 시계 카드 ── */
 .sky-clock-card {
-  border-radius: 0;
+  border-radius: 12px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -521,9 +521,9 @@
   background: linear-gradient(180deg, #03040a 0%, #07091a 40%, #0d1235 70%, #152050 100%);
 }
 .sky-night .sky-clock-orb {
-  width: 24px; height: 24px;
-  background: radial-gradient(circle at 38% 38%, #dde8ff 0%, #a8b8e0 80%);
-  box-shadow: 0 0 10px 3px rgba(160,180,255,.35);
+  width: 26px; height: 26px;
+  background: radial-gradient(circle at 35% 35%, #eef2ff 0%, #c0ccff 60%, #8899e0 100%);
+  box-shadow: 0 0 14px 5px rgba(180,200,255,.45);
   bottom: 22px;
 }
 .sky-night .sky-clock-orb::after {
@@ -534,7 +534,7 @@
   background: #0d1235;
   top: -2px; left: 9px;
 }
-.sky-night .sky-clock-info { background: #080c1a; }
+.sky-night .sky-clock-info { background: #0a0e24; }
 .sky-night .sky-clock-region { color: #5a7ab8; }
-.sky-night .sky-clock-time   { color: #c0ccff; }
+.sky-night .sky-clock-time   { color: #d0d8ff; }
 .sky-night .sky-clock-tz     { color: #2a3a6a; }
