@@ -24,8 +24,14 @@ const SIZE_OPTIONS = [
   { label: 'L', value: 12 },   // 100%
 ]
 
+const ROW_OPTIONS = [
+  { label: '1', value: 1 },
+  { label: '2', value: 2 },
+  { label: '3', value: 3 },
+]
+
 /* ── SortableCard ─────────────────────────────────────────────────────────── */
-export function SortableCard({ id, span, editMode, onSizeChange, children }) {
+export function SortableCard({ id, span, rowSpan = 1, editMode, onSizeChange, onRowSpanChange, children }) {
   const {
     attributes,
     listeners,
@@ -42,6 +48,7 @@ export function SortableCard({ id, span, editMode, onSizeChange, children }) {
         transform:   CSS.Transform.toString(transform),
         transition:  transition || undefined,
         gridColumn:  `span ${Math.min(span, 12)}`,
+        gridRow:     rowSpan > 1 ? `span ${rowSpan}` : undefined,
         position:    'relative',
         opacity:     isDragging ? 0.4 : 1,
         zIndex:      isDragging ? 50 : 'auto',
@@ -66,6 +73,17 @@ export function SortableCard({ id, span, editMode, onSizeChange, children }) {
                 className={`layout-size-btn${span === value ? ' active' : ''}`}
                 onPointerDown={e => e.stopPropagation()}
                 onClick={() => onSizeChange(id, value)}
+              >
+                {label}
+              </button>
+            ))}
+            <span style={{ margin: '0 4px', color: '#aaa', fontSize: '0.7rem' }}>↕</span>
+            {ROW_OPTIONS.map(({ label, value }) => (
+              <button
+                key={`r${label}`}
+                className={`layout-size-btn${rowSpan === value ? ' active' : ''}`}
+                onPointerDown={e => e.stopPropagation()}
+                onClick={() => onRowSpanChange && onRowSpanChange(id, value)}
               >
                 {label}
               </button>
