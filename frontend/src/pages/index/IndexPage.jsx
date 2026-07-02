@@ -382,7 +382,6 @@ export default function IndexPage() {
   function handleSizeChange(id, span) {
     setDraftItems(prev => prev.map(item => item.id === id ? { ...item, span } : item))
   }
-
   function handleRowSpanChange(id, rowSpan) {
     setDraftItems(prev => prev.map(item => item.id === id ? { ...item, rowSpan } : item))
   }
@@ -531,7 +530,7 @@ export default function IndexPage() {
                 key={id}
                 id={id}
                 span={span}
-                rowSpan={rowSpan}
+                rowSpan={rowSpan || 1}
                 editMode={editMode}
                 onSizeChange={handleSizeChange}
                 onRowSpanChange={handleRowSpanChange}
