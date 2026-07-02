@@ -68,19 +68,14 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
       body: JSON.stringify({ date, checked: !isDone }),
     })
     const todoType = todo.todo_type || 'repeat'
-    if (todoType === 'once' && !isDone) {
-      // once 타입 완료 → 즉시 목록에서 제거
-      setTodos(prev => prev.filter(td => td.id !== todo.id))
-    } else {
-      setTodos(prev => prev.map(td =>
-        td.id !== todo.id ? td : {
-          ...td,
-          is_done_dates: isDone
-            ? td.is_done_dates.filter(d => d !== date)
-            : [...td.is_done_dates, date],
-        }
-      ))
-    }
+    setTodos(prev => prev.map(td =>
+      td.id !== todo.id ? td : {
+        ...td,
+        is_done_dates: isDone
+          ? td.is_done_dates.filter(d => d !== date)
+          : [...td.is_done_dates, date],
+      }
+    ))
   }
 
   async function deleteTodo(id) {
