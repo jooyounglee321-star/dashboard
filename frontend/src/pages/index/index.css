@@ -425,3 +425,116 @@
   /* 모바일 사이트 그리드 3열로 축소 */
   .m-sites-grid{grid-template-columns:repeat(3,1fr);}
 }
+
+/* ── 하늘 배경 시계 카드 ── */
+.sky-clock-card {
+  border-radius: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+}
+.sky-clock-bg {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 110px;
+}
+.sky-clock-orb {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  position: absolute;
+  transition: bottom .5s ease;
+}
+.sky-clock-info {
+  padding: 10px 16px 13px;
+  text-align: left;
+}
+.sky-clock-region {
+  font-size: 0.65rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+.sky-clock-time {
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: -.03em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.sky-clock-tz {
+  font-size: 0.6rem;
+  margin-top: 4px;
+  letter-spacing: .06em;
+}
+
+/* 낮 */
+.sky-day .sky-clock-bg {
+  background: linear-gradient(180deg, #1a6fc4 0%, #3d9fe8 30%, #7dcff5 65%, #f9e97a 88%, #fcd46a 100%);
+}
+.sky-day .sky-clock-orb {
+  background: radial-gradient(circle, #ffe869 30%, #ffb820 100%);
+  box-shadow: 0 0 18px 6px rgba(255,220,60,.55), 0 0 40px rgba(255,180,0,.3);
+  bottom: 26px;
+}
+.sky-day .sky-clock-info { background: #1b3050; }
+.sky-day .sky-clock-region { color: #7ab8e8; }
+.sky-day .sky-clock-time   { color: #e8f4ff; }
+.sky-day .sky-clock-tz     { color: #4a7aaa; }
+
+/* 새벽 */
+.sky-dawn .sky-clock-bg {
+  background: linear-gradient(180deg, #0e1a3a 0%, #2a3575 30%, #c05a8a 60%, #f0854a 82%, #fcc17a 100%);
+}
+.sky-dawn .sky-clock-orb {
+  width: 26px; height: 26px;
+  background: radial-gradient(circle, #ffd090 30%, #ff8040 100%);
+  box-shadow: 0 0 14px 5px rgba(255,130,50,.5);
+  bottom: 8px;
+}
+.sky-dawn .sky-clock-info { background: #1a1430; }
+.sky-dawn .sky-clock-region { color: #d89adf; }
+.sky-dawn .sky-clock-time   { color: #f5e0ff; }
+.sky-dawn .sky-clock-tz     { color: #7a5a88; }
+
+/* 황혼 */
+.sky-dusk .sky-clock-bg {
+  background: linear-gradient(180deg, #0d1228 0%, #5c2a78 35%, #d4503a 65%, #f07c2a 85%, #f9b84a 100%);
+}
+.sky-dusk .sky-clock-orb {
+  width: 24px; height: 24px;
+  background: radial-gradient(circle, #ffb060 30%, #e84020 100%);
+  box-shadow: 0 0 12px 5px rgba(240,80,30,.45);
+  bottom: 5px;
+  opacity: .85;
+}
+.sky-dusk .sky-clock-info { background: #160d22; }
+.sky-dusk .sky-clock-region { color: #d47a60; }
+.sky-dusk .sky-clock-time   { color: #ffe8d0; }
+.sky-dusk .sky-clock-tz     { color: #7a4a38; }
+
+/* 밤 */
+.sky-night .sky-clock-bg {
+  background: linear-gradient(180deg, #03040a 0%, #07091a 40%, #0d1235 70%, #152050 100%);
+}
+.sky-night .sky-clock-orb {
+  width: 24px; height: 24px;
+  background: radial-gradient(circle at 38% 38%, #dde8ff 0%, #a8b8e0 80%);
+  box-shadow: 0 0 10px 3px rgba(160,180,255,.35);
+  bottom: 22px;
+}
+.sky-night .sky-clock-orb::after {
+  content: '';
+  position: absolute;
+  width: 17px; height: 17px;
+  border-radius: 50%;
+  background: #0d1235;
+  top: -2px; left: 9px;
+}
+.sky-night .sky-clock-info { background: #080c1a; }
+.sky-night .sky-clock-region { color: #5a7ab8; }
+.sky-night .sky-clock-time   { color: #c0ccff; }
+.sky-night .sky-clock-tz     { color: #2a3a6a; }
