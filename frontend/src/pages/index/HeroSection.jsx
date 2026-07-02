@@ -105,6 +105,46 @@ function AnalogClock({ tz, size, now }) {
   )
 }
 
+
+/* ── 시계 phase 계산 ── */
+function skyPhase(h24) {
+  if (h24 >= 5  && h24 < 7)  return 'dawn'
+  if (h24 >= 7  && h24 < 18) return 'day'
+  if (h24 >= 18 && h24 < 20) return 'dusk'
+  return 'night'
+}
+
+/* ── 하늘 배경 시계 카드 ── */
+function SkyClockCard({ zone, now, size }) {
+  const parts = (() => {
+    try {
+      const p = new Intl.DateTimeFormat('en-US', {
+        timeZone: zone.tz, hour: 'numeric', minute: 'numeric',
+        second: 'numeric', hour12: false
+      }).formatToParts(now)
+      const v = (t) => parseInt(p.find(x => x.type === t)?.value ?? '0')
+      return { h: v('hour'), m: v('minute'), s: v('second') }
+    } catch { return { h: 0, m: 0, s: 0 } }
+  })()
+
+  const ph = skyPhase(parts.h)
+
+  const timeStr = `${String(parts.h).padStart(2,'0')}:${String(parts.m).padStart(2,'0')}`
+
+  return (
+    <div className={`sky-clock-card sky-${ph}`}>
+      <div className="sky-clock-bg">
+        <div className="sky-clock-orb" />
+      </div>
+      <div className="sky-clock-info">
+        <div className="sky-clock-region">{zone.region}</div>
+        <div className="sky-clock-time">{timeStr}</div>
+        {zone.label && <div className="sky-clock-tz">{zone.label}</div>}
+      </div>
+    </div>
+  )
+}
+
 export default function HeroSection({ zones: propZones, isMobile = false, clockCount = 3, tempUnit = 'C', lang = 'ko' }) {
   const defaultZones = lang === 'en' ? DEFAULT_ZONES_EN : DEFAULT_ZONES_KO
   const zones = (propZones?.length === 3) ? propZones : defaultZones
@@ -204,40 +244,16 @@ export default function HeroSection({ zones: propZones, isMobile = false, clockC
       <div className={`hero-inner hero-inner--${clockCount}`}>
 
         {/* 지역 1 (기준) */}
-        <div className="time-zone tz-primary">
-          <div className="tz-region">{zones[0].region}</div>
-          <div className="tz-analog">
-            <AnalogClock tz={zones[0].tz} size={clockSize} now={now} />
-          </div>
-          <div className="tz-time">{z0.time}</div>
-          <div className="tz-date">{z0.date}</div>
-          <div className="tz-name">{zones[0].label || ''}</div>
-        </div>
+        <SkyClockCard zone={zones[0]} now={now} size={clockSize} />
 
         {/* 지역 2 */}
         {clockCount >= 2 && (
-          <div className="time-zone">
-            <div className="tz-region">{zones[1].region}</div>
-            <div className="tz-analog">
-              <AnalogClock tz={zones[1].tz} size={clockSize} now={now} />
-            </div>
-            <div className="tz-time">{z1.time}</div>
-            <div className="tz-date">{z1.date}</div>
-            <div className="tz-name">{zones[1].label || ''}</div>
-          </div>
+          <SkyClockCard zone={zones[1]} now={now} size={clockSize} />
         )}
 
         {/* 지역 3 */}
         {clockCount >= 3 && (
-          <div className="time-zone">
-            <div className="tz-region">{zones[2].region}</div>
-            <div className="tz-analog">
-              <AnalogClock tz={zones[2].tz} size={clockSize} now={now} />
-            </div>
-            <div className="tz-time">{z2.time}</div>
-            <div className="tz-date">{z2.date}</div>
-            <div className="tz-name">{zones[2].label || ''}</div>
-          </div>
+          <SkyClockCard zone={zones[2]} now={now} size={clockSize} />
         )}
 
         {/* 날씨 */}
