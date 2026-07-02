@@ -1764,6 +1764,8 @@ function SettingTab({ lang, currency, toDisplay }) {
   const [catMode, setCatMode]   = useState('default')
   const [newParent, setNewParent] = useState({ name_ko: '', name_en: '', icon: '' })
   const [newSub, setNewSub]     = useState({ parent_id: '', name_ko: '', name_en: '', icon: '' })
+  const [editId2, setEditId2]   = useState(null)
+  const [editName2, setEditName2] = useState('')
   const { toast, showToast } = useToast()
 
   const loadBudgets = useCallback(() => {
@@ -1998,8 +2000,6 @@ function SettingTab({ lang, currency, toDisplay }) {
 
           {/* 사용자 카테고리 목록 */}
           {(() => {
-            const [editId2, setEditId2] = React.useState(null)
-            const [editName2, setEditName2] = React.useState('')
             async function saveEdit2(id) {
               await apiReq('PUT', `/api/expense/categories/${id}`, { name_ko: editName2, name_en: editName2 }).catch(() => {})
               setEditId2(null); loadCats()
