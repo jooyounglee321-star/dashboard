@@ -461,7 +461,30 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   }, [isOpen, mainTab, histData, histRange, histGroupFilter, histCurrencyFilter, histGroupNames, lang])
 
   if (!isOpen) return null
-  if (!stockData?.groups?.length) return null
+  if (!stockData?.groups?.length) return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 1000,
+      background: 'rgba(0,0,0,0.5)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center'
+    }} onClick={onClose}>
+      <div style={{
+        background: 'var(--card)', borderRadius: 16, padding: '2.5rem 3rem',
+        textAlign: 'center', boxShadow: '0 8px 40px rgba(0,0,0,.3)'
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize: '2.5rem', marginBottom: '0.8rem' }}>📊</div>
+        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.4rem' }}>
+          보유 종목이 없습니다
+        </div>
+        <div style={{ fontSize: '0.85rem', color: 'var(--ink3)', marginBottom: '1.5rem' }}>
+          종목을 추가하면 통계를 확인할 수 있습니다
+        </div>
+        <button onClick={onClose} style={{
+          padding: '0.5rem 1.5rem', background: 'var(--accent)', color: '#fff',
+          border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: '0.85rem', fontFamily: 'inherit'
+        }}>닫기</button>
+      </div>
+    </div>
+  )
 
   const { grpTotals, grandUSD, grandKRW, totalKRW, stockEvals, lineDatasets, fxRate, groupTickers, stockValues } = computed || {}
   const groupNames = (stockData?.groups ?? []).map(g => cleanStr(g.name, g.id))
