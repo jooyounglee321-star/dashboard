@@ -186,7 +186,12 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
     const fmt = v => isKRW ? fmtKRW(v) : fmtUSD(v)
     let grpTotal = 0
 
-    const stockRows = g.stocks.map(s => {
+    const sortedStocks = [...g.stocks].sort((a, b) => {
+      const aEtf = (a.name || a.ticker || '').toUpperCase().includes('ETF') ? 1 : 0
+      const bEtf = (b.name || b.ticker || '').toUpperCase().includes('ETF') ? 1 : 0
+      return aEtf - bEtf
+    })
+    const stockRows = sortedStocks.map(s => {
       const { holdQty, avgCost, cur, chP, val, evalPL, evalPct, realizedPL, totalSellQty, isLive, hasPrice, marketState } = stockCalcMap.get(s) ?? calcStock(s, priceMap)
       grpTotal += val
       const cs = chP >= 0 ? 'up' : 'down'; const sg = chP >= 0 ? '▲' : '▼'
