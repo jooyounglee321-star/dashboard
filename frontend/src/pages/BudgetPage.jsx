@@ -1997,29 +1997,53 @@ function SettingTab({ lang, currency, toDisplay }) {
           </div>
 
           {/* 사용자 카테고리 목록 */}
-          {customCats.length === 0
-            ? <p className="bp-info bp-empty">{t(lang, 'budgetNoCustomCats')}</p>
-            : (
+          {(() => {
+            const [editId2, setEditId2] = React.useState(null)
+            const [editName2, setEditName2] = React.useState('')
+            async function saveEdit2(id) {
+              await apiReq('PUT', `/api/expense/categories/${id}`, { name_ko: editName2, name_en: editName2 }).catch(() => {})
+              setEditId2(null); loadCats()
+            }
+            const userSubCatIds = new Set(cats.flatMap(c => (c.subs||[]).filter(s=>!s.is_default).map(()=>c.id)))
+            const visibleCats = [...customCats, ...cats.filter(c=>c.is_default && userSubCatIds.has(c.id))]
+            if (visibleCats.length === 0)
+              return <p className="bp-info bp-empty">{t(lang, 'budgetNoCustomCats')}</p>
+            return (
               <div className="bp-cat-grid">
-                {customCats.map(cat => (
-                  <div key={cat.id} className="bp-cat-card">
-                    <div className="bp-cat-head">
-                      {cat.icon} <strong>{cat.name}</strong>
-                      <button type="button" className="bp-icon-btn del" style={{ marginLeft: 'auto' }} onClick={(ev) => delCat(ev, cat.id)}>🗑️</button>
+                {visibleCats.map(cat => {
+                  const subsToShow = cat.is_default ? (cat.subs||[]).filter(s=>!s.is_default) : (cat.subs||[])
+                  return (
+                    <div key={cat.id} className="bp-cat-card">
+                      <div className="bp-cat-head">
+                        {cat.icon}{' '}
+                        {editId2 === `c${cat.id}` && !cat.is_default
+                          ? <input autoFocus style={{width:100,fontWeight:'bold',border:'none',outline:'none',background:'transparent'}}
+                              value={editName2} onChange={e=>setEditName2(e.target.value)}
+                              onBlur={()=>saveEdit2(cat.id)} onKeyDown={e=>e.key==='Enter'&&saveEdit2(cat.id)}/>
+                          : <strong style={{cursor:cat.is_default?'default':'pointer'}}
+                              onClick={()=>{if(!cat.is_default){setEditId2(`c${cat.id}`);setEditName2(cat.name)}}}>{cat.name}</strong>
+                        }
+                        {!cat.is_default && <button type="button" className="bp-icon-btn del" style={{marginLeft:'auto'}} onClick={(ev)=>delCat(ev,cat.id)}>🗑️</button>}
+                      </div>
+                      <div className="bp-cat-subs">
+                        {subsToShow.map(s=>(
+                          <span key={s.id} className="bp-sub-chip editable">
+                            {editId2===`s${s.id}`
+                              ? <input autoFocus style={{width:80,fontSize:'0.8rem',border:'none',outline:'none',background:'transparent'}}
+                                  value={editName2} onChange={e=>setEditName2(e.target.value)}
+                                  onBlur={()=>saveEdit2(s.id)} onKeyDown={e=>e.key==='Enter'&&saveEdit2(s.id)}/>
+                              : <span style={{cursor:'pointer'}} onClick={()=>{setEditId2(`s${s.id}`);setEditName2(s.name)}}>{s.name}</span>
+                            }
+                            <button type="button" className="bp-sub-del" onClick={(ev)=>delCat(ev,s.id)}>×</button>
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                    <div className="bp-cat-subs">
-                      {cat.subs?.map(s => (
-                        <span key={s.id} className="bp-sub-chip editable">
-                          {s.name}
-                          <button type="button" className="bp-sub-del" onClick={(ev) => delCat(ev, s.id)}>×</button>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )
-          }
+          })()}
         </>
       )}
     </section>
