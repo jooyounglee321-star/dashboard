@@ -323,7 +323,7 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 |--------|------|----------|------|
 | `id` | INTEGER | PK, INDEX | 자동 증가 고유 ID |
 | `user_id` | INTEGER | NOT NULL, FK → `users.id` CASCADE, INDEX, UNIQUE | 소유 사용자 ID (1인당 1행) |
-| `data` | TEXT | NOT NULL, DEFAULT `'[]'` | `stock_groups_v2` JSON 배열 전체 저장 |
+| `data` | TEXT | NOT NULL, DEFAULT `'[]'` | `portfolio_groups` JSON 배열 전체 저장 |
 | `updated_at` | DATETIME | DEFAULT `now()`, ON UPDATE `now()` | 마지막 수정 일시 |
 
 **UNIQUE 제약:** `(user_id)` — `uq_portfolio_groups_user`  
