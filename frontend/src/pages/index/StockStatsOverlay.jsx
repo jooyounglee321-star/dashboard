@@ -167,7 +167,13 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
 
   // 현황 탭 공통 필터
   const [overviewGroup, setOverviewGroup] = useState('')
-  const [overviewCurrency, setOverviewCurrency] = useState('KRW')
+  const [overviewCurrency, setOverviewCurrency] = useState(() => {
+    // USD 그룹만 있으면 USD 기본, 혼합이면 KRW
+    const gs = stockData?.groups ?? []
+    const hasKRW = gs.some(g => g.currency === 'KRW')
+    const hasUSD = gs.some(g => g.currency !== 'KRW')
+    return (hasUSD && !hasKRW) ? 'USD' : 'KRW'
+  })
   const [overviewPeriod, setOverviewPeriod] = useState('all')
 
   // 히스토리 탭 필터
