@@ -238,33 +238,22 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const computed = useMemo(() => computeStockStats(stockData, userJoinDate), [JSON.stringify(stockData), userJoinDate])
 
-  // 현황 탭 차트 렌더링
-  useEffect(() => {
-    if (!isOpen || !computed || mainTab !== 'overview') return
-
-    chartsRef.current.forEach(c => c.destroy())
-    chartsRef.current = []
-
-    const { grpTotals, stockValues, stockEvals, lineDatasets, fxRate, groupTickers } = computed
-
-    // 기간 cutoff
+  // 기간 필터 적용 데이터 — 렌더 스코프에서 계산해 useEffect와 JSX(effectivePieItems)가 공유
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const { periodGrpTotals, periodStockValues, periodStockEvals } = useMemo(() => {
+    if (!computed || !stockData) return { periodGrpTotals: [], periodStockValues: [], periodStockEvals: [] }
     const cutoff = calcCutoff(overviewPeriod, customFrom)
     const cutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
-
-    // 기간 필터 적용 → 파이/바차트용 데이터 재계산
-    const { priceMap: pm } = stockData || {}
-    const periodStockValues = []
-    const periodStockEvals = []
-    const periodGrpTotals = (stockData?.groups ?? []).map(g => {
+    const pm = stockData.priceMap
+    const psv = [], pse = []
+    const pgt = (stockData.groups ?? []).map(g => {
       const isKRW = g.currency === 'KRW'
       const sym = isKRW ? '₩' : '$'
       let grpTotal = 0
       g.stocks.filter(s => !s.is_deleted).forEach(s => {
-        const allPP = s.purchases || []
-        const pp = allPP.filter(p => (!cutoff || !p.date || p.date >= cutoff) && (!cutoffEnd || !p.date || p.date <= cutoffEnd))
-        const sl = s.sells || []
+        const pp = (s.purchases || []).filter(p => (!cutoff || !p.date || p.date >= cutoff) && (!cutoffEnd || !p.date || p.date <= cutoffEnd))
         const bq = pp.reduce((a, p) => a + (p.qty || 0), 0)
-        const sq = sl.reduce((a, p) => a + (p.qty || 0), 0)
+        const sq = (s.sells || []).reduce((a, p) => a + (p.qty || 0), 0)
         const hq = Math.max(0, bq - sq)
         const validPP = pp.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
         const ws = validPP.reduce((a, p) => a + p.price * p.qty, 0)
@@ -273,12 +262,25 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         const cur = pm?.[s.ticker]?.current_price ?? avg
         const evalAmt = cur * hq
         grpTotal += evalAmt
-        if (hq > 0) periodStockValues.push({ ticker: s.ticker, name: cleanStr(s.name, s.ticker), evalAmt, groupName: cleanStr(g.name, g.id), currency: g.currency, isKRW })
+        if (hq > 0) psv.push({ ticker: s.ticker, name: cleanStr(s.name, s.ticker), evalAmt, groupName: cleanStr(g.name, g.id), currency: g.currency, isKRW })
         const evalPL = avg > 0 ? (cur - avg) * hq : null
-        if (evalPL != null) periodStockEvals.push({ label: s.ticker, name: cleanStr(s.name, s.ticker), evalPL, sym, isKRW })
+        if (evalPL != null) pse.push({ label: s.ticker, name: cleanStr(s.name, s.ticker), evalPL, sym, isKRW })
       })
       return { id: g.id, name: cleanStr(g.name, g.id), currency: g.currency, total: grpTotal, isKRW }
     })
+    return { periodGrpTotals: pgt, periodStockValues: psv, periodStockEvals: pse }
+  }, [computed, overviewPeriod, customFrom, customTo]) // stockData 변경은 computed 경유로 감지
+
+  // 현황 탭 차트 렌더링
+  useEffect(() => {
+    if (!isOpen || !computed || mainTab !== 'overview') return
+
+    chartsRef.current.forEach(c => c.destroy())
+    chartsRef.current = []
+
+    const { grpTotals, stockValues, stockEvals, lineDatasets, fxRate, groupTickers } = computed
+    const cutoff = calcCutoff(overviewPeriod, customFrom)
+    const cutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
 
     // 통화 환산 헬퍼
     const toDisplay = (val, isKRW) => {
