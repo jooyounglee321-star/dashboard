@@ -1,18 +1,19 @@
 export const fmtKRW = (v) => Math.round(v).toLocaleString('ko-KR')
 export const fmtUSD = (v) => Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-// 차트 축·툴팁용 축약 포맷 (만/억, $M)
+// 차트 축·툴팁용 축약 포맷
+// KRW: 천원 단위 (1억 미만 → X,XXX천 / 1억 이상 → X억)
 export const fmtKRWShort = (val) => {
   const abs = Math.abs(val); const sign = val < 0 ? '-' : ''
-  if (abs >= 100000000) { const uk = Math.round(abs / 10000); return sign + Math.floor(uk / 10000).toLocaleString('ko-KR') + '억 ' + (uk % 10000).toLocaleString('ko-KR') + '만' }
-  if (abs >= 10000) return sign + Math.round(abs / 10000).toLocaleString('ko-KR') + '만'
-  return sign + Math.round(abs).toLocaleString('ko-KR')
+  if (abs >= 100000000) return sign + Math.round(abs / 100000000).toLocaleString('ko-KR') + '억'
+  return sign + Math.round(abs / 1000).toLocaleString('ko-KR') + '천'
 }
+// USD: 센트 제거, K/M 축약 ($1.2K / $1.2M)
 export const fmtUSDShort = (val) => {
   const abs = Math.abs(val); const sign = val < 0 ? '-' : ''
   if (abs >= 1000000) return sign + '$' + (abs / 1000000).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'M'
-  if (abs >= 1000) return sign + '$' + Math.round(abs).toLocaleString('en-US')
-  return sign + '$' + abs.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+  if (abs >= 1000) return sign + '$' + (abs / 1000).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'K'
+  return sign + '$' + Math.round(abs).toLocaleString('en-US')
 }
 export const fmtShort = (val, currency) => currency === 'USD' ? fmtUSDShort(val) : fmtKRWShort(val)
 
