@@ -44,6 +44,14 @@
 - `frontend/src/utils/date.js`: `MONTHS_KO`, `MONTHS_EN`, `MONTHS_EN_FULL`, `ML` 추가
 - `frontend/src/utils/format.js`: `formatAuto`, `fmtAmt`, `fmtSigned`, `fmtKRWShort`, `fmtUSDShort`, `fmtShort` 추가
 
+### fix
+- `LoginPage.jsx` `setMsg` 호출 들여쓰기 누락 수정
+
+### verified (이미 구현됨 — 변경 없음)
+- `LoginPage.jsx` 자동로그인 체크박스 (`autoLogin` state + `localStorage`/`sessionStorage` 분기) 이미 구현 완료
+- `api.js` 토큰 조회 `sessionStorage → localStorage` fallback 이미 구현 완료
+- `auth.autoLogin` i18n 키 (`ko: 자동로그인` / `en: Remember me`) 이미 존재
+
 ### docs
 - `CLAUDE.md` 유틸리티 함수 규칙 추가: `utils/date.js`·`utils/format.js` 로컬 선언 금지, import 강제
 
