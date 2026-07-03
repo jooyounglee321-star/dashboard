@@ -350,6 +350,21 @@ export default function IndexPage() {
   const stockData = stockError ? null : { groups: stockGroups, priceMap, fxRate }
   const lang = widgetCfg?.language ?? 'ko'
 
+  // 통화 표시 방식 변경 → widget_config 서버 저장
+  async function saveCurrencyDisplay(mode) {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    const newCfg = { ...(widgetCfg || {}), stock: { ...(widgetCfg?.stock || {}), currency_display: mode } }
+    setWidgetCfg(newCfg)
+    try {
+      await fetch('/api/auth/widget-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify(newCfg),
+      })
+    } catch (e) { console.warn('widget-config 저장 실패', e) }
+  }
+
   // ── 레이아웃 편집 함수 ──────────────────────────────────────────────────
   function enterEditMode() { setDraftItems([...layoutItems]); setEditMode(true) }
   function cancelEdit()    { setEditMode(false); setDraftItems([]) }
@@ -392,7 +407,7 @@ export default function IndexPage() {
       case 'hero':     return <HeroSection zones={zones} clockCount={widgetCfg?.hero?.clock_count ?? 3} tempUnit={widgetCfg?.hero?.temp_unit ?? 'C'} lang={lang} />
       case 'schedule': return <ScheduleCard lang={lang} />
       case 'youtube':  return <YoutubeCard maxCount={widgetCfg?.youtube?.max_count ?? 10} lang={lang} />
-      case 'stock':    return <StockCard groups={stockGroups} priceMap={priceMap} fxRate={fxRate} loading={stockLoading} onOpenStats={() => setStatsOpenPersist(true)} onOpenSettings={() => setStockSettingsOpen(true)} currencyDisplay={widgetCfg?.stock?.currency_display} lang={lang} />
+      case 'stock':    return <StockCard groups={stockGroups} priceMap={priceMap} fxRate={fxRate} loading={stockLoading} onOpenStats={() => setStatsOpenPersist(true)} onOpenSettings={() => setStockSettingsOpen(true)} currencyDisplay={widgetCfg?.stock?.currency_display} onCurrencyChange={saveCurrencyDisplay} lang={lang} />
       case 'expense':  return <ExpenseCard lang={lang} />
       case 'diet':     return <DietCard mealConfig={widgetCfg?.diet?.meals} lang={lang} />
       case 'memo':        return <MemoCard lang={lang} />
@@ -435,6 +450,7 @@ export default function IndexPage() {
       <StockSettingsModal
         isOpen={stockSettingsOpen}
         onClose={() => setStockSettingsOpen(false)}
+        onCurrencyChange={saveCurrencyDisplay}
         lang={lang}
       />
 
