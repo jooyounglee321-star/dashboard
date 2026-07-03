@@ -254,18 +254,7 @@ export default function AdminPage() {
                       <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>{t(lang, 'admin.maxUnit')}</span>
                     </div>
                   )}
-                  {/* 주식: 합계 표시 통화 */}
-                  {key === 'stock' && widgetCfg.stock?.enabled !== false && (
-                    <select
-                      value={widgetCfg.stock?.currency_display ?? 'KRW'}
-                      onChange={e => setWidget('stock', 'currency_display', e.target.value)}
-                      style={{ fontSize: '0.75rem', padding: '0.22rem 0.5rem', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit' }}
-                    >
-                      <option value="KRW">{t(lang, 'admin.krwOnly')}</option>
-                      <option value="USD">{t(lang, 'admin.usdOnly')}</option>
-                      <option value="BOTH">{t(lang, 'admin.bothFull')}</option>
-                    </select>
-                  )}
+
                   {/* 식단: 표시할 끼니 */}
                   {key === 'diet' && widgetCfg.diet?.enabled !== false && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
