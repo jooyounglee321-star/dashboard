@@ -397,8 +397,9 @@ export default function IndexPage() {
   function handleSizeChange(id, span) {
     setDraftItems(prev => prev.map(item => item.id === id ? { ...item, span } : item))
   }
-  function handleRowSpanChange(id, rowSpan) {
-    setDraftItems(prev => prev.map(item => item.id === id ? { ...item, rowSpan } : item))
+
+  function handleRowsChange(id, rows) {
+    setDraftItems(prev => prev.map(item => item.id === id ? { ...item, rows } : item))
   }
 
   function renderWidget(item) {
@@ -541,15 +542,15 @@ export default function IndexPage() {
       <main className="main">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={visibleItems.map(i => i.id)} strategy={rectSortingStrategy}>
-            {visibleItems.map(({ id, span, rowSpan, el }) => (
+            {visibleItems.map(({ id, span, rows, el }) => (
               <SortableCard
                 key={id}
                 id={id}
                 span={span}
-                rowSpan={rowSpan || 1}
+                rows={rows ?? 1}
                 editMode={editMode}
                 onSizeChange={handleSizeChange}
-                onRowSpanChange={handleRowSpanChange}
+                onRowsChange={handleRowsChange}
               >
                 {el}
               </SortableCard>

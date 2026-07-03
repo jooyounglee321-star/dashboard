@@ -24,14 +24,10 @@ const SIZE_OPTIONS = [
   { label: 'L', value: 12 },   // 100%
 ]
 
-const ROW_OPTIONS = [
-  { label: '1', value: 1 },
-  { label: '2', value: 2 },
-  { label: '3', value: 3 },
-]
+const ROW_OPTIONS = [1, 2, 3, 4, 5, 6]
 
 /* ── SortableCard ─────────────────────────────────────────────────────────── */
-export function SortableCard({ id, span, rowSpan = 1, editMode, onSizeChange, onRowSpanChange, children }) {
+export function SortableCard({ id, span, rows = 1, editMode, onSizeChange, onRowsChange, children }) {
   const {
     attributes,
     listeners,
@@ -48,7 +44,7 @@ export function SortableCard({ id, span, rowSpan = 1, editMode, onSizeChange, on
         transform:   CSS.Transform.toString(transform),
         transition:  transition || undefined,
         gridColumn:  `span ${Math.min(span, 12)}`,
-        gridRow:     rowSpan > 1 ? `span ${rowSpan}` : undefined,
+        gridRow:     rows > 1 ? `span ${rows}` : undefined,
         position:    'relative',
         opacity:     isDragging ? 0.4 : 1,
         zIndex:      isDragging ? 50 : 'auto',
@@ -77,15 +73,17 @@ export function SortableCard({ id, span, rowSpan = 1, editMode, onSizeChange, on
                 {label}
               </button>
             ))}
-            <span style={{ margin: '0 4px', color: '#aaa', fontSize: '0.7rem' }}>↕</span>
-            {ROW_OPTIONS.map(({ label, value }) => (
+          </div>
+          <div className="layout-size-btns" style={{ marginLeft: '0.3rem' }}>
+            <span style={{ fontSize: '0.65rem', color: 'var(--accent2)', lineHeight: '1.6', paddingRight: '0.15rem' }}>↕</span>
+            {ROW_OPTIONS.map(n => (
               <button
-                key={`r${label}`}
-                className={`layout-size-btn${rowSpan === value ? ' active' : ''}`}
+                key={n}
+                className={`layout-size-btn${(rows ?? 1) === n ? ' active' : ''}`}
                 onPointerDown={e => e.stopPropagation()}
-                onClick={() => onRowSpanChange && onRowSpanChange(id, value)}
+                onClick={() => onRowsChange(id, n)}
               >
-                {label}
+                {n}
               </button>
             ))}
           </div>
