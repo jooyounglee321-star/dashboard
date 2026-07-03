@@ -577,10 +577,9 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   })()
 
   const effectiveStockEvals = (() => {
-    if (!stockEvals) return []
-    if (!overviewGroup) return stockEvals
+    if (!overviewGroup) return periodStockEvals
     const tickers = new Set(groupTickers?.[overviewGroup] ?? [])
-    return stockEvals.filter(s => tickers.has(s.label))
+    return periodStockEvals.filter(s => tickers.has(s.label))
   })()
 
   const effectivePieItems = (() => {
@@ -760,7 +759,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             )}
 
             {/* ── 바차트 ── */}
-            {stockEvals?.length > 0 && (
+            {periodStockEvals.length > 0 && (
               <div className="stats-section">
                 <div className="stats-section-title">{t(lang, 'statsBarTitle')}</div>
                 {effectiveStockEvals.length > 0
