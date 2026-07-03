@@ -1,3 +1,4 @@
+import { MONTHS_KO as MON, MONTHS_EN as MON_EN, MONTHS_EN_FULL } from '../../utils/date'
 import { useState, useEffect } from 'react'
 import { t } from './i18n'
 
@@ -24,9 +25,7 @@ const W_DESC = {
 }
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토']
-const MON = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월']
 const DAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const MON_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
 const DEFAULT_ZONES_KO = [
   { region: '내 위치', tz: Intl.DateTimeFormat().resolvedOptions().timeZone, label: '' },
