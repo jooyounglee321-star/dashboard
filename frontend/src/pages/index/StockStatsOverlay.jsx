@@ -236,7 +236,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         const grpStocks = stockValues.filter(s => s.groupName?.toLowerCase() === overviewGroup.toLowerCase())
         const vals = grpStocks.map(s => ({ name: safeName(cleanStr(s.name, s.ticker)), val: Math.max(0, toDisplay(s.evalAmt, s.isKRW)) }))
         const total = vals.reduce((a, x) => a + x.val, 0) || 1
-        pieLabels = vals.map(x => `${x.name} (${(x.val / total * 100).toFixed(1)}%)`)
+        pieLabels = vals.map(x => `${x.name || 'Group'} (${(x.val / total * 100).toFixed(1)}%)`)
         pieData = vals.map(x => parseFloat(x.val.toFixed(2)))
       } else {
         // 그룹별 비중 (val=0인 그룹 제외 — 빈/삭제 그룹의 '알 수 없음' 방지)
@@ -600,10 +600,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                 {(grpTotals ?? [])
                   .filter(g => !overviewGroup || g.name?.toLowerCase() === overviewGroup.toLowerCase())
                   .map((g, i) => {
-                    let display
-                    if (overviewCurrency === 'USD' && g.isKRW && fxRate) display = formatUSD(g.total / fxRate)
-                    else if (overviewCurrency === 'KRW' && !g.isKRW && fxRate) display = `₩${formatKRW(g.total * fxRate)}`
-                    else display = g.currency === 'USD' ? formatUSD(g.total) : `₩${formatKRW(g.total)}`
+                    const display = g.currency === 'USD' ? formatUSD(g.total) : `₩${formatKRW(g.total)}`
                     return (
                       <div className="stats-summary-card" key={i}>
                         <div className="stats-summary-label">{g.name} ({g.currency})</div>
