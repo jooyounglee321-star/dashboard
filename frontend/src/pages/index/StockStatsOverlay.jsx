@@ -626,6 +626,19 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         ))}
       </div>
 
+      {/* 기간 선택 바 — 항상 노출, 탭과 콘텐츠 사이 sticky */}
+      <div style={{
+        position: 'sticky', top: 0, zIndex: 9,
+        display: 'flex', alignItems: 'center', gap: '0.75rem',
+        padding: '0.55rem 1.4rem',
+        background: 'var(--card)',
+        borderBottom: '1px solid var(--border)',
+        boxShadow: '0 1px 6px rgba(0,0,0,0.07)',
+      }}>
+        <span style={{ fontSize: '0.75rem', color: 'var(--ink3)', fontWeight: 500, whiteSpace: 'nowrap' }}>기간</span>
+        <PeriodSelector value={overviewPeriod} onChange={setOverviewPeriod} />
+      </div>
+
       <div className="stats-body">
         {/* ══════════════ 현황 탭 ══════════════ */}
         {mainTab === 'overview' && (!computed ? (
@@ -664,7 +677,6 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                       </select>
                     </>
                   )}
-                  <PeriodSelector value={overviewPeriod} onChange={setOverviewPeriod} style={{ marginLeft: 'auto' }} />
                 </div>
               )
             })()}
@@ -817,7 +829,6 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                     <option value="USD">USD</option>
                     <option value="KRW">KRW</option>
                   </select>
-                  <PeriodSelector value={overviewPeriod} onChange={setOverviewPeriod} style={{ marginLeft: 'auto' }} />
                 </div>
                 <div className="stats-chart-wrap">
                   <canvas ref={histLineRef} />
