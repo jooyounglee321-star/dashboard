@@ -231,15 +231,16 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       Chart.getChart(pieRef.current)?.destroy()
       let pieLabels, pieData
       const safeName = (n) => (!n || n === 'undefined' || String(n).trim() === '') ? '알 수 없음' : String(n)
-      if (overviewGroup) {
-        // 선택 그룹 내 종목별 비중
-        const grpStocks = stockValues.filter(s => s.groupName?.toLowerCase() === overviewGroup.toLowerCase())
+      const effectiveGroup = overviewGroup || (grpTotals.length === 1 ? grpTotals[0].name : '')
+      if (effectiveGroup) {
+        // 선택 그룹(또는 단일 그룹) 내 종목별 비중
+        const grpStocks = stockValues.filter(s => s.groupName?.toLowerCase() === effectiveGroup.toLowerCase())
         const vals = grpStocks.map(s => ({ name: safeName(cleanStr(s.name, s.ticker)), val: Math.max(0, toDisplay(s.evalAmt, s.isKRW)) }))
         const total = vals.reduce((a, x) => a + x.val, 0) || 1
         pieLabels = vals.map(x => `${x.name || 'Group'} (${(x.val / total * 100).toFixed(1)}%)`)
         pieData = vals.map(x => parseFloat(x.val.toFixed(2)))
       } else {
-        // 그룹별 비중 (val=0인 그룹 제외 — 빈/삭제 그룹의 '알 수 없음' 방지)
+        // 그룹별 비중 (val=0인 그룹 제외)
         const vals = grpTotals
           .map(g => ({ name: g.name, val: Math.max(0, toDisplay(g.total, g.isKRW)) }))
           .filter(x => x.val > 0)
@@ -570,52 +571,78 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         ) : (
           <>
             {/* ── 공통 필터 바 ── */}
-            <div style={{
-              display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center',
-              padding: '0.7rem 1.2rem', borderBottom: '1px solid var(--border)',
-              background: 'var(--bg)',
-            }}>
-              <span style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>{t(lang, 'stock.filterByGroup')}:</span>
-              <select value={overviewGroup} onChange={e => setOverviewGroup(e.target.value)} style={selStyle}>
-                <option value="">{t(lang, 'stock.allGroups')}</option>
-                {groupNames.map((name, i) => <option key={i} value={name}>{name}</option>)}
-              </select>
-              <span style={{ fontSize: '0.78rem', color: 'var(--ink3)', marginLeft: '0.4rem' }}>{t(lang, 'stock.filterByCurrency')}:</span>
-              <select value={overviewCurrency} onChange={e => setOverviewCurrency(e.target.value)} style={selStyle}>
-                <option value="KRW">KRW</option>
-                <option value="USD">USD</option>
-              </select>
-              <span style={{ fontSize: '0.78rem', color: 'var(--ink3)', marginLeft: '0.4rem' }}>기간:</span>
-              {[['1m', '1개월'], ['3m', '3개월'], ['all', '전체']].map(([key, label]) => (
-                <button key={key} onClick={() => setOverviewPeriod(key)} style={periodBtn(overviewPeriod === key)}>
-                  {label}
-                </button>
-              ))}
-            </div>
+            {(() => {
+              // 그룹이 여러 개인 경우에만 그룹 드롭다운 표시
+              const hasMultiGroup = groupNames.length > 1
+              // KRW 그룹이 존재하는 경우에만 통화 드롭다운 표시
+              const hasKRWGroup = (grpTotals ?? []).some(g => g.isKRW)
+              const hasUSDGroup = (grpTotals ?? []).some(g => !g.isKRW)
+              const hasMultiCurrency = hasKRWGroup && hasUSDGroup
+              return (
+                <div style={{
+                  display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center',
+                  padding: '0.7rem 1.2rem', borderBottom: '1px solid var(--border)',
+                  background: 'var(--bg)',
+                }}>
+                  {hasMultiGroup && (
+                    <>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>{t(lang, 'stock.filterByGroup')}:</span>
+                      <select value={overviewGroup} onChange={e => setOverviewGroup(e.target.value)} style={selStyle}>
+                        <option value="">{t(lang, 'stock.allGroups')}</option>
+                        {groupNames.map((name, i) => <option key={i} value={name}>{name}</option>)}
+                      </select>
+                    </>
+                  )}
+                  {hasMultiCurrency && (
+                    <>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--ink3)', marginLeft: hasMultiGroup ? '0.4rem' : 0 }}>{t(lang, 'stock.filterByCurrency')}:</span>
+                      <select value={overviewCurrency} onChange={e => setOverviewCurrency(e.target.value)} style={selStyle}>
+                        <option value="KRW">KRW (원화)</option>
+                        <option value="USD">USD (달러)</option>
+                      </select>
+                    </>
+                  )}
+                  <span style={{ fontSize: '0.78rem', color: 'var(--ink3)', marginLeft: (hasMultiGroup || hasMultiCurrency) ? '0.4rem' : 0 }}>기간:</span>
+                  {[['1m', '1개월'], ['3m', '3개월'], ['all', '전체']].map(([key, label]) => (
+                    <button key={key} onClick={() => setOverviewPeriod(key)} style={periodBtn(overviewPeriod === key)}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )
+            })()}
 
             {/* ── 전체 합계 요약 카드 ── */}
-            <div className="stats-section">
-              <div className="stats-section-title">{t(lang, 'statsSummaryTitle')}</div>
-              <div className="stats-summary-grid">
-                {(grpTotals ?? [])
-                  .filter(g => !overviewGroup || g.name?.toLowerCase() === overviewGroup.toLowerCase())
-                  .map((g, i) => {
-                    const display = g.currency === 'USD' ? formatUSD(g.total) : `₩${formatKRW(g.total)}`
-                    return (
+            {(() => {
+              const filteredGroups = (grpTotals ?? []).filter(g => !overviewGroup || g.name?.toLowerCase() === overviewGroup.toLowerCase())
+              const hasUSD = filteredGroups.some(g => !g.isKRW)
+              // 총 원화환산: 원화그룹 + USD그룹*환율
+              const filteredKRW = filteredGroups.reduce((a, g) => a + (g.isKRW ? g.total : (fxRate ? g.total * fxRate : 0)), 0)
+              return (
+                <div className="stats-section">
+                  <div className="stats-section-title">{t(lang, 'statsSummaryTitle')}</div>
+                  <div className="stats-summary-grid">
+                    {filteredGroups.map((g, i) => (
                       <div className="stats-summary-card" key={i}>
                         <div className="stats-summary-label">{g.name} ({g.currency})</div>
-                        <div className="stats-summary-value">{display}</div>
+                        <div className="stats-summary-value">
+                          {g.currency === 'USD' ? formatUSD(g.total) : `₩${formatKRW(g.total)}`}
+                        </div>
                       </div>
-                    )
-                  })}
-                <div className="stats-summary-card">
-                  <div className="stats-summary-label">
-                    {t(lang, 'statsKRWEquiv')}{fxRate ? ` ($1=₩${fmtKRW(fxRate)})` : ` (${t(lang, 'statsFxNone')})`}
+                    ))}
+                    {/* 원화환산 카드: USD 자산이 있으면 항상 표시 */}
+                    {hasUSD && (
+                      <div className="stats-summary-card">
+                        <div className="stats-summary-label">
+                          {t(lang, 'statsKRWEquiv')}{fxRate ? ` ($1=₩${fmtKRW(fxRate)})` : ` (${t(lang, 'statsFxNone')})`}
+                        </div>
+                        <div className="stats-summary-value">₩{formatKRW(filteredKRW)}</div>
+                      </div>
+                    )}
                   </div>
-                  <div className="stats-summary-value">₩{formatKRW(totalKRW ?? 0)}</div>
                 </div>
-              </div>
-            </div>
+              )
+            })()}
 
             {/* ── 파이차트 ── */}
             <div className="stats-section">
