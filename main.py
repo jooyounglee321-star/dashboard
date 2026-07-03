@@ -1075,7 +1075,7 @@ if DEBUG_MODE:
         return response
 
 app.include_router(auth_router.router, prefix="/api")
-app.include_router(expenses.router, prefix="/api")       # 레거시 /api/expenses
+# app.include_router(expenses.router, prefix="/api")  # 레거시 /api/expenses — expense.py로 통합됨 (2026-07-03)
 app.include_router(expense_router,   prefix="/api")       # 신규 /api/expense
 app.include_router(exchange_router,  prefix="/api")       # 신규 /api/exchange-rates
 app.include_router(income_router,    prefix="/api")       # 신규 /api/income
