@@ -297,6 +297,14 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
     if (embedded || isOpen) loadGroups()
   }, [isOpen, embedded])
 
+  // body scroll lock
+  useEffect(() => {
+    if (!embedded && isOpen) {
+      document.body.style.overflow = 'hidden'
+      return () => { document.body.style.overflow = '' }
+    }
+  }, [isOpen, embedded])
+
   async function loadGroups() {
     try {
       const json = await apiFetch('/api/portfolio/groups', { signal: AbortSignal.timeout(8000) })
