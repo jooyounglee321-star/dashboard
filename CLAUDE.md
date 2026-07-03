@@ -77,3 +77,12 @@
 - 중요한 기술적 결정, 비즈니스 결정, DB 설계 변경이 생길 때마다 DECISIONS.md를 자동으로 업데이트할 것.
 - 중요한 결정사항은 DECISIONS.md에도 기록할 것.
 - 작업 완료 후 항상 CHANGELOG.md, DECISIONS.md, DB_SCHEMA.md, README.md 최신 상태 유지할 것.
+
+## 유틸리티 함수 규칙 (중복 방지)
+- 날짜/월 관련: 반드시 `frontend/src/utils/date.js` 에서 import. 로컬 선언 금지.
+  - 월 배열: `import { ML, MONTHS_KO, MONTHS_EN, MONTHS_EN_FULL } from '../../utils/date'`
+  - 오늘 날짜: `import { todayStr } from '../../utils/date'`
+- 통화 포맷: 반드시 `frontend/src/utils/format.js` 에서 import. 로컬 선언 금지.
+  - `import { fmtKRW, fmtUSD, formatAuto, fmtAmt } from '../../utils/format'`
+  - 새 포맷 함수 필요시 이 파일에만 추가하고 import해서 사용.
+- 새 유틸 함수 추가 시 반드시 utils/ 폴더에만 추가할 것.
