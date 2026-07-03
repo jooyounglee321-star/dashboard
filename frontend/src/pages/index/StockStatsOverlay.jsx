@@ -2,7 +2,7 @@ import { useEffect, useRef, useMemo, useState } from 'react'
 import { Chart, registerables } from 'chart.js'
 import 'chartjs-adapter-date-fns'
 import { t } from './i18n'
-import { fmtKRW, fmtUSD, formatAuto } from '../../utils/format'
+import { fmtKRW, fmtUSD, formatAuto, fmtKRWShort, fmtUSDShort, fmtShort } from '../../utils/format'
 import { apiFetch } from '../../api'
 import PeriodSelector from '../../components/PeriodSelector'
 Chart.register(...registerables)
@@ -333,7 +333,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                 ticks: { callback: v => {
                   const ds = datasets[0]
                   const cur = ds?.currency ?? (overviewCurrency === 'USD' ? 'USD' : 'KRW')
-                  return cur === 'USD' ? '$' + fmtUSD(v) : '₩' + fmtKRW(v)
+                  return cur === 'USD' ? fmtUSDShort(v) : '₩' + fmtKRWShort(v)
                 } },
               },
             },
@@ -345,7 +345,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                     const v = ctx.parsed.y
                     const ds = datasets[ctx.datasetIndex]
                     const cur = ds?.currency ?? (overviewCurrency === 'USD' ? 'USD' : 'KRW')
-                    return cur === 'USD' ? '$' + fmtUSD(v) : '₩' + fmtKRW(v)
+                    return cur === 'USD' ? fmtUSDShort(v) : '₩' + fmtKRWShort(v)
                   },
                 },
               },
@@ -387,7 +387,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                 title: { display: true, text: `${t(lang, 'statsAxisPL')} (${axisSymbol})` },
                 ticks: {
                   callback: v => {
-                    const fmt = formatAuto(Math.abs(v), overviewCurrency)
+                    const fmt = fmtShort(Math.abs(v), overviewCurrency)
                     return v >= 0 ? `+${fmt}` : `-${fmt}`
                   },
                 },
@@ -399,7 +399,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                 callbacks: {
                   label: ctx => {
                     const s = sorted[ctx.dataIndex]
-                    const fmt = formatAuto(Math.abs(s.evalPL), overviewCurrency)
+                    const fmt = fmtShort(Math.abs(s.evalPL), overviewCurrency)
                     return `${s.evalPL >= 0 ? '+' : '-'}${fmt}`
                   },
                 },
@@ -491,7 +491,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
           x: { type: 'category', title: { display: true, text: t(lang, 'statsAxisDate') }, ticks: { maxTicksLimit: 10 } },
           y: {
             title: { display: true, text: yLabel },
-            ticks: { callback: v => useUSD ? '$' + fmtUSD(v) : '₩' + fmtKRW(v) },
+            ticks: { callback: v => useUSD ? fmtUSDShort(v) : '₩' + fmtKRWShort(v) },
           },
         },
         plugins: {
@@ -500,7 +500,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             callbacks: {
               label: ctx => {
                 const v = ctx.parsed.y
-                return useUSD ? '$' + fmtUSD(v) : '₩' + fmtKRW(v)
+                return useUSD ? fmtUSDShort(v) : '₩' + fmtKRWShort(v)
               },
             },
           },
