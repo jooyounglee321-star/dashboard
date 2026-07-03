@@ -3,13 +3,10 @@ import Toast, { useToast } from '../../components/Toast'
 import { t } from './i18n'
 
 import { apiFetch } from '../../api'
-import { CURRENCY_LIST } from '../../data/currencies'
-
 /* ── 유틸 ── */
 const sv = (k, v) => localStorage.setItem(k, JSON.stringify(v))
 const ld = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d } catch { return d } }
 const genId = () => Math.random().toString(36).slice(2, 10)
-const TOTAL_MODE_KEY = 'stock_total_mode'
 const GRP_COLORS = [
   { bg: '#c8deff', tx: '#1a3d7c' }, { bg: '#c0edd8', tx: '#0d4a2a' },
   { bg: '#ffd5c0', tx: '#7a2a00' }, { bg: '#ddd0f5', tx: '#3a1870' },
@@ -288,10 +285,9 @@ function StockDetailPanel({ g, s, onUpdate }) {
 /* ── 메인 컴포넌트 ── */
 // embedded=true: 모달 오버레이 없이 내용만 렌더 (AdminPage 재사용용)
 // embedded=false (기본): 전체화면 오버레이 모달
-export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embedded = false, onCurrencyChange }) {
+export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embedded = false }) {
   const { toast, showToast } = useToast()
   const [groups,      setGroups]      = useState([])
-  const [totalMode,   setTotalMode]   = useState(() => { try { return localStorage.getItem(TOTAL_MODE_KEY) || 'KRW' } catch { return 'KRW' } })
   const [expanded,    setExpanded]    = useState(new Set())
   const [deleteModal, setDeleteModal] = useState(null)
   const [newsOpen,    setNewsOpen]    = useState(null) // stock id
@@ -409,17 +405,6 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       <Toast toast={toast} />
 
-      {/* 합계 표시 방식 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-        <label style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>{t(lang, 'admin.totalDisplay')}</label>
-        <select value={totalMode} onChange={e => { const m = e.target.value; setTotalMode(m); localStorage.setItem(TOTAL_MODE_KEY, m); onCurrencyChange?.(m); showToast('✓ 합계 표시 방식이 저장되었습니다', 'ok') }}
-          style={{ fontSize: '0.78rem', padding: '0.22rem 0.5rem', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit' }}>
-          <option value="KRW">{t(lang, 'admin.krwOnly')}</option>
-          <option value="USD">{t(lang, 'admin.usdOnly')}</option>
-          <option value="BOTH">{t(lang, 'admin.bothFull')}</option>
-        </select>
-      </div>
-
       <p style={{ fontSize: '0.78rem', color: 'var(--ink3)', margin: 0 }}>{t(lang, 'admin.stockHint')}</p>
 
       {/* 그룹 목록 */}
@@ -438,11 +423,6 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
                   <input type="text" value={g.name} placeholder="그룹 이름"
                     onChange={e => updateGroup(g.id, 'name', e.target.value)}
                     style={{ ...inpGrp, flex: 1 }} />
-                  <select value={g.currency} onChange={e => updateGroup(g.id, 'currency', e.target.value)} style={{ ...inpGrp, minWidth: 110 }}>
-                    {CURRENCY_LIST.map(cur => (
-                      <option key={cur.code} value={cur.code}>{cur.symbol} {cur.code}</option>
-                    ))}
-                  </select>
                   <span style={{ fontSize: '0.72rem', color: col.tx, opacity: 0.7 }}>{g.stocks.length}/10</span>
                   <button onClick={() => delGroup(g.id)} style={{ padding: '0.28rem 0.65rem', fontSize: '0.78rem', cursor: 'pointer', background: 'transparent', color: '#c0392b', border: '1px solid #c0392b', borderRadius: 6, fontFamily: 'inherit', transition: 'all 0.15s' }}>{t(lang, 'admin.delGroup')}</button>
                 </div>
