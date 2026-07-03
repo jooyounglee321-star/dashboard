@@ -268,7 +268,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
           labels: pieLabels,
           datasets: [{ data: pieData, backgroundColor: CHART_COLORS.slice(0, pieData.length), borderWidth: 2, borderColor: '#fffef9' }],
         },
-        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 12, generateLabels: (chart) => { const def = Chart.defaults.plugins.legend.labels.generateLabels(chart); def.forEach(l => { const nameOnly = (l.text || '').split(' (')[0]; if (!nameOnly || nameOnly === 'undefined') l.text = '알 수 없음'; else if (l.text.length > 20) l.text = l.text.slice(0, 20) + '...' }); return def } } } } },
+        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 12, generateLabels: (chart) => { const def = Chart.defaults.plugins.legend.labels.generateLabels(chart); return def.filter(l => { const nameOnly = (l.text || '').split(' (')[0]; return nameOnly && nameOnly !== '알 수 없음' && nameOnly !== 'undefined' }).map(l => { if (l.text.length > 25) l.text = l.text.slice(0, 25) + '...'; return l }) } } } } },
       })
       chartsRef.current.push(inst)
     }
@@ -634,7 +634,14 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               const filteredKRW = filteredGroups.reduce((a, g) => a + (g.isKRW ? g.total : (fxRate ? g.total * fxRate : 0)), 0)
               return (
                 <div className="stats-section">
-                  <div className="stats-section-title">{t(lang, 'statsSummaryTitle')}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                    <div className="stats-section-title" style={{ marginBottom: 0 }}>{t(lang, 'statsSummaryTitle')}</div>
+                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+                      {[['1m', '1개월'], ['3m', '3개월'], ['all', '전체']].map(([key, label]) => (
+                        <button key={key} onClick={() => setOverviewPeriod(key)} style={periodBtn(overviewPeriod === key)}>{label}</button>
+                      ))}
+                    </div>
+                  </div>
                   <div className="stats-summary-grid">
                     {filteredGroups.map((g, i) => (
                       <div className="stats-summary-card" key={i}>
@@ -661,7 +668,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             {/* ── 파이차트 ── */}
             <div className="stats-section">
               <div className="stats-section-title">
-                {overviewGroup ? `${overviewGroup} — ${t(lang, 'statsPieTitle')}` : t(lang, 'statsPieTitle')}
+                {overviewGroup ? `${t(lang, 'statsPieTitle')} — ${overviewGroup}` : t(lang, 'statsPieTitle')}
               </div>
               {effectivePieItems.length > 0
                 ? <div className="stats-chart-wrap pie-wrap"><canvas ref={pieRef} /></div>
@@ -672,14 +679,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             {/* ── 라인차트 ── */}
             {lineDatasets?.length > 0 && (
               <div className="stats-section">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  <div className="stats-section-title" style={{ marginBottom: 0 }}>{t(lang, 'statsLineTitle')}</div>
-                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
-                    {[['1m', '1개월'], ['3m', '3개월'], ['all', '전체']].map(([key, label]) => (
-                      <button key={key} onClick={() => setOverviewPeriod(key)} style={periodBtn(overviewPeriod === key)}>{label}</button>
-                    ))}
-                  </div>
-                </div>
+                <div className="stats-section-title">{t(lang, 'statsLineTitle')}</div>
                 {effectiveLineDatasets.length > 0
                   ? <div className="stats-chart-wrap"><canvas ref={lineRef} /></div>
                   : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
