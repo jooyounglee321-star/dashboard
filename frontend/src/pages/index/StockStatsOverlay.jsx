@@ -9,6 +9,19 @@ Chart.register(...registerables)
 
 const CHART_COLORS = ['#2563eb', '#16a34a', '#d97706', '#9333ea', '#dc2626', '#0891b2', '#65a30d', '#c026d3']
 
+/** 기간 키 → cutoff 날짜(YYYY-MM-DD) 또는 null(전체) */
+function calcCutoff(period, customFrom) {
+  const d = new Date()
+  if (period === '1m')  return new Date(d.getFullYear(), d.getMonth() - 1, d.getDate()).toISOString().slice(0, 10)
+  if (period === '3m')  return new Date(d.getFullYear(), d.getMonth() - 3, d.getDate()).toISOString().slice(0, 10)
+  if (period === '6m')  return new Date(d.getFullYear(), d.getMonth() - 6, d.getDate()).toISOString().slice(0, 10)
+  if (period === 'ytd') return `${d.getFullYear()}-01-01`
+  if (period === '1y')  return new Date(d.getFullYear() - 1, d.getMonth(), d.getDate()).toISOString().slice(0, 10)
+  if (period === '3y')  return new Date(d.getFullYear() - 3, d.getMonth(), d.getDate()).toISOString().slice(0, 10)
+  if (period === 'custom') return customFrom || null
+  return null
+}
+
 // "undefined" 문자열·JS undefined·null·"" 모두 처리 — 첫 번째 유효한 값 반환
 const cleanStr = (...vals) => vals.find(v => v && typeof v === 'string' && v !== 'undefined' && v.trim() !== '') ?? '알 수 없음'
 
@@ -184,6 +197,8 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     return (!hasUSD && hasKRW) ? 'KRW' : 'USD'
   })
   const [overviewPeriod, setOverviewPeriod] = useState('all')
+  const [customFrom, setCustomFrom] = useState('')
+  const [customTo,   setCustomTo]   = useState('')
 
   // 히스토리 탭 필터
   const [mainTab, setMainTab] = useState('overview')
@@ -227,16 +242,8 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     const { grpTotals, stockValues, stockEvals, lineDatasets, fxRate, groupTickers } = computed
 
     // 기간 cutoff
-    const now = new Date()
-    const cutoff = (() => {
-      if (overviewPeriod === '1m') return new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString().slice(0, 10)
-      if (overviewPeriod === '3m') return new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()).toISOString().slice(0, 10)
-      if (overviewPeriod === '6m') return new Date(now.getFullYear(), now.getMonth() - 6, now.getDate()).toISOString().slice(0, 10)
-      if (overviewPeriod === 'ytd') return `${now.getFullYear()}-01-01`
-      if (overviewPeriod === '1y') return new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString().slice(0, 10)
-      if (overviewPeriod === '3y') return new Date(now.getFullYear() - 3, now.getMonth(), now.getDate()).toISOString().slice(0, 10)
-      return null
-    })()
+    const cutoff = calcCutoff(overviewPeriod, customFrom)
+    const cutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
 
     // 기간 필터 적용 → 파이/바차트용 데이터 재계산
     const { priceMap: pm } = stockData || {}
@@ -248,7 +255,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       let grpTotal = 0
       g.stocks.filter(s => !s.is_deleted).forEach(s => {
         const allPP = s.purchases || []
-        const pp = cutoff ? allPP.filter(p => !p.date || p.date >= cutoff) : allPP
+        const pp = allPP.filter(p => (!cutoff || !p.date || p.date >= cutoff) && (!cutoffEnd || !p.date || p.date <= cutoffEnd))
         const sl = s.sells || []
         const bq = pp.reduce((a, p) => a + (p.qty || 0), 0)
         const sq = sl.reduce((a, p) => a + (p.qty || 0), 0)
@@ -416,7 +423,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       chartsRef.current.forEach(c => c.destroy())
       chartsRef.current = []
     }
-  }, [isOpen, computed, lang, overviewCurrency, overviewGroup, overviewPeriod, mainTab])
+  }, [isOpen, computed, lang, overviewCurrency, overviewGroup, overviewPeriod, customFrom, customTo, mainTab])
 
   // 히스토리 데이터 fetch
   useEffect(() => {
@@ -465,18 +472,10 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     const useUSD = histCurrencyFilter === 'USD' && !histGroupFilter
     const yLabel = useUSD ? '$' : '₩'
 
-    const now = new Date()
-    const cutoff = (() => {
-      if (overviewPeriod === '1m') return new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString().slice(0, 10)
-      if (overviewPeriod === '3m') return new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()).toISOString().slice(0, 10)
-      if (overviewPeriod === '6m') return new Date(now.getFullYear(), now.getMonth() - 6, now.getDate()).toISOString().slice(0, 10)
-      if (overviewPeriod === 'ytd') return `${now.getFullYear()}-01-01`
-      if (overviewPeriod === '1y') return new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString().slice(0, 10)
-      if (overviewPeriod === '3y') return new Date(now.getFullYear() - 3, now.getMonth(), now.getDate()).toISOString().slice(0, 10)
-      return null
-    })()
+    const cutoff = calcCutoff(overviewPeriod, customFrom)
+    const cutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
     const filtered = [...histData]
-      .filter(r => getValue(r) != null && (!cutoff || r.snapshot_date >= cutoff))
+      .filter(r => getValue(r) != null && (!cutoff || r.snapshot_date >= cutoff) && (!cutoffEnd || r.snapshot_date <= cutoffEnd))
       .sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date))
     if (!filtered.length) return
 
@@ -517,7 +516,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       },
     })
     return () => { if (histChartRef.current) { histChartRef.current.destroy(); histChartRef.current = null } }
-  }, [isOpen, mainTab, histData, overviewPeriod, histGroupFilter, histCurrencyFilter, histGroupNames, lang])
+  }, [isOpen, mainTab, histData, overviewPeriod, customFrom, customTo, histGroupFilter, histCurrencyFilter, histGroupNames, lang])
 
   useEffect(() => {
     if (!isOpen) return
@@ -555,22 +554,14 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   const groupNames = (stockData?.groups ?? []).map(g => cleanStr(g.name, g.id))
 
   // ── 필터 적용 후 유효 데이터 (JSX 조건부 렌더링 + useEffect 공유) ──
-  const now = new Date()
-  const periodCutoff = (() => {
-    if (overviewPeriod === '1m') return new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString().slice(0, 10)
-    if (overviewPeriod === '3m') return new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()).toISOString().slice(0, 10)
-    if (overviewPeriod === '6m') return new Date(now.getFullYear(), now.getMonth() - 6, now.getDate()).toISOString().slice(0, 10)
-    if (overviewPeriod === 'ytd') return `${now.getFullYear()}-01-01`
-    if (overviewPeriod === '1y') return new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString().slice(0, 10)
-    if (overviewPeriod === '3y') return new Date(now.getFullYear() - 3, now.getMonth(), now.getDate()).toISOString().slice(0, 10)
-    return null
-  })()
+  const periodCutoff = calcCutoff(overviewPeriod, customFrom)
+  const periodCutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
 
   const effectiveLineDatasets = (() => {
     if (!lineDatasets) return []
     let ds = overviewGroup ? lineDatasets.filter(d => d.label === overviewGroup) : lineDatasets
-    if (periodCutoff) {
-      ds = ds.map(d => ({ ...d, data: d.data.filter(pt => pt.x >= periodCutoff) })).filter(d => d.data.length > 0)
+    if (periodCutoff || periodCutoffEnd) {
+      ds = ds.map(d => ({ ...d, data: d.data.filter(pt => (!periodCutoff || pt.x >= periodCutoff) && (!periodCutoffEnd || pt.x <= periodCutoffEnd)) })).filter(d => d.data.length > 0)
     }
     return ds
   })()
@@ -636,7 +627,13 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         boxShadow: '0 1px 6px rgba(0,0,0,0.07)',
       }}>
         <span style={{ fontSize: '0.75rem', color: 'var(--ink3)', fontWeight: 500, whiteSpace: 'nowrap' }}>기간</span>
-        <PeriodSelector value={overviewPeriod} onChange={setOverviewPeriod} />
+        <PeriodSelector
+          value={overviewPeriod}
+          onChange={setOverviewPeriod}
+          customFrom={customFrom}
+          customTo={customTo}
+          onCustomChange={(f, t) => { setCustomFrom(f); setCustomTo(t) }}
+        />
       </div>
 
       <div className="stats-body">
@@ -757,18 +754,10 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--ink3)' }}>{t(lang, 'stock.noHistory')}</div>
           )
 
-          const now = new Date()
-          const cutoff = (() => {
-            if (overviewPeriod === '1m') return new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString().slice(0, 10)
-            if (overviewPeriod === '3m') return new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()).toISOString().slice(0, 10)
-            if (overviewPeriod === '6m') return new Date(now.getFullYear(), now.getMonth() - 6, now.getDate()).toISOString().slice(0, 10)
-            if (overviewPeriod === 'ytd') return `${now.getFullYear()}-01-01`
-            if (overviewPeriod === '1y') return new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString().slice(0, 10)
-            if (overviewPeriod === '3y') return new Date(now.getFullYear() - 3, now.getMonth(), now.getDate()).toISOString().slice(0, 10)
-            return null
-          })()
+          const cutoff = calcCutoff(overviewPeriod, customFrom)
+          const cutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
           const filtered = [...histData]
-            .filter(r => r.total_krw_equiv != null && (!cutoff || r.snapshot_date >= cutoff))
+            .filter(r => r.total_krw_equiv != null && (!cutoff || r.snapshot_date >= cutoff) && (!cutoffEnd || r.snapshot_date <= cutoffEnd))
             .sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date))
 
           const equivVals = filtered.map(r => r.total_krw_equiv)
