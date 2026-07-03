@@ -1,3 +1,4 @@
+import { fmtAmt } from '../utils/format'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { t } from '../i18n'
@@ -7,17 +8,12 @@ import { INCOME_CATEGORIES, getSubcategories } from '../data/incomeCategories'
 import { CURRENCY_CODES as CURRENCIES, CURRENCY_SYMBOLS as SYM } from '../data/currencies'
 import { useToast } from '../components/Toast'
 import Toast from '../components/Toast'
-import { pad2, todayStr } from '../utils/date'
+import { pad2, todayStr, ML } from '../utils/date'
 import SharedCalendar from '../components/SharedCalendar'
 import './BudgetPage.css'
 
 Chart.register(...registerables)
 const COLORS = ['#e8a060','#60b4e8','#7ee882','#e860c8','#e8e060','#60e8d0','#e88060','#a060e8','#60e89a','#e86060']
-const ML = {
-  ko: ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],
-  en: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
-}
-
 // ── 이모지 피커 데이터 ────────────────────────────────────────────────────────
 const EMOJI_TABS = [
   { label: '😊', name: '얼굴/감정', emojis: ['😊','😂','🥰','😍','🤩','😎','😄','😁','😆','😜','🥳','😏','🤗','😇','🥹','😭','😱','🤔','🙄','😴','🤯','😤','🙃','😋','🤪','🥺','😬','🤭','😶','😐'] },
@@ -45,12 +41,6 @@ const toLocalDateStr = (inputValue) => {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
 }
 
-function fmtAmt(amt, cur) {
-  const s = SYM[cur] || '$'
-  const n = amt || 0
-  if (cur === 'KRW' || cur === 'JPY') return s + Math.round(n).toLocaleString()
-  return s + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-}
 
 /**
  * localStorage에서 JWT를 읽어 유효성 검증 후 반환.
