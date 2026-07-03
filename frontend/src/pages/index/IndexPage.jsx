@@ -450,7 +450,7 @@ export default function IndexPage() {
       {/* 내 주식 설정 모달 */}
       <StockSettingsModal
         isOpen={stockSettingsOpen}
-        onClose={() => setStockSettingsOpen(false)}
+        onClose={() => { setStockSettingsOpen(false); loadStocks() }}
         onCurrencyChange={saveCurrencyDisplay}
         lang={lang}
       />
