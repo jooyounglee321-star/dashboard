@@ -165,7 +165,7 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
           <span className={titleCls}>{t(lang, 'stockTitle')}</span>
           <button style={btnStyle} onClick={onOpenStats}>{t(lang, 'stock.statsLink')}</button>
           <button style={{ ...btnStyle, marginLeft: '0.4rem' }} onClick={onOpenSettings}>{t(lang, 'stock.settings')}</button>
-          <span style={{ marginLeft: 'auto', fontSize: '0.68rem', color: 'var(--ink3)' }}>{fxText}</span>
+          {/* fxText */}
         </div>
         <div className={body}>
           <div className="empty-msg">{t(lang, 'stockLoading')}</div>
@@ -182,7 +182,7 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
           <span className={titleCls}>{t(lang, 'stockTitle')}</span>
           <button style={btnStyle} onClick={onOpenStats}>{t(lang, 'stock.statsLink')}</button>
           <button style={{ ...btnStyle, marginLeft: '0.4rem' }} onClick={onOpenSettings}>{t(lang, 'stock.settings')}</button>
-          <span style={{ marginLeft: 'auto', fontSize: isMobile ? '0.65rem' : '0.68rem', color: 'var(--ink3)' }}>{fxText}</span>
+          {/* fxText */}
         </div>
         <div className={body}>
           <div className="empty-msg">{t(lang, 'stockEmpty')}</div>
@@ -321,13 +321,13 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
     const tot = grandKRW + (fxRate ? grandUSD * fxRate : 0)
     totalBar = (
       <div className="stock-total-bar">
-        <span className="stock-total-label">{t(lang, 'stockTotalLabel')}{fxNote}</span>
+        <span className="stock-total-label">{t(lang, 'stockTotalLabel')}{/* fxNote */}</span>
         <span className="stock-total-value">₩{fmtKRW(tot)}</span>
       </div>
     )
     mTotalBar = (
       <div className="m-total-bar">
-        <span style={{ fontSize: '0.72rem', color: '#a89880' }}>{t(lang, 'stockTotalLabel')}{fxNote}</span>
+        <span style={{ fontSize: '0.72rem', color: '#a89880' }}>{t(lang, 'stockTotalLabel')}{/* fxNote */}</span>
         <span style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--accent2)' }}>₩{fmtKRW(tot)}</span>
       </div>
     )
@@ -335,13 +335,13 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
     const tot = grandUSD + (fxRate ? grandKRW / fxRate : 0)
     totalBar = (
       <div className="stock-total-bar">
-        <span className="stock-total-label">{t(lang, 'stockTotalLabel')}{fxNote}</span>
+        <span className="stock-total-label">{t(lang, 'stockTotalLabel')}{/* fxNote */}</span>
         <span className="stock-total-value">${fmtUSD(tot)}</span>
       </div>
     )
     mTotalBar = (
       <div className="m-total-bar">
-        <span style={{ fontSize: '0.72rem', color: '#a89880' }}>{t(lang, 'stockTotalLabel')}{fxNote}</span>
+        <span style={{ fontSize: '0.72rem', color: '#a89880' }}>{t(lang, 'stockTotalLabel')}{/* fxNote */}</span>
         <span style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--accent2)' }}>${fmtUSD(tot)}</span>
       </div>
     )
@@ -352,7 +352,7 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
         <div style={rowS}><span className="stock-total-label">{t(lang, 'stockUSDSum')}</span><span className="stock-total-value" style={{ fontSize: '0.82rem' }}>${fmtUSD(grandUSD)}</span></div>
         <div style={rowS}><span className="stock-total-label">{t(lang, 'stockKRWSum')}</span><span className="stock-total-value" style={{ fontSize: '0.82rem' }}>₩{fmtKRW(grandKRW)}</span></div>
         <div style={divS} />
-        <div style={rowS}><span className="stock-total-label">{t(lang, 'stockKRWEquiv')}{fxNote}</span><span className="stock-total-value">₩{fmtKRW(totKRW)}</span></div>
+        <div style={rowS}><span className="stock-total-label">{t(lang, 'stockKRWEquiv')}{/* fxNote */}</span><span className="stock-total-value">₩{fmtKRW(totKRW)}</span></div>
       </div>
     )
     mTotalBar = (
@@ -360,7 +360,7 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
         <div style={rowS}><span style={{ fontSize: '0.72rem', color: '#a89880' }}>{t(lang, 'stockUSDSum')}</span><span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--accent2)' }}>${fmtUSD(grandUSD)}</span></div>
         <div style={rowS}><span style={{ fontSize: '0.72rem', color: '#a89880' }}>{t(lang, 'stockKRWSum')}</span><span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--accent2)' }}>₩{fmtKRW(grandKRW)}</span></div>
         <div style={divS} />
-        <div style={rowS}><span style={{ fontSize: '0.72rem', color: '#a89880' }}>{t(lang, 'stockKRWEquivShort')}{fxNote}</span><span style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--accent2)' }}>₩{fmtKRW(totKRW)}</span></div>
+        <div style={rowS}><span style={{ fontSize: '0.72rem', color: '#a89880' }}>{t(lang, 'stockKRWEquivShort')}{/* fxNote */}</span><span style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--accent2)' }}>₩{fmtKRW(totKRW)}</span></div>
       </div>
     )
   }
@@ -373,9 +373,7 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
         <span className={titleCls}>{t(lang, 'stockTitle')}</span>
         <button style={btnStyle} onClick={onOpenStats}>{t(lang, 'stock.statsLink')}</button>
         <button style={{ ...btnStyle, marginLeft: '0.4rem' }} onClick={onOpenSettings}>{t(lang, 'stock.settings')}</button>
-        <span style={{ marginLeft: 'auto', fontSize: isMobile ? '0.65rem' : '0.68rem', color: 'var(--ink3)', fontWeight: 400 }}>
-          {fxText}
-        </span>
+        {/* fxText */}
       </div>
       <div className={body}>
         {!isMobile ? (
