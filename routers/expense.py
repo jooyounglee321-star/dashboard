@@ -17,17 +17,18 @@ from sqlalchemy import func as sqlfunc
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Expense, ExpenseBudget, ExpenseCategory, ExchangeRate, RecurringExpense, User
-from routers._shared import get_rate as _get_rate, cat_name as _cat_name, require_admin
+from models import Expense, ExpenseCategory, ExchangeRate, RecurringExpense, User
+from routers._shared import cat_name as _cat_name, require_admin
 from routers.expense_shared import (
-    ExpenseIn, ExpensePatch, BudgetIn, BudgetPatch,
+    ExpenseIn, ExpensePatch,
     RecurringExpenseIn, RecurringExpensePatch,
     to_usd as _to_usd, build_cat_map as _build_cat_map,
-    expense_dict as _expense_dict, budget_dict as _budget_dict,
+    expense_dict as _expense_dict,
     recurring_dict as _recurring_dict,
 )
 from routers.expense_categories import category_router
 from routers.expense_stats import stats_router
+from routers.expense_budget import budget_router
 from routers.auth import get_current_user
 
 logger = logging.getLogger(__name__)
@@ -36,13 +37,14 @@ expense_router  = APIRouter(prefix="/expense",        tags=["expense"])
 exchange_router = APIRouter(prefix="/exchange-rates", tags=["exchange-rates"])
 expense_router.include_router(category_router)
 expense_router.include_router(stats_router)
+expense_router.include_router(budget_router)
 
 
 
 
 
 # ════════════════════════════════════════════════════════════════════════════
-# 예산 API
+# 지출 CRUD  (/{id} 경로는 마지막에 정의)
 # ════════════════════════════════════════════════════════════════════════════
 
 def _fetch_cat_map(ids, db: Session) -> dict:
@@ -50,111 +52,6 @@ def _fetch_cat_map(ids, db: Session) -> dict:
     if not ids_set:
         return {}
     return {c.id: c for c in db.query(ExpenseCategory).filter(ExpenseCategory.id.in_(ids_set)).all()}
-
-
-
-
-@expense_router.get("/budget")
-def list_budgets(
-    year:  int          = Query(...),
-    month: int | None   = None,
-    lang:  str          = Query("ko", pattern="^(ko|en)$"),
-    db:    Session      = Depends(get_db),
-    current_user: User  = Depends(get_current_user),
-):
-    """해당 기간 예산 목록 + 카테고리별 실지출/잔여 포함."""
-    q = db.query(ExpenseBudget).filter(
-        ExpenseBudget.user_id == current_user.id,
-        ExpenseBudget.year == year,
-    )
-    if month is not None:
-        q = q.filter(ExpenseBudget.month == month)
-    budgets = q.all()
-
-    # 해당 기간 실지출
-    eq = db.query(Expense).filter(
-        Expense.user_id == current_user.id,
-        sqlfunc.extract("year", Expense.date) == year,
-    )
-    if month is not None:
-        eq = eq.filter(sqlfunc.extract("month", Expense.date) == month)
-    actual: dict[int | None, float] = {}
-    for e in eq.all():
-        k   = e.category_id
-        usd = float(e.converted_amount) if e.converted_amount is not None else float(e.amount)
-        actual[k] = round(actual.get(k, 0.0) + usd, 2)
-
-    currencies = {b.currency for b in budgets}
-    rate_map   = {c: _get_rate(c, db) for c in currencies}
-
-    cat_map = _fetch_cat_map([b.category_id for b in budgets], db)
-
-    result = []
-    for b in budgets:
-        brate      = rate_map.get(b.currency, 1.0)
-        budget_usd = round(float(b.amount) / brate, 2)
-        spent_usd  = actual.get(b.category_id, 0.0)
-        d = _budget_dict(b, cat_map, lang)
-        d["budget_usd"]    = budget_usd
-        d["spent_usd"]     = spent_usd
-        d["remaining_usd"] = round(budget_usd - spent_usd, 2)
-        result.append(d)
-    return result
-
-
-@expense_router.post("/budget", status_code=201)
-def create_budget(
-    body: BudgetIn,
-    db:   Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    b = ExpenseBudget(
-        user_id     = current_user.id,
-        category_id = body.category_id,
-        year        = body.year,
-        month       = body.month,
-        amount      = body.amount,
-        currency    = body.currency,
-    )
-    db.add(b)
-    db.commit()
-    db.refresh(b)
-    return _budget_dict(b, _fetch_cat_map([b.category_id], db))
-
-
-@expense_router.put("/budget/{budget_id}")
-def update_budget(
-    budget_id: int,
-    body:      BudgetPatch,
-    db:        Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    b = db.get(ExpenseBudget, budget_id)
-    if not b or b.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Budget not found")
-    for field, val in body.model_dump(exclude_unset=True).items():
-        setattr(b, field, val)
-    db.commit()
-    db.refresh(b)
-    return _budget_dict(b, _fetch_cat_map([b.category_id], db))
-
-
-@expense_router.delete("/budget/{budget_id}", status_code=204)
-def delete_budget(
-    budget_id: int,
-    db:        Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    b = db.get(ExpenseBudget, budget_id)
-    if not b or b.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Budget not found")
-    db.delete(b)
-    db.commit()
-
-
-# ════════════════════════════════════════════════════════════════════════════
-# 지출 CRUD  (/{id} 경로는 마지막에 정의)
-# ════════════════════════════════════════════════════════════════════════════
 
 @expense_router.get("")
 def list_expenses(
