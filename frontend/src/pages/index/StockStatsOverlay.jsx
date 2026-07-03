@@ -189,7 +189,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   const [userJoinDate, setUserJoinDate] = useState(null)
   const [histData, setHistData] = useState([])
   const [histLoading, setHistLoading] = useState(false)
-  const [histRange, setHistRange] = useState('1m')
+  // histRange 제거 — overviewPeriod로 통합
   const [histPage, setHistPage] = useState(0)
   const [histGroupFilter, setHistGroupFilter] = useState('')
   const [histCurrencyFilter, setHistCurrencyFilter] = useState('')
@@ -432,11 +432,15 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     const yLabel = useUSD ? '$' : '₩'
 
     const now = new Date()
-    const cutoff = histRange === '1m'
-      ? new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString().slice(0, 10)
-      : histRange === '3m'
-        ? new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()).toISOString().slice(0, 10)
-        : null
+    const cutoff = (() => {
+      if (overviewPeriod === '1m') return new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString().slice(0, 10)
+      if (overviewPeriod === '3m') return new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()).toISOString().slice(0, 10)
+      if (overviewPeriod === '6m') return new Date(now.getFullYear(), now.getMonth() - 6, now.getDate()).toISOString().slice(0, 10)
+      if (overviewPeriod === 'ytd') return `${now.getFullYear()}-01-01`
+      if (overviewPeriod === '1y') return new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString().slice(0, 10)
+      if (overviewPeriod === '3y') return new Date(now.getFullYear() - 3, now.getMonth(), now.getDate()).toISOString().slice(0, 10)
+      return null
+    })()
     const filtered = [...histData]
       .filter(r => getValue(r) != null && (!cutoff || r.snapshot_date >= cutoff))
       .sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date))
@@ -479,7 +483,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       },
     })
     return () => { if (histChartRef.current) { histChartRef.current.destroy(); histChartRef.current = null } }
-  }, [isOpen, mainTab, histData, histRange, histGroupFilter, histCurrencyFilter, histGroupNames, lang])
+  }, [isOpen, mainTab, histData, overviewPeriod, histGroupFilter, histCurrencyFilter, histGroupNames, lang])
 
   useEffect(() => {
     if (!isOpen) return
@@ -710,11 +714,15 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
           )
 
           const now = new Date()
-          const cutoff = histRange === '1m'
-            ? new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString().slice(0, 10)
-            : histRange === '3m'
-              ? new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()).toISOString().slice(0, 10)
-              : null
+          const cutoff = (() => {
+            if (overviewPeriod === '1m') return new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString().slice(0, 10)
+            if (overviewPeriod === '3m') return new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()).toISOString().slice(0, 10)
+            if (overviewPeriod === '6m') return new Date(now.getFullYear(), now.getMonth() - 6, now.getDate()).toISOString().slice(0, 10)
+            if (overviewPeriod === 'ytd') return `${now.getFullYear()}-01-01`
+            if (overviewPeriod === '1y') return new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString().slice(0, 10)
+            if (overviewPeriod === '3y') return new Date(now.getFullYear() - 3, now.getMonth(), now.getDate()).toISOString().slice(0, 10)
+            return null
+          })()
           const filtered = [...histData]
             .filter(r => r.total_krw_equiv != null && (!cutoff || r.snapshot_date >= cutoff))
             .sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date))
@@ -779,8 +787,8 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                   </select>
                 </div>
                 <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.75rem' }}>
-                  {[['1m', '1개월'], ['3m', '3개월'], ['all', '전체']].map(([key, label]) => (
-                    <button key={key} onClick={() => setHistRange(key)} style={periodBtn(histRange === key)}>{label}</button>
+                  {[['1m','1M'],['3m','3M'],['6m','6M'],['ytd','YTD'],['1y','1Y'],['3y','3Y'],['all','전체']].map(([key, label]) => (
+                    <button key={key} onClick={() => setOverviewPeriod(key)} style={periodBtn(overviewPeriod === key)}>{label}</button>
                   ))}
                 </div>
                 <div className="stats-chart-wrap">
