@@ -56,7 +56,7 @@ export default function LoginPage() {
         const storage = autoLogin ? localStorage : sessionStorage
         storage.setItem('token', jwt)
         if (data.user) storage.setItem('user', JSON.stringify(data.user))
-setMsg({ type: 'success', text: t(lang, 'auth.successLogin') })
+        setMsg({ type: 'success', text: t(lang, 'auth.successLogin') })
         setTimeout(() => navigate('/'), 800)
       } else {
         setMsg({ type: 'error', text: data.detail || t(lang, 'auth.errLogin') })
