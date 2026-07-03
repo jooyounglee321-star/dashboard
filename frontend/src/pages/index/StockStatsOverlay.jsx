@@ -4,6 +4,7 @@ import 'chartjs-adapter-date-fns'
 import { t } from './i18n'
 import { fmtKRW, fmtUSD } from '../../utils/format'
 import { apiFetch } from '../../api'
+import PeriodSelector from '../../components/PeriodSelector'
 Chart.register(...registerables)
 
 const CHART_COLORS = ['#2563eb', '#16a34a', '#d97706', '#9333ea', '#dc2626', '#0891b2', '#65a30d', '#c026d3']
@@ -663,6 +664,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                       </select>
                     </>
                   )}
+                  <PeriodSelector value={overviewPeriod} onChange={setOverviewPeriod} style={{ marginLeft: 'auto' }} />
                 </div>
               )
             })()}
@@ -675,14 +677,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               const filteredKRW = filteredGroups.reduce((a, g) => a + (g.isKRW ? g.total : (fxRate ? g.total * fxRate : 0)), 0)
               return (
                 <div className="stats-section">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-                    <div className="stats-section-title" style={{ marginBottom: 0 }}>{t(lang, 'statsSummaryTitle')}</div>
-                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
-                      {[['1m','1M'],['3m','3M'],['6m','6M'],['ytd','YTD'],['1y','1Y'],['3y','3Y'],['all','전체']].map(([key, label]) => (
-                        <button key={key} onClick={() => setOverviewPeriod(key)} style={periodBtn(overviewPeriod === key)}>{label}</button>
-                      ))}
-                    </div>
-                  </div>
+                  <div className="stats-section-title">{t(lang, 'statsSummaryTitle')}</div>
                   <div className="stats-summary-grid">
                     {filteredGroups.map((g, i) => (
                       <div className="stats-summary-card" key={i}>
@@ -805,7 +800,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
 
               {/* 날짜 범위 버튼 + 필터 + 라인차트 */}
               <div className="stats-section">
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.75rem' }}>
                   <span style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>{t(lang, 'stock.filterByGroup')}:</span>
                   <select value={histGroupFilter} onChange={e => setHistGroupFilter(e.target.value)} style={selStyle}>
                     <option value="">{t(lang, 'stock.allGroups')}</option>
@@ -822,11 +817,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                     <option value="USD">USD</option>
                     <option value="KRW">KRW</option>
                   </select>
-                </div>
-                <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.75rem' }}>
-                  {[['1m','1M'],['3m','3M'],['6m','6M'],['ytd','YTD'],['1y','1Y'],['3y','3Y'],['all','전체']].map(([key, label]) => (
-                    <button key={key} onClick={() => setOverviewPeriod(key)} style={periodBtn(overviewPeriod === key)}>{label}</button>
-                  ))}
+                  <PeriodSelector value={overviewPeriod} onChange={setOverviewPeriod} style={{ marginLeft: 'auto' }} />
                 </div>
                 <div className="stats-chart-wrap">
                   <canvas ref={histLineRef} />
