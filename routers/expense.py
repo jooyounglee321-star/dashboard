@@ -1,9 +1,12 @@
 from __future__ import annotations
-"""가계부 Phase 3 — 카테고리·지출·통계·예산·환율 API.
+"""가계부 메인 라우터 — 지출 CRUD + 환율 API.
 
 라우터 두 개:
   expense_router  → prefix /expense
   exchange_router → prefix /exchange-rates
+
+통계/카테고리/예산/정기지출은 각각 별도 파일로 분리:
+  expense_categories.py, expense_stats.py, expense_budget.py, expense_recurring.py
 """
 
 import logging
@@ -17,8 +20,9 @@ from sqlalchemy import func as sqlfunc
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Expense, ExpenseCategory, ExchangeRate, User
-from routers._shared import cat_name as _cat_name, require_admin
+from models import Expense, ExchangeRate, User
+from routers._shared import require_admin
+from routers.auth import get_current_user
 from routers.expense_shared import (
     ExpenseIn, ExpensePatch,
     to_usd as _to_usd, build_cat_map as _build_cat_map,
@@ -28,7 +32,6 @@ from routers.expense_categories import category_router
 from routers.expense_stats import stats_router
 from routers.expense_budget import budget_router
 from routers.expense_recurring import recurring_router
-from routers.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -40,18 +43,9 @@ expense_router.include_router(budget_router)
 expense_router.include_router(recurring_router)
 
 
-
-
-
 # ════════════════════════════════════════════════════════════════════════════
 # 지출 CRUD  (/{id} 경로는 마지막에 정의)
 # ════════════════════════════════════════════════════════════════════════════
-
-def _fetch_cat_map(ids, db: Session) -> dict:
-    ids_set = {i for i in ids if i}
-    if not ids_set:
-        return {}
-    return {c.id: c for c in db.query(ExpenseCategory).filter(ExpenseCategory.id.in_(ids_set)).all()}
 
 @expense_router.get("")
 def list_expenses(
@@ -74,7 +68,6 @@ def list_expenses(
         )
     elif year:
         q = q.filter(sqlfunc.extract("year", Expense.date) == year)
-    # type 필터: expense | income (미지정 시 전체 반환)
     if type:
         q = q.filter(Expense.type == type)
     rows = q.order_by(Expense.date.desc(), Expense.created_at.desc()).all()
@@ -123,7 +116,6 @@ def update_expense(
     updates = body.model_dump(exclude_unset=True)
     lang    = updates.pop("lang", "ko")
 
-    # amount / currency 변경이 있으면 환산 재계산
     new_amount   = updates.pop("amount",   None)
     new_currency = updates.pop("currency", None)
     if new_amount is not None or new_currency is not None:
@@ -137,7 +129,6 @@ def update_expense(
 
     for field, val in updates.items():
         if field == "type":
-            # type 값 검증: expense | income 만 허용
             if val in ("expense", "income"):
                 e.type = val
         else:
@@ -231,8 +222,6 @@ def get_rate(currency: str, db: Session = Depends(get_db), _: User = Depends(get
     }
 
 
-# ── 환율 갱신 공용 함수 (main.py APScheduler에서도 호출) ─────────────────────
-
 def do_refresh_rates(db: Session) -> dict:
     """Yahoo Finance에서 실시간 환율 조회 후 DB 업데이트. 캐시 무효화."""
     updated: list[str] = []
@@ -267,11 +256,8 @@ def do_refresh_rates(db: Session) -> dict:
             db.rollback()
             logger.error("[RATE] DB 커밋 실패: %s", exc)
 
-    # 인메모리 캐시 무효화
     _rate_cache["data"] = None
     _rate_cache["ts"]   = 0.0
 
     logger.info("[RATE] 환율 갱신 완료 — 성공: %s / 실패: %s", updated, failed)
     return {"updated": updated, "failed": failed}
-
-

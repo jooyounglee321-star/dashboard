@@ -38,7 +38,7 @@
 - `routers/expense_stats.py` 신설: 통계/요약 5개 엔드포인트(summary/daily, summary/monthly, summary/yearly, stats, daily-compare) 분리 → `expense_router.include_router(stats_router)` 로 sub-router 포함
 - `routers/expense_budget.py` 신설: 예산 CRUD 4개 엔드포인트(budget GET/POST/PUT/DELETE) 분리 → `expense_router.include_router(budget_router)` 로 sub-router 포함
 - `routers/expense_recurring.py` 신설: 정기지출 5개 엔드포인트(recurring GET/POST/PUT/DELETE/apply) 분리 → `expense_router.include_router(recurring_router)` 로 sub-router 포함; apply_recurring의 `day_of_month=None` TypeError 버그 수정(dom 변수로 방어)
-- `expense.py` 1316줄 → 약 250줄로 경량화 (지출 CRUD + 환율만 잔류)
+- `expense.py` 최종 슬림화: 불필요한 `_fetch_cat_map`/`ExpenseCategory`/`_cat_name` 제거 → 263줄 (지출 CRUD 4개 + 환율 3개만 잔류)
 
 ### feat (공통 유틸)
 - `frontend/src/utils/date.js`: `MONTHS_KO`, `MONTHS_EN`, `MONTHS_EN_FULL`, `ML` 추가
