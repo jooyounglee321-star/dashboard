@@ -124,8 +124,23 @@ const btnStyle = {
   fontFamily: 'inherit', textDecoration: 'none',
 }
 
-function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSettings, isMobile = false, currencyDisplay, lang = 'ko' }) {
-  const totalMode = currencyDisplay ?? (() => { try { return localStorage.getItem(TOTAL_MODE_KEY) || 'KRW' } catch { return 'KRW' } })()
+function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSettings, isMobile = false, currencyDisplay, onCurrencyChange, lang = 'ko' }) {
+  const totalMode = currencyDisplay ?? (() => {
+    try {
+      const saved = localStorage.getItem(TOTAL_MODE_KEY)
+      if (saved) return saved
+      const hasKRW = groups.some(g => g.currency === 'KRW')
+      const hasUSD = groups.some(g => g.currency !== 'KRW')
+      if (hasUSD && hasKRW) return 'BOTH'
+      if (hasUSD) return 'USD'
+      return 'KRW'
+    } catch { return 'KRW' }
+  })()
+
+  function handleCurrencyChange(mode) {
+    try { localStorage.setItem(TOTAL_MODE_KEY, mode) } catch {}
+    onCurrencyChange?.(mode)
+  }
 
   const stockCalcMap = useMemo(() => {
     const map = new Map()
@@ -302,7 +317,7 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
   // Total bar
   let totalBar, mTotalBar
 
-  if (totalMode === 'KRW') {
+  if (totalMode?.toUpperCase() === 'KRW') {
     const tot = grandKRW + (fxRate ? grandUSD * fxRate : 0)
     totalBar = (
       <div className="stock-total-bar">
@@ -316,7 +331,7 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
         <span style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--accent2)' }}>₩{fmtKRW(tot)}</span>
       </div>
     )
-  } else if (totalMode === 'USD') {
+  } else if (totalMode?.toUpperCase() === 'USD') {
     const tot = grandUSD + (fxRate ? grandKRW / fxRate : 0)
     totalBar = (
       <div className="stock-total-bar">

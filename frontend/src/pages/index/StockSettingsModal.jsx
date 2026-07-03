@@ -287,7 +287,7 @@ function StockDetailPanel({ g, s, onUpdate }) {
 /* ── 메인 컴포넌트 ── */
 // embedded=true: 모달 오버레이 없이 내용만 렌더 (AdminPage 재사용용)
 // embedded=false (기본): 전체화면 오버레이 모달
-export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embedded = false }) {
+export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embedded = false, onCurrencyChange }) {
   const { toast, showToast } = useToast()
   const [groups,      setGroups]      = useState([])
   const [totalMode,   setTotalMode]   = useState(() => { try { return localStorage.getItem(TOTAL_MODE_KEY) || 'KRW' } catch { return 'KRW' } })
@@ -411,7 +411,7 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
       {/* 합계 표시 방식 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
         <label style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>{t(lang, 'admin.totalDisplay')}</label>
-        <select value={totalMode} onChange={e => { setTotalMode(e.target.value); localStorage.setItem(TOTAL_MODE_KEY, e.target.value); showToast('✓ 합계 표시 방식이 저장되었습니다', 'ok') }}
+        <select value={totalMode} onChange={e => { const m = e.target.value; setTotalMode(m); localStorage.setItem(TOTAL_MODE_KEY, m); onCurrencyChange?.(m); showToast('✓ 합계 표시 방식이 저장되었습니다', 'ok') }}
           style={{ fontSize: '0.78rem', padding: '0.22rem 0.5rem', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit' }}>
           <option value="KRW">{t(lang, 'admin.krwOnly')}</option>
           <option value="USD">{t(lang, 'admin.usdOnly')}</option>
