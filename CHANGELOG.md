@@ -6,10 +6,12 @@
 
 ## 2026-07-03
 
-### fix
+### fix (크리티컬)
 - `StockStatsOverlay` 모달 스크롤 시 배경 이동 버그 수정 (body scroll lock 추가)
 - 뉴스설정 저장 후 모달 닫아도 반영 안 되던 버그 수정 (onClose 시 stockGroups 재로드)
 - 통계화면 기본 통화 KRW 하드코딩 → 그룹 통화 자동 감지 (USD 그룹만 있으면 USD 기본)
+- `effectivePieItems` ReferenceError 크래시 수정: `periodGrpTotals`/`periodStockValues`를 useEffect 로컬 변수에서 `useMemo`로 추출해 렌더 스코프에서 공유
+- 바차트 빈 캔버스 버그 수정: 기간 필터 시 `effectiveStockEvals`가 `periodStockEvals` 기반으로 변경 (표시 조건 불일치 해소)
 
 ### feat
 - 보유주식 관리 모달에서 합계표시/통화선택 드롭다운 제거 (카드 헤더 토글로 통합)
@@ -18,6 +20,26 @@
 - 레이아웃 편집 세로 높이 1~6 선택 가능하도록 확장
 - 주식 카드 헤더에 $ / ₩ / $+₩ 통화 토글 버튼 추가
 - 통화 표시 방식 서버 widget_config에 저장 (기기 변경 시에도 유지)
+- `StockStatsOverlay` 기간 선택 기능 추가 (1M/3M/6M/YTD/1Y/3Y/전체/직접)
+  - `PeriodSelector` 재사용 컴포넌트 분리 (`frontend/src/components/PeriodSelector.jsx`)
+  - 직접 기간: 시작일/종료일 date input으로 임의 기간 설정
+  - 기간 선택 시 파이차트·바차트·라인차트·히스토리 테이블 모두 연동
+  - sticky 기간 바: 탭 하단에 항상 노출
+- 파이차트 개선: 종목명 해시 기반 고정 색상 (`colorForKey`) + 좌측 커스텀 범례 + 우측 도넛 220×220
+- 차트 축·툴팁 포맷 개선: KRW 천원 단위(`X,XXX천`/`X억`), USD K/M 축약(`$1.2K`/`$1.2M`)
+
+### refactor
+- `StockStatsOverlay` 로컬 포맷터(`formatKRW`/`formatUSD`/`formatAuto`) 제거 → `utils/format` 공통 함수로 통합
+- `BudgetPage`/`MemoCard`/`HeroSection` 로컬 `ML`·`fmtAmt`·`MON` 선언 → `utils/date`·`utils/format` import로 통합
+- 레거시 `expenses.py` 라우터 비활성화 (`expense.py`로 통합 완료)
+- `histRange` 상태 제거 → `overviewPeriod`로 현황/히스토리 탭 기간 상태 통합
+
+### feat (공통 유틸)
+- `frontend/src/utils/date.js`: `MONTHS_KO`, `MONTHS_EN`, `MONTHS_EN_FULL`, `ML` 추가
+- `frontend/src/utils/format.js`: `formatAuto`, `fmtAmt`, `fmtSigned`, `fmtKRWShort`, `fmtUSDShort`, `fmtShort` 추가
+
+### docs
+- `CLAUDE.md` 유틸리티 함수 규칙 추가: `utils/date.js`·`utils/format.js` 로컬 선언 금지, import 강제
 
 ## 2026-07-02
 
