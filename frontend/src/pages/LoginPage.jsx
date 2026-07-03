@@ -19,6 +19,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
+  const [autoLogin, setAutoLogin] = useState(false)
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState({ type: '', text: '' })
 
@@ -52,8 +53,9 @@ export default function LoginPage() {
           setMsg({ type: 'error', text: t(lang, 'auth.errLogin') })
           return
         }
-        localStorage.setItem('token', jwt)
-        if (data.user) localStorage.setItem('user', JSON.stringify(data.user))
+        const storage = autoLogin ? localStorage : sessionStorage
+        storage.setItem('token', jwt)
+        if (data.user) storage.setItem('user', JSON.stringify(data.user))
 setMsg({ type: 'success', text: t(lang, 'auth.successLogin') })
         setTimeout(() => navigate('/'), 800)
       } else {
@@ -114,6 +116,16 @@ setMsg({ type: 'success', text: t(lang, 'auth.successLogin') })
                   {showPw ? '🙈' : '👁️'}
                 </button>
               </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 12px' }}>
+              <input
+                type="checkbox" id="autoLogin"
+                checked={autoLogin} onChange={e => setAutoLogin(e.target.checked)}
+                style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--accent)' }}
+              />
+              <label htmlFor="autoLogin" style={{ fontSize: '0.875rem', color: 'var(--text-sub)', cursor: 'pointer', userSelect: 'none' }}>
+                {t(lang, 'auth.autoLogin')}
+              </label>
             </div>
             <button type="submit" className="btn-submit" disabled={loading}>
               {loading ? t(lang, 'auth.processing') : t(lang, 'auth.loginBtn')}
