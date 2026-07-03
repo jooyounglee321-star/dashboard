@@ -124,7 +124,7 @@ function computeStockStats(stockData, userJoinDate) {
     g.stocks.forEach(s => {
       ;(s.purchases || []).filter(p => !p.date || !startDate || p.date >= startDate).forEach(p => {
         const rawAmt = (p.qty || 0) * (p.price || 0)
-        const amt = g.currency === 'USD' ? rawAmt * (fxRate ?? 1) : rawAmt
+        const amt = rawAmt  // 그룹 통화 그대로 유지 (USD→USD, KRW→KRW)
         const dateKey = p.date || startDate
         if (!dateKey) return
         dailyMap[dateKey] = (dailyMap[dateKey] ?? 0) + amt
@@ -147,6 +147,7 @@ function computeStockStats(stockData, userJoinDate) {
       backgroundColor: 'transparent',
       tension: 0.3,
       pointRadius: 3,
+      currency: g.currency,
     })
   })
 
@@ -167,6 +168,13 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
 
   // 현황 탭 공통 필터
   const [overviewGroup, setOverviewGroup] = useState('')
+  // 그룹 1개면 자동으로 해당 그룹 선택 (파이차트 종목별 드릴다운)
+  useEffect(() => {
+    if (!stockData?.groups) return
+    const names = stockData.groups.map(g => cleanStr(g.name, g.id))
+    if (names.length === 1) setOverviewGroup(names[0])
+    else setOverviewGroup('')
+  }, [stockData])
   const [overviewCurrency, setOverviewCurrency] = useState(() => {
     // USD 그룹만 있으면 USD 기본, 혼합이면 KRW
     const gs = stockData?.groups ?? []
@@ -289,7 +297,11 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               },
               y: {
                 title: { display: true, text: t(lang, 'statsAxisInvest') },
-                ticks: { callback: v => overviewCurrency === 'USD' ? formatUSD(v) : `₩${formatKRW(v)}` },
+                ticks: { callback: v => {
+                  const ds = datasets[0]
+                  const cur = ds?.currency ?? (overviewCurrency === 'USD' ? 'USD' : 'KRW')
+                  return cur === 'USD' ? formatUSD(v) : `₩${formatKRW(v)}`
+                } },
               },
             },
             plugins: {
@@ -298,7 +310,9 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                 callbacks: {
                   label: ctx => {
                     const v = ctx.parsed.y
-                    return overviewCurrency === 'USD' ? formatUSD(v) : `₩${formatKRW(v)}`
+                    const ds = datasets[ctx.datasetIndex]
+                    const cur = ds?.currency ?? (overviewCurrency === 'USD' ? 'USD' : 'KRW')
+                    return cur === 'USD' ? formatUSD(v) : `₩${formatKRW(v)}`
                   },
                 },
               },
@@ -608,12 +622,6 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                       </select>
                     </>
                   )}
-                  <span style={{ fontSize: '0.78rem', color: 'var(--ink3)', marginLeft: (hasMultiGroup || hasMultiCurrency) ? '0.4rem' : 0 }}>기간:</span>
-                  {[['1m', '1개월'], ['3m', '3개월'], ['all', '전체']].map(([key, label]) => (
-                    <button key={key} onClick={() => setOverviewPeriod(key)} style={periodBtn(overviewPeriod === key)}>
-                      {label}
-                    </button>
-                  ))}
                 </div>
               )
             })()}
@@ -636,8 +644,8 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                         </div>
                       </div>
                     ))}
-                    {/* 원화환산 카드: USD 자산이 있으면 항상 표시 */}
-                    {hasUSD && (
+                    {/* 원화환산 카드: USD 그룹이 1개 이상 있고, 전체보기(overviewGroup='')일 때만 표시 */}
+                    {!overviewGroup && (grpTotals ?? []).some(g => !g.isKRW) && (grpTotals ?? []).some(g => g.isKRW) && (
                       <div className="stats-summary-card">
                         <div className="stats-summary-label">
                           {t(lang, 'statsKRWEquiv')}{fxRate ? ` ($1=₩${fmtKRW(fxRate)})` : ` (${t(lang, 'statsFxNone')})`}
@@ -664,7 +672,14 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             {/* ── 라인차트 ── */}
             {lineDatasets?.length > 0 && (
               <div className="stats-section">
-                <div className="stats-section-title">{t(lang, 'statsLineTitle')}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <div className="stats-section-title" style={{ marginBottom: 0 }}>{t(lang, 'statsLineTitle')}</div>
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+                    {[['1m', '1개월'], ['3m', '3개월'], ['all', '전체']].map(([key, label]) => (
+                      <button key={key} onClick={() => setOverviewPeriod(key)} style={periodBtn(overviewPeriod === key)}>{label}</button>
+                    ))}
+                  </div>
+                </div>
                 {effectiveLineDatasets.length > 0
                   ? <div className="stats-chart-wrap"><canvas ref={lineRef} /></div>
                   : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
