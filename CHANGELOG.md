@@ -35,7 +35,8 @@
 - `histRange` 상태 제거 → `overviewPeriod`로 현황/히스토리 탭 기간 상태 통합
 - `routers/expense_shared.py` 신설: Pydantic 스키마 + 내부 헬퍼(`to_usd`, `cat_dict`, `build_cat_map`, `fetch_cat_map`, `expense_dict`, `split_income_expense`, `group_by_category`, `budget_dict`, `recurring_dict`) 분리
 - `routers/expense_categories.py` 신설: 카테고리 CRUD 4개 + 드릴다운 2개(category-detail, category-yearly-detail) 총 6개 엔드포인트 분리 → `expense_router.include_router(category_router)` 로 sub-router 포함
-- `expense.py` 1316줄 → 약 900줄로 경량화 (카테고리·스키마·헬퍼 분리)
+- `routers/expense_stats.py` 신설: 통계/요약 5개 엔드포인트(summary/daily, summary/monthly, summary/yearly, stats, daily-compare) 분리 → `expense_router.include_router(stats_router)` 로 sub-router 포함
+- `expense.py` 1316줄 → 약 600줄로 경량화 (카테고리·통계·스키마·헬퍼 분리)
 
 ### feat (공통 유틸)
 - `frontend/src/utils/date.js`: `MONTHS_KO`, `MONTHS_EN`, `MONTHS_EN_FULL`, `ML` 추가
