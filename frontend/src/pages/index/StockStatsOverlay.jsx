@@ -460,6 +460,12 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     return () => { if (histChartRef.current) { histChartRef.current.destroy(); histChartRef.current = null } }
   }, [isOpen, mainTab, histData, histRange, histGroupFilter, histCurrencyFilter, histGroupNames, lang])
 
+  useEffect(() => {
+    if (!isOpen) return
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [isOpen])
+
   if (!isOpen) return null
   if (!stockData?.groups?.length) return (
     <div style={{
