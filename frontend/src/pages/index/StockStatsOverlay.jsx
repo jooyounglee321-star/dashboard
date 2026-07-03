@@ -522,11 +522,15 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
 
   // ── 필터 적용 후 유효 데이터 (JSX 조건부 렌더링 + useEffect 공유) ──
   const now = new Date()
-  const periodCutoff = overviewPeriod === '1m'
-    ? new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString().slice(0, 10)
-    : overviewPeriod === '3m'
-      ? new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()).toISOString().slice(0, 10)
-      : null
+  const periodCutoff = (() => {
+    if (overviewPeriod === '1m') return new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString().slice(0, 10)
+    if (overviewPeriod === '3m') return new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()).toISOString().slice(0, 10)
+    if (overviewPeriod === '6m') return new Date(now.getFullYear(), now.getMonth() - 6, now.getDate()).toISOString().slice(0, 10)
+    if (overviewPeriod === 'ytd') return `${now.getFullYear()}-01-01`
+    if (overviewPeriod === '1y') return new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString().slice(0, 10)
+    if (overviewPeriod === '3y') return new Date(now.getFullYear() - 3, now.getMonth(), now.getDate()).toISOString().slice(0, 10)
+    return null
+  })()
 
   const effectiveLineDatasets = (() => {
     if (!lineDatasets) return []
@@ -641,7 +645,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: '0.5rem' }}>
                     <div className="stats-section-title" style={{ marginBottom: 0 }}>{t(lang, 'statsSummaryTitle')}</div>
                     <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
-                      {[['1m', '1개월'], ['3m', '3개월'], ['all', '전체']].map(([key, label]) => (
+                      {[['1m','1M'],['3m','3M'],['6m','6M'],['ytd','YTD'],['1y','1Y'],['3y','3Y'],['all','전체']].map(([key, label]) => (
                         <button key={key} onClick={() => setOverviewPeriod(key)} style={periodBtn(overviewPeriod === key)}>{label}</button>
                       ))}
                     </div>
