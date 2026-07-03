@@ -8,7 +8,7 @@ export const apiLog = []
 const MAX_LOG = 50
 
 export function getToken() {
-  try { return localStorage.getItem('token') || '' } catch { return '' }
+  try { return sessionStorage.getItem('token') || localStorage.getItem('token') || '' } catch { return '' }
 }
 
 /**
