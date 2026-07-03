@@ -172,7 +172,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     const gs = stockData?.groups ?? []
     const hasKRW = gs.some(g => g.currency === 'KRW')
     const hasUSD = gs.some(g => g.currency !== 'KRW')
-    return (hasUSD && !hasKRW) ? 'USD' : 'KRW'
+    return (!hasUSD && hasKRW) ? 'KRW' : 'USD'
   })
   const [overviewPeriod, setOverviewPeriod] = useState('all')
 
