@@ -7,7 +7,13 @@ import { apiFetch } from '../../api'
 import PeriodSelector from '../../components/PeriodSelector'
 Chart.register(...registerables)
 
-const CHART_COLORS = ['#2563eb', '#16a34a', '#d97706', '#9333ea', '#dc2626', '#0891b2', '#65a30d', '#c026d3']
+const CHART_COLORS = ['#2563eb', '#16a34a', '#d97706', '#9333ea', '#dc2626', '#0891b2', '#65a30d', '#c026d3', '#ea580c', '#0d9488', '#7c3aed', '#b45309']
+// 종목명 기반 고정 색 (기간 변경해도 동일 색 유지)
+function colorForKey(key) {
+  let h = 0
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0
+  return CHART_COLORS[h % CHART_COLORS.length]
+}
 
 /** 기간 키 → cutoff 날짜(YYYY-MM-DD) 또는 null(전체) */
 function calcCutoff(period, customFrom) {
@@ -284,7 +290,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     // ── 파이차트 ──
     if (pieRef.current) {
       Chart.getChart(pieRef.current)?.destroy()
-      let pieLabels, pieData
+      let pieLabels, pieData, pieColors = []
       const safeName = (n) => (!n || n === 'undefined' || String(n).trim() === '') ? '알 수 없음' : String(n)
       const effectiveGroup = overviewGroup || (periodGrpTotals.length === 1 ? periodGrpTotals[0].name : '')
       if (effectiveGroup) {
@@ -294,6 +300,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         const total = vals.reduce((a, x) => a + x.val, 0) || 1
         pieLabels = vals.map(x => `${x.name || 'Group'} (${(x.val / total * 100).toFixed(1)}%)`)
         pieData = vals.map(x => parseFloat(x.val.toFixed(2)))
+        pieColors = vals.map(x => colorForKey(x.name))
       } else {
         // 그룹별 비중 (val=0인 그룹 제외)
         const vals = periodGrpTotals
@@ -302,14 +309,15 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         const total = vals.reduce((a, x) => a + x.val, 0) || 1
         pieLabels = vals.map(x => `${x.name} (${(x.val / total * 100).toFixed(1)}%)`)
         pieData = vals.map(x => parseFloat(x.val.toFixed(2)))
+        pieColors = vals.map(x => colorForKey(x.name))
       }
       const inst = new Chart(pieRef.current, {
         type: 'doughnut',
         data: {
           labels: pieLabels,
-          datasets: [{ data: pieData, backgroundColor: CHART_COLORS.slice(0, pieData.length), borderWidth: 2, borderColor: '#fffef9' }],
+          datasets: [{ data: pieData, backgroundColor: pieColors, borderWidth: 2, borderColor: '#fffef9' }],
         },
-        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 12, generateLabels: (chart) => { const def = Chart.defaults.plugins.legend.labels.generateLabels(chart); return def.filter(l => { const nameOnly = (l.text || '').split(' (')[0]; return nameOnly && nameOnly !== '알 수 없음' && nameOnly !== 'undefined' }).map(l => { if (l.text.length > 25) l.text = l.text.slice(0, 25) + '...'; return l }) } } } } },
+        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } } },
       })
       chartsRef.current.push(inst)
     }
@@ -575,8 +583,9 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
 
   const effectivePieItems = (() => {
     if (!computed) return []
-    if (overviewGroup) return (stockValues ?? []).filter(s => s.groupName?.toLowerCase() === overviewGroup.toLowerCase())
-    return grpTotals ?? []
+    const effGroup = overviewGroup || (periodGrpTotals.length === 1 ? periodGrpTotals[0].name : '')
+    if (effGroup) return periodStockValues.filter(s => s.groupName?.toLowerCase() === effGroup.toLowerCase())
+    return periodGrpTotals.filter(g => g.total > 0)
   })()
 
   // 공통 스타일
@@ -716,7 +725,23 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                 {overviewGroup ? `${t(lang, 'statsPieTitle')} — ${overviewGroup}` : t(lang, 'statsPieTitle')}
               </div>
               {effectivePieItems.length > 0
-                ? <div className="stats-chart-wrap pie-wrap"><canvas ref={pieRef} /></div>
+                ? <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+                    {/* 좌측 범례 */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', minWidth: 140, flex: '0 0 auto' }}>
+                      {effectivePieItems.map((item, i) => {
+                        const name = item.name ?? item.ticker ?? ''
+                        const color = colorForKey(name)
+                        return (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                            <span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: 3, background: color, flexShrink: 0 }} />
+                            <span style={{ fontSize: '0.8rem', color: 'var(--ink)', lineHeight: 1.3 }}>{name}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {/* 우측 도넛 차트 */}
+                    <div style={{ width: 220, height: 220, flexShrink: 0 }}><canvas ref={pieRef} /></div>
+                  </div>
                 : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
               }
             </div>
