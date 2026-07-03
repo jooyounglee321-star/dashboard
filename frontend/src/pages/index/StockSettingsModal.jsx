@@ -3,6 +3,7 @@ import Toast, { useToast } from '../../components/Toast'
 import { t } from './i18n'
 
 import { apiFetch } from '../../api'
+import { CURRENCY_LIST } from '../../data/currencies'
 
 /* ── 유틸 ── */
 const sv = (k, v) => localStorage.setItem(k, JSON.stringify(v))
@@ -319,7 +320,7 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
 
   function addGroup() {
     if (groups.length >= 10) { showToast('그룹은 최대 10개까지 가능합니다', 'err'); return }
-    saveGroupsToDB([...groups, { id: genId(), name: t(lang, 'admin.newGroup'), currency: 'KRW', stocks: [] }])
+    saveGroupsToDB([...groups, { id: genId(), name: t(lang, 'admin.newGroup'), currency: 'USD', stocks: [] }])
   }
   function delGroup(gid) {
     if (!window.confirm('그룹과 모든 종목을 삭제하시겠습니까?')) return
@@ -437,9 +438,10 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
                   <input type="text" value={g.name} placeholder="그룹 이름"
                     onChange={e => updateGroup(g.id, 'name', e.target.value)}
                     style={{ ...inpGrp, flex: 1 }} />
-                  <select value={g.currency} onChange={e => updateGroup(g.id, 'currency', e.target.value)} style={inpGrp}>
-                    <option value="KRW">₩ KRW</option>
-                    <option value="USD">$ USD</option>
+                  <select value={g.currency} onChange={e => updateGroup(g.id, 'currency', e.target.value)} style={{ ...inpGrp, minWidth: 110 }}>
+                    {CURRENCY_LIST.map(cur => (
+                      <option key={cur.code} value={cur.code}>{cur.symbol} {cur.code}</option>
+                    ))}
                   </select>
                   <span style={{ fontSize: '0.72rem', color: col.tx, opacity: 0.7 }}>{g.stocks.length}/10</span>
                   <button onClick={() => delGroup(g.id)} style={{ padding: '0.28rem 0.65rem', fontSize: '0.78rem', cursor: 'pointer', background: 'transparent', color: '#c0392b', border: '1px solid #c0392b', borderRadius: 6, fontFamily: 'inherit', transition: 'all 0.15s' }}>{t(lang, 'admin.delGroup')}</button>
