@@ -196,7 +196,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   const [customTo,   setCustomTo]   = useState('')
 
   // 히스토리 탭 필터
-  const [mainTab, setMainTab] = useState('overview')
+  const mainTab = 'overview' // 탭 병합으로 항상 overview
   const [userJoinDate, setUserJoinDate] = useState(null)
   const [histData, setHistData] = useState([])
   const [histLoading, setHistLoading] = useState(false)
@@ -262,7 +262,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
 
   // 현황 탭 차트 렌더링
   useEffect(() => {
-    if (!isOpen || !computed || mainTab !== 'overview') return
+    if (!isOpen || !computed) return
 
     chartsRef.current.forEach(c => c.destroy())
     chartsRef.current = []
@@ -429,21 +429,21 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       chartsRef.current.forEach(c => c.destroy())
       chartsRef.current = []
     }
-  }, [isOpen, computed, lang, overviewCurrency, overviewGroup, overviewPeriod, customFrom, customTo, mainTab])
+  }, [isOpen, computed, lang, overviewCurrency, overviewGroup, overviewPeriod, customFrom, customTo])
 
   // 히스토리 데이터 fetch
   useEffect(() => {
-    if (!isOpen || mainTab !== 'history') return
+    if (!isOpen) return
     setHistLoading(true)
     apiFetch('/api/portfolio/history')
       .then(d => { setHistData(Array.isArray(d) ? d : []); setHistPage(0) })
       .catch(() => setHistData([]))
       .finally(() => setHistLoading(false))
-  }, [isOpen, mainTab])
+  }, [isOpen])
 
   // 히스토리 라인차트
   useEffect(() => {
-    if (!isOpen || mainTab !== 'history' || histLoading || !histLineRef.current) return
+    if (!isOpen || histLoading || !histLineRef.current) return
     if (histChartRef.current) { histChartRef.current.destroy(); histChartRef.current = null }
     if (!histData.length) return
 
@@ -522,7 +522,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       },
     })
     return () => { if (histChartRef.current) { histChartRef.current.destroy(); histChartRef.current = null } }
-  }, [isOpen, mainTab, histData, overviewPeriod, customFrom, customTo, histGroupFilter, histCurrencyFilter, histGroupNames, lang])
+  }, [isOpen, histData, overviewPeriod, customFrom, customTo, histGroupFilter, histCurrencyFilter, histGroupNames, lang])
 
   useEffect(() => {
     if (!isOpen) return
@@ -609,24 +609,12 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         <span className="stats-title">{t(lang, 'statsTitle')}</span>
       </div>
 
-      {/* 메인 탭 */}
-      <div style={{ display: 'flex', gap: '0', borderBottom: '1.5px solid var(--border)', padding: '0 1.2rem' }}>
-        {[['overview', 'stock.currentTab'], ['history', 'stock.historyTab']].map(([key, i18nKey]) => (
-          <button key={key} onClick={() => setMainTab(key)} style={{
-            padding: '0.6rem 1.2rem', fontSize: '0.88rem', fontWeight: mainTab === key ? 700 : 400,
-            border: 'none', borderBottom: mainTab === key ? '2.5px solid var(--accent)' : '2.5px solid transparent',
-            background: 'transparent', color: mainTab === key ? 'var(--accent)' : 'var(--ink3)',
-            cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', marginBottom: '-1.5px',
-          }}>
-            {t(lang, i18nKey)}
-          </button>
-        ))}
-      </div>
+
 
 
       <div className="stats-body">
         {/* ══════════════ 현황 탭 ══════════════ */}
-        {mainTab === 'overview' && (!computed ? (
+        {!computed ? (
           <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--ink3)' }}>{t(lang, 'statsLoading')}</div>
         ) : (
           <>
@@ -766,10 +754,10 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               </div>
             )}
           </>
-        ))}
+        )}
 
-        {/* ══════════════ 히스토리 탭 ══════════════ */}
-        {mainTab === 'history' && (() => {
+        {/* ══════════════ 히스토리 ══════════════ */}
+        {(() => {
           if (histLoading) return (
             <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--ink3)' }}>{t(lang, 'statsLoading')}</div>
           )
