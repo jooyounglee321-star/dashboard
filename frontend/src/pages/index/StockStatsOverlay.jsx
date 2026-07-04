@@ -316,9 +316,11 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       let datasets = overviewGroup
         ? lineDatasets.filter(ds => ds.label === overviewGroup)
         : lineDatasets
-      if (cutoff) {
-        datasets = datasets.map(ds => ({ ...ds, data: ds.data.filter(pt => pt.x >= cutoff) }))
-          .filter(ds => ds.data.length > 0)
+      if (cutoff || cutoffEnd) {
+        datasets = datasets.map(ds => ({
+          ...ds,
+          data: ds.data.filter(pt => (!cutoff || pt.x >= cutoff) && (!cutoffEnd || pt.x <= cutoffEnd))
+        })).filter(ds => ds.data.length > 0)
       }
       if (datasets.length > 0) {
         const inst = new Chart(lineRef.current, {
