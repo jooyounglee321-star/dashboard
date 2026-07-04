@@ -272,7 +272,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     }
     const safeName = (n) => (!n || n === 'undefined' || String(n).trim() === '') ? '알 수 없음' : String(n)
 
-    let pieLabels, pieData
+    let pieLabels, pieData, pieColors
     if (overviewGroup) {
       const grpStocks = stockValues.filter(s => s.groupName?.toLowerCase() === overviewGroup.toLowerCase())
       const vals = grpStocks.map(s => {
@@ -284,6 +284,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       const total = vals.reduce((a, x) => a + x.val, 0) || 1
       pieLabels = vals.map(x => `${x.name} (${(x.val / total * 100).toFixed(1)}%)`)
       pieData = vals.map(x => parseFloat(x.val.toFixed(2)))
+      pieColors = vals.map(x => colorForKey(x.name))
     } else {
       const vals = (grpTotals ?? [])
         .map(g => ({ name: g.name, val: Math.max(0, toDisplay(g.total, g.isKRW)) }))
@@ -291,6 +292,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       const total = vals.reduce((a, x) => a + x.val, 0) || 1
       pieLabels = vals.map(x => `${x.name} (${(x.val / total * 100).toFixed(1)}%)`)
       pieData = vals.map(x => parseFloat(x.val.toFixed(2)))
+      pieColors = vals.map(x => colorForKey(x.name))
     }
     if (!pieLabels?.length) return
 
@@ -298,7 +300,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       type: 'doughnut',
       data: {
         labels: pieLabels,
-        datasets: [{ data: pieData, backgroundColor: CHART_COLORS.slice(0, pieData.length), borderWidth: 2, borderColor: '#fffef9' }],
+        datasets: [{ data: pieData, backgroundColor: pieColors, borderWidth: 2, borderColor: '#fffef9' }],
       },
       options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 12, generateLabels: (chart) => { const def = Chart.defaults.plugins.legend.labels.generateLabels(chart); def.forEach(l => { const nameOnly = (l.text || '').split(' (')[0]; if (!nameOnly || nameOnly === 'undefined') l.text = '알 수 없음'; else if (l.text.length > 20) l.text = l.text.slice(0, 20) + '...' }); return def } } } } },
     })
