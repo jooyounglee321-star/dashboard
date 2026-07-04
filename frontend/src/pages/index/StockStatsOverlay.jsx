@@ -616,24 +616,6 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         ))}
       </div>
 
-      {/* 기간 선택 바 — 항상 노출, 탭과 콘텐츠 사이 sticky */}
-      <div style={{
-        position: 'sticky', top: 0, zIndex: 9,
-        display: 'flex', alignItems: 'center', gap: '0.75rem',
-        padding: '0.55rem 1.4rem',
-        background: 'var(--card)',
-        borderBottom: '1px solid var(--border)',
-        boxShadow: '0 1px 6px rgba(0,0,0,0.07)',
-      }}>
-        <span style={{ fontSize: '0.75rem', color: 'var(--ink3)', fontWeight: 500, whiteSpace: 'nowrap' }}>기간</span>
-        <PeriodSelector
-          value={overviewPeriod}
-          onChange={setOverviewPeriod}
-          customFrom={customFrom}
-          customTo={customTo}
-          onCustomChange={(f, t) => { setCustomFrom(f); setCustomTo(t) }}
-        />
-      </div>
 
       <div className="stats-body">
         {/* ══════════════ 현황 탭 ══════════════ */}
@@ -746,7 +728,16 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             {/* ── 라인차트 ── */}
             {lineDatasets?.length > 0 && (
               <div className="stats-section">
-                <div className="stats-section-title">{t(lang, 'statsLineTitle')}</div>
+                <div className="stats-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  <span>{t(lang, 'statsLineTitle')}</span>
+                  <PeriodSelector
+                    value={overviewPeriod}
+                    onChange={setOverviewPeriod}
+                    customFrom={customFrom}
+                    customTo={customTo}
+                    onCustomChange={(f, t2) => { setCustomFrom(f); setCustomTo(t2) }}
+                  />
+                </div>
                 {effectiveLineDatasets.length > 0
                   ? <div className="stats-chart-wrap"><canvas ref={lineRef} /></div>
                   : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
@@ -757,7 +748,16 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             {/* ── 바차트 ── */}
             {periodStockEvals.length > 0 && (
               <div className="stats-section">
-                <div className="stats-section-title">{t(lang, 'statsBarTitle')}</div>
+                <div className="stats-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  <span>{t(lang, 'statsBarTitle')}</span>
+                  <PeriodSelector
+                    value={overviewPeriod}
+                    onChange={setOverviewPeriod}
+                    customFrom={customFrom}
+                    customTo={customTo}
+                    onCustomChange={(f, t2) => { setCustomFrom(f); setCustomTo(t2) }}
+                  />
+                </div>
                 {effectiveStockEvals.length > 0
                   ? <div className="stats-chart-wrap"><canvas ref={barRef} /></div>
                   : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
