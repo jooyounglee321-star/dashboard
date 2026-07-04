@@ -258,7 +258,54 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     return { periodGrpTotals: pgt, periodStockValues: psv, periodStockEvals: pse }
   }, [computed, overviewPeriod, customFrom, customTo]) // stockData 변경은 computed 경유로 감지
 
-  // 현황 탭 차트 렌더링
+  // ── 파이차트 전용 useEffect (period와 무관하게 별도 렌더링) ──
+  const pieChartRef = useRef(null)
+  useEffect(() => {
+    if (!isOpen || !computed || !pieRef.current) return
+    if (pieChartRef.current) { pieChartRef.current.destroy(); pieChartRef.current = null }
+
+    const { grpTotals, stockValues, fxRate } = computed
+    const toDisplay = (val, isKRW) => {
+      if (overviewCurrency === 'USD' && isKRW && fxRate) return val / fxRate
+      if (overviewCurrency === 'KRW' && !isKRW && fxRate) return val * fxRate
+      return val
+    }
+    const safeName = (n) => (!n || n === 'undefined' || String(n).trim() === '') ? '알 수 없음' : String(n)
+
+    let pieLabels, pieData
+    if (overviewGroup) {
+      const grpStocks = stockValues.filter(s => s.groupName?.toLowerCase() === overviewGroup.toLowerCase())
+      const vals = grpStocks.map(s => {
+        const displayName = s.isKRW
+          ? safeName(cleanStr(s.name, s.ticker))
+          : (s.ticker && s.ticker !== 'undefined' ? s.ticker : safeName(cleanStr(s.name, s.ticker)))
+        return { name: displayName, val: Math.max(0, toDisplay(s.evalAmt, s.isKRW)) }
+      })
+      const total = vals.reduce((a, x) => a + x.val, 0) || 1
+      pieLabels = vals.map(x => `${x.name} (${(x.val / total * 100).toFixed(1)}%)`)
+      pieData = vals.map(x => parseFloat(x.val.toFixed(2)))
+    } else {
+      const vals = (grpTotals ?? [])
+        .map(g => ({ name: g.name, val: Math.max(0, toDisplay(g.total, g.isKRW)) }))
+        .filter(x => x.val > 0)
+      const total = vals.reduce((a, x) => a + x.val, 0) || 1
+      pieLabels = vals.map(x => `${x.name} (${(x.val / total * 100).toFixed(1)}%)`)
+      pieData = vals.map(x => parseFloat(x.val.toFixed(2)))
+    }
+    if (!pieLabels?.length) return
+
+    pieChartRef.current = new Chart(pieRef.current, {
+      type: 'doughnut',
+      data: {
+        labels: pieLabels,
+        datasets: [{ data: pieData, backgroundColor: CHART_COLORS.slice(0, pieData.length), borderWidth: 2, borderColor: '#fffef9' }],
+      },
+      options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 12, generateLabels: (chart) => { const def = Chart.defaults.plugins.legend.labels.generateLabels(chart); def.forEach(l => { const nameOnly = (l.text || '').split(' (')[0]; if (!nameOnly || nameOnly === 'undefined') l.text = '알 수 없음'; else if (l.text.length > 20) l.text = l.text.slice(0, 20) + '...' }); return def } } } } },
+    })
+    return () => { if (pieChartRef.current) { pieChartRef.current.destroy(); pieChartRef.current = null } }
+  }, [isOpen, computed, overviewGroup, overviewCurrency, lang])
+
+  // 현황 탭 라인/바차트 렌더링 (period 포함)
   useEffect(() => {
     if (!isOpen || !computed) return
 
@@ -274,47 +321,6 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       if (overviewCurrency === 'USD' && isKRW && fxRate) return val / fxRate
       if (overviewCurrency === 'KRW' && !isKRW && fxRate) return val * fxRate
       return val
-    }
-
-    // ── 파이차트 ──
-    console.log('[PIE DEBUG] period:', overviewPeriod, 'group:', overviewGroup, 'stockValues count:', stockValues?.length, 'pieRef:', !!pieRef.current)
-    if (pieRef.current) {
-      Chart.getChart(pieRef.current)?.destroy()
-      let pieLabels, pieData, pieColors = []
-      const safeName = (n) => (!n || n === 'undefined' || String(n).trim() === '') ? '알 수 없음' : String(n)
-      const effectiveGroup = overviewGroup || (periodGrpTotals.length === 1 ? periodGrpTotals[0].name : '')
-      if (effectiveGroup) {
-        // 선택 그룹(또는 단일 그룹) 내 종목별 비중
-        const grpStocks = periodStockValues.filter(s => s.groupName?.toLowerCase() === effectiveGroup.toLowerCase())
-        const vals = grpStocks.map(s => {
-          const displayName = s.isKRW
-            ? safeName(cleanStr(s.name, s.ticker))
-            : (s.ticker && s.ticker !== 'undefined' ? s.ticker : safeName(cleanStr(s.name, s.ticker)))
-          return { name: displayName, val: Math.max(0, toDisplay(s.evalAmt, s.isKRW)) }
-        })
-        const total = vals.reduce((a, x) => a + x.val, 0) || 1
-        pieLabels = vals.map(x => `${x.name || 'Group'} (${(x.val / total * 100).toFixed(1)}%)`)
-        pieData = vals.map(x => parseFloat(x.val.toFixed(2)))
-        pieColors = vals.map(x => colorForKey(x.name))
-      } else {
-        // 그룹별 비중 (val=0인 그룹 제외)
-        const vals = periodGrpTotals
-          .map(g => ({ name: g.name, val: Math.max(0, toDisplay(g.total, g.isKRW)) }))
-          .filter(x => x.val > 0)
-        const total = vals.reduce((a, x) => a + x.val, 0) || 1
-        pieLabels = vals.map(x => `${x.name} (${(x.val / total * 100).toFixed(1)}%)`)
-        pieData = vals.map(x => parseFloat(x.val.toFixed(2)))
-        pieColors = vals.map(x => colorForKey(x.name))
-      }
-      const inst = new Chart(pieRef.current, {
-        type: 'doughnut',
-        data: {
-          labels: pieLabels,
-          datasets: [{ data: pieData, backgroundColor: pieColors, borderWidth: 2, borderColor: '#fffef9' }],
-        },
-        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } } },
-      })
-      chartsRef.current.push(inst)
     }
 
     // ── 라인차트 ──
