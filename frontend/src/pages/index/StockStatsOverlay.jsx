@@ -336,12 +336,6 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       let datasets = overviewGroup
         ? lineDatasets.filter(ds => ds.label === overviewGroup)
         : lineDatasets
-      if (cutoff || cutoffEnd) {
-        datasets = datasets.map(ds => ({
-          ...ds,
-          data: ds.data.filter(pt => (!cutoff || pt.x >= cutoff) && (!cutoffEnd || pt.x <= cutoffEnd))
-        })).filter(ds => ds.data.length > 0)
-      }
       if (datasets.length > 0) {
         const inst = new Chart(lineRef.current, {
           type: 'line',
@@ -354,6 +348,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                 time: { unit: 'day', displayFormats: { day: 'yyyy-MM-dd' } },
                 title: { display: true, text: t(lang, 'statsAxisDate') },
                 ticks: { source: 'auto', maxTicksLimit: 10 },
+                ...(cutoff || cutoffEnd ? { min: cutoff || undefined, max: cutoffEnd || undefined } : {}),
               },
               y: {
                 title: { display: true, text: t(lang, 'statsAxisInvest') },
