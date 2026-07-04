@@ -583,9 +583,10 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
 
   const effectivePieItems = (() => {
     if (!computed) return []
-    const effGroup = overviewGroup || (periodGrpTotals.length === 1 ? periodGrpTotals[0].name : '')
-    if (effGroup) return periodStockValues.filter(s => s.groupName?.toLowerCase() === effGroup.toLowerCase())
-    return periodGrpTotals.filter(g => g.total > 0)
+    const { grpTotals, stockValues } = computed
+    const effGroup = overviewGroup || (grpTotals.length === 1 ? grpTotals[0].name : '')
+    if (effGroup) return stockValues.filter(s => s.groupName?.toLowerCase() === effGroup.toLowerCase())
+    return grpTotals.filter(g => g.total > 0)
   })()
 
   // 공통 스타일
