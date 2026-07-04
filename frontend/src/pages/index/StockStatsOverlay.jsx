@@ -280,7 +280,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
           ? safeName(cleanStr(s.name, s.ticker))
           : (s.ticker && s.ticker !== 'undefined' ? s.ticker : safeName(cleanStr(s.name, s.ticker)))
         return { name: displayName, val: Math.max(0, toDisplay(s.evalAmt, s.isKRW)) }
-      })
+      }).filter(x => x.val > 0 && x.name !== '알 수 없음')
       const total = vals.reduce((a, x) => a + x.val, 0) || 1
       pieLabels = vals.map(x => `${x.name} (${(x.val / total * 100).toFixed(1)}%)`)
       pieData = vals.map(x => parseFloat(x.val.toFixed(2)))
