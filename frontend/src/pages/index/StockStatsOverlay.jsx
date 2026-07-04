@@ -244,6 +244,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       const sym = isKRW ? '₩' : '$'
       let grpTotal = 0
       g.stocks.filter(s => !s.is_deleted).forEach(s => {
+        // 파이차트(psv)용: 기간 내 매입만 포함
         const pp = (s.purchases || []).filter(p => (!cutoff || !p.date || p.date >= cutoff) && (!cutoffEnd || !p.date || p.date <= cutoffEnd))
         const bq = pp.reduce((a, p) => a + (p.qty || 0), 0)
         const sq = (s.sells || []).reduce((a, p) => a + (p.qty || 0), 0)
@@ -256,7 +257,16 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         const evalAmt = cur * hq
         grpTotal += evalAmt
         if (hq > 0) psv.push({ ticker: s.ticker, name: cleanStr(s.name, s.ticker), evalAmt, groupName: cleanStr(g.name, g.id), currency: g.currency, isKRW })
-        const evalPL = avg > 0 ? (cur - avg) * hq : null
+        // 바차트(pse) 평가순익: 기간 무관하게 전체 보유 포지션 기준
+        const allPP = s.purchases || []
+        const allBQ = allPP.reduce((a, p) => a + (p.qty || 0), 0)
+        const allSQ = (s.sells || []).reduce((a, p) => a + (p.qty || 0), 0)
+        const allHQ = Math.max(0, allBQ - allSQ)
+        const validAllPP = allPP.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
+        const allWS = validAllPP.reduce((a, p) => a + p.price * p.qty, 0)
+        const allVQT = validAllPP.reduce((a, p) => a + p.qty, 0)
+        const allAvg = allVQT > 0 ? allWS / allVQT : 0
+        const evalPL = allAvg > 0 ? (cur - allAvg) * allHQ : null
         if (evalPL != null) pse.push({ label: s.ticker, name: cleanStr(s.name, s.ticker), evalPL, sym, isKRW })
       })
       return { id: g.id, name: cleanStr(g.name, g.id), currency: g.currency, total: grpTotal, isKRW }
