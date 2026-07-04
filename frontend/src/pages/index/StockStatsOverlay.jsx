@@ -280,7 +280,12 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       if (effectiveGroup) {
         // 선택 그룹(또는 단일 그룹) 내 종목별 비중
         const grpStocks = periodStockValues.filter(s => s.groupName?.toLowerCase() === effectiveGroup.toLowerCase())
-        const vals = grpStocks.map(s => ({ name: safeName(cleanStr(s.name, s.ticker)), val: Math.max(0, toDisplay(s.evalAmt, s.isKRW)) }))
+        const vals = grpStocks.map(s => {
+          const displayName = s.isKRW
+            ? safeName(cleanStr(s.name, s.ticker))
+            : (s.ticker && s.ticker !== 'undefined' ? s.ticker : safeName(cleanStr(s.name, s.ticker)))
+          return { name: displayName, val: Math.max(0, toDisplay(s.evalAmt, s.isKRW)) }
+        })
         const total = vals.reduce((a, x) => a + x.val, 0) || 1
         pieLabels = vals.map(x => `${x.name || 'Group'} (${(x.val / total * 100).toFixed(1)}%)`)
         pieData = vals.map(x => parseFloat(x.val.toFixed(2)))
@@ -705,7 +710,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             {/* ── 파이차트 ── */}
             <div className="stats-section">
               <div className="stats-section-title">
-                {overviewGroup ? `${t(lang, 'statsPieTitle')} — ${overviewGroup}` : t(lang, 'statsPieTitle')}
+                {t(lang, 'statsPieTitle')}
               </div>
               {effectivePieItems.length > 0
                 ? <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
@@ -723,7 +728,12 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                       })}
                     </div>
                     {/* 우측 도넛 차트 */}
-                    <div style={{ width: 220, height: 220, flexShrink: 0 }}><canvas ref={pieRef} /></div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
+                      <div style={{ width: 220, height: 220, flexShrink: 0 }}><canvas ref={pieRef} /></div>
+                      {overviewGroup && (
+                        <div style={{ fontSize: '0.82rem', color: 'var(--ink3)', fontWeight: 500 }}>{overviewGroup}</div>
+                      )}
+                    </div>
                   </div>
                 : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
               }
