@@ -378,7 +378,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         const inst = new Chart(barRef.current, {
           type: 'bar',
           data: {
-            labels: sorted.map(s => s.name),
+            labels: sorted.map(s => s.isKRW ? s.name : (s.label && s.label !== 'undefined' ? s.label : s.name)),
             datasets: [{
               label: t(lang, 'statsBarLabel'),
               data: sorted.map(s => parseFloat(s.evalPL.toFixed(2))),
@@ -725,11 +725,11 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               }
             </div>
 
-            {/* ── 라인차트 ── */}
-            {lineDatasets?.length > 0 && (
+            {/* ── 라인차트 + 바차트 (좌우 배치) ── */}
+            {(lineDatasets?.length > 0 || periodStockEvals.length > 0) && (
               <div className="stats-section">
                 <div className="stats-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.4rem' }}>
-                  <span>{t(lang, 'statsLineTitle')}</span>
+                  <span>{t(lang, 'statsLineTitle')} / {t(lang, 'statsBarTitle')}</span>
                   <PeriodSelector
                     value={overviewPeriod}
                     onChange={setOverviewPeriod}
@@ -738,30 +738,24 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                     onCustomChange={(f, t2) => { setCustomFrom(f); setCustomTo(t2) }}
                   />
                 </div>
-                {effectiveLineDatasets.length > 0
-                  ? <div className="stats-chart-wrap"><canvas ref={lineRef} /></div>
-                  : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
-                }
-              </div>
-            )}
-
-            {/* ── 바차트 ── */}
-            {periodStockEvals.length > 0 && (
-              <div className="stats-section">
-                <div className="stats-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.4rem' }}>
-                  <span>{t(lang, 'statsBarTitle')}</span>
-                  <PeriodSelector
-                    value={overviewPeriod}
-                    onChange={setOverviewPeriod}
-                    customFrom={customFrom}
-                    customTo={customTo}
-                    onCustomChange={(f, t2) => { setCustomFrom(f); setCustomTo(t2) }}
-                  />
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                  {lineDatasets?.length > 0 && (
+                    <div style={{ flex: '1 1 300px', minWidth: 0 }}>
+                      {effectiveLineDatasets.length > 0
+                        ? <div className="stats-chart-wrap"><canvas ref={lineRef} /></div>
+                        : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
+                      }
+                    </div>
+                  )}
+                  {periodStockEvals.length > 0 && (
+                    <div style={{ flex: '1 1 300px', minWidth: 0 }}>
+                      {effectiveStockEvals.length > 0
+                        ? <div className="stats-chart-wrap"><canvas ref={barRef} /></div>
+                        : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
+                      }
+                    </div>
+                  )}
                 </div>
-                {effectiveStockEvals.length > 0
-                  ? <div className="stats-chart-wrap"><canvas ref={barRef} /></div>
-                  : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
-                }
               </div>
             )}
           </>
