@@ -97,8 +97,10 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
       .catch(() => {})
   }, []) // eslint-disable-line
 
+  const [isSubmitting, setIsSubmitting] = useState(false)
   async function addMeal() {
-    if (!mtext.trim()) return
+    if (!mtext.trim() || isSubmitting) return
+    setIsSubmitting(true)
     await fetch('/api/diets', {
       method: 'POST',
       headers: { ...authHeader(), 'Content-Type': 'application/json' },
@@ -115,6 +117,7 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
     const nextMeal = { '아침': '점심', '점심': '저녁', '저녁': '간식' }
     if (nextMeal[mtime]) setMtime(nextMeal[mtime])
     await loadMeal(date)
+    setIsSubmitting(false)
   }
 
   // 개별 항목 삭제 (by ID)
@@ -216,7 +219,7 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
           onChange={e => setMtext(e.target.value)}
           placeholder={t(lang, 'dietPlaceholder')}
           style={{ flex: 1 }}
-          onKeyDown={e => e.key === 'Enter' && addMeal()}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addMeal() } }}
         />
       </div>
       <div className="m-row" style={{ marginTop: '0.35rem' }}>
@@ -228,7 +231,7 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
           onChange={e => setMcal(e.target.value)}
           placeholder={t(lang, 'dietCaloriesPlaceholder')}
           style={{ flex: 1 }}
-          onKeyDown={e => e.key === 'Enter' && addMeal()}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addMeal() } }}
         />
       </div>
       <button className="m-btn" onClick={addMeal} style={{ width: '100%', marginTop: '0.4rem' }}>
@@ -246,7 +249,7 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
           value={mtext}
           onChange={e => setMtext(e.target.value)}
           placeholder={t(lang, 'dietPlaceholder')}
-          onKeyDown={e => e.key === 'Enter' && addMeal()}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addMeal() } }}
         />
         <input
           className="diet-cal-inp"
@@ -255,7 +258,7 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
           value={mcal}
           onChange={e => setMcal(e.target.value)}
           placeholder={t(lang, 'dietCaloriesPlaceholder')}
-          onKeyDown={e => e.key === 'Enter' && addMeal()}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addMeal() } }}
         />
       </div>
       <button className="btn-sm" onClick={addMeal}>{t(lang, 'dietAdd')}</button>
