@@ -279,6 +279,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     }
 
     // ── 파이차트 ──
+    console.log('[PIE DEBUG] period:', overviewPeriod, 'group:', overviewGroup, 'stockValues count:', stockValues?.length, 'pieRef:', !!pieRef.current)
     if (pieRef.current) {
       Chart.getChart(pieRef.current)?.destroy()
       let pieLabels, pieData, pieColors = []
