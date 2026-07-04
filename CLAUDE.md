@@ -86,3 +86,23 @@
   - `import { fmtKRW, fmtUSD, formatAuto, fmtAmt } from '../../utils/format'`
   - 새 포맷 함수 필요시 이 파일에만 추가하고 import해서 사용.
 - 새 유틸 함수 추가 시 반드시 utils/ 폴더에만 추가할 것.
+
+## 공통 컴포넌트 규칙 (중복 방지)
+- 기간 선택 UI: 반드시 `frontend/src/components/PeriodSelector.jsx` 사용.
+  - `import PeriodSelector from '../../components/PeriodSelector'`
+  - props: `value`, `onChange`, `customFrom`, `customTo`, `onCustomChange`
+  - 1M/3M/6M/YTD/1Y/3Y/전체/직접 버튼 + custom 날짜 picker 내장
+  - 인라인 버튼 배열로 직접 구현 금지.
+
+## 파이썬 스크립트로 파일 수정 시 주의사항
+- 스크립트 실행 전 반드시 현재 파일 구조를 grep으로 확인할 것.
+- 파일이 이미 리팩토링되어 있으면 스크립트의 `old` 문자열이 다를 수 있음.
+- 스크립트 실패(❌) 시 해당 부분을 grep으로 찾아 직접 Edit으로 수정할 것.
+- 스크립트 성공(✅) 후에도 grep으로 실제 적용 여부 재확인할 것.
+
+## StockStatsOverlay 구조 주의사항
+- 파이차트는 두 개의 독립 데이터 경로를 사용함. 둘 다 동시에 수정해야 함:
+  1. **캔버스 레이블** (`pieLabels`): useEffect 내 `vals` 배열에서 생성
+  2. **좌측 범례** (`effectivePieItems`): 렌더 스코프에서 직접 `periodStockValues` 순회
+- 기간 cutoff 계산: `calcCutoff(period, customFrom)` 함수 사용 (파일 상단 정의).
+  - 1m/3m/6m/ytd/1y/3y/custom/all 모두 지원. 별도 구현 금지.
