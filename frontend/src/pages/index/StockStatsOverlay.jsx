@@ -202,8 +202,6 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   const [histLoading, setHistLoading] = useState(false)
   // histRange 제거 — overviewPeriod로 통합
   const [histPage, setHistPage] = useState(0)
-  const [histGroupFilter, setHistGroupFilter] = useState('')
-  const [histCurrencyFilter, setHistCurrencyFilter] = useState('')
   const HIST_PAGE_SIZE = 20
 
   // group ID → 이름 매핑 (구형 스냅샷 폴백용)
@@ -449,33 +447,25 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     if (!histData.length) return
 
     const getValue = (r) => {
-      if (histGroupFilter) {
-        try {
-          const parsed = JSON.parse(r.data || '{}')
-          if (parsed.groups) {
-            // 신형: group ID 키
-            const grp = parsed.groups[histGroupFilter]
-            if (grp) return grp.currency === 'USD' ? grp.total * (r.usd_krw || 1) : grp.total
+      try {
+        const parsed = JSON.parse(r.data || '{}')
+        if (parsed.groups) {
+          if (overviewGroup) {
+            const gid = Object.entries(parsed.group_names ?? {}).find(([, n]) => n === overviewGroup)?.[0]
+            if (gid && parsed.groups[gid] != null) return parsed.groups[gid].total ?? 0
+            if (parsed.groups[overviewGroup] != null) return parsed.groups[overviewGroup].total ?? 0
+            return 0
           }
-          // 구형 폴백: 그룹명 키 dict 또는 배열
-          const groupName = histGroupNames[histGroupFilter]
-          if (groupName) {
-            if (Array.isArray(parsed)) {
-              const g = parsed.find(x => x.name?.toLowerCase() === groupName.toLowerCase())
-              if (g) return g.currency === 'USD' ? (g.total ?? 0) * (r.usd_krw || 1) : (g.total ?? 0)
-            } else {
-              const leg = parsed[groupName] ?? parsed[groupName.toLowerCase()]
-              if (leg != null) return typeof leg === 'object' ? (leg.currency === 'USD' ? leg.total * (r.usd_krw || 1) : leg.total) : leg
-            }
-          }
-          return 0
-        } catch { return 0 }
-      }
+          return Object.values(parsed.groups).filter(g => g.currency !== 'KRW').reduce((a, g) => a + (g.total ?? 0), 0)
+        }
+      } catch {}
       return r.total_usd ?? 0
     }
 
-    const useUSD = true
-    const yLabel = '$'
+    const selGroup = overviewGroup ? (stockData?.groups ?? []).find(g => cleanStr(g.name, g.id) === overviewGroup) : null
+    const useKRW = selGroup?.currency === 'KRW'
+    const yLabel = useKRW ? '₩' : '$'
+    const useUSD = !useKRW
 
     const cutoff = calcCutoff(overviewPeriod, customFrom)
     const cutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
@@ -521,7 +511,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       },
     })
     return () => { if (histChartRef.current) { histChartRef.current.destroy(); histChartRef.current = null } }
-  }, [isOpen, histData, overviewPeriod, customFrom, customTo, histGroupFilter, histCurrencyFilter, histGroupNames, lang])
+  }, [isOpen, histData, overviewPeriod, customFrom, customTo, histGroupNames, lang, overviewGroup, stockData])
 
   useEffect(() => {
     if (!isOpen) return
@@ -761,82 +751,66 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             {t(lang, 'stock.historyTab')}
           </div>
         </div>
-        {(() => {
-          if (histLoading) return (
-            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--ink3)' }}>{t(lang, 'statsLoading')}</div>
-          )
-          if (!histData.length) return (
-            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--ink3)' }}>{t(lang, 'stock.noHistory')}</div>
-          )
+        {histLoading ? (
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)' }}>{t(lang, 'statsLoading')}</div>
+        ) : histData.length > 0 && (() => {
+          const allGroups = stockData?.groups ?? []
+          const currencies = [...new Set(allGroups.map(g => g.currency ?? 'USD'))]
 
-          const cutoff = calcCutoff(overviewPeriod, customFrom)
-          const cutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
-          const filtered = [...histData]
-            .filter(r => r.total_krw_equiv != null && (!cutoff || r.snapshot_date >= cutoff) && (!cutoffEnd || r.snapshot_date <= cutoffEnd))
-            .sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date))
+          const getValByCurrency = (r, currency) => {
+            try {
+              const parsed = JSON.parse(r.data || '{}')
+              if (parsed.groups) {
+                if (overviewGroup) {
+                  const gid = Object.entries(parsed.group_names ?? {}).find(([, n]) => n === overviewGroup)?.[0]
+                        ?? Object.keys(parsed.groups).find(k => k === overviewGroup)
+                  const grp = gid ? parsed.groups[gid] : parsed.groups[overviewGroup]
+                  if (grp && grp.currency === currency) return grp.total ?? 0
+                  return null
+                }
+                return Object.values(parsed.groups)
+                  .filter(g => (g.currency ?? 'USD') === currency)
+                  .reduce((a, g) => a + (g.total ?? 0), 0)
+              }
+            } catch {}
+            if (!overviewGroup) {
+              if (currency === 'USD') return r.total_usd ?? 0
+              if (currency === 'KRW') return r.total_krw ?? 0
+            }
+            return null
+          }
 
-          const equivVals = filtered.map(r => r.total_krw_equiv)
-          const maxVal = equivVals.length ? Math.max(...equivVals) : 0
-          const minVal = equivVals.length ? Math.min(...equivVals) : 0
-          const maxRow = filtered.find(r => r.total_krw_equiv === maxVal)
-          const minRow = filtered.find(r => r.total_krw_equiv === minVal)
-          const first = filtered[0]?.total_krw_equiv ?? 0
-          const last = filtered[filtered.length - 1]?.total_krw_equiv ?? 0
-          const periodReturn = first > 0 ? ((last - first) / first * 100) : null
+          const fmtByCurrency = (val, currency) => {
+            if (val == null) return '—'
+            return currency === 'KRW' ? `₩${fmtKRW(val)}` : `$${fmtUSD(val)}`
+          }
 
-          const tableRows = [...histData].sort((a, b) => b.snapshot_date.localeCompare(a.snapshot_date))
+          const now = new Date()
+          const cutoff = histRange === '1m'
+            ? new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString().slice(0, 10)
+            : histRange === '3m'
+              ? new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()).toISOString().slice(0, 10)
+              : null
+
+          const tableRows = [...histData]
+            .sort((a, b) => b.snapshot_date.localeCompare(a.snapshot_date))
+            .filter(r => !cutoff || r.snapshot_date >= cutoff)
           const totalPages = Math.ceil(tableRows.length / HIST_PAGE_SIZE)
           const pageRows = tableRows.slice(histPage * HIST_PAGE_SIZE, (histPage + 1) * HIST_PAGE_SIZE)
 
-          const histGroupOptions = (stockData?.groups ?? []).map(g => ({ id: g.id, name: cleanStr(g.name, g.id) }))
-
           return (
             <>
-              {/* 요약 카드 */}
+              {/* 라인차트 */}
               <div className="stats-section">
-                <div className="stats-summary-grid">
-                  <div className="stats-summary-card">
-                    <div className="stats-summary-label">{t(lang, 'stock.highestAsset')}</div>
-                    <div className="stats-summary-value" style={{ fontSize: '0.95rem' }}>₩{fmtKRW(maxVal)}</div>
-                    {maxRow && <div style={{ fontSize: '0.72rem', color: 'var(--ink3)', marginTop: '0.15rem' }}>{maxRow.snapshot_date}</div>}
-                  </div>
-                  <div className="stats-summary-card">
-                    <div className="stats-summary-label">{t(lang, 'stock.lowestAsset')}</div>
-                    <div className="stats-summary-value" style={{ fontSize: '0.95rem' }}>₩{fmtKRW(minVal)}</div>
-                    {minRow && <div style={{ fontSize: '0.72rem', color: 'var(--ink3)', marginTop: '0.15rem' }}>{minRow.snapshot_date}</div>}
-                  </div>
-                  <div className="stats-summary-card">
-                    <div className="stats-summary-label">{t(lang, 'stock.periodReturn')}</div>
-                    <div className="stats-summary-value" style={{ color: periodReturn == null ? 'inherit' : periodReturn >= 0 ? 'var(--up)' : 'var(--down)', fontSize: '0.95rem' }}>
-                      {periodReturn == null ? '—' : `${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%`}
-                    </div>
+                <div className="stats-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  <span>일별 자산 추이</span>
+                  <div style={{ display: 'flex', gap: '0.3rem' }}>
+                    {[['1m', '1M'], ['3m', '3M'], ['all', '전체']].map(([key, label]) => (
+                      <button key={key} onClick={() => setHistRange(key)} style={periodBtn(histRange === key)}>{label}</button>
+                    ))}
                   </div>
                 </div>
-              </div>
-
-              {/* 날짜 범위 버튼 + 필터 + 라인차트 */}
-              <div className="stats-section">
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.75rem' }}>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>{t(lang, 'stock.filterByGroup')}:</span>
-                  <select value={histGroupFilter} onChange={e => setHistGroupFilter(e.target.value)} style={selStyle}>
-                    <option value="">{t(lang, 'stock.allGroups')}</option>
-                    {histGroupOptions.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                  </select>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--ink3)', marginLeft: '0.3rem' }}>{t(lang, 'stock.filterByCurrency')}:</span>
-                  <select
-                    value={histCurrencyFilter}
-                    onChange={e => setHistCurrencyFilter(e.target.value)}
-                    disabled={!!histGroupFilter}
-                    style={{ ...selStyle, opacity: histGroupFilter ? 0.45 : 1, cursor: histGroupFilter ? 'not-allowed' : 'pointer' }}
-                  >
-                    <option value="">{t(lang, 'stock.allCurrencies')}</option>
-                    <option value="USD">USD</option>
-                    <option value="KRW">KRW</option>
-                  </select>
-                </div>
-                <div className="stats-chart-wrap">
-                  <canvas ref={histLineRef} />
-                </div>
+                <div className="stats-chart-wrap"><canvas ref={histLineRef} /></div>
               </div>
 
               {/* 일별 결산 테이블 */}
@@ -847,10 +821,9 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                     <thead>
                       <tr style={{ borderBottom: '1.5px solid var(--border)', color: 'var(--ink3)', textAlign: 'right' }}>
                         <th style={{ textAlign: 'left', padding: '0.4rem 0.5rem', fontWeight: 600 }}>날짜</th>
-                        <th style={{ padding: '0.4rem 0.5rem', fontWeight: 600 }}>USD합계</th>
-                        <th style={{ padding: '0.4rem 0.5rem', fontWeight: 600 }}>KRW합계</th>
-                        <th style={{ padding: '0.4rem 0.5rem', fontWeight: 600 }}>원화환산전체</th>
-                        <th style={{ padding: '0.4rem 0.5rem', fontWeight: 600 }}>실현손익</th>
+                        {currencies.map(cur => (
+                          <th key={cur} style={{ padding: '0.4rem 0.5rem', fontWeight: 600 }}>{cur}</th>
+                        ))}
                         <th style={{ padding: '0.4rem 0.5rem', fontWeight: 600 }}>{t(lang, 'stock.savedBy')}</th>
                       </tr>
                     </thead>
@@ -858,12 +831,11 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                       {pageRows.map(r => (
                         <tr key={r.id} style={{ borderBottom: '1px solid var(--border)' }}>
                           <td style={{ padding: '0.4rem 0.5rem', color: 'var(--ink)', fontWeight: 500 }}>{r.snapshot_date}</td>
-                          <td style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: 'var(--ink)' }}>${fmtUSD(r.total_usd ?? 0)}</td>
-                          <td style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: 'var(--ink)' }}>₩{fmtKRW(r.total_krw ?? 0)}</td>
-                          <td style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: 'var(--ink)', fontWeight: 600 }}>₩{fmtKRW(r.total_krw_equiv ?? 0)}</td>
-                          <td style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: (r.realized_pl ?? 0) >= 0 ? 'var(--up)' : 'var(--down)' }}>
-                            {r.realized_pl != null ? `${r.realized_pl >= 0 ? '+' : ''}₩${fmtKRW(r.realized_pl)}` : '—'}
-                          </td>
+                          {currencies.map(cur => (
+                            <td key={cur} style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: 'var(--ink)', fontWeight: 600 }}>
+                              {fmtByCurrency(getValByCurrency(r, cur), cur)}
+                            </td>
+                          ))}
                           <td style={{ padding: '0.4rem 0.5rem', textAlign: 'center' }}>
                             <span style={{
                               display: 'inline-block', padding: '0.15rem 0.45rem', borderRadius: 4, fontSize: '0.7rem', fontWeight: 600,
