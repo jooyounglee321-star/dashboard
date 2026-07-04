@@ -719,7 +719,9 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                     {/* 좌측 범례 */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', minWidth: 140, flex: '0 0 auto' }}>
                       {effectivePieItems.map((item, i) => {
-                        const name = item.name ?? item.ticker ?? ''
+                        const name = !item.isKRW && item.ticker && item.ticker !== 'undefined'
+                          ? item.ticker
+                          : (item.name ?? item.ticker ?? '')
                         const color = colorForKey(name)
                         return (
                           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
