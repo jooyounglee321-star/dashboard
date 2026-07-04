@@ -319,7 +319,7 @@
   "statsKRWGroup": "₩ KRW Group",
   "statsKRWEquiv": "KRW Equivalent Total",
   "statsFxNone": "FX rate unavailable",
-  "statsPieTitle": "Asset Allocation by Group",
+  "statsPieTitle": "Asset Allocation",
   "statsLineTitle": "Cumulative Investment by Group",
   "statsBarTitle": "Unrealized P/L by Stock",
   "statsAxisDate": "Purchase Date",
