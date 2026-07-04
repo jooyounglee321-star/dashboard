@@ -263,7 +263,9 @@ export default function IndexPage() {
         ...Object.entries(tickerCatMap).map(async ([t, cat]) => {
           try {
             newPriceMap[t] = await apiFetch(`/api/stocks/price/${encodeURIComponent(t)}?category=${cat}`, { signal })
-          } catch {}
+          } catch (e) {
+            console.warn(`[PRICE FAIL] ${t} (${cat}):`, e?.message || e)
+          }
         }),
       ])
 
@@ -305,7 +307,9 @@ export default function IndexPage() {
             ...Object.entries(tickerCatMap).map(async ([t, cat]) => {
               try {
                 snapPriceMap[t] = await apiFetch(`/api/stocks/price/${encodeURIComponent(t)}?category=${cat}`)
-              } catch {}
+              } catch (e) {
+                console.warn(`[PRICE FAIL] ${t} (${cat}):`, e?.message || e)
+              }
             }),
           ])
           snapFxRate = fxRes.status === 'fulfilled' ? (fxRes.value?.usd_krw ?? null) : null

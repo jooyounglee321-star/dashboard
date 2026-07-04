@@ -93,11 +93,17 @@ function computeStockStats(stockData, userJoinDate) {
         const bq = pp.reduce((a,p)=>a+(p.qty||0),0)
         const sq = sl.reduce((a,p)=>a+(p.qty||0),0)
         const hq = Math.max(0, bq - sq)
-        return { ticker: s.ticker, name: s.name, bq, sq, hq }
+        const validPP = pp.filter(p => (p.price||0)>0 && (p.qty||0)>0)
+        const ws = validPP.reduce((a,p)=>a+p.price*p.qty,0)
+        const vqt = validPP.reduce((a,p)=>a+p.qty,0)
+        const avg = vqt > 0 ? ws/vqt : 0
+        const livePrice = priceMap[s.ticker]?.current_price
+        return { ticker: s.ticker, name: s.name, bq, sq, hq, avg, livePrice: livePrice ?? null, hasPriceData: livePrice != null }
       })
     })),
     grpTotals: grpTotals.length,
-    stockValues: stockValues.map(s => ({ ticker: s.ticker, name: s.name, evalAmt: s.evalAmt }))
+    stockValues: stockValues.map(s => ({ ticker: s.ticker, name: s.name, evalAmt: s.evalAmt })),
+    priceMapTickers: Object.keys(priceMap)
   }
 
   // startDate부터 오늘까지 연속 날짜 생성
