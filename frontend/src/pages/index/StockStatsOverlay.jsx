@@ -200,7 +200,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   const [userJoinDate, setUserJoinDate] = useState(null)
   const [histData, setHistData] = useState([])
   const [histLoading, setHistLoading] = useState(false)
-  // histRange 제거 — overviewPeriod로 통합
+  const [histRange, setHistRange] = useState('all')
   const [histPage, setHistPage] = useState(0)
   const HIST_PAGE_SIZE = 20
 
