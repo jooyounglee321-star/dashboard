@@ -7,7 +7,7 @@ import { apiFetch } from '../../api'
 import PeriodSelector from '../../components/PeriodSelector'
 Chart.register(...registerables)
 
-const CHART_COLORS = ['#2563eb', '#16a34a', '#d97706', '#9333ea', '#dc2626', '#0891b2', '#65a30d', '#c026d3', '#ea580c', '#0d9488', '#7c3aed', '#b45309']
+const CHART_COLORS = ['#2563eb','#16a34a','#f59e0b','#9333ea','#ef4444','#0891b2','#65a30d','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16','#06b6d4','#a855f7','#e11d48']
 // 종목명 기반 고정 색 (기간 변경해도 동일 색 유지)
 function colorForKey(key) {
   let h = 0
@@ -29,7 +29,7 @@ function calcCutoff(period, customFrom) {
 }
 
 // "undefined" 문자열·JS undefined·null·"" 모두 처리 — 첫 번째 유효한 값 반환
-const cleanStr = (...vals) => vals.find(v => v && typeof v === 'string' && v !== 'undefined' && v.trim() !== '') ?? '알 수 없음'
+const cleanStr = (...vals) => vals.find(v => v && typeof v === 'string' && v !== 'undefined' && v.trim() !== '') ?? null
 
 // 차트 y축/tooltip용 축약 포맷터
 
@@ -308,7 +308,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         labels: pieLabels,
         datasets: [{ data: pieData, backgroundColor: pieColors, borderWidth: 2, borderColor: '#fffef9' }],
       },
-      options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 12, generateLabels: (chart) => { const def = Chart.defaults.plugins.legend.labels.generateLabels(chart); def.forEach(l => { const nameOnly = (l.text || '').split(' (')[0]; if (!nameOnly || nameOnly === 'undefined') l.text = '알 수 없음'; else if (l.text.length > 20) l.text = l.text.slice(0, 20) + '...' }); return def } } } } },
+      options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 12, generateLabels: (chart) => { const def = Chart.defaults.plugins.legend.labels.generateLabels(chart); return def.filter(l => { const n = (l.text || '').split(' (')[0]; return n && n !== '알 수 없음' && n !== '(없음)' && n !== 'undefined' }).map(l => { if (l.text.length > 20) l.text = l.text.slice(0, 20) + '...'; return l }) } } } } },
     })
     return () => { if (pieChartRef.current) { pieChartRef.current.destroy(); pieChartRef.current = null } }
   }, [isOpen, computed, overviewGroup, overviewCurrency, lang])
