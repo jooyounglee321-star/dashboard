@@ -410,6 +410,56 @@ def run_backfill(
     return result
 
 
+# ── POST /api/portfolio/backfill-full ──────────────────────────────────────────
+@router.post("/backfill-full")
+def run_full_backfill(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """기존 스냅샷 전체 삭제 후 최초 매입일부터 재백필.
+    유저가 수동으로 히스토리 초기화 시 사용.
+    """
+    user_id = current_user.id
+
+    # 기존 스냅샷 전부 삭제
+    deleted = db.query(DailyPortfolioSnapshot).filter(
+        DailyPortfolioSnapshot.user_id == user_id
+    ).delete()
+    db.commit()
+    logger.info("[FULL BACKFILL] user=%d 기존 스냅샷 %d건 삭제", user_id, deleted)
+
+    # 최초 매입일을 찾아 start_date 직접 설정
+    pg_row = db.query(PortfolioGroups).filter(PortfolioGroups.user_id == user_id).first()
+    earliest_purchase_date = None
+    if pg_row and pg_row.data:
+        try:
+            from datetime import date as _date
+            pg_data = json.loads(pg_row.data)
+            all_dates = []
+            for grp in pg_data:
+                for st in grp.get("stocks", []):
+                    for p in st.get("purchases", []):
+                        d = p.get("date")
+                        if d:
+                            try:
+                                all_dates.append(_date.fromisoformat(str(d)))
+                            except Exception:
+                                pass
+            if all_dates:
+                earliest_purchase_date = min(all_dates)
+        except Exception:
+            pass
+
+    # 신규 유저처럼 취급하여 최대 365일 백필
+    # (삭제했으니 is_new_user=True로 동작)
+    result = backfill_portfolio_snapshots(user_id, db)
+
+    result["deleted"] = deleted
+    result["earliest_purchase_date"] = str(earliest_purchase_date) if earliest_purchase_date else None
+    logger.info("[FULL BACKFILL] user=%d 완료: %s", user_id, result)
+    return result
+
+
 # ── GET /api/portfolio/groups ────────────────────────────────────────────────
 @router.get("/groups")
 def get_groups(
