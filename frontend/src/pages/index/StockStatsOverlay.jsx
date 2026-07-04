@@ -471,13 +471,11 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
           return 0
         } catch { return 0 }
       }
-      if (histCurrencyFilter === 'USD') return r.total_usd ?? 0
-      if (histCurrencyFilter === 'KRW') return r.total_krw ?? 0
-      return r.total_krw_equiv ?? 0
+      return r.total_usd ?? 0
     }
 
-    const useUSD = histCurrencyFilter === 'USD' && !histGroupFilter
-    const yLabel = useUSD ? '$' : '₩'
+    const useUSD = true
+    const yLabel = '$'
 
     const cutoff = calcCutoff(overviewPeriod, customFrom)
     const cutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
