@@ -87,10 +87,17 @@ function computeStockStats(stockData, userJoinDate) {
       name: g.name,
       total: g.stocks?.length ?? 0,
       deleted: g.stocks?.filter(s => s.is_deleted).length ?? 0,
-      active: g.stocks?.filter(s => !s.is_deleted).length ?? 0
+      active: g.stocks?.filter(s => !s.is_deleted).length ?? 0,
+      stocks: g.stocks?.filter(s => !s.is_deleted).map(s => {
+        const pp = s.purchases || []; const sl = s.sells || []
+        const bq = pp.reduce((a,p)=>a+(p.qty||0),0)
+        const sq = sl.reduce((a,p)=>a+(p.qty||0),0)
+        const hq = Math.max(0, bq - sq)
+        return { ticker: s.ticker, name: s.name, bq, sq, hq }
+      })
     })),
     grpTotals: grpTotals.length,
-    stockValues: stockValues.length
+    stockValues: stockValues.map(s => ({ ticker: s.ticker, name: s.name, evalAmt: s.evalAmt }))
   }
 
   // startDate부터 오늘까지 연속 날짜 생성
