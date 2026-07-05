@@ -730,11 +730,11 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               }
             </div>
 
-            {/* ── 라인차트 + 바차트 (좌우 배치) ── */}
-            {(lineDatasets?.length > 0 || periodStockEvals.length > 0) && (
+            {/* ── 세 차트 공유 기간 필터 그룹 ── */}
+            {(lineDatasets?.length > 0 || periodStockEvals.length > 0 || histData.length > 0) && (
               <div className="stats-section">
-                <div className="stats-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.4rem' }}>
-                  <span>{t(lang, 'statsLineTitle')} / {t(lang, 'statsBarTitle')}</span>
+                <div className="stats-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '1rem' }}>
+                  <span>{t(lang, 'statsLineTitle')} / {t(lang, 'statsBarTitle')} / 일별 자산 추이</span>
                   <PeriodSelector
                     value={overviewPeriod}
                     onChange={setOverviewPeriod}
@@ -743,24 +743,34 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                     onCustomChange={(f, t2) => { setCustomFrom(f); setCustomTo(t2) }}
                   />
                 </div>
-                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                  {lineDatasets?.length > 0 && (
-                    <div style={{ flex: '1 1 300px', minWidth: 0 }}>
-                      {effectiveLineDatasets.length > 0
-                        ? <div className="stats-chart-wrap"><canvas ref={lineRef} /></div>
-                        : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
-                      }
-                    </div>
-                  )}
-                  {periodStockEvals.length > 0 && (
-                    <div style={{ flex: '1 1 300px', minWidth: 0 }}>
-                      {effectiveStockEvals.length > 0
-                        ? <div className="stats-chart-wrap"><canvas ref={barRef} /></div>
-                        : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
-                      }
-                    </div>
-                  )}
-                </div>
+                {/* 그룹별 누적 투자금액 추이 + 종목별 평가손익 (좌우 배치) */}
+                {(lineDatasets?.length > 0 || periodStockEvals.length > 0) && (
+                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    {lineDatasets?.length > 0 && (
+                      <div style={{ flex: '1 1 300px', minWidth: 0 }}>
+                        {effectiveLineDatasets.length > 0
+                          ? <div className="stats-chart-wrap"><canvas ref={lineRef} /></div>
+                          : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
+                        }
+                      </div>
+                    )}
+                    {periodStockEvals.length > 0 && (
+                      <div style={{ flex: '1 1 300px', minWidth: 0 }}>
+                        {effectiveStockEvals.length > 0
+                          ? <div className="stats-chart-wrap"><canvas ref={barRef} /></div>
+                          : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
+                        }
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* 일별 자산 추이 */}
+                {histData.length > 0 && (
+                  <div style={{ marginTop: '1.2rem' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ink3)', marginBottom: '0.4rem' }}>일별 자산 추이</div>
+                    <div className="stats-chart-wrap"><canvas ref={histLineRef} /></div>
+                  </div>
+                )}
               </div>
             )}
           </>
@@ -800,27 +810,14 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             return currency === 'KRW' ? `₩${fmtKRW(val)}` : `$${fmtUSD(val)}`
           }
 
-          const now = new Date()
-          const cutoff = histRange === '1m'
-            ? new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString().slice(0, 10)
-            : histRange === '3m'
-              ? new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()).toISOString().slice(0, 10)
-              : null
-
           const tableRows = [...histData]
             .sort((a, b) => b.snapshot_date.localeCompare(a.snapshot_date))
-            .filter(r => !cutoff || r.snapshot_date >= cutoff)
+            .filter(r => !periodCutoff || r.snapshot_date >= periodCutoff)
           const totalPages = Math.ceil(tableRows.length / HIST_PAGE_SIZE)
           const pageRows = tableRows.slice(histPage * HIST_PAGE_SIZE, (histPage + 1) * HIST_PAGE_SIZE)
 
           return (
             <>
-              {/* 라인차트 */}
-              <div className="stats-section">
-                <div className="stats-section-title">일별 자산 추이</div>
-                <div className="stats-chart-wrap"><canvas ref={histLineRef} /></div>
-              </div>
-
               {/* 일별 결산 테이블 */}
               <div className="stats-section">
                 <div className="stats-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
