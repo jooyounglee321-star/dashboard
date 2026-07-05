@@ -766,12 +766,6 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
           </>
         )}
 
-        {/* ══════════════ 히스토리 ══════════════ */}
-        <div style={{ borderTop: '2px solid var(--border)', margin: '1.5rem 0 0.5rem', padding: '1rem 0 0' }}>
-          <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--ink)', marginBottom: '0.5rem', paddingLeft: '0.2rem' }}>
-            {t(lang, 'stock.historyTab')}
-          </div>
-        </div>
         {histLoading ? (
           <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)' }}>{t(lang, 'statsLoading')}</div>
         ) : histData.length > 0 && (() => {
