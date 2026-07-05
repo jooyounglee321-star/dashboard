@@ -733,8 +733,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             {/* ── 세 차트 공유 기간 필터 그룹 ── */}
             {(lineDatasets?.length > 0 || periodStockEvals.length > 0 || histData.length > 0) && (
               <div className="stats-section">
-                <div className="stats-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '1rem' }}>
-                  <span>{t(lang, 'statsLineTitle')} / {t(lang, 'statsBarTitle')} / 일별 자산 추이</span>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
                   <PeriodSelector
                     value={overviewPeriod}
                     onChange={setOverviewPeriod}
@@ -745,7 +744,8 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                 </div>
                 {/* 그룹별 누적 투자금액 추이 */}
                 {lineDatasets?.length > 0 && (
-                  <div style={{ marginBottom: '1.2rem' }}>
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <div className="stats-section-title">{t(lang, 'statsLineTitle')}</div>
                     {effectiveLineDatasets.length > 0
                       ? <div className="stats-chart-wrap"><canvas ref={lineRef} /></div>
                       : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
@@ -754,7 +754,8 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                 )}
                 {/* 종목별 평가손익 */}
                 {periodStockEvals.length > 0 && (
-                  <div style={{ marginBottom: '1.2rem' }}>
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <div className="stats-section-title">{t(lang, 'statsBarTitle')}</div>
                     {effectiveStockEvals.length > 0
                       ? <div className="stats-chart-wrap"><canvas ref={barRef} /></div>
                       : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
@@ -764,7 +765,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                 {/* 일별 자산 추이 */}
                 {histData.length > 0 && (
                   <div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ink3)', marginBottom: '0.4rem' }}>일별 자산 추이</div>
+                    <div className="stats-section-title">일별 자산 추이</div>
                     <div className="stats-chart-wrap"><canvas ref={histLineRef} /></div>
                   </div>
                 )}
