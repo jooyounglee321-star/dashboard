@@ -79,7 +79,7 @@ def _get_historical_prices_batch(
         return {}
 
 
-def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
+def backfill_portfolio_snapshots(user_id: int, db: Session, force_start_date=None) -> dict:
     """누락된 날짜의 포트폴리오 스냅샷을 해당일 종가로 백필.
 
     신규 유저 (스냅샷 0건):
@@ -139,25 +139,28 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
             if pg_updated else None
         )
 
-        # 가장 이른 날짜 선택 (가입일 하한선 없음 — 실제 매입일 기준)
-        if pg_date and user_date:
-            start_date = min(pg_date, user_date)
-        elif user_date:
-            start_date = user_date
+        if force_start_date:
+            # backfill-full 등에서 실제 매입일을 직접 전달한 경우
+            start_date = force_start_date
         else:
-            start_date = today_kst - timedelta(days=365)  # 최후 폴백
+            # 가장 이른 날짜 선택 (가입일 하한선 없음 — 실제 매입일 기준)
+            if pg_date and user_date:
+                start_date = min(pg_date, user_date)
+            elif user_date:
+                start_date = user_date
+            else:
+                start_date = today_kst - timedelta(days=365)  # 최후 폴백
 
-        # stocks 테이블은 보조 확인용 (없어도 진행)
-        from sqlalchemy import func as sa_func
-        oldest_stock = (
-            db.query(sa_func.min(Stock.created_at))
-            .filter(Stock.user_id == user_id)
-            .scalar()
-        )
-        if oldest_stock is not None:
-            stock_date = oldest_stock.date() if hasattr(oldest_stock, "date") else oldest_stock
-            # stocks 등록일이 더 이르면 반영 (단 가입일 하한선 유지)
-            start_date = min(start_date, stock_date)
+            # stocks 테이블은 보조 확인용 (없어도 진행)
+            from sqlalchemy import func as sa_func
+            oldest_stock = (
+                db.query(sa_func.min(Stock.created_at))
+                .filter(Stock.user_id == user_id)
+                .scalar()
+            )
+            if oldest_stock is not None:
+                stock_date = oldest_stock.date() if hasattr(oldest_stock, "date") else oldest_stock
+                start_date = min(start_date, stock_date)
 
         max_days = 365
     else:
@@ -448,7 +451,7 @@ def run_full_backfill(
 
     # 신규 유저처럼 취급하여 최대 365일 백필
     # (삭제했으니 is_new_user=True로 동작)
-    result = backfill_portfolio_snapshots(user_id, db)
+    result = backfill_portfolio_snapshots(user_id, db, force_start_date=earliest_purchase_date)
 
     result["deleted"] = deleted
     result["earliest_purchase_date"] = str(earliest_purchase_date) if earliest_purchase_date else None
