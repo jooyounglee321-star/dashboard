@@ -356,7 +356,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               x: {
                 type: 'time',
                 time: { unit: 'day', displayFormats: { day: 'yyyy-MM-dd' } },
-                title: { display: true, text: t(lang, 'statsAxisDate') },
+                title: { display: false },
                 ticks: { source: 'auto', maxTicksLimit: 10 },
                 ...(cutoff ? { min: cutoff } : {}),
                 ...(cutoffEnd ? { max: cutoffEnd } : {}),
@@ -511,7 +511,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       options: {
         responsive: true,
         scales: {
-          x: { type: 'category', title: { display: true, text: t(lang, 'statsAxisDate') }, ticks: { maxTicksLimit: 10 } },
+          x: { type: 'category', title: { display: false }, ticks: { maxTicksLimit: 10 } },
           y: {
             title: { display: true, text: yLabel },
             ticks: { callback: v => useUSD ? fmtUSDShort(v) : '₩' + fmtKRWShort(v) },
