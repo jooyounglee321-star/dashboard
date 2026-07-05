@@ -139,10 +139,9 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
             if pg_updated else None
         )
 
-        # 가장 이른 날짜 선택, 단 회원가입일 하한선 적용
+        # 가장 이른 날짜 선택 (가입일 하한선 없음 — 실제 매입일 기준)
         if pg_date and user_date:
-            raw_start = min(pg_date, user_date)   # 더 이른 날짜
-            start_date = max(raw_start, user_date) # 가입일보다 이전 불가
+            start_date = min(pg_date, user_date)
         elif user_date:
             start_date = user_date
         else:
@@ -158,10 +157,7 @@ def backfill_portfolio_snapshots(user_id: int, db: Session) -> dict:
         if oldest_stock is not None:
             stock_date = oldest_stock.date() if hasattr(oldest_stock, "date") else oldest_stock
             # stocks 등록일이 더 이르면 반영 (단 가입일 하한선 유지)
-            if user_date:
-                start_date = max(min(start_date, stock_date), user_date)
-            else:
-                start_date = min(start_date, stock_date)
+            start_date = min(start_date, stock_date)
 
         max_days = 365
     else:
