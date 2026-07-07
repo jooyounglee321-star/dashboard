@@ -7,7 +7,8 @@
 ## 2026-07-07
 
 ### fix
-- StockStatsOverlay "그룹별 누적 투자금액 추이" 차트: 가입일 이전 매입 내역이 누적 합계에서 제외되던 버그 수정 (`MAX(매입일, 가입일)` → 실제 최초 매입일 기준으로 통일, 백엔드 백필 로직과 일치) — `userJoinDate` state 및 관련 useEffect 제거
+- StockStatsOverlay "그룹별 누적 투자금액 추이" 차트: 가입일 이전 매입 내역이 누적 합계에서 제외되던 버그 수정 (`MAX(매입일, 가입일)` → 실제 최초 매입일 기준으로 통일) — `userJoinDate` state 및 관련 useEffect 제거
+- backfill 시작일 계산 버그 수정: 일반 `/api/portfolio/backfill`이 `min(updated_at, 가입일)`을 사용해 실제 매입일 이전 스냅샷이 생성되지 않던 문제 → portfolio JSON에서 최초 매입일을 직접 추출해 시작일로 사용 ("일별 자산 추이" 차트 가입 전 데이터 누락 해소)
 
 ---
 

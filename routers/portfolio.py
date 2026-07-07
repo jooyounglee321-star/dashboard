@@ -124,8 +124,7 @@ def backfill_portfolio_snapshots(user_id: int, db: Session, force_start_date=Non
         if not pg_has_stocks:
             return {"backfilled": 0, "dates": [], "is_new_user": True}
 
-        # 시작일: MIN(portfolio_groups.updated_at, users.created_at) 중 이른 날짜
-        # 단, 회원가입일(users.created_at)보다는 이전일 수 없음 (하한선 유지)
+        # 시작일: portfolio JSON의 실제 최초 매입일 기준 (가입일 하한선 없음)
         user_row = db.query(User).filter(User.id == user_id).first()
         user_created = user_row.created_at if user_row and user_row.created_at else None
         user_date = (
@@ -143,8 +142,21 @@ def backfill_portfolio_snapshots(user_id: int, db: Session, force_start_date=Non
             # backfill-full 등에서 실제 매입일을 직접 전달한 경우
             start_date = force_start_date
         else:
-            # 가장 이른 날짜 선택 (가입일 하한선 없음 — 실제 매입일 기준)
-            if pg_date and user_date:
+            # portfolio JSON에서 실제 최초 매입일 추출 (backfill-full과 동일 로직)
+            all_purchase_dates = []
+            try:
+                for g in pg_check_data:
+                    for s in g.get("stocks", []):
+                        for p in s.get("purchases", []):
+                            d = p.get("date")
+                            if d:
+                                all_purchase_dates.append(d)
+            except Exception:
+                pass
+
+            if all_purchase_dates:
+                start_date = date.fromisoformat(min(all_purchase_dates))
+            elif pg_date and user_date:
                 start_date = min(pg_date, user_date)
             elif user_date:
                 start_date = user_date
