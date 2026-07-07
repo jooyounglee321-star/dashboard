@@ -331,6 +331,7 @@
   "expenseItemPlaceholder": "항목",
   "expenseItemNamePlaceholder": "항목명",
   "expenseAmountPlaceholder": "금액",
+  "expenseAmountRequired": "금액을 입력해주세요",
   "expenseAdd": "추가",
   "expenseAddShort": "+ 추가",
   "expenseDbBadge": "DB 저장",
