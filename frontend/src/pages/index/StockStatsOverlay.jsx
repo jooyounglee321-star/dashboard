@@ -241,16 +241,16 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         const evalAmt = cur * hq
         grpTotal += evalAmt
         if (hq > 0) psv.push({ ticker: s.ticker, name: cleanStr(s.name, s.ticker), evalAmt, groupName: cleanStr(g.name, g.id), currency: g.currency, isKRW })
-        // 바차트(pse) 평가순익: 기간 무관하게 전체 보유 포지션 기준
-        const allPP = s.purchases || []
-        const allBQ = allPP.reduce((a, p) => a + (p.qty || 0), 0)
-        const allSQ = (s.sells || []).reduce((a, p) => a + (p.qty || 0), 0)
-        const allHQ = Math.max(0, allBQ - allSQ)
-        const validAllPP = allPP.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
-        const allWS = validAllPP.reduce((a, p) => a + p.price * p.qty, 0)
-        const allVQT = validAllPP.reduce((a, p) => a + p.qty, 0)
-        const allAvg = allVQT > 0 ? allWS / allVQT : 0
-        const evalPL = allAvg > 0 ? (cur - allAvg) * allHQ : null
+        // 바차트(pse) 평가손익: psv와 동일하게 기간 내 매입만 기준
+        const periodPP = (s.purchases || []).filter(p => (!cutoff || !p.date || p.date >= cutoff) && (!cutoffEnd || !p.date || p.date <= cutoffEnd))
+        const periodBQ = periodPP.reduce((a, p) => a + (p.qty || 0), 0)
+        const periodSQ = (s.sells || []).reduce((a, p) => a + (p.qty || 0), 0)
+        const periodHQ = Math.max(0, periodBQ - periodSQ)
+        const validPeriodPP = periodPP.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
+        const periodWS = validPeriodPP.reduce((a, p) => a + p.price * p.qty, 0)
+        const periodVQT = validPeriodPP.reduce((a, p) => a + p.qty, 0)
+        const periodAvg = periodVQT > 0 ? periodWS / periodVQT : 0
+        const evalPL = periodAvg > 0 ? (cur - periodAvg) * periodHQ : null
         if (evalPL != null) pse.push({ label: s.ticker, name: cleanStr(s.name, s.ticker), evalPL, sym, isKRW })
       })
       return { id: g.id, name: cleanStr(g.name, g.id), currency: g.currency, total: grpTotal, isKRW }
