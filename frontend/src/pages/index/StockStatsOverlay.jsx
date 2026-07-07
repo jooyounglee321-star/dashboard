@@ -33,7 +33,7 @@ const cleanStr = (...vals) => vals.find(v => v && typeof v === 'string' && v !==
 
 // 차트 y축/tooltip용 축약 포맷터
 
-function computeStockStats(stockData, userJoinDate) {
+function computeStockStats(stockData) {
   if (!stockData) return null
   const { groups, priceMap, fxRate } = stockData
   if (!groups || groups.length === 0) return null
@@ -126,10 +126,7 @@ function computeStockStats(stockData, userJoinDate) {
     })
   })
   const minPurchaseDate = allPurchaseDates.length ? allPurchaseDates.sort()[0] : null
-  const joinDate = userJoinDate ?? null
-  const startDate = minPurchaseDate && joinDate
-    ? (minPurchaseDate > joinDate ? minPurchaseDate : joinDate)
-    : (joinDate ?? minPurchaseDate ?? today)
+  const startDate = minPurchaseDate ?? today
 
   const globalDates = generateDateRange(startDate, today)
 
@@ -203,7 +200,6 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
 
   // 히스토리 탭 필터
   const mainTab = 'overview' // 탭 병합으로 항상 overview
-  const [userJoinDate, setUserJoinDate] = useState(null)
   const [histData, setHistData] = useState([])
   const [histLoading, setHistLoading] = useState(false)
   const [histRange, setHistRange] = useState('all')
@@ -216,20 +212,8 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     [stockData]
   )
 
-  // 회원가입일 로드 (localStorage 우선 → /api/auth/me 폴백)
-  useEffect(() => {
-    if (!isOpen || userJoinDate) return
-    try {
-      const u = JSON.parse(localStorage.getItem('user') || '{}')
-      if (u.created_at) { setUserJoinDate(u.created_at.slice(0, 10)); return }
-    } catch {}
-    apiFetch('/api/auth/me')
-      .then(d => { if (d?.created_at) setUserJoinDate(d.created_at.slice(0, 10)) })
-      .catch(() => {})
-  }, [isOpen])
-
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const computed = useMemo(() => computeStockStats(stockData, userJoinDate), [JSON.stringify(stockData), userJoinDate])
+  const computed = useMemo(() => computeStockStats(stockData), [JSON.stringify(stockData)])
 
   // 기간 필터 적용 데이터 — 렌더 스코프에서 계산해 useEffect와 JSX(effectivePieItems)가 공유
   // eslint-disable-next-line react-hooks/exhaustive-deps
