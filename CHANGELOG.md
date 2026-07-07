@@ -9,6 +9,9 @@
 ### fix
 - StockStatsOverlay "그룹별 누적 투자금액 추이" 차트: 가입일 이전 매입 내역이 누적 합계에서 제외되던 버그 수정 (`MAX(매입일, 가입일)` → 실제 최초 매입일 기준으로 통일) — `userJoinDate` state 및 관련 useEffect 제거
 - backfill 시작일 계산 버그 수정: 일반 `/api/portfolio/backfill`이 `min(updated_at, 가입일)`을 사용해 실제 매입일 이전 스냅샷이 생성되지 않던 문제 → portfolio JSON에서 최초 매입일을 직접 추출해 시작일로 사용 ("일별 자산 추이" 차트 가입 전 데이터 누락 해소)
+- backfill 스냅샷 저장 조건 버그 수정: `if not total_krw_equiv`가 `None`(환율 미조회)도 falsy로 처리해 USD 종목 스냅샷이 전부 건너뛰어지던 문제 → `total_krw_equiv is not None and total_krw_equiv == 0`으로 변경 (실제 0원일 때만 건너뜀)
+- "일별 자산 추이" 차트 KRW 전용 포트폴리오 표시 버그 수정: `getValue`가 항상 USD 합계를 리턴해 KRW 종목만 있을 때 차트가 0으로 평탄하게 표시되던 문제 → `overviewCurrency` 기반으로 KRW/USD 합계 분기 처리
+- "전체 재계산" 완료 알림에 최초 매입일 정보 추가 (진단용)
 
 ---
 

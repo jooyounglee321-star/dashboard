@@ -356,8 +356,8 @@ def backfill_portfolio_snapshots(user_id: int, db: Session, force_start_date=Non
                 "group_names": {gid: g["name"] for gid, g in groups.items()},
             }, ensure_ascii=False)
 
-            # 재계산 후에도 0이면 저장하지 않음 (yfinance 데이터 미반영 상태 방지)
-            if not total_krw_equiv:
+            # 평가액이 None(환율 미조회)인 경우는 저장, 실제 0원인 경우만 건너뜀
+            if total_krw_equiv is not None and total_krw_equiv == 0:
                 logger.info("[BACKFILL] user=%d %s total_krw_equiv=0, 저장 건너뜀", user_id, target_date)
                 continue
 

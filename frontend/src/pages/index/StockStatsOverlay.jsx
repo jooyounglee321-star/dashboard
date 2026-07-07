@@ -450,6 +450,11 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     if (histChartRef.current) { histChartRef.current.destroy(); histChartRef.current = null }
     if (!histData.length) return
 
+    const selGroup = overviewGroup ? (stockData?.groups ?? []).find(g => cleanStr(g.name, g.id) === overviewGroup) : null
+    const useKRW = selGroup ? selGroup.currency === 'KRW' : overviewCurrency === 'KRW'
+    const yLabel = useKRW ? '₩' : '$'
+    const useUSD = !useKRW
+
     const getValue = (r) => {
       try {
         const parsed = JSON.parse(r.data || '{}')
@@ -460,16 +465,14 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             if (parsed.groups[overviewGroup] != null) return parsed.groups[overviewGroup].total ?? 0
             return 0
           }
+          if (useKRW) {
+            return Object.values(parsed.groups).filter(g => g.currency === 'KRW').reduce((a, g) => a + (g.total ?? 0), 0)
+          }
           return Object.values(parsed.groups).filter(g => g.currency !== 'KRW').reduce((a, g) => a + (g.total ?? 0), 0)
         }
       } catch {}
-      return r.total_usd ?? 0
+      return useKRW ? (r.total_krw ?? 0) : (r.total_usd ?? 0)
     }
-
-    const selGroup = overviewGroup ? (stockData?.groups ?? []).find(g => cleanStr(g.name, g.id) === overviewGroup) : null
-    const useKRW = selGroup?.currency === 'KRW'
-    const yLabel = useKRW ? '₩' : '$'
-    const useUSD = !useKRW
 
     const cutoff = calcCutoff(overviewPeriod, customFrom)
     const cutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
@@ -809,7 +812,8 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                       if (!window.confirm('기존 히스토리를 모두 삭제하고 최초 매입일부터 재계산합니다. 계속하시겠습니까?')) return
                       try {
                         const res = await apiFetch('/api/portfolio/backfill-full', { method: 'POST' })
-                        alert(`재계산 완료: ${res.backfilled}일 생성`)
+                        alert(`재계산 완료: ${res.backfilled}일 생성\n최초 매입일: ${res.earliest_purchase_date || '없음'}`)
+
                         setHistData([])
                         setHistPage(0)
                         const d = await apiFetch('/api/portfolio/history')
