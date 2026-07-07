@@ -331,6 +331,7 @@
   "expenseItemPlaceholder": "Category",
   "expenseItemNamePlaceholder": "Item name",
   "expenseAmountPlaceholder": "Amount",
+  "expenseAmountRequired": "Please enter an amount",
   "expenseAdd": "Add",
   "expenseAddShort": "+ Add",
   "expenseDbBadge": "DB Saved",

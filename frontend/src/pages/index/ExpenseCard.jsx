@@ -159,7 +159,7 @@ function ExpForm({ compact, form, setForm, categories, subs, lang, submitting, a
         <button
           className="btn-sm"
           onClick={addExpense}
-          disabled={submitting || !form.amount || Number(form.amount) <= 0}
+          disabled={submitting}
           style={{ width: '5rem', flexShrink: 0 }}
         >
           {t(lang, 'expenseAdd')}
@@ -395,7 +395,10 @@ export default function ExpenseCard({ isMobile = false, lang = 'ko' }) {
   /* ── CRUD ─────────────────────────────────────────────────────────── */
 
   async function addExpense() {
-    if (!form.amount || Number(form.amount) <= 0) return
+    if (!form.amount || Number(form.amount) <= 0) {
+      showToast(t(lang, 'expenseAmountRequired'), 'err')
+      return
+    }
     setSubmitting(true)
     const isIncome = form.type === 'income'
     try {
