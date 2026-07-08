@@ -143,7 +143,7 @@ function computeStockStats(stockData) {
       data: pts,
       borderColor: CHART_COLORS[gi % CHART_COLORS.length],
       backgroundColor: 'transparent',
-      tension: 0.3,
+      stepped: true,
       pointRadius: 3,
       currency: g.currency,
     })
