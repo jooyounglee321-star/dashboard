@@ -228,29 +228,30 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       const sym = isKRW ? '₩' : '$'
       let grpTotal = 0
       g.stocks.filter(s => !s.is_deleted).forEach(s => {
-        // 파이차트(psv)용: 기간 내 매입만 포함
-        const pp = (s.purchases || []).filter(p => (!cutoff || !p.date || p.date >= cutoff) && (!cutoffEnd || !p.date || p.date <= cutoffEnd))
-        const bq = pp.reduce((a, p) => a + (p.qty || 0), 0)
+        // 전체 보유 수량 (기간 무관)
+        const totalBQ = (s.purchases || []).reduce((a, p) => a + (p.qty || 0), 0)
         const sq = (s.sells || []).reduce((a, p) => a + (p.qty || 0), 0)
-        const hq = Math.max(0, bq - sq)
+        const totalHQ = Math.max(0, totalBQ - sq)
+
+        // 기간 내 매입 필터 (파이·바차트 공통)
+        const pp = (s.purchases || []).filter(p => (!cutoff || !p.date || p.date >= cutoff) && (!cutoffEnd || !p.date || p.date <= cutoffEnd))
+        const periodBQ = pp.reduce((a, p) => a + (p.qty || 0), 0)
+        // 기간 매입 수량은 실제 보유 수량을 초과할 수 없음 (이전 기간 매도를 차감하지 않음)
+        const periodHQ = Math.min(periodBQ, totalHQ)
+
         const validPP = pp.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
         const ws = validPP.reduce((a, p) => a + p.price * p.qty, 0)
         const vqt = validPP.reduce((a, p) => a + p.qty, 0)
         const avg = vqt > 0 ? ws / vqt : 0
         const cur = pm?.[s.ticker]?.current_price ?? avg
-        const evalAmt = cur * hq
+
+        // 파이차트(psv): 기간 내 매입 평가금액
+        const evalAmt = cur * periodHQ
         grpTotal += evalAmt
-        if (hq > 0) psv.push({ ticker: s.ticker, name: cleanStr(s.name, s.ticker), evalAmt, groupName: cleanStr(g.name, g.id), currency: g.currency, isKRW })
-        // 바차트(pse) 평가손익: psv와 동일하게 기간 내 매입만 기준
-        const periodPP = (s.purchases || []).filter(p => (!cutoff || !p.date || p.date >= cutoff) && (!cutoffEnd || !p.date || p.date <= cutoffEnd))
-        const periodBQ = periodPP.reduce((a, p) => a + (p.qty || 0), 0)
-        const periodSQ = (s.sells || []).reduce((a, p) => a + (p.qty || 0), 0)
-        const periodHQ = Math.max(0, periodBQ - periodSQ)
-        const validPeriodPP = periodPP.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
-        const periodWS = validPeriodPP.reduce((a, p) => a + p.price * p.qty, 0)
-        const periodVQT = validPeriodPP.reduce((a, p) => a + p.qty, 0)
-        const periodAvg = periodVQT > 0 ? periodWS / periodVQT : 0
-        const evalPL = periodAvg > 0 ? (cur - periodAvg) * periodHQ : null
+        if (periodHQ > 0) psv.push({ ticker: s.ticker, name: cleanStr(s.name, s.ticker), evalAmt, groupName: cleanStr(g.name, g.id), currency: g.currency, isKRW })
+
+        // 바차트(pse): 기간 내 매입 평균단가 기준 평가손익
+        const evalPL = avg > 0 ? (cur - avg) * periodHQ : null
         if (evalPL != null) pse.push({ label: s.ticker, name: cleanStr(s.name, s.ticker), evalPL, sym, isKRW })
       })
       return { id: g.id, name: cleanStr(g.name, g.id), currency: g.currency, total: grpTotal, isKRW }
