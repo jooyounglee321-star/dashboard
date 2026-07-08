@@ -15,4 +15,9 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
   },
+  test: {
+    environment: 'node',
+    globals: true,
+    fakeTimers: { now: new Date('2026-07-07T12:00:00Z') },
+  },
 })
