@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-07-07 (3)
+
+### feat
+- 단위 테스트 도입 (Vitest): `frontend/src/__tests__/stockStats.test.js` — 36개 테스트 케이스
+  - `calcCutoff`: 1m/3m/6m/ytd/1y/3y/custom/all 전 케이스
+  - `cleanStr`: undefined 문자열·null·빈값 처리
+  - `computePeriodStats`: 기간 필터, periodHQ 경계값, is_deleted, KRW/USD 다중 그룹, custom 범위, 전량 매도 등
+- 핵심 계산 로직 `calcCutoff` / `cleanStr` / `computePeriodStats` 를 `utils/stockStats.js` 로 추출 — StockStatsOverlay는 import 사용
+
+### fix
+- 테스트 실행 중 발견: 전량 매도(totalHQ=0)된 종목이 evalPL=0으로 바차트에 포함되던 문제 → `avg > 0 && periodHQ > 0` 조건으로 수정
+
+---
+
 ## 2026-07-07 (2)
 
 ### fix

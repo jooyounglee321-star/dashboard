@@ -5,6 +5,7 @@ import { t } from './i18n'
 import { fmtKRW, fmtUSD, formatAuto, fmtKRWShort, fmtUSDShort, fmtShort } from '../../utils/format'
 import { apiFetch } from '../../api'
 import PeriodSelector from '../../components/PeriodSelector'
+import { calcCutoff, cleanStr, computePeriodStats } from '../../utils/stockStats'
 Chart.register(...registerables)
 
 const CHART_COLORS = ['#2563eb','#16a34a','#f59e0b','#9333ea','#ef4444','#0891b2','#65a30d','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16','#06b6d4','#a855f7','#e11d48']
@@ -15,21 +16,6 @@ function colorForKey(key) {
   return CHART_COLORS[h % CHART_COLORS.length]
 }
 
-/** 기간 키 → cutoff 날짜(YYYY-MM-DD) 또는 null(전체) */
-function calcCutoff(period, customFrom) {
-  const d = new Date()
-  if (period === '1m')  return new Date(d.getFullYear(), d.getMonth() - 1, d.getDate()).toISOString().slice(0, 10)
-  if (period === '3m')  return new Date(d.getFullYear(), d.getMonth() - 3, d.getDate()).toISOString().slice(0, 10)
-  if (period === '6m')  return new Date(d.getFullYear(), d.getMonth() - 6, d.getDate()).toISOString().slice(0, 10)
-  if (period === 'ytd') return `${d.getFullYear()}-01-01`
-  if (period === '1y')  return new Date(d.getFullYear() - 1, d.getMonth(), d.getDate()).toISOString().slice(0, 10)
-  if (period === '3y')  return new Date(d.getFullYear() - 3, d.getMonth(), d.getDate()).toISOString().slice(0, 10)
-  if (period === 'custom') return customFrom || null
-  return null
-}
-
-// "undefined" 문자열·JS undefined·null·"" 모두 처리 — 첫 번째 유효한 값 반환
-const cleanStr = (...vals) => vals.find(v => v && typeof v === 'string' && v !== 'undefined' && v.trim() !== '') ?? null
 
 // 차트 y축/tooltip용 축약 포맷터
 
@@ -215,49 +201,12 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const computed = useMemo(() => computeStockStats(stockData), [JSON.stringify(stockData)])
 
-  // 기간 필터 적용 데이터 — 렌더 스코프에서 계산해 useEffect와 JSX(effectivePieItems)가 공유
+  // 기간 필터 적용 데이터 — computePeriodStats (utils/stockStats.js) 로 위임
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const { periodGrpTotals, periodStockValues, periodStockEvals } = useMemo(() => {
-    if (!computed || !stockData) return { periodGrpTotals: [], periodStockValues: [], periodStockEvals: [] }
-    const cutoff = calcCutoff(overviewPeriod, customFrom)
-    const cutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
-    const pm = stockData.priceMap
-    const psv = [], pse = []
-    const pgt = (stockData.groups ?? []).map(g => {
-      const isKRW = g.currency === 'KRW'
-      const sym = isKRW ? '₩' : '$'
-      let grpTotal = 0
-      g.stocks.filter(s => !s.is_deleted).forEach(s => {
-        // 전체 보유 수량 (기간 무관)
-        const totalBQ = (s.purchases || []).reduce((a, p) => a + (p.qty || 0), 0)
-        const sq = (s.sells || []).reduce((a, p) => a + (p.qty || 0), 0)
-        const totalHQ = Math.max(0, totalBQ - sq)
-
-        // 기간 내 매입 필터 (파이·바차트 공통)
-        const pp = (s.purchases || []).filter(p => (!cutoff || !p.date || p.date >= cutoff) && (!cutoffEnd || !p.date || p.date <= cutoffEnd))
-        const periodBQ = pp.reduce((a, p) => a + (p.qty || 0), 0)
-        // 기간 매입 수량은 실제 보유 수량을 초과할 수 없음 (이전 기간 매도를 차감하지 않음)
-        const periodHQ = Math.min(periodBQ, totalHQ)
-
-        const validPP = pp.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
-        const ws = validPP.reduce((a, p) => a + p.price * p.qty, 0)
-        const vqt = validPP.reduce((a, p) => a + p.qty, 0)
-        const avg = vqt > 0 ? ws / vqt : 0
-        const cur = pm?.[s.ticker]?.current_price ?? avg
-
-        // 파이차트(psv): 기간 내 매입 평가금액
-        const evalAmt = cur * periodHQ
-        grpTotal += evalAmt
-        if (periodHQ > 0) psv.push({ ticker: s.ticker, name: cleanStr(s.name, s.ticker), evalAmt, groupName: cleanStr(g.name, g.id), currency: g.currency, isKRW })
-
-        // 바차트(pse): 기간 내 매입 평균단가 기준 평가손익
-        const evalPL = avg > 0 ? (cur - avg) * periodHQ : null
-        if (evalPL != null) pse.push({ label: s.ticker, name: cleanStr(s.name, s.ticker), evalPL, sym, isKRW })
-      })
-      return { id: g.id, name: cleanStr(g.name, g.id), currency: g.currency, total: grpTotal, isKRW }
-    })
-    return { periodGrpTotals: pgt, periodStockValues: psv, periodStockEvals: pse }
-  }, [computed, overviewPeriod, customFrom, customTo]) // stockData 변경은 computed 경유로 감지
+  const { periodGrpTotals, periodStockValues, periodStockEvals } = useMemo(
+    () => computePeriodStats(stockData, overviewPeriod, customFrom, customTo),
+    [computed, overviewPeriod, customFrom, customTo] // stockData 변경은 computed 경유로 감지
+  )
 
   // ── 파이차트 전용 useEffect (period와 무관하게 별도 렌더링) ──
   const pieChartRef = useRef(null)
