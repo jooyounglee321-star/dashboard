@@ -617,6 +617,102 @@ def get_history(
 
 
 # ── GET /api/portfolio/history/{date} ───────────────────────────────────────
+@router.get("/period-pl")
+def get_period_pl(
+    from_date: date = Query(..., alias="from"),
+    db: Session     = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """기간 시작일 종가 기준 보유 종목별 시장손익 반환.
+    P&L = (현재가 - from_date 종가) × 보유수량
+    """
+    pg = db.query(PortfolioGroups).filter(PortfolioGroups.user_id == current_user.id).first()
+    if not pg or not pg.data:
+        return []
+
+    raw = json.loads(pg.data) if isinstance(pg.data, str) else pg.data
+    groups = raw if isinstance(raw, list) else [raw]
+
+    # 보유 종목 수집
+    holdings: list[dict] = []
+    for g in groups:
+        currency = g.get("currency", "USD")
+        category = g.get("category")
+        for s in g.get("stocks", []):
+            if s.get("is_deleted"):
+                continue
+            purchases = s.get("purchases", [])
+            sells     = s.get("sells", [])
+            total_buy = sum(p.get("qty", 0) for p in purchases)
+            total_sell= sum(p.get("qty", 0) for p in sells)
+            total_hq  = max(0.0, total_buy - total_sell)
+            if total_hq <= 0:
+                continue
+            all_valid = [p for p in purchases if (p.get("price") or 0) > 0 and (p.get("qty") or 0) > 0]
+            ws  = sum(p["price"] * p["qty"] for p in all_valid)
+            vqt = sum(p["qty"] for p in all_valid)
+            holdings.append({
+                "ticker":   s.get("ticker", ""),
+                "name":     s.get("name") or s.get("ticker", ""),
+                "qty":      total_hq,
+                "avg_cost": ws / vqt if vqt > 0 else 0,
+                "currency": currency,
+                "category": category,
+                "group":    g.get("name", ""),
+            })
+
+    if not holdings:
+        return []
+
+    # 현재가 조회 (fast_info)
+    from routers.stocks import _fetch_price
+    import concurrent.futures, time
+
+    def fetch_current(h):
+        try:
+            result = _fetch_price(h["ticker"], h.get("category"))
+            return h["ticker"], result.get("current_price")
+        except Exception:
+            return h["ticker"], None
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as ex:
+        cur_results = dict(ex.map(fetch_current, holdings))
+
+    # 기간 시작가 조회 (yfinance history)
+    unique_tickers = list({h["ticker"] for h in holdings})
+    start_prices: dict[str, float] = {}
+    for ticker in unique_tickers:
+        cat = next((h.get("category") for h in holdings if h["ticker"] == ticker), None)
+        pm = _get_historical_prices_batch(ticker, cat, [from_date])
+        if pm:
+            start_prices[ticker] = list(pm.values())[0]
+
+    result_list = []
+    for h in holdings:
+        ticker = h["ticker"]
+        cur = cur_results.get(ticker)
+        start = start_prices.get(ticker)
+        if cur is None or start is None or start == 0:
+            continue
+        pl = (cur - start) * h["qty"]
+        pl_pct = (cur - start) / start * 100
+        result_list.append({
+            "ticker":     ticker,
+            "name":       h["name"],
+            "group":      h["group"],
+            "qty":        h["qty"],
+            "avg_cost":   h["avg_cost"],
+            "price_start":start,
+            "price_now":  cur,
+            "pl":         pl,
+            "pl_pct":     pl_pct,
+            "currency":   h["currency"],
+        })
+
+    result_list.sort(key=lambda x: x["pl"], reverse=True)
+    return result_list
+
+
 @router.get("/history/{snapshot_date}", response_model=PortfolioSnapshotOut)
 def get_history_by_date(
     snapshot_date: date,

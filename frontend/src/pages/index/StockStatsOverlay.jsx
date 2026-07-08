@@ -160,6 +160,8 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   const pieRef = useRef(null)
   const lineRef = useRef(null)
   const barRef = useRef(null)
+  const plBarRef = useRef(null)
+  const plBarChartRef = useRef(null)
   const chartsRef = useRef([])
   const histLineRef = useRef(null)
   const histChartRef = useRef(null)
@@ -383,6 +385,80 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       chartsRef.current = []
     }
   }, [isOpen, computed, lang, overviewCurrency, overviewGroup, overviewPeriod, customFrom, customTo])
+
+  // 기간 시장손익 데이터 fetch
+  const [periodPlData, setPeriodPlData] = useState([])
+  const [periodPlLoading, setPeriodPlLoading] = useState(false)
+  useEffect(() => {
+    if (!isOpen) return
+    const fromDate = calcCutoff(overviewPeriod, customFrom)
+    if (!fromDate) { setPeriodPlData([]); return }
+    setPeriodPlLoading(true)
+    apiFetch(`/api/portfolio/period-pl?from=${fromDate}`)
+      .then(d => setPeriodPlData(Array.isArray(d) ? d : []))
+      .catch(() => setPeriodPlData([]))
+      .finally(() => setPeriodPlLoading(false))
+  }, [isOpen, overviewPeriod, customFrom])
+
+  // 기간 시장손익 바차트
+  useEffect(() => {
+    if (plBarChartRef.current) { plBarChartRef.current.destroy(); plBarChartRef.current = null }
+    if (!isOpen || !plBarRef.current || !periodPlData.length) return
+    const tickerSet = overviewGroup ? new Set(groupTickers?.[overviewGroup] ?? []) : null
+    const filtered = tickerSet ? periodPlData.filter(d => tickerSet.has(d.ticker)) : periodPlData
+    if (!filtered.length) return
+    const fxR = computed?.fxRate
+    const converted = filtered.map(d => {
+      let pl = d.pl
+      const sym = d.currency === 'KRW' ? '₩' : '$'
+      if (overviewCurrency === 'KRW' && d.currency !== 'KRW' && fxR) { pl = pl * fxR }
+      if (overviewCurrency === 'USD' && d.currency === 'KRW' && fxR) { pl = pl / fxR }
+      return { ...d, pl, sym: overviewCurrency === 'KRW' ? '₩' : '$' }
+    })
+    const sorted = [...converted].sort((a, b) => b.pl - a.pl)
+    const axisSymbol = overviewCurrency === 'KRW' ? '₩' : '$'
+    plBarChartRef.current = new Chart(plBarRef.current, {
+      type: 'bar',
+      data: {
+        labels: sorted.map(d => d.ticker),
+        datasets: [{
+          label: t(lang, 'statsPeriodPlLabel'),
+          data: sorted.map(d => parseFloat(d.pl.toFixed(2))),
+          backgroundColor: sorted.map(d => d.pl >= 0 ? 'rgba(37,99,235,0.75)' : 'rgba(220,38,38,0.75)'),
+          borderColor: sorted.map(d => d.pl >= 0 ? '#2563eb' : '#dc2626'),
+          borderWidth: 1,
+        }],
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            title: { display: true, text: `${t(lang, 'statsAxisPL')} (${axisSymbol})` },
+            ticks: {
+              callback: v => {
+                const fmt = fmtShort(Math.abs(v), overviewCurrency)
+                return v >= 0 ? `+${fmt}` : `-${fmt}`
+              },
+            },
+          },
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const d = sorted[ctx.dataIndex]
+                const fmt = fmtShort(Math.abs(d.pl), overviewCurrency)
+                const pct = d.pl_pct != null ? ` (${d.pl_pct >= 0 ? '+' : ''}${d.pl_pct.toFixed(1)}%)` : ''
+                return `${d.pl >= 0 ? '+' : '-'}${fmt}${pct}`
+              },
+            },
+          },
+        },
+      },
+    })
+    return () => { if (plBarChartRef.current) { plBarChartRef.current.destroy(); plBarChartRef.current = null } }
+  }, [isOpen, periodPlData, overviewGroup, overviewCurrency, lang, computed])
 
   // 히스토리 데이터 fetch
   useEffect(() => {
@@ -696,6 +772,18 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                     {effectiveStockEvals.length > 0
                       ? <div className="stats-chart-wrap"><canvas ref={barRef} /></div>
                       : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
+                    }
+                  </div>
+                )}
+                {/* 종목별 기간 시장손익 */}
+                {calcCutoff(overviewPeriod, customFrom) && (
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <div className="stats-section-title">{t(lang, 'statsPeriodPlTitle')}</div>
+                    {periodPlLoading
+                      ? <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'statsPeriodPlLoading')}</div>
+                      : periodPlData.length > 0
+                        ? <div className="stats-chart-wrap"><canvas ref={plBarRef} /></div>
+                        : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
                     }
                   </div>
                 )}

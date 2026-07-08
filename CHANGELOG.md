@@ -6,6 +6,13 @@
 
 ## 2026-07-08
 
+### feat
+- 종목별 기간 시장손익 바차트 추가
+  - 백엔드: `GET /api/portfolio/period-pl?from=YYYY-MM-DD` — yfinance로 기간 시작일 종가 조회, `(현재가 - 시작가) × 보유수량` 계산
+  - 프론트: 기존 기간 버튼(1M/3M/6M/YTD/1Y/3Y/전체/직접)과 연동, 기간 변경 시 API 재조회 후 차트 갱신
+  - "전체" 선택 시 시작일이 없으므로 차트 미표시 (기간 지정 시에만 노출)
+  - i18n: `statsPeriodPlTitle`, `statsPeriodPlLabel`, `statsPeriodPlLoading` 키 추가 (en/ko)
+
 ### fix
 - 종목별 평가손익 바차트: 기간 필터(1M 등) 선택 시 해당 기간에 매입 내역이 없는 종목이 차트에서 사라지는 버그 수정
   - 기존: `periodHQ`(기간 내 매입 수량)가 0이면 바차트에서 제외 → 과거에 매입했지만 최근 추가 매입 없는 종목이 누락
