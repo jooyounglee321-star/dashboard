@@ -52,6 +52,7 @@ export function computePeriodStats(stockData, period, customFrom = null, customT
       // 기간 매입 수량은 실제 보유 수량을 초과할 수 없음
       const periodHQ = Math.min(periodBQ, totalHQ)
 
+      // 기간 내 매입 평균단가 (파이차트용)
       const validPP  = pp.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
       const ws       = validPP.reduce((a, p) => a + p.price * p.qty, 0)
       const vqt      = validPP.reduce((a, p) => a + p.qty, 0)
@@ -70,8 +71,12 @@ export function computePeriodStats(stockData, period, customFrom = null, customT
         isKRW,
       })
 
-      // 바차트(pse): 기간 내 매입 평균단가 기준 평가손익 (psv와 동일하게 periodHQ>0 필수)
-      const evalPL = avg > 0 && periodHQ > 0 ? (cur - avg) * periodHQ : null
+      // 바차트(pse): 전체 보유 기준 평가손익 — 기간 무관하게 현재 보유 종목 전체 표시
+      const allValidPP = (s.purchases || []).filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
+      const allWS  = allValidPP.reduce((a, p) => a + p.price * p.qty, 0)
+      const allVQT = allValidPP.reduce((a, p) => a + p.qty, 0)
+      const allAvg = allVQT > 0 ? allWS / allVQT : 0
+      const evalPL = allAvg > 0 && totalHQ > 0 ? (cur - allAvg) * totalHQ : null
       if (evalPL != null) pse.push({
         label: s.ticker,
         name: cleanStr(s.name, s.ticker),
