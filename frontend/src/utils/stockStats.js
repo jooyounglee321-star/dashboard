@@ -91,3 +91,178 @@ export function computePeriodStats(stockData, period, customFrom = null, customT
 
   return { periodGrpTotals: pgt, periodStockValues: psv, periodStockEvals: pse }
 }
+
+/**
+ * 동적 단위 계산: 선택된 그룹에 따라 "그룹 단위" 또는 "종목 단위" 반환
+ * @param {object} stockData  { groups: [...], priceMap: {...} }
+ * @param {string} selectedGroup  '' = 전체, 그룹명 = 해당 그룹
+ * @returns {{ units: Array<{name, evalAmt, isKRW, ticker?, currency}>, isStockUnit: boolean }}
+ */
+export function computeUnits(stockData, selectedGroup) {
+  if (!stockData?.groups) return { units: [], isStockUnit: false }
+  const { groups, priceMap = {} } = stockData
+  const groupNames = groups.map(g => cleanStr(g.name, g.id))
+  const isStockUnit = !!selectedGroup || groupNames.length === 1
+  const activeGroup = selectedGroup || (groupNames.length === 1 ? groupNames[0] : '')
+
+  if (isStockUnit) {
+    const g = groups.find(gr => cleanStr(gr.name, gr.id) === activeGroup)
+    if (!g) return { units: [], isStockUnit: true }
+    const units = []
+    for (const s of g.stocks || []) {
+      if (s.is_deleted) continue
+      const pp = s.purchases || [], sl = s.sells || []
+      const bq = pp.reduce((a, p) => a + (p.qty || 0), 0)
+      const sq = sl.reduce((a, p) => a + (p.qty || 0), 0)
+      const hq = Math.max(0, bq - sq)
+      if (hq <= 0) continue
+      const valid = pp.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
+      const ws = valid.reduce((a, p) => a + p.price * p.qty, 0)
+      const vqt = valid.reduce((a, p) => a + p.qty, 0)
+      const avg = vqt > 0 ? ws / vqt : 0
+      const cur = priceMap[s.ticker]?.current_price ?? avg
+      units.push({
+        name: s.ticker || cleanStr(s.name, s.ticker) || '',
+        ticker: s.ticker,
+        evalAmt: cur * hq,
+        isKRW: g.currency === 'KRW',
+        currency: g.currency,
+      })
+    }
+    return { units, isStockUnit: true }
+  }
+
+  // 그룹 단위
+  const units = groups.map(g => {
+    const isKRW = g.currency === 'KRW'
+    let total = 0
+    for (const s of g.stocks || []) {
+      if (s.is_deleted) continue
+      const pp = s.purchases || [], sl = s.sells || []
+      const bq = pp.reduce((a, p) => a + (p.qty || 0), 0)
+      const sq = sl.reduce((a, p) => a + (p.qty || 0), 0)
+      const hq = Math.max(0, bq - sq)
+      const valid = pp.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
+      const ws = valid.reduce((a, p) => a + p.price * p.qty, 0)
+      const vqt = valid.reduce((a, p) => a + p.qty, 0)
+      const avg = vqt > 0 ? ws / vqt : 0
+      const cur = priceMap[s.ticker]?.current_price ?? avg
+      total += cur * hq
+    }
+    return {
+      name: cleanStr(g.name, g.id) || '',
+      evalAmt: total,
+      isKRW,
+      currency: g.currency,
+    }
+  }).filter(u => u.evalAmt > 0)
+  return { units, isStockUnit: false }
+}
+
+/**
+ * 수익률% 계산: 종목별 (현재가 - 평균단가) / 평균단가 × 100
+ * @param {object} stockData
+ * @param {string} selectedGroup
+ * @returns {Array<{ticker, name, holdQty, avgCost, curPrice, returnPct, isKRW}>}
+ */
+export function computeReturnRates(stockData, selectedGroup) {
+  if (!stockData?.groups) return []
+  const { groups, priceMap = {} } = stockData
+  const groupNames = groups.map(g => cleanStr(g.name, g.id))
+  const activeGroup = selectedGroup || (groupNames.length === 1 ? groupNames[0] : '')
+  const targetGroups = activeGroup
+    ? groups.filter(g => cleanStr(g.name, g.id) === activeGroup)
+    : groups
+
+  const result = []
+  for (const g of targetGroups) {
+    for (const s of g.stocks || []) {
+      if (s.is_deleted) continue
+      const pp = s.purchases || [], sl = s.sells || []
+      const bq = pp.reduce((a, p) => a + (p.qty || 0), 0)
+      const sq = sl.reduce((a, p) => a + (p.qty || 0), 0)
+      const hq = Math.max(0, bq - sq)
+      if (hq <= 0) continue
+      const valid = pp.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
+      const ws = valid.reduce((a, p) => a + p.price * p.qty, 0)
+      const vqt = valid.reduce((a, p) => a + p.qty, 0)
+      const avgCost = vqt > 0 ? ws / vqt : 0
+      if (avgCost <= 0) continue
+      const curPrice = priceMap[s.ticker]?.current_price ?? avgCost
+      const returnPct = (curPrice - avgCost) / avgCost * 100
+      result.push({
+        ticker: s.ticker,
+        name: cleanStr(s.name, s.ticker) || s.ticker,
+        holdQty: hq,
+        avgCost,
+        curPrice,
+        returnPct,
+        isKRW: g.currency === 'KRW',
+        currency: g.currency,
+      })
+    }
+  }
+  return result.sort((a, b) => b.returnPct - a.returnPct)
+}
+
+/**
+ * 집중도 계산: 각 단위의 비중%
+ * @param {Array<{name, evalAmt, isKRW}>} units
+ * @param {number|null} fxRate  KRW→USD 환산 (단위 혼재 시 USD 기준 통합)
+ * @returns {Array<{name, pct, isKRW}>}
+ */
+export function computeConcentration(units, fxRate = null) {
+  if (!units?.length) return []
+  // USD 기준 통합
+  const toUSD = (amt, isKRW) => (isKRW && fxRate ? amt / fxRate : amt)
+  const total = units.reduce((a, u) => a + toUSD(u.evalAmt, u.isKRW), 0)
+  if (!total) return []
+  return units.map(u => ({
+    name: u.name,
+    pct: toUSD(u.evalAmt, u.isKRW) / total * 100,
+    isKRW: u.isKRW,
+  })).sort((a, b) => b.pct - a.pct)
+}
+
+/**
+ * 실현 손익 계산 (프론트 측 폴백용)
+ * @param {object} stockData
+ * @returns {{ total: number, items: Array }}
+ */
+export function computeRealizedPL(stockData) {
+  if (!stockData?.groups) return { total: 0, items: [] }
+  const items = []
+  let total = 0
+  for (const g of stockData.groups) {
+    for (const s of g.stocks || []) {
+      const pp = s.purchases || [], sl = s.sells || []
+      if (!sl.length) continue
+      const valid = pp.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
+      const ws = valid.reduce((a, p) => a + p.price * p.qty, 0)
+      const vqt = valid.reduce((a, p) => a + p.qty, 0)
+      const avgCost = vqt > 0 ? ws / vqt : 0
+      if (avgCost <= 0) continue
+      for (const sell of sl) {
+        const qty = sell.qty || 0
+        const price = sell.price || 0
+        if (qty <= 0) continue
+        const pl = (price - avgCost) * qty
+        const plPct = (price - avgCost) / avgCost * 100
+        total += pl
+        items.push({
+          ticker: s.ticker,
+          group: cleanStr(g.name, g.id),
+          date: sell.date || '',
+          qty,
+          sell_price: price,
+          avg_cost: avgCost,
+          pl,
+          pl_pct: plPct,
+          currency: g.currency,
+        })
+      }
+    }
+  }
+  items.sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+  return { total, items }
+}

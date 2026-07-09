@@ -713,6 +713,96 @@ def get_period_pl(
     return result_list
 
 
+@router.get("/benchmark")
+def get_benchmark(
+    tickers: str = Query("SPY,QQQ"),
+    from_date: str = Query(None, alias="from"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """벤치마크 지수 시세 조회 (yfinance). 시작점=100 정규화."""
+    ticker_list = [t.strip().upper() for t in tickers.split(",") if t.strip()]
+    start = from_date or (date.today() - timedelta(days=365)).isoformat()
+
+    result: dict = {}
+    for ticker in ticker_list:
+        try:
+            hist = yf.Ticker(ticker).history(start=start, end=date.today().isoformat())
+            if hist.empty:
+                continue
+            closes = []
+            dates_out = []
+            for ts, row in hist.iterrows():
+                d = ts.date() if hasattr(ts, "date") else ts
+                dates_out.append(d.isoformat())
+                closes.append(round(float(row["Close"]), 4))
+            if not closes:
+                continue
+            base = closes[0]
+            normalized = [round(c / base * 100, 4) for c in closes] if base else closes
+            result[ticker] = {"dates": dates_out, "closes": closes, "normalized": normalized}
+        except Exception as exc:
+            logger.warning("[BENCHMARK] %s 조회 실패: %s", ticker, exc)
+
+    return result
+
+
+@router.get("/realized-pl")
+def get_realized_pl(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """실현 손익 내역. 취득단가 = 종목 전체 매입의 가중평균 (단순 AVCO)."""
+    pg = db.query(PortfolioGroups).filter(PortfolioGroups.user_id == current_user.id).first()
+    if not pg or not pg.data:
+        return {"total": 0, "items": []}
+
+    raw = json.loads(pg.data) if isinstance(pg.data, str) else pg.data
+    groups = raw if isinstance(raw, list) else [raw]
+
+    items = []
+    total_pl = 0.0
+
+    for g in groups:
+        currency = g.get("currency", "USD")
+        group_name = g.get("name", "")
+        for s in g.get("stocks", []):
+            ticker = s.get("ticker", "")
+            sells = s.get("sells", []) or []
+            if not sells:
+                continue
+            purchases = s.get("purchases", []) or []
+            # 전체 가중평균 단가
+            all_valid = [p for p in purchases if (p.get("price") or 0) > 0 and (p.get("qty") or 0) > 0]
+            ws = sum(p["price"] * p["qty"] for p in all_valid)
+            vqt = sum(p["qty"] for p in all_valid)
+            avg_cost = ws / vqt if vqt > 0 else 0
+
+            for sell in sells:
+                sell_date = sell.get("date", "")
+                sell_qty = sell.get("qty", 0) or 0
+                sell_price = sell.get("price", 0) or 0
+                if sell_qty <= 0 or avg_cost <= 0:
+                    continue
+                pl = (sell_price - avg_cost) * sell_qty
+                pl_pct = (sell_price - avg_cost) / avg_cost * 100
+                total_pl += pl
+                items.append({
+                    "ticker": ticker,
+                    "group": group_name,
+                    "date": sell_date,
+                    "qty": sell_qty,
+                    "sell_price": sell_price,
+                    "avg_cost": round(avg_cost, 4),
+                    "pl": round(pl, 4),
+                    "pl_pct": round(pl_pct, 2),
+                    "currency": currency,
+                })
+
+    items.sort(key=lambda x: x["date"] or "", reverse=True)
+    return {"total": round(total_pl, 4), "items": items}
+
+
 @router.get("/history/{snapshot_date}", response_model=PortfolioSnapshotOut)
 def get_history_by_date(
     snapshot_date: date,

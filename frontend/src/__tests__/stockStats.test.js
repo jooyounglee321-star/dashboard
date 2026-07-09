@@ -6,8 +6,8 @@
  * 3M cutoff → 2026-04-07
  * 6M cutoff → 2026-01-07
  */
-import { describe, it, expect } from 'vitest'
-import { calcCutoff, cleanStr, computePeriodStats } from '../utils/stockStats'
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
+import { calcCutoff, cleanStr, computePeriodStats, computeUnits, computeReturnRates, computeConcentration, computeRealizedPL } from '../utils/stockStats'
 
 // ────────────────────────────────────────────────────────────
 // 헬퍼
@@ -31,6 +31,9 @@ const priceMap = {
 // calcCutoff
 // ────────────────────────────────────────────────────────────
 describe('calcCutoff', () => {
+  beforeAll(() => vi.useFakeTimers({ now: new Date(2026, 6, 7, 12, 0, 0) })) // 로컬 시간 7월7일 정오
+  afterAll(() => vi.useRealTimers())
+
   it('1m → 2026-06-07', () => expect(calcCutoff('1m')).toBe('2026-06-07'))
   it('3m → 2026-04-07', () => expect(calcCutoff('3m')).toBe('2026-04-07'))
   it('6m → 2026-01-07', () => expect(calcCutoff('6m')).toBe('2026-01-07'))
@@ -98,36 +101,40 @@ describe('computePeriodStats', () => {
   })
 
   // ── 기간 필터 ──────────────────────────────────────────
-  it('1M: 기간 밖 매입은 psv/pse에서 제외', () => {
+  it('1M: psv는 기간 내 매입만, pse는 전체 보유 기준', () => {
+    // psv: 1M 이내 매입(5주)만 포함 → evalAmt=200*5=1000
+    // pse: allAvg=(5*100+5*180)/10=140, totalHQ=10 → evalPL=(200-140)*10=600
     const data = { groups: [group('g1', 'USD', [
       stock('AAPL', [
-        p('2026-01-01', 5, 100),  // 1M 이전 → 제외 (cutoff=2026-06-07)
-        p('2026-07-01', 5, 180),  // 1M 이내 → 포함
+        p('2026-01-01', 5, 100),  // 1M 이전 → psv 제외
+        p('2026-07-01', 5, 180),  // 1M 이내 → psv 포함
       ])
     ])], priceMap }
 
     const { periodStockValues, periodStockEvals } = computePeriodStats(data, '1m')
 
-    expect(periodStockValues[0].evalAmt).toBe(1000)         // 200*5
-    expect(periodStockEvals[0].evalPL).toBe(100)            // (200-180)*5
+    expect(periodStockValues[0].evalAmt).toBe(1000)   // 200*5 (period only)
+    expect(periodStockEvals[0].evalPL).toBe(600)      // (200-140)*10 (전체 보유 기준)
   })
 
-  it('3M: cutoff=2026-04-07 — 그 이전 매입 제외', () => {
+  it('3M: pse는 전체 보유 기준 (allAvg/totalHQ)', () => {
+    // allAvg=(10*190+5*195)/15=191.67, totalHQ=15, evalPL=(200-191.67)*15=125
     const data = { groups: [group('g1', 'USD', [
       stock('AAPL', [
-        p('2026-04-01', 10, 190), // 3M 이전 → 제외
-        p('2026-05-01', 5, 195),  // 3M 이내 → 포함
+        p('2026-04-01', 10, 190), // 3M 이전
+        p('2026-05-01', 5, 195),  // 3M 이내
       ])
     ])], priceMap }
 
     const { periodStockEvals } = computePeriodStats(data, '3m')
 
-    expect(periodStockEvals[0].evalPL).toBe((200 - 195) * 5) // 25
+    expect(periodStockEvals[0].evalPL).toBeCloseTo(125, 5) // (200*15 - (10*190+5*195)) = 3000-2875=125
   })
 
   // ── periodHQ 핵심 케이스 ───────────────────────────────
-  it('핵심버그: 이전 기간 매도가 많아도 1M 매입 수량 유지 (min(periodBQ, totalHQ))', () => {
-    // totalBQ=15, sq=8, totalHQ=7 / periodBQ(1M)=5 → periodHQ=min(5,7)=5
+  it('매도 있어도 pse는 현재 보유(totalHQ) 기준', () => {
+    // totalBQ=15, sq=8, totalHQ=7
+    // allAvg=(10*120+5*190)/15=143.33, evalPL=(200-143.33)*7≈396.67
     const data = { groups: [group('g1', 'USD', [
       stock('AAPL',
         [p('2025-12-01', 10, 120), p('2026-07-01', 5, 190)],
@@ -137,7 +144,8 @@ describe('computePeriodStats', () => {
 
     const { periodStockEvals } = computePeriodStats(data, '1m')
 
-    expect(periodStockEvals[0].evalPL).toBe((200 - 190) * 5) // 50
+    // (200 - 2150/15) * 7 = (3000-2150)/15*7 = 5950/15
+    expect(periodStockEvals[0].evalPL).toBeCloseTo(5950 / 15, 2)
   })
 
   it('기간 매입 > 현재 보유: periodHQ=min(periodBQ, totalHQ) 로 조정', () => {
@@ -168,15 +176,18 @@ describe('computePeriodStats', () => {
     expect(periodStockEvals).toHaveLength(0)
   })
 
-  it('기간 내 매입 없음 → 그 종목은 psv/pse에 미포함', () => {
+  it('기간 내 매입 없음 → psv 미포함, pse는 현재 보유 표시', () => {
+    // psv: 1M 이내 매입 없음 → 비어있음
+    // pse: totalHQ=10, allAvg=100, evalPL=(200-100)*10=1000 → 표시됨
     const data = { groups: [group('g1', 'USD', [
       stock('AAPL', [p('2025-01-01', 10, 100)])  // 훨씬 이전
     ])], priceMap }
 
     const { periodStockValues, periodStockEvals } = computePeriodStats(data, '1m')
 
-    expect(periodStockValues).toHaveLength(0)
-    expect(periodStockEvals).toHaveLength(0)
+    expect(periodStockValues).toHaveLength(0)   // psv: 기간 내 매입 없으므로 비어있음
+    expect(periodStockEvals).toHaveLength(1)    // pse: 현재 보유 종목 표시
+    expect(periodStockEvals[0].evalPL).toBe(1000) // (200-100)*10
   })
 
   // ── is_deleted ─────────────────────────────────────────
@@ -248,17 +259,22 @@ describe('computePeriodStats', () => {
     expect(periodGrpTotals.find(g => g.id === 'us').total).toBe(1000)     // 200*5
   })
 
-  it('다중 그룹: 1M 기간 필터가 그룹별로 독립 적용', () => {
-    // cutoff = 2026-06-07
+  it('다중 그룹: psv는 기간 필터 적용, pse는 전체 보유 기준', () => {
+    // psv cutoff=2026-06-07
+    // 005930 psv: 1M내 3주, AAPL psv: 없음, TSLA psv: 2주
+    // pse:
+    //   005930: allAvg=(5*70000+3*75000)/8=71875, totalHQ=8, evalPL=(80000-71875)*8=65000
+    //   AAPL: allAvg=150, totalHQ=10, evalPL=(200-150)*10=500
+    //   TSLA: allAvg=280, totalHQ=2, evalPL=(300-280)*2=40
     const data = {
       groups: [
         group('kr', 'KRW', [stock('005930', [
-          p('2025-10-01', 5, 70000),  // 1M 이전 제외
-          p('2026-07-01', 3, 75000),  // 1M 이내 포함
+          p('2025-10-01', 5, 70000),  // 1M 이전 → psv 제외
+          p('2026-07-01', 3, 75000),  // 1M 이내 → psv 포함
         ])]),
         group('us', 'USD', [
-          stock('AAPL', [p('2026-01-01', 10, 150)]),         // 1M 이전 → 제외
-          stock('TSLA', [p('2026-06-20', 2, 280)]),          // 1M 이내 → 포함
+          stock('AAPL', [p('2026-01-01', 10, 150)]),         // 1M 이전 → psv 제외
+          stock('TSLA', [p('2026-06-20', 2, 280)]),          // 1M 이내 → psv 포함
         ]),
       ],
       priceMap,
@@ -268,13 +284,13 @@ describe('computePeriodStats', () => {
 
     const tickers = periodStockValues.map(x => x.ticker)
     expect(tickers).toContain('005930')
-    expect(tickers).not.toContain('AAPL')
+    expect(tickers).not.toContain('AAPL')   // psv: 기간 내 매입 없음
     expect(tickers).toContain('TSLA')
 
-    // 005930: avg=75000, cur=80000, qty=3, evalPL=15000
-    expect(periodStockEvals.find(e => e.label === '005930').evalPL).toBe(15000)
-    // TSLA: avg=280, cur=300, qty=2, evalPL=40
-    expect(periodStockEvals.find(e => e.label === 'TSLA').evalPL).toBe(40)
+    // pse: 전체 보유 기준
+    expect(periodStockEvals.find(e => e.label === '005930').evalPL).toBe(65000)  // (80000-71875)*8
+    expect(periodStockEvals.find(e => e.label === 'TSLA').evalPL).toBe(40)       // (300-280)*2
+    expect(periodStockEvals.find(e => e.label === 'AAPL').evalPL).toBe(500)     // (200-150)*10
   })
 
   it('세 그룹: grpTotal이 각 그룹 내 evalAmt 합산과 일치', () => {
@@ -316,8 +332,10 @@ describe('computePeriodStats', () => {
       data, 'custom', '2026-01-01', '2026-03-31'
     )
 
+    // psv: 기간 내 매입(3주, avg=140) → evalAmt=200*3=600
+    // pse: allAvg=(5*130+3*140+4*160)/12=142.5, totalHQ=12, evalPL=(200-142.5)*12=690
     expect(periodStockValues[0].evalAmt).toBe(200 * 3)          // 600
-    expect(periodStockEvals[0].evalPL).toBe((200 - 140) * 3)   // 180
+    expect(periodStockEvals[0].evalPL).toBe(690)                // (200*12 - (5*130+3*140+4*160)) = 2400-1710=690
   })
 
   // ── 날짜 없는 매입 ─────────────────────────────────────
@@ -351,5 +369,247 @@ describe('computePeriodStats', () => {
     }
     const { periodGrpTotals } = computePeriodStats(data, 'all')
     expect(periodGrpTotals[0].name).toBe('real-id')
+  })
+})
+
+// ────────────────────────────────────────────────────────────
+// computeUnits
+// ────────────────────────────────────────────────────────────
+describe('computeUnits', () => {
+  const data = {
+    groups: [
+      group('g1', 'USD', [
+        stock('AAPL', [p('2026-01-01', 10, 150)]),  // evalAmt=200*10=2000
+        stock('TSLA', [p('2026-01-01', 5, 250)]),   // evalAmt=300*5=1500
+      ]),
+      group('g2', 'KRW', [
+        stock('005930', [p('2026-01-01', 3, 70000)]), // evalAmt=80000*3=240000
+      ]),
+    ],
+    priceMap,
+  }
+
+  it('전체 선택 → 그룹 단위 반환', () => {
+    const { units, isStockUnit } = computeUnits(data, '')
+    expect(isStockUnit).toBe(false)
+    expect(units).toHaveLength(2)
+    const g1 = units.find(u => u.name === 'g1')
+    expect(g1.evalAmt).toBe(200*10 + 300*5) // 3500
+  })
+
+  it('그룹 선택 → 종목 단위 반환', () => {
+    const { units, isStockUnit } = computeUnits(data, 'g1')
+    expect(isStockUnit).toBe(true)
+    expect(units).toHaveLength(2)
+    expect(units.find(u => u.ticker === 'AAPL').evalAmt).toBe(2000)
+    expect(units.find(u => u.ticker === 'TSLA').evalAmt).toBe(1500)
+  })
+
+  it('그룹 1개면 자동 종목 단위', () => {
+    const singleGroup = {
+      groups: [group('only', 'USD', [stock('AAPL', [p('2026-01-01', 5, 150)])])],
+      priceMap,
+    }
+    const { isStockUnit, units } = computeUnits(singleGroup, '')
+    expect(isStockUnit).toBe(true)
+    expect(units).toHaveLength(1)
+    expect(units[0].evalAmt).toBe(200 * 5)
+  })
+
+  it('전량 매도 종목은 units에 미포함', () => {
+    const d = {
+      groups: [group('g1', 'USD', [
+        stock('AAPL', [p('2026-01-01', 5, 150)], [s('2026-02-01', 5, 180)]),
+        stock('TSLA', [p('2026-01-01', 3, 250)]),
+      ])],
+      priceMap,
+    }
+    const { units } = computeUnits(d, 'g1')
+    expect(units.map(u => u.ticker)).not.toContain('AAPL')
+    expect(units.map(u => u.ticker)).toContain('TSLA')
+  })
+
+  it('null 입력 → 빈 배열', () => {
+    const { units } = computeUnits(null, '')
+    expect(units).toHaveLength(0)
+  })
+})
+
+// ────────────────────────────────────────────────────────────
+// computeReturnRates
+// ────────────────────────────────────────────────────────────
+describe('computeReturnRates', () => {
+  it('수익률% 계산 정확성', () => {
+    const data = { groups: [group('g1', 'USD', [
+      stock('AAPL', [p('2026-01-01', 10, 150)]),   // (200-150)/150*100 = 33.33%
+      stock('TSLA', [p('2026-01-01', 5, 350)]),    // (300-350)/350*100 = -14.28%
+    ])], priceMap }
+    const rates = computeReturnRates(data, '')
+    const aapl = rates.find(r => r.ticker === 'AAPL')
+    const tsla = rates.find(r => r.ticker === 'TSLA')
+    expect(aapl.returnPct).toBeCloseTo((200-150)/150*100, 1)
+    expect(tsla.returnPct).toBeCloseTo((300-350)/350*100, 1)
+    expect(aapl.holdQty).toBe(10)
+    expect(aapl.avgCost).toBe(150)
+    expect(aapl.curPrice).toBe(200)
+  })
+
+  it('그룹 선택 시 해당 그룹 종목만 반환', () => {
+    const data = {
+      groups: [
+        group('g1', 'USD', [stock('AAPL', [p('2026-01-01', 10, 150)])]),
+        group('g2', 'USD', [stock('TSLA', [p('2026-01-01', 5, 250)])]),
+      ],
+      priceMap,
+    }
+    const rates = computeReturnRates(data, 'g1')
+    expect(rates.map(r => r.ticker)).toContain('AAPL')
+    expect(rates.map(r => r.ticker)).not.toContain('TSLA')
+  })
+
+  it('전량 매도 종목 제외', () => {
+    const data = { groups: [group('g1', 'USD', [
+      stock('AAPL', [p('2026-01-01', 5, 150)], [s('2026-02-01', 5, 180)]),
+    ])], priceMap }
+    expect(computeReturnRates(data, '')).toHaveLength(0)
+  })
+
+  it('내림차순 정렬 (수익률 높은 것 먼저)', () => {
+    const data = { groups: [group('g1', 'USD', [
+      stock('TSLA', [p('2026-01-01', 1, 350)]),  // returnPct<0
+      stock('AAPL', [p('2026-01-01', 1, 150)]),  // returnPct>0
+    ])], priceMap }
+    const rates = computeReturnRates(data, '')
+    expect(rates[0].ticker).toBe('AAPL')
+    expect(rates[1].ticker).toBe('TSLA')
+  })
+})
+
+// ────────────────────────────────────────────────────────────
+// computeConcentration
+// ────────────────────────────────────────────────────────────
+describe('computeConcentration', () => {
+  it('비중% 합계 = 100', () => {
+    const units = [
+      { name: 'A', evalAmt: 300, isKRW: false },
+      { name: 'B', evalAmt: 700, isKRW: false },
+    ]
+    const result = computeConcentration(units, null)
+    const sum = result.reduce((a, r) => a + r.pct, 0)
+    expect(sum).toBeCloseTo(100, 5)
+  })
+
+  it('단일 항목 → 100%', () => {
+    const units = [{ name: 'Only', evalAmt: 1000, isKRW: false }]
+    const result = computeConcentration(units, null)
+    expect(result[0].pct).toBeCloseTo(100, 5)
+  })
+
+  it('내림차순 정렬', () => {
+    const units = [
+      { name: 'A', evalAmt: 200, isKRW: false },
+      { name: 'B', evalAmt: 800, isKRW: false },
+    ]
+    const result = computeConcentration(units, null)
+    expect(result[0].name).toBe('B')
+    expect(result[1].name).toBe('A')
+  })
+
+  it('빈 배열 → 빈 결과', () => {
+    expect(computeConcentration([], null)).toHaveLength(0)
+  })
+
+  it('KRW+USD 혼재: fxRate로 환산 후 비중 계산', () => {
+    // USD 1000, KRW 1000000 (fxRate=1000 → USD 1000)
+    // 50:50 비중
+    const units = [
+      { name: 'USD-A', evalAmt: 1000, isKRW: false },
+      { name: 'KRW-B', evalAmt: 1000000, isKRW: true },
+    ]
+    const result = computeConcentration(units, 1000)
+    const usd = result.find(r => r.name === 'USD-A')
+    const krw = result.find(r => r.name === 'KRW-B')
+    expect(usd.pct).toBeCloseTo(50, 1)
+    expect(krw.pct).toBeCloseTo(50, 1)
+  })
+})
+
+// ────────────────────────────────────────────────────────────
+// computeRealizedPL
+// ────────────────────────────────────────────────────────────
+describe('computeRealizedPL', () => {
+  it('기본 실현 손익 계산', () => {
+    // avg_cost=150, sell_price=200, qty=5 → pl=250
+    const data = { groups: [group('g1', 'USD', [
+      stock('AAPL', [p('2026-01-01', 5, 150)], [s('2026-03-01', 5, 200)])
+    ])], priceMap }
+    const { total, items } = computeRealizedPL(data)
+    expect(items).toHaveLength(1)
+    expect(items[0].pl).toBeCloseTo(250, 2)
+    expect(items[0].pl_pct).toBeCloseTo((200-150)/150*100, 2)
+    expect(total).toBeCloseTo(250, 2)
+  })
+
+  it('손실 케이스', () => {
+    const data = { groups: [group('g1', 'USD', [
+      stock('AAPL', [p('2026-01-01', 10, 200)], [s('2026-03-01', 10, 150)])
+    ])], priceMap }
+    const { total, items } = computeRealizedPL(data)
+    expect(items[0].pl).toBeCloseTo(-500, 2)
+    expect(total).toBeCloseTo(-500, 2)
+  })
+
+  it('가중평균 단가 계산', () => {
+    // avg_cost = (10*100 + 5*200) / 15 = 133.33
+    const data = { groups: [group('g1', 'USD', [
+      stock('AAPL',
+        [p('2026-01-01', 10, 100), p('2026-02-01', 5, 200)],
+        [s('2026-04-01', 3, 300)]
+      )
+    ])], priceMap }
+    const { items } = computeRealizedPL(data)
+    expect(items[0].avg_cost).toBeCloseTo((10*100+5*200)/15, 2)
+    expect(items[0].pl).toBeCloseTo((300 - (10*100+5*200)/15) * 3, 2)
+  })
+
+  it('매도 없으면 빈 결과', () => {
+    const data = { groups: [group('g1', 'USD', [
+      stock('AAPL', [p('2026-01-01', 5, 150)])
+    ])], priceMap }
+    const { total, items } = computeRealizedPL(data)
+    expect(items).toHaveLength(0)
+    expect(total).toBe(0)
+  })
+
+  it('null 입력 → 빈 결과', () => {
+    const { total, items } = computeRealizedPL(null)
+    expect(total).toBe(0)
+    expect(items).toHaveLength(0)
+  })
+
+  it('날짜 내림차순 정렬', () => {
+    const data = { groups: [group('g1', 'USD', [
+      stock('AAPL',
+        [p('2026-01-01', 10, 100)],
+        [s('2026-03-01', 2, 200), s('2026-01-15', 3, 150)]
+      )
+    ])], priceMap }
+    const { items } = computeRealizedPL(data)
+    expect(items[0].date).toBe('2026-03-01')
+    expect(items[1].date).toBe('2026-01-15')
+  })
+
+  it('여러 그룹 합계', () => {
+    const data = {
+      groups: [
+        group('g1', 'USD', [stock('AAPL', [p('2026-01-01', 5, 100)], [s('2026-03-01', 5, 200)])]),
+        group('g2', 'KRW', [stock('005930', [p('2026-01-01', 10, 60000)], [s('2026-04-01', 10, 80000)])]),
+      ],
+      priceMap,
+    }
+    const { total, items } = computeRealizedPL(data)
+    expect(items).toHaveLength(2)
+    // USD pl=500, KRW pl=200000
+    expect(total).toBeCloseTo(500 + 200000, 0)
   })
 })
