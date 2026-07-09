@@ -552,6 +552,35 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     return () => { document.body.style.overflow = '' }
   }, [isOpen])
 
+  // 종목별 평가손익 계산 내역 (차트 우측 테이블용) — 조건부 return 전에 선언 필수
+  const stockEvalBreakdown = useMemo(() => {
+    if (!stockData?.groups) return []
+    const pm = stockData.priceMap || {}
+    const tSet = overviewGroup ? new Set((computed?.groupTickers ?? {})[overviewGroup] ?? []) : null
+    const result = []
+    for (const g of stockData.groups) {
+      const isKRW = g.currency === 'KRW'
+      for (const s of g.stocks || []) {
+        if (s.is_deleted) continue
+        if (tSet && !tSet.has(s.ticker)) continue
+        const purchases = s.purchases || []
+        const sells = s.sells || []
+        const totalHQ = Math.max(0, purchases.reduce((a, p) => a + (p.qty || 0), 0) - sells.reduce((a, p) => a + (p.qty || 0), 0))
+        if (totalHQ <= 0) continue
+        const valid = purchases.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
+        const ws = valid.reduce((a, p) => a + p.price * p.qty, 0)
+        const vqt = valid.reduce((a, p) => a + p.qty, 0)
+        const allAvg = vqt > 0 ? ws / vqt : 0
+        const cur = pm[s.ticker]?.current_price ?? allAvg
+        if (allAvg <= 0) continue
+        const evalPL = (cur - allAvg) * totalHQ
+        const pct = (cur - allAvg) / allAvg * 100
+        result.push({ ticker: s.ticker, totalHQ, allAvg, cur, evalPL, pct, isKRW })
+      }
+    }
+    return result.sort((a, b) => b.evalPL - a.evalPL)
+  }, [stockData, overviewGroup, computed])
+
   if (!isOpen) return null
   if (!stockData?.groups?.length) return (
     <div style={{
@@ -607,35 +636,6 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     if (effGroup) return stockValues.filter(s => s.groupName?.toLowerCase() === effGroup.toLowerCase())
     return grpTotals.filter(g => g.total > 0)
   })()
-
-  // 종목별 평가손익 계산 내역 (차트 우측 테이블용)
-  const stockEvalBreakdown = useMemo(() => {
-    if (!stockData?.groups) return []
-    const pm = stockData.priceMap || {}
-    const tickerSet = overviewGroup ? new Set(groupTickers?.[overviewGroup] ?? []) : null
-    const result = []
-    for (const g of stockData.groups) {
-      const isKRW = g.currency === 'KRW'
-      for (const s of g.stocks || []) {
-        if (s.is_deleted) continue
-        if (tickerSet && !tickerSet.has(s.ticker)) continue
-        const purchases = s.purchases || []
-        const sells = s.sells || []
-        const totalHQ = Math.max(0, purchases.reduce((a, p) => a + (p.qty || 0), 0) - sells.reduce((a, p) => a + (p.qty || 0), 0))
-        if (totalHQ <= 0) continue
-        const valid = purchases.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
-        const ws = valid.reduce((a, p) => a + p.price * p.qty, 0)
-        const vqt = valid.reduce((a, p) => a + p.qty, 0)
-        const allAvg = vqt > 0 ? ws / vqt : 0
-        const cur = pm[s.ticker]?.current_price ?? allAvg
-        if (allAvg <= 0) continue
-        const evalPL = (cur - allAvg) * totalHQ
-        const pct = (cur - allAvg) / allAvg * 100
-        result.push({ ticker: s.ticker, totalHQ, allAvg, cur, evalPL, pct, isKRW })
-      }
-    }
-    return result.sort((a, b) => b.evalPL - a.evalPL)
-  }, [stockData, overviewGroup, groupTickers])
 
   // 공통 스타일
   const selStyle = {
