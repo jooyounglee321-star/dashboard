@@ -827,7 +827,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                               <thead>
                                 <tr style={{ color: 'var(--ink3)', borderBottom: '1px solid var(--border)' }}>
                                   <th style={{ textAlign: 'left', padding: '0.3rem 0.4rem', fontWeight: 500 }}>그룹</th>
-                                  <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>현재 누적 투자금액</th>
+                                  <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>누적 투자금액 (총 매입비용, 현재가 아님)</th>
                                 </tr>
                               </thead>
                               <tbody>
