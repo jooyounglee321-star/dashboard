@@ -2,22 +2,21 @@ import { useEffect, useRef, useMemo, useState } from 'react'
 import { Chart, registerables } from 'chart.js'
 import 'chartjs-adapter-date-fns'
 import { t } from './i18n'
-import { fmtKRW, fmtUSD, formatAuto, fmtKRWShort, fmtUSDShort, fmtShort } from '../../utils/format'
+import { fmtKRW, fmtUSD, fmtKRWShort, fmtUSDShort, fmtShort } from '../../utils/format'
 import { apiFetch } from '../../api'
 import PeriodSelector from '../../components/PeriodSelector'
-import { calcCutoff, cleanStr, computePeriodStats } from '../../utils/stockStats'
+import {
+  calcCutoff, cleanStr, computePeriodStats,
+  computeUnits, computeReturnRates, computeConcentration,
+} from '../../utils/stockStats'
 Chart.register(...registerables)
 
 const CHART_COLORS = ['#2563eb','#16a34a','#f59e0b','#9333ea','#ef4444','#0891b2','#65a30d','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16','#06b6d4','#a855f7','#e11d48']
-// 종목명 기반 고정 색 (기간 변경해도 동일 색 유지)
 function colorForKey(key) {
   let h = 0
   for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0
   return CHART_COLORS[h % CHART_COLORS.length]
 }
-
-
-// 차트 y축/tooltip용 축약 포맷터
 
 function computeStockStats(stockData) {
   if (!stockData) return null
@@ -45,10 +44,9 @@ function computeStockStats(stockData) {
   grpTotals.forEach(g => { if (g.isKRW) grandKRW += g.total; else grandUSD += g.total })
   const totalKRW = grandKRW + (fxRate ? grandUSD * fxRate : 0)
 
-  // 종목별 평가액 (파이차트 그룹 드릴다운 + 바차트용)
   const stockValues = []
   const stockEvals = []
-  groups.forEach((g, gi) => {
+  groups.forEach((g) => {
     const isKRW = g.currency === 'KRW'
     const sym = isKRW ? '₩' : '$'
     g.stocks.filter(s => !s.is_deleted).forEach(s => {
@@ -68,68 +66,33 @@ function computeStockStats(stockData) {
     })
   })
 
-  window.__debugStockData = {
-    groups: groups.map(g => ({
-      name: g.name,
-      total: g.stocks?.length ?? 0,
-      deleted: g.stocks?.filter(s => s.is_deleted).length ?? 0,
-      active: g.stocks?.filter(s => !s.is_deleted).length ?? 0,
-      stocks: g.stocks?.filter(s => !s.is_deleted).map(s => {
-        const pp = s.purchases || []; const sl = s.sells || []
-        const bq = pp.reduce((a,p)=>a+(p.qty||0),0)
-        const sq = sl.reduce((a,p)=>a+(p.qty||0),0)
-        const hq = Math.max(0, bq - sq)
-        const validPP = pp.filter(p => (p.price||0)>0 && (p.qty||0)>0)
-        const ws = validPP.reduce((a,p)=>a+p.price*p.qty,0)
-        const vqt = validPP.reduce((a,p)=>a+p.qty,0)
-        const avg = vqt > 0 ? ws/vqt : 0
-        const livePrice = priceMap[s.ticker]?.current_price
-        return { ticker: s.ticker, name: s.name, bq, sq, hq, avg, livePrice: livePrice ?? null, hasPriceData: livePrice != null }
-      })
-    })),
-    grpTotals: grpTotals.length,
-    stockValues: stockValues.map(s => ({ ticker: s.ticker, name: s.name, evalAmt: s.evalAmt })),
-    priceMapTickers: Object.keys(priceMap)
-  }
-
-  // startDate부터 오늘까지 연속 날짜 생성
   const today = new Date().toISOString().slice(0, 10)
   const generateDateRange = (start, end) => {
     const dates = []
     const cur = new Date(start)
     const endDate = new Date(end)
-    while (cur <= endDate) {
-      dates.push(cur.toISOString().slice(0, 10))
-      cur.setDate(cur.getDate() + 1)
-    }
+    while (cur <= endDate) { dates.push(cur.toISOString().slice(0, 10)); cur.setDate(cur.getDate() + 1) }
     return dates
   }
 
   const allPurchaseDates = []
-  groups.forEach(g => {
-    g.stocks.forEach(s => {
-      ;(s.purchases || []).forEach(p => { if (p.date) allPurchaseDates.push(p.date) })
-    })
-  })
+  groups.forEach(g => { g.stocks.forEach(s => { ;(s.purchases || []).forEach(p => { if (p.date) allPurchaseDates.push(p.date) }) }) })
   const minPurchaseDate = allPurchaseDates.length ? allPurchaseDates.sort()[0] : null
   const startDate = minPurchaseDate ?? today
-
   const globalDates = generateDateRange(startDate, today)
 
   const lineDatasets = []
   groups.forEach((g, gi) => {
     const dailyMap = {}
     g.stocks.forEach(s => {
-      ;(s.purchases || []).filter(p => !p.date || !startDate || p.date >= startDate).forEach(p => {
+      ;(s.purchases || []).forEach(p => {
         const rawAmt = (p.qty || 0) * (p.price || 0)
-        const amt = rawAmt  // 그룹 통화 그대로 유지 (USD→USD, KRW→KRW)
         const dateKey = p.date || startDate
         if (!dateKey) return
-        dailyMap[dateKey] = (dailyMap[dateKey] ?? 0) + amt
+        dailyMap[dateKey] = (dailyMap[dateKey] ?? 0) + rawAmt
       })
     })
     if (!Object.keys(dailyMap).length) return
-
     let cum = 0, started = false
     const pts = []
     globalDates.forEach(date => {
@@ -137,7 +100,6 @@ function computeStockStats(stockData) {
       if (started) pts.push({ x: date, y: Math.round(cum) })
     })
     if (!pts.length) return
-
     lineDatasets.push({
       label: cleanStr(g.name, g.id),
       data: pts,
@@ -149,7 +111,6 @@ function computeStockStats(stockData) {
     })
   })
 
-  // 그룹명 → ticker[] 맵
   const groupTickers = {}
   groups.forEach(g => { groupTickers[cleanStr(g.name, g.id)] = g.stocks.map(s => s.ticker) })
 
@@ -157,6 +118,7 @@ function computeStockStats(stockData) {
 }
 
 export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = 'ko' }) {
+  // ── refs ──
   const pieRef = useRef(null)
   const lineRef = useRef(null)
   const barRef = useRef(null)
@@ -165,18 +127,15 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   const chartsRef = useRef([])
   const histLineRef = useRef(null)
   const histChartRef = useRef(null)
+  const returnBarRef = useRef(null)
+  const returnBarChartRef = useRef(null)
+  const benchmarkRef = useRef(null)
+  const benchmarkChartRef = useRef(null)
+  const pieChartRef = useRef(null)
 
-  // 현황 탭 공통 필터
+  // ── 상태 ──
   const [overviewGroup, setOverviewGroup] = useState('')
-  // 그룹 1개면 자동으로 해당 그룹 선택 (파이차트 종목별 드릴다운)
-  useEffect(() => {
-    if (!stockData?.groups) return
-    const names = stockData.groups.map(g => cleanStr(g.name, g.id))
-    if (names.length === 1) setOverviewGroup(names[0])
-    else setOverviewGroup('')
-  }, [stockData])
   const [overviewCurrency, setOverviewCurrency] = useState(() => {
-    // USD 그룹만 있으면 USD 기본, 혼합이면 KRW
     const gs = stockData?.groups ?? []
     const hasKRW = gs.some(g => g.currency === 'KRW')
     const hasUSD = gs.some(g => g.currency !== 'KRW')
@@ -186,32 +145,172 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   const [customFrom, setCustomFrom] = useState('')
   const [customTo,   setCustomTo]   = useState('')
 
-  // 히스토리 탭 필터
-  const mainTab = 'overview' // 탭 병합으로 항상 overview
   const [histData, setHistData] = useState([])
   const [histLoading, setHistLoading] = useState(false)
-  const [histRange, setHistRange] = useState('all')
   const [histPage, setHistPage] = useState(0)
   const HIST_PAGE_SIZE = 20
 
-  // group ID → 이름 매핑 (구형 스냅샷 폴백용)
+  const [periodPlData, setPeriodPlData] = useState([])
+  const [periodPlLoading, setPeriodPlLoading] = useState(false)
+
+  const [benchmarkData, setBenchmarkData] = useState(null)
+  const [benchmarkLoading, setBenchmarkLoading] = useState(false)
+
+  const [realizedData, setRealizedData] = useState(null)
+  const [realizedLoading, setRealizedLoading] = useState(false)
+
+  // ── 자동 그룹 선택 (그룹 1개면 종목 단위로) ──
+  useEffect(() => {
+    if (!stockData?.groups) return
+    const names = stockData.groups.map(g => cleanStr(g.name, g.id))
+    if (names.length === 1) setOverviewGroup(names[0])
+    else setOverviewGroup('')
+  }, [stockData])
+
+  // ── group ID → 이름 매핑 ──
   const histGroupNames = useMemo(
     () => Object.fromEntries((stockData?.groups ?? []).map(g => [g.id, cleanStr(g.name, g.id)])),
     [stockData]
   )
 
+  // ── 핵심 계산 ──
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const computed = useMemo(() => computeStockStats(stockData), [JSON.stringify(stockData)])
 
-  // 기간 필터 적용 데이터 — computePeriodStats (utils/stockStats.js) 로 위임
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const { periodGrpTotals, periodStockValues, periodStockEvals } = useMemo(
     () => computePeriodStats(stockData, overviewPeriod, customFrom, customTo),
-    [computed, overviewPeriod, customFrom, customTo] // stockData 변경은 computed 경유로 감지
+    [computed, overviewPeriod, customFrom, customTo]
   )
 
-  // ── 파이차트 전용 useEffect (period와 무관하게 별도 렌더링) ──
-  const pieChartRef = useRef(null)
+  // ── KPI 계산 (총 평가금액, 미실현 손익, 오늘 등락) ──
+  const kpi = useMemo(() => {
+    if (!stockData?.groups) return null
+    const pm = stockData.priceMap || {}
+    const fx = stockData.fxRate || null
+    let totalEvalUSD = 0, totalEvalKRW = 0
+    let unrealizedUSD = 0, unrealizedKRW = 0
+    let todayChgUSD = 0, todayChgKRW = 0
+
+    for (const g of stockData.groups) {
+      const isKRW = g.currency === 'KRW'
+      for (const s of g.stocks || []) {
+        if (s.is_deleted) continue
+        const pp = s.purchases || [], sl = s.sells || []
+        const bq = pp.reduce((a, p) => a + (p.qty || 0), 0)
+        const sq = sl.reduce((a, p) => a + (p.qty || 0), 0)
+        const hq = Math.max(0, bq - sq)
+        if (hq <= 0) continue
+        const valid = pp.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
+        const ws = valid.reduce((a, p) => a + p.price * p.qty, 0)
+        const vqt = valid.reduce((a, p) => a + p.qty, 0)
+        const avg = vqt > 0 ? ws / vqt : 0
+        const info = pm[s.ticker] || {}
+        const cur = info.current_price ?? avg
+        const evalAmt = cur * hq
+        const chgAmt = (info.change_amount || 0) * hq
+
+        if (isKRW) {
+          totalEvalKRW += evalAmt
+          if (avg > 0) unrealizedKRW += (cur - avg) * hq
+          todayChgKRW += chgAmt
+        } else {
+          totalEvalUSD += evalAmt
+          if (avg > 0) unrealizedUSD += (cur - avg) * hq
+          todayChgUSD += chgAmt
+        }
+      }
+    }
+
+    // 원화 환산 기준 통합 표시
+    const totalKRW = totalEvalKRW + (fx ? totalEvalUSD * fx : 0)
+    const unrealizedKRWTotal = unrealizedKRW + (fx ? unrealizedUSD * fx : 0)
+    const todayChgKRWTotal = todayChgKRW + (fx ? todayChgUSD * fx : 0)
+    const costKRW = totalKRW - unrealizedKRWTotal
+    const unrealizedPct = costKRW > 0 ? unrealizedKRWTotal / costKRW * 100 : 0
+
+    return {
+      totalEvalUSD, totalEvalKRW, totalKRW,
+      unrealizedUSD, unrealizedKRW, unrealizedKRWTotal, unrealizedPct,
+      todayChgUSD, todayChgKRW, todayChgKRWTotal,
+    }
+  }, [stockData])
+
+  // ── 동적 단위 계산 ──
+  const { units, isStockUnit } = useMemo(
+    () => computeUnits(stockData, overviewGroup),
+    [stockData, overviewGroup]
+  )
+
+  // ── 수익률 계산 ──
+  const returnRates = useMemo(
+    () => computeReturnRates(stockData, overviewGroup),
+    [stockData, overviewGroup]
+  )
+
+  // ── 집중도 계산 ──
+  const concentration = useMemo(
+    () => computeConcentration(units, computed?.fxRate),
+    [units, computed]
+  )
+
+  // ── effectivePieItems ──
+  const effectivePieItems = useMemo(() => {
+    if (!computed) return []
+    const { grpTotals, stockValues } = computed
+    const effGroup = overviewGroup || (grpTotals.length === 1 ? grpTotals[0].name : '')
+    if (effGroup) return stockValues.filter(s => s.groupName?.toLowerCase() === effGroup.toLowerCase())
+    return grpTotals.filter(g => g.total > 0)
+  }, [computed, overviewGroup])
+
+  // ── effectiveLineDatasets ──
+  const effectiveLineDatasets = useMemo(() => {
+    if (!computed?.lineDatasets) return []
+    const periodCutoff = calcCutoff(overviewPeriod, customFrom)
+    const periodCutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
+    let ds = overviewGroup ? computed.lineDatasets.filter(d => d.label === overviewGroup) : computed.lineDatasets
+    if (periodCutoff || periodCutoffEnd) {
+      ds = ds.map(d => ({ ...d, data: d.data.filter(pt => (!periodCutoff || pt.x >= periodCutoff) && (!periodCutoffEnd || pt.x <= periodCutoffEnd)) })).filter(d => d.data.length > 0)
+    }
+    return ds
+  }, [computed, overviewGroup, overviewPeriod, customFrom, customTo])
+
+  // ── effectiveStockEvals (기간 시장손익 바차트용 필터) ──
+  const effectiveStockEvals = useMemo(() => {
+    if (!overviewGroup) return periodStockEvals
+    const tickers = new Set(computed?.groupTickers?.[overviewGroup] ?? [])
+    return periodStockEvals.filter(s => tickers.has(s.label))
+  }, [periodStockEvals, overviewGroup, computed])
+
+  // ── 종목별 평가손익 내역 ──
+  const stockEvalBreakdown = useMemo(() => {
+    if (!stockData?.groups) return []
+    const pm = stockData.priceMap || {}
+    const tSet = overviewGroup ? new Set((computed?.groupTickers ?? {})[overviewGroup] ?? []) : null
+    const result = []
+    for (const g of stockData.groups) {
+      const isKRW = g.currency === 'KRW'
+      for (const s of g.stocks || []) {
+        if (s.is_deleted) continue
+        if (tSet && !tSet.has(s.ticker)) continue
+        const pp = s.purchases || [], sl = s.sells || []
+        const hq = Math.max(0, pp.reduce((a, p) => a + (p.qty || 0), 0) - sl.reduce((a, p) => a + (p.qty || 0), 0))
+        if (hq <= 0) continue
+        const valid = pp.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
+        const ws = valid.reduce((a, p) => a + p.price * p.qty, 0)
+        const vqt = valid.reduce((a, p) => a + p.qty, 0)
+        const avg = vqt > 0 ? ws / vqt : 0
+        const cur = pm[s.ticker]?.current_price ?? avg
+        if (avg <= 0) continue
+        const evalPL = (cur - avg) * hq
+        const pct = (cur - avg) / avg * 100
+        result.push({ ticker: s.ticker, totalHQ: hq, allAvg: avg, cur, evalPL, pct, isKRW })
+      }
+    }
+    return result.sort((a, b) => b.evalPL - a.evalPL)
+  }, [stockData, overviewGroup, computed])
+
+  // ── 파이차트 useEffect ──
   useEffect(() => {
     if (!isOpen || !computed || !pieRef.current) return
     if (pieChartRef.current) { pieChartRef.current.destroy(); pieChartRef.current = null }
@@ -228,9 +327,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     if (overviewGroup) {
       const grpStocks = stockValues.filter(s => s.groupName?.toLowerCase() === overviewGroup.toLowerCase())
       const vals = grpStocks.map(s => {
-        const displayName = s.isKRW
-          ? safeName(cleanStr(s.name, s.ticker))
-          : (s.ticker && s.ticker !== 'undefined' ? s.ticker : safeName(cleanStr(s.name, s.ticker)))
+        const displayName = s.isKRW ? safeName(cleanStr(s.name, s.ticker)) : (s.ticker && s.ticker !== 'undefined' ? s.ticker : safeName(cleanStr(s.name, s.ticker)))
         return { name: displayName, val: Math.max(0, toDisplay(s.evalAmt, s.isKRW)) }
       }).filter(x => x.val > 0 && x.name !== '알 수 없음')
       const total = vals.reduce((a, x) => a + x.val, 0) || 1
@@ -238,9 +335,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       pieData = vals.map(x => parseFloat(x.val.toFixed(2)))
       pieColors = vals.map(x => colorForKey(x.name))
     } else {
-      const vals = (grpTotals ?? [])
-        .map(g => ({ name: g.name, val: Math.max(0, toDisplay(g.total, g.isKRW)) }))
-        .filter(x => x.val > 0)
+      const vals = (grpTotals ?? []).map(g => ({ name: g.name, val: Math.max(0, toDisplay(g.total, g.isKRW)) })).filter(x => x.val > 0)
       const total = vals.reduce((a, x) => a + x.val, 0) || 1
       pieLabels = vals.map(x => `${x.name} (${(x.val / total * 100).toFixed(1)}%)`)
       pieData = vals.map(x => parseFloat(x.val.toFixed(2)))
@@ -250,38 +345,159 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
 
     pieChartRef.current = new Chart(pieRef.current, {
       type: 'doughnut',
-      data: {
-        labels: pieLabels,
-        datasets: [{ data: pieData, backgroundColor: pieColors, borderWidth: 2, borderColor: '#fffef9' }],
-      },
+      data: { labels: pieLabels, datasets: [{ data: pieData, backgroundColor: pieColors, borderWidth: 2, borderColor: '#fffef9' }] },
       options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 12, generateLabels: (chart) => { const def = Chart.defaults.plugins.legend.labels.generateLabels(chart); return def.filter(l => { const n = (l.text || '').split(' (')[0]; return n && n !== '알 수 없음' && n !== '(없음)' && n !== 'undefined' }).map(l => { if (l.text.length > 20) l.text = l.text.slice(0, 20) + '...'; return l }) } } } } },
     })
     return () => { if (pieChartRef.current) { pieChartRef.current.destroy(); pieChartRef.current = null } }
   }, [isOpen, computed, overviewGroup, overviewCurrency, lang])
 
-  // 현황 탭 라인/바차트 렌더링 (period 포함)
+  // ── 수익률 바차트 useEffect ──
+  useEffect(() => {
+    if (returnBarChartRef.current) { returnBarChartRef.current.destroy(); returnBarChartRef.current = null }
+    if (!isOpen || !returnBarRef.current || !returnRates.length) return
+
+    const sorted = [...returnRates].sort((a, b) => b.returnPct - a.returnPct)
+    returnBarChartRef.current = new Chart(returnBarRef.current, {
+      type: 'bar',
+      data: {
+        labels: sorted.map(s => s.ticker || s.name),
+        datasets: [{
+          label: t(lang, 'statsReturnRate'),
+          data: sorted.map(s => parseFloat(s.returnPct.toFixed(2))),
+          backgroundColor: sorted.map(s => s.returnPct >= 0 ? 'rgba(74,124,89,0.75)' : 'rgba(220,38,38,0.75)'),
+          borderColor: sorted.map(s => s.returnPct >= 0 ? '#4a7c59' : '#dc2626'),
+          borderWidth: 1,
+        }],
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            title: { display: true, text: t(lang, 'statsReturnAxisPct') },
+            ticks: { callback: v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%` },
+          },
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => `${ctx.parsed.y >= 0 ? '+' : ''}${ctx.parsed.y.toFixed(2)}%` } },
+        },
+      },
+    })
+    return () => { if (returnBarChartRef.current) { returnBarChartRef.current.destroy(); returnBarChartRef.current = null } }
+  }, [isOpen, returnRates, lang])
+
+  // ── 벤치마크 차트 useEffect ──
+  useEffect(() => {
+    if (benchmarkChartRef.current) { benchmarkChartRef.current.destroy(); benchmarkChartRef.current = null }
+    if (!isOpen || !benchmarkRef.current || !benchmarkData) return
+
+    const datasets = []
+    // 포트폴리오 라인
+    if (histData.length) {
+      const cutoff = calcCutoff(overviewPeriod, customFrom)
+      const cutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
+      const selGroup = overviewGroup ? (stockData?.groups ?? []).find(g => cleanStr(g.name, g.id) === overviewGroup) : null
+      const useKRW = selGroup ? selGroup.currency === 'KRW' : overviewCurrency === 'KRW'
+
+      const getValue = (r) => {
+        try {
+          const parsed = JSON.parse(r.data || '{}')
+          if (parsed.groups) {
+            if (overviewGroup) {
+              const gid = Object.entries(parsed.group_names ?? {}).find(([, n]) => n === overviewGroup)?.[0]
+              if (gid && parsed.groups[gid] != null) return parsed.groups[gid].total ?? 0
+              if (parsed.groups[overviewGroup] != null) return parsed.groups[overviewGroup].total ?? 0
+              return 0
+            }
+            if (useKRW) return Object.values(parsed.groups).filter(g => g.currency === 'KRW').reduce((a, g) => a + (g.total ?? 0), 0)
+            return Object.values(parsed.groups).filter(g => g.currency !== 'KRW').reduce((a, g) => a + (g.total ?? 0), 0)
+          }
+        } catch {}
+        return useKRW ? (r.total_krw ?? 0) : (r.total_usd ?? 0)
+      }
+
+      const filtered = [...histData]
+        .filter(r => getValue(r) != null && (!cutoff || r.snapshot_date >= cutoff) && (!cutoffEnd || r.snapshot_date <= cutoffEnd))
+        .sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date))
+
+      if (filtered.length) {
+        const vals = filtered.map(r => getValue(r))
+        const base = vals[0] || 1
+        const normalized = vals.map(v => parseFloat((v / base * 100).toFixed(2)))
+        datasets.push({
+          label: t(lang, 'statsBenchmarkPortfolio'),
+          data: filtered.map((r, i) => ({ x: r.snapshot_date, y: normalized[i] })),
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37,99,235,0.1)',
+          fill: false,
+          tension: 0.2,
+          pointRadius: filtered.length > 60 ? 0 : 2,
+          borderWidth: 2,
+        })
+      }
+    }
+
+    // 벤치마크 라인들
+    const bmColors = ['#f59e0b', '#9333ea', '#ef4444', '#0891b2']
+    Object.entries(benchmarkData).forEach(([ticker, d], i) => {
+      if (!d.dates?.length) return
+      datasets.push({
+        label: ticker,
+        data: d.dates.map((date, j) => ({ x: date, y: d.normalized[j] })),
+        borderColor: bmColors[i % bmColors.length],
+        backgroundColor: 'transparent',
+        fill: false,
+        tension: 0.2,
+        pointRadius: d.dates.length > 60 ? 0 : 2,
+        borderWidth: 1.5,
+        borderDash: [4, 2],
+      })
+    })
+
+    if (!datasets.length) return
+
+    benchmarkChartRef.current = new Chart(benchmarkRef.current, {
+      type: 'line',
+      data: { datasets },
+      options: {
+        responsive: true,
+        scales: {
+          x: { type: 'time', time: { unit: 'day', displayFormats: { day: 'yyyy-MM-dd' } }, ticks: { maxTicksLimit: 8 } },
+          y: {
+            title: { display: true, text: '정규화 (시작=100)' },
+            ticks: { callback: v => v.toFixed(0) },
+          },
+        },
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}` } },
+        },
+      },
+    })
+    return () => { if (benchmarkChartRef.current) { benchmarkChartRef.current.destroy(); benchmarkChartRef.current = null } }
+  }, [isOpen, benchmarkData, histData, overviewPeriod, customFrom, customTo, overviewGroup, overviewCurrency, stockData, lang])
+
+  // ── 라인/바차트 (기간 필터 연동) useEffect ──
   useEffect(() => {
     if (!isOpen || !computed) return
-
     chartsRef.current.forEach(c => c.destroy())
     chartsRef.current = []
 
-    const { grpTotals, stockValues, stockEvals, lineDatasets, fxRate, groupTickers } = computed
+    const { lineDatasets, stockEvals, fxRate, groupTickers } = computed
     const cutoff = calcCutoff(overviewPeriod, customFrom)
     const cutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
-
-    // 통화 환산 헬퍼
     const toDisplay = (val, isKRW) => {
       if (overviewCurrency === 'USD' && isKRW && fxRate) return val / fxRate
       if (overviewCurrency === 'KRW' && !isKRW && fxRate) return val * fxRate
       return val
     }
 
-    // ── 라인차트 ──
+    // 라인차트
     if (lineRef.current) {
-      let datasets = overviewGroup
-        ? lineDatasets.filter(ds => ds.label === overviewGroup)
-        : lineDatasets
+      let datasets = overviewGroup ? lineDatasets.filter(ds => ds.label === overviewGroup) : lineDatasets
+      if (cutoff || cutoffEnd) {
+        datasets = datasets.map(d => ({ ...d, data: d.data.filter(pt => (!cutoff || pt.x >= cutoff) && (!cutoffEnd || pt.x <= cutoffEnd)) })).filter(d => d.data.length > 0)
+      }
       if (datasets.length > 0) {
         const inst = new Chart(lineRef.current, {
           type: 'line',
@@ -289,35 +505,12 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
           options: {
             responsive: true,
             scales: {
-              x: {
-                type: 'time',
-                time: { unit: 'day', displayFormats: { day: 'yyyy-MM-dd' } },
-                title: { display: false },
-                ticks: { source: 'auto', maxTicksLimit: 10 },
-                ...(cutoff ? { min: cutoff } : {}),
-                ...(cutoffEnd ? { max: cutoffEnd } : {}),
-              },
-              y: {
-                title: { display: true, text: t(lang, 'statsAxisInvest') },
-                ticks: { callback: v => {
-                  const ds = datasets[0]
-                  const cur = ds?.currency ?? (overviewCurrency === 'USD' ? 'USD' : 'KRW')
-                  return cur === 'USD' ? fmtUSDShort(v) : '₩' + fmtKRWShort(v)
-                } },
-              },
+              x: { type: 'time', time: { unit: 'day', displayFormats: { day: 'yyyy-MM-dd' } }, ticks: { maxTicksLimit: 10 }, ...(cutoff ? { min: cutoff } : {}), ...(cutoffEnd ? { max: cutoffEnd } : {}) },
+              y: { title: { display: true, text: t(lang, 'statsAxisInvest') }, ticks: { callback: v => { const ds = datasets[0]; const cur = ds?.currency ?? (overviewCurrency === 'USD' ? 'USD' : 'KRW'); return cur === 'USD' ? fmtUSDShort(v) : '₩' + fmtKRWShort(v) } } },
             },
             plugins: {
-              legend: { position: 'bottom', labels: { generateLabels: (chart) => { const def = Chart.defaults.plugins.legend.labels.generateLabels(chart); def.forEach(l => { if (l.text && l.text.length > 20) l.text = l.text.slice(0, 20) + '...' }); return def } } },
-              tooltip: {
-                callbacks: {
-                  label: ctx => {
-                    const v = ctx.parsed.y
-                    const ds = datasets[ctx.datasetIndex]
-                    const cur = ds?.currency ?? (overviewCurrency === 'USD' ? 'USD' : 'KRW')
-                    return cur === 'USD' ? fmtUSDShort(v) : '₩' + fmtKRWShort(v)
-                  },
-                },
-              },
+              legend: { position: 'bottom' },
+              tooltip: { callbacks: { label: ctx => { const v = ctx.parsed.y; const ds = datasets[ctx.datasetIndex]; const cur = ds?.currency ?? (overviewCurrency === 'USD' ? 'USD' : 'KRW'); return cur === 'USD' ? fmtUSDShort(v) : '₩' + fmtKRWShort(v) } } },
             },
           },
         })
@@ -325,7 +518,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       }
     }
 
-    // ── 바차트 ──
+    // 바차트 (평가손익 절대값)
     if (barRef.current && periodStockEvals.length) {
       const tickerSet = overviewGroup ? new Set(groupTickers[overviewGroup] ?? []) : null
       const filtered = tickerSet ? periodStockEvals.filter(s => tickerSet.has(s.label)) : periodStockEvals
@@ -341,76 +534,31 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
           type: 'bar',
           data: {
             labels: sorted.map(s => s.isKRW ? s.name : (s.label && s.label !== 'undefined' ? s.label : s.name)),
-            datasets: [{
-              label: t(lang, 'statsBarLabel'),
-              data: sorted.map(s => parseFloat(s.evalPL.toFixed(2))),
-              backgroundColor: sorted.map(s => s.evalPL >= 0 ? 'rgba(74,124,89,0.75)' : 'rgba(220,38,38,0.75)'),
-              borderColor: sorted.map(s => s.evalPL >= 0 ? '#4a7c59' : '#dc2626'),
-              borderWidth: 1,
-            }],
+            datasets: [{ label: t(lang, 'statsBarLabel'), data: sorted.map(s => parseFloat(s.evalPL.toFixed(2))), backgroundColor: sorted.map(s => s.evalPL >= 0 ? 'rgba(74,124,89,0.75)' : 'rgba(220,38,38,0.75)'), borderColor: sorted.map(s => s.evalPL >= 0 ? '#4a7c59' : '#dc2626'), borderWidth: 1 }],
           },
           options: {
             responsive: true,
-            scales: {
-              y: {
-                title: { display: true, text: `${t(lang, 'statsAxisPL')} (${axisSymbol})` },
-                ticks: {
-                  callback: v => {
-                    const fmt = fmtShort(Math.abs(v), overviewCurrency)
-                    return v >= 0 ? `+${fmt}` : `-${fmt}`
-                  },
-                },
-              },
-            },
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                callbacks: {
-                  label: ctx => {
-                    const s = sorted[ctx.dataIndex]
-                    const fmt = fmtShort(Math.abs(s.evalPL), overviewCurrency)
-                    return `${s.evalPL >= 0 ? '+' : '-'}${fmt}`
-                  },
-                },
-              },
-            },
+            scales: { y: { title: { display: true, text: `${t(lang, 'statsAxisPL')} (${axisSymbol})` }, ticks: { callback: v => { const fmt = fmtShort(Math.abs(v), overviewCurrency); return v >= 0 ? `+${fmt}` : `-${fmt}` } } } },
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => { const s = sorted[ctx.dataIndex]; const fmt = fmtShort(Math.abs(s.evalPL), overviewCurrency); return `${s.evalPL >= 0 ? '+' : '-'}${fmt}` } } } },
           },
         })
         chartsRef.current.push(inst)
       }
     }
 
-    return () => {
-      chartsRef.current.forEach(c => c.destroy())
-      chartsRef.current = []
-    }
-  }, [isOpen, computed, lang, overviewCurrency, overviewGroup, overviewPeriod, customFrom, customTo])
+    return () => { chartsRef.current.forEach(c => c.destroy()); chartsRef.current = [] }
+  }, [isOpen, computed, lang, overviewCurrency, overviewGroup, overviewPeriod, customFrom, customTo, periodStockEvals])
 
-  // 기간 시장손익 데이터 fetch
-  const [periodPlData, setPeriodPlData] = useState([])
-  const [periodPlLoading, setPeriodPlLoading] = useState(false)
-  useEffect(() => {
-    if (!isOpen) return
-    const fromDate = calcCutoff(overviewPeriod, customFrom)
-    if (!fromDate) { setPeriodPlData([]); return }
-    setPeriodPlLoading(true)
-    apiFetch(`/api/portfolio/period-pl?from=${fromDate}`)
-      .then(d => setPeriodPlData(Array.isArray(d) ? d : []))
-      .catch(() => setPeriodPlData([]))
-      .finally(() => setPeriodPlLoading(false))
-  }, [isOpen, overviewPeriod, customFrom])
-
-  // 기간 시장손익 바차트
+  // ── 기간 시장손익 바차트 useEffect ──
   useEffect(() => {
     if (plBarChartRef.current) { plBarChartRef.current.destroy(); plBarChartRef.current = null }
     if (!isOpen || !plBarRef.current || !periodPlData.length) return
-    const tickerSet = overviewGroup ? new Set(groupTickers?.[overviewGroup] ?? []) : null
+    const tickerSet = overviewGroup ? new Set(computed?.groupTickers?.[overviewGroup] ?? []) : null
     const filtered = tickerSet ? periodPlData.filter(d => tickerSet.has(d.ticker)) : periodPlData
     if (!filtered.length) return
     const fxR = computed?.fxRate
     const converted = filtered.map(d => {
       let pl = d.pl
-      const sym = d.currency === 'KRW' ? '₩' : '$'
       if (overviewCurrency === 'KRW' && d.currency !== 'KRW' && fxR) { pl = pl * fxR }
       if (overviewCurrency === 'USD' && d.currency === 'KRW' && fxR) { pl = pl / fxR }
       return { ...d, pl, sym: overviewCurrency === 'KRW' ? '₩' : '$' }
@@ -434,43 +582,19 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         scales: {
           y: {
             title: { display: true, text: `${t(lang, 'statsAxisPL')} (${axisSymbol})` },
-            ticks: {
-              callback: v => {
-                const fmt = fmtShort(Math.abs(v), overviewCurrency)
-                return v >= 0 ? `+${fmt}` : `-${fmt}`
-              },
-            },
+            ticks: { callback: v => { const fmt = fmtShort(Math.abs(v), overviewCurrency); return v >= 0 ? `+${fmt}` : `-${fmt}` } },
           },
         },
         plugins: {
           legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: ctx => {
-                const d = sorted[ctx.dataIndex]
-                const fmt = fmtShort(Math.abs(d.pl), overviewCurrency)
-                const pct = d.pl_pct != null ? ` (${d.pl_pct >= 0 ? '+' : ''}${d.pl_pct.toFixed(1)}%)` : ''
-                return `${d.pl >= 0 ? '+' : '-'}${fmt}${pct}`
-              },
-            },
-          },
+          tooltip: { callbacks: { label: ctx => { const d = sorted[ctx.dataIndex]; const fmt = fmtShort(Math.abs(d.pl), overviewCurrency); const pct = d.pl_pct != null ? ` (${d.pl_pct >= 0 ? '+' : ''}${d.pl_pct.toFixed(1)}%)` : ''; return `${d.pl >= 0 ? '+' : '-'}${fmt}${pct}` } } },
         },
       },
     })
     return () => { if (plBarChartRef.current) { plBarChartRef.current.destroy(); plBarChartRef.current = null } }
   }, [isOpen, periodPlData, overviewGroup, overviewCurrency, lang, computed])
 
-  // 히스토리 데이터 fetch
-  useEffect(() => {
-    if (!isOpen) return
-    setHistLoading(true)
-    apiFetch('/api/portfolio/history')
-      .then(d => { setHistData(Array.isArray(d) ? d : []); setHistPage(0) })
-      .catch(() => setHistData([]))
-      .finally(() => setHistLoading(false))
-  }, [isOpen])
-
-  // 히스토리 라인차트
+  // ── 히스토리 라인차트 useEffect ──
   useEffect(() => {
     if (!isOpen || histLoading || !histLineRef.current) return
     if (histChartRef.current) { histChartRef.current.destroy(); histChartRef.current = null }
@@ -479,7 +603,6 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     const selGroup = overviewGroup ? (stockData?.groups ?? []).find(g => cleanStr(g.name, g.id) === overviewGroup) : null
     const useKRW = selGroup ? selGroup.currency === 'KRW' : overviewCurrency === 'KRW'
     const yLabel = useKRW ? '₩' : '$'
-    const useUSD = !useKRW
 
     const getValue = (r) => {
       try {
@@ -491,9 +614,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             if (parsed.groups[overviewGroup] != null) return parsed.groups[overviewGroup].total ?? 0
             return 0
           }
-          if (useKRW) {
-            return Object.values(parsed.groups).filter(g => g.currency === 'KRW').reduce((a, g) => a + (g.total ?? 0), 0)
-          }
+          if (useKRW) return Object.values(parsed.groups).filter(g => g.currency === 'KRW').reduce((a, g) => a + (g.total ?? 0), 0)
           return Object.values(parsed.groups).filter(g => g.currency !== 'KRW').reduce((a, g) => a + (g.total ?? 0), 0)
         }
       } catch {}
@@ -524,120 +645,87 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       options: {
         responsive: true,
         scales: {
-          x: { type: 'category', title: { display: false }, ticks: { maxTicksLimit: 10 } },
-          y: {
-            title: { display: true, text: yLabel },
-            ticks: { callback: v => useUSD ? fmtUSDShort(v) : '₩' + fmtKRWShort(v) },
-          },
+          x: { type: 'category', ticks: { maxTicksLimit: 10 } },
+          y: { title: { display: true, text: yLabel }, ticks: { callback: v => useKRW ? '₩' + fmtKRWShort(v) : fmtUSDShort(v) } },
         },
         plugins: {
           legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: ctx => {
-                const v = ctx.parsed.y
-                return useUSD ? fmtUSDShort(v) : '₩' + fmtKRWShort(v)
-              },
-            },
-          },
+          tooltip: { callbacks: { label: ctx => { const v = ctx.parsed.y; return useKRW ? '₩' + fmtKRWShort(v) : fmtUSDShort(v) } } },
         },
       },
     })
     return () => { if (histChartRef.current) { histChartRef.current.destroy(); histChartRef.current = null } }
-  }, [isOpen, histData, overviewPeriod, customFrom, customTo, histGroupNames, lang, overviewGroup, stockData])
+  }, [isOpen, histData, overviewPeriod, customFrom, customTo, histGroupNames, lang, overviewGroup, stockData, histLoading, overviewCurrency])
 
+  // ── body scroll lock ──
   useEffect(() => {
     if (!isOpen) return
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = '' }
   }, [isOpen])
 
-  // 종목별 평가손익 계산 내역 (차트 우측 테이블용) — 조건부 return 전에 선언 필수
-  const stockEvalBreakdown = useMemo(() => {
-    if (!stockData?.groups) return []
-    const pm = stockData.priceMap || {}
-    const tSet = overviewGroup ? new Set((computed?.groupTickers ?? {})[overviewGroup] ?? []) : null
-    const result = []
-    for (const g of stockData.groups) {
-      const isKRW = g.currency === 'KRW'
-      for (const s of g.stocks || []) {
-        if (s.is_deleted) continue
-        if (tSet && !tSet.has(s.ticker)) continue
-        const purchases = s.purchases || []
-        const sells = s.sells || []
-        const totalHQ = Math.max(0, purchases.reduce((a, p) => a + (p.qty || 0), 0) - sells.reduce((a, p) => a + (p.qty || 0), 0))
-        if (totalHQ <= 0) continue
-        const valid = purchases.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
-        const ws = valid.reduce((a, p) => a + p.price * p.qty, 0)
-        const vqt = valid.reduce((a, p) => a + p.qty, 0)
-        const allAvg = vqt > 0 ? ws / vqt : 0
-        const cur = pm[s.ticker]?.current_price ?? allAvg
-        if (allAvg <= 0) continue
-        const evalPL = (cur - allAvg) * totalHQ
-        const pct = (cur - allAvg) / allAvg * 100
-        result.push({ ticker: s.ticker, totalHQ, allAvg, cur, evalPL, pct, isKRW })
-      }
-    }
-    return result.sort((a, b) => b.evalPL - a.evalPL)
-  }, [stockData, overviewGroup, computed])
+  // ── 데이터 fetch: 히스토리 ──
+  useEffect(() => {
+    if (!isOpen) return
+    setHistLoading(true)
+    apiFetch('/api/portfolio/history')
+      .then(d => { setHistData(Array.isArray(d) ? d : []); setHistPage(0) })
+      .catch(() => setHistData([]))
+      .finally(() => setHistLoading(false))
+  }, [isOpen])
 
+  // ── 데이터 fetch: 기간 시장손익 ──
+  useEffect(() => {
+    if (!isOpen) return
+    const fromDate = calcCutoff(overviewPeriod, customFrom)
+    if (!fromDate) { setPeriodPlData([]); return }
+    setPeriodPlLoading(true)
+    apiFetch(`/api/portfolio/period-pl?from=${fromDate}`)
+      .then(d => setPeriodPlData(Array.isArray(d) ? d : []))
+      .catch(() => setPeriodPlData([]))
+      .finally(() => setPeriodPlLoading(false))
+  }, [isOpen, overviewPeriod, customFrom])
+
+  // ── 데이터 fetch: 벤치마크 ──
+  useEffect(() => {
+    if (!isOpen) return
+    const fromDate = calcCutoff(overviewPeriod, customFrom)
+    const params = fromDate ? `?from=${fromDate}` : ''
+    setBenchmarkLoading(true)
+    apiFetch(`/api/portfolio/benchmark${params}`)
+      .then(d => setBenchmarkData(d && typeof d === 'object' ? d : null))
+      .catch(() => setBenchmarkData(null))
+      .finally(() => setBenchmarkLoading(false))
+  }, [isOpen, overviewPeriod, customFrom])
+
+  // ── 데이터 fetch: 실현 손익 ──
+  useEffect(() => {
+    if (!isOpen) return
+    setRealizedLoading(true)
+    apiFetch('/api/portfolio/realized-pl')
+      .then(d => setRealizedData(d || null))
+      .catch(() => setRealizedData(null))
+      .finally(() => setRealizedLoading(false))
+  }, [isOpen])
+
+  // ── 조건부 return (모든 hook 이후) ──
   if (!isOpen) return null
   if (!stockData?.groups?.length) return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 1000,
-      background: 'rgba(0,0,0,0.5)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center'
-    }} onClick={onClose}>
-      <div style={{
-        background: 'var(--card)', borderRadius: 16, padding: '2.5rem 3rem',
-        textAlign: 'center', boxShadow: '0 8px 40px rgba(0,0,0,.3)'
-      }} onClick={e => e.stopPropagation()}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
+      <div style={{ background: 'var(--card)', borderRadius: 16, padding: '2.5rem 3rem', textAlign: 'center', boxShadow: '0 8px 40px rgba(0,0,0,.3)' }} onClick={e => e.stopPropagation()}>
         <div style={{ fontSize: '2.5rem', marginBottom: '0.8rem' }}>📊</div>
-        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.4rem' }}>
-          보유 종목이 없습니다
-        </div>
-        <div style={{ fontSize: '0.85rem', color: 'var(--ink3)', marginBottom: '1.5rem' }}>
-          종목을 추가하면 통계를 확인할 수 있습니다
-        </div>
-        <button onClick={onClose} style={{
-          padding: '0.5rem 1.5rem', background: 'var(--accent)', color: '#fff',
-          border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: '0.85rem', fontFamily: 'inherit'
-        }}>닫기</button>
+        <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.4rem' }}>보유 종목이 없습니다</div>
+        <div style={{ fontSize: '0.85rem', color: 'var(--ink3)', marginBottom: '1.5rem' }}>종목을 추가하면 통계를 확인할 수 있습니다</div>
+        <button onClick={onClose} style={{ padding: '0.5rem 1.5rem', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: '0.85rem', fontFamily: 'inherit' }}>닫기</button>
       </div>
     </div>
   )
 
-  const { grpTotals, grandUSD, grandKRW, totalKRW, stockEvals, lineDatasets, fxRate, groupTickers, stockValues } = computed || {}
+  const { grpTotals, fxRate, groupTickers, stockValues } = computed || {}
   const groupNames = (stockData?.groups ?? []).map(g => cleanStr(g.name, g.id))
-
-  // ── 필터 적용 후 유효 데이터 (JSX 조건부 렌더링 + useEffect 공유) ──
   const periodCutoff = calcCutoff(overviewPeriod, customFrom)
   const periodCutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
 
-  const effectiveLineDatasets = (() => {
-    if (!lineDatasets) return []
-    let ds = overviewGroup ? lineDatasets.filter(d => d.label === overviewGroup) : lineDatasets
-    if (periodCutoff || periodCutoffEnd) {
-      ds = ds.map(d => ({ ...d, data: d.data.filter(pt => (!periodCutoff || pt.x >= periodCutoff) && (!periodCutoffEnd || pt.x <= periodCutoffEnd)) })).filter(d => d.data.length > 0)
-    }
-    return ds
-  })()
-
-  const effectiveStockEvals = (() => {
-    if (!overviewGroup) return periodStockEvals
-    const tickers = new Set(groupTickers?.[overviewGroup] ?? [])
-    return periodStockEvals.filter(s => tickers.has(s.label))
-  })()
-
-  const effectivePieItems = (() => {
-    if (!computed) return []
-    const { grpTotals, stockValues } = computed
-    const effGroup = overviewGroup || (grpTotals.length === 1 ? grpTotals[0].name : '')
-    if (effGroup) return stockValues.filter(s => s.groupName?.toLowerCase() === effGroup.toLowerCase())
-    return grpTotals.filter(g => g.total > 0)
-  })()
-
-  // 공통 스타일
   const selStyle = {
     fontSize: '0.78rem', padding: '0.25rem 0.5rem', borderRadius: 6,
     border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)',
@@ -650,6 +738,182 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     color: active ? '#fff' : 'var(--ink3)', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
   })
 
+  // ── KPI 카드 렌더 ──
+  const renderKPICards = () => {
+    if (!kpi) return null
+    const hasMultiCurrency = stockData?.groups?.some(g => g.currency === 'KRW') && stockData?.groups?.some(g => g.currency !== 'KRW')
+
+    const cards = [
+      {
+        label: t(lang, 'statsKpiEval'),
+        value: hasMultiCurrency
+          ? `₩${fmtKRW(kpi.totalKRW)}`
+          : kpi.totalEvalKRW > 0 ? `₩${fmtKRW(kpi.totalEvalKRW)}` : `$${fmtUSD(kpi.totalEvalUSD)}`,
+        sub: hasMultiCurrency && fxRate ? `$${fmtUSD(kpi.totalEvalUSD)} + ₩${fmtKRW(kpi.totalEvalKRW)}` : null,
+        color: 'var(--ink)',
+      },
+      {
+        label: t(lang, 'statsKpiUnrealized'),
+        value: hasMultiCurrency
+          ? `${kpi.unrealizedKRWTotal >= 0 ? '+' : ''}₩${fmtKRW(kpi.unrealizedKRWTotal)}`
+          : kpi.unrealizedKRW !== 0 ? `${kpi.unrealizedKRW >= 0 ? '+' : ''}₩${fmtKRW(kpi.unrealizedKRW)}`
+          : `${kpi.unrealizedUSD >= 0 ? '+' : ''}$${fmtUSD(kpi.unrealizedUSD)}`,
+        sub: `${kpi.unrealizedPct >= 0 ? '+' : ''}${kpi.unrealizedPct.toFixed(2)}%`,
+        color: kpi.unrealizedKRWTotal >= 0 ? '#16a34a' : '#dc2626',
+      },
+      {
+        label: t(lang, 'statsKpiRealized'),
+        value: realizedLoading ? t(lang, 'statsRealizedLoading') : realizedData
+          ? `${realizedData.total >= 0 ? '+' : ''}${fmtShort(Math.abs(realizedData.total), 'USD')}`
+          : '—',
+        sub: realizedData?.items?.length ? `${realizedData.items.length}건` : null,
+        color: !realizedData || realizedData.total === 0 ? 'var(--ink)' : realizedData.total > 0 ? '#16a34a' : '#dc2626',
+      },
+      {
+        label: t(lang, 'statsKpiToday'),
+        value: hasMultiCurrency
+          ? `${kpi.todayChgKRWTotal >= 0 ? '+' : ''}₩${fmtKRW(kpi.todayChgKRWTotal)}`
+          : kpi.todayChgKRW !== 0 ? `${kpi.todayChgKRW >= 0 ? '+' : ''}₩${fmtKRW(kpi.todayChgKRW)}`
+          : `${kpi.todayChgUSD >= 0 ? '+' : ''}$${fmtUSD(kpi.todayChgUSD)}`,
+        sub: null,
+        color: kpi.todayChgKRWTotal >= 0 ? '#16a34a' : '#dc2626',
+      },
+    ]
+
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', padding: '1rem 1.2rem', borderBottom: '1px solid var(--border)' }}>
+        {cards.map((c, i) => (
+          <div key={i} style={{ background: 'var(--card)', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid var(--border)', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+            <div style={{ fontSize: '0.72rem', color: 'var(--ink3)', marginBottom: '0.35rem', fontWeight: 500 }}>{c.label}</div>
+            <div style={{ fontSize: '1.15rem', fontWeight: 700, color: c.color, lineHeight: 1.2 }}>{c.value}</div>
+            {c.sub && <div style={{ fontSize: '0.72rem', color: c.color === 'var(--ink)' ? 'var(--ink3)' : c.color, marginTop: '0.2rem', opacity: 0.85 }}>{c.sub}</div>}
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  // ── 집중도 섹션 ──
+  const renderConcentration = () => {
+    if (!concentration.length) return null
+    return (
+      <div className="stats-section">
+        <div className="stats-section-title">{t(lang, 'statsConcentrationTitle')}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {concentration.map((c, i) => {
+            const isWarn = c.pct >= 30 && c.pct < 50
+            const isAlert = c.pct >= 50
+            const barColor = isAlert ? '#dc2626' : isWarn ? '#f59e0b' : '#2563eb'
+            return (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: 90, fontSize: '0.78rem', color: 'var(--ink)', fontWeight: 500, flexShrink: 0, textAlign: 'right' }}>{c.name}</div>
+                <div style={{ flex: 1, background: 'var(--border)', borderRadius: 4, height: 16, overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.min(100, c.pct)}%`, height: '100%', background: barColor, borderRadius: 4, transition: 'width 0.4s ease' }} />
+                </div>
+                <div style={{ width: 55, fontSize: '0.78rem', fontWeight: 600, color: barColor, flexShrink: 0 }}>
+                  {c.pct.toFixed(1)}%
+                  {isAlert && <span style={{ marginLeft: 4, fontSize: '0.65rem' }}>⚠</span>}
+                  {isWarn && !isAlert && <span style={{ marginLeft: 4, fontSize: '0.65rem' }}>△</span>}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        <div style={{ fontSize: '0.68rem', color: 'var(--ink3)', marginTop: '0.5rem', lineHeight: 1.5 }}>
+          △ {t(lang, 'statsConcentrationWarn')} &nbsp;|&nbsp; ⚠ {t(lang, 'statsConcentrationAlert')}
+        </div>
+      </div>
+    )
+  }
+
+  // ── 실현 손익 테이블 ──
+  const renderRealizedPL = () => (
+    <div className="stats-section">
+      <div className="stats-section-title">{t(lang, 'statsRealizedTitle')}</div>
+      {realizedLoading ? (
+        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)' }}>{t(lang, 'statsRealizedLoading')}</div>
+      ) : !realizedData?.items?.length ? (
+        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)' }}>{t(lang, 'statsRealizedNone')}</div>
+      ) : (
+        <>
+          <div style={{ marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 700, color: realizedData.total >= 0 ? '#16a34a' : '#dc2626' }}>
+            합계: {realizedData.total >= 0 ? '+' : ''}{fmtShort(Math.abs(realizedData.total), 'USD')}
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ color: 'var(--ink3)', borderBottom: '1.5px solid var(--border)' }}>
+                  <th style={{ textAlign: 'left', padding: '0.3rem 0.4rem', fontWeight: 500 }}>종목</th>
+                  <th style={{ textAlign: 'left', padding: '0.3rem 0.4rem', fontWeight: 500 }}>그룹</th>
+                  <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>{t(lang, 'statsRealizedSellDate')}</th>
+                  <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>{t(lang, 'statsRealizedQty')}</th>
+                  <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>{t(lang, 'statsRealizedSellPrice')}</th>
+                  <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>{t(lang, 'statsRealizedAvgCost')}</th>
+                  <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>{t(lang, 'statsRealizedPL')}</th>
+                  <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>{t(lang, 'statsRealizedPLPct')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {realizedData.items.map((item, i) => {
+                  const isKRW = item.currency === 'KRW'
+                  const fmt = v => isKRW ? '₩' + fmtKRW(v) : '$' + fmtUSD(v)
+                  const pos = item.pl >= 0
+                  return (
+                    <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '0.3rem 0.4rem', color: 'var(--ink)', fontWeight: 600 }}>{item.ticker}</td>
+                      <td style={{ padding: '0.3rem 0.4rem', color: 'var(--ink3)' }}>{item.group}</td>
+                      <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{item.date}</td>
+                      <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{item.qty % 1 === 0 ? item.qty : item.qty.toFixed(3)}</td>
+                      <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink)' }}>{fmt(item.sell_price)}</td>
+                      <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{fmt(item.avg_cost)}</td>
+                      <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{pos ? '+' : ''}{fmt(Math.abs(item.pl))}</td>
+                      <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? '#16a34a' : '#dc2626' }}>{pos ? '+' : ''}{item.pl_pct.toFixed(1)}%</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </div>
+  )
+
+  const allGroups = stockData?.groups ?? []
+  const currencies = [...new Set(allGroups.map(g => g.currency ?? 'USD'))]
+
+  const getValByCurrency = (r, currency) => {
+    try {
+      const parsed = JSON.parse(r.data || '{}')
+      if (parsed.groups) {
+        if (overviewGroup) {
+          const gid = Object.entries(parsed.group_names ?? {}).find(([, n]) => n === overviewGroup)?.[0]
+                ?? Object.keys(parsed.groups).find(k => k === overviewGroup)
+          const grp = gid ? parsed.groups[gid] : parsed.groups[overviewGroup]
+          if (grp && grp.currency === currency) return grp.total ?? 0
+          return null
+        }
+        return Object.values(parsed.groups).filter(g => (g.currency ?? 'USD') === currency).reduce((a, g) => a + (g.total ?? 0), 0)
+      }
+    } catch {}
+    if (!overviewGroup) {
+      if (currency === 'USD') return r.total_usd ?? 0
+      if (currency === 'KRW') return r.total_krw ?? 0
+    }
+    return null
+  }
+
+  const fmtByCurrency = (val, currency) => {
+    if (val == null) return '—'
+    return currency === 'KRW' ? `₩${fmtKRW(val)}` : `$${fmtUSD(val)}`
+  }
+
+  const tableRows = [...histData]
+    .sort((a, b) => b.snapshot_date.localeCompare(a.snapshot_date))
+    .filter(r => !periodCutoff || r.snapshot_date >= periodCutoff)
+  const totalPages = Math.ceil(tableRows.length / HIST_PAGE_SIZE)
+  const pageRows = tableRows.slice(histPage * HIST_PAGE_SIZE, (histPage + 1) * HIST_PAGE_SIZE)
+
   return (
     <div
       id="stock-stats-overlay"
@@ -661,29 +925,22 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         <span className="stats-title">{t(lang, 'statsTitle')}</span>
       </div>
 
-
-
+      {/* ① KPI 카드 4개 */}
+      {renderKPICards()}
 
       <div className="stats-body">
-        {/* ══════════════ 현황 탭 ══════════════ */}
         {!computed ? (
           <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--ink3)' }}>{t(lang, 'statsLoading')}</div>
         ) : (
           <>
-            {/* ── 공통 필터 바 ── */}
+            {/* ② 그룹/종목 탭 + 통화 필터 */}
             {(() => {
-              // 그룹이 여러 개인 경우에만 그룹 드롭다운 표시
               const hasMultiGroup = groupNames.length > 1
-              // KRW 그룹이 존재하는 경우에만 통화 드롭다운 표시
               const hasKRWGroup = (grpTotals ?? []).some(g => g.isKRW)
               const hasUSDGroup = (grpTotals ?? []).some(g => !g.isKRW)
               const hasMultiCurrency = hasKRWGroup && hasUSDGroup
               return (
-                <div style={{
-                  display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center',
-                  padding: '0.7rem 1.2rem', borderBottom: '1px solid var(--border)',
-                  background: 'var(--bg)',
-                }}>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', padding: '0.7rem 1.2rem', borderBottom: '1px solid var(--border)', background: 'var(--bg)' }}>
                   {hasMultiGroup && (
                     <>
                       <span style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>{t(lang, 'stock.filterByGroup')}:</span>
@@ -706,11 +963,20 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               )
             })()}
 
-            {/* ── 전체 합계 요약 카드 ── */}
+            {/* 기간 선택 (전체 공유) */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0.7rem 1.2rem', borderBottom: '1px solid var(--border)' }}>
+              <PeriodSelector
+                value={overviewPeriod}
+                onChange={setOverviewPeriod}
+                customFrom={customFrom}
+                customTo={customTo}
+                onCustomChange={(f, t2) => { setCustomFrom(f); setCustomTo(t2) }}
+              />
+            </div>
+
+            {/* ③ 전체 합계 요약 카드 */}
             {(() => {
               const filteredGroups = (grpTotals ?? []).filter(g => !overviewGroup || g.name?.toLowerCase() === overviewGroup.toLowerCase())
-              const hasUSD = filteredGroups.some(g => !g.isKRW)
-              // 총 원화환산: 원화그룹 + USD그룹*환율
               const filteredKRW = filteredGroups.reduce((a, g) => a + (g.isKRW ? g.total : (fxRate ? g.total * fxRate : 0)), 0)
               return (
                 <div className="stats-section">
@@ -719,17 +985,12 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                     {filteredGroups.map((g, i) => (
                       <div className="stats-summary-card" key={i}>
                         <div className="stats-summary-label">{g.name} ({g.currency})</div>
-                        <div className="stats-summary-value">
-                          {g.currency === 'USD' ? ('$' + fmtUSD(g.total)) : ('₩' + fmtKRW(g.total))}
-                        </div>
+                        <div className="stats-summary-value">{g.currency === 'USD' ? ('$' + fmtUSD(g.total)) : ('₩' + fmtKRW(g.total))}</div>
                       </div>
                     ))}
-                    {/* 원화환산 카드: USD 그룹이 1개 이상 있고, 전체보기(overviewGroup='')일 때만 표시 */}
                     {!overviewGroup && (grpTotals ?? []).some(g => !g.isKRW) && (grpTotals ?? []).some(g => g.isKRW) && (
                       <div className="stats-summary-card">
-                        <div className="stats-summary-label">
-                          {t(lang, 'statsKRWEquiv')}{fxRate ? ` ($1=₩${fmtKRW(fxRate)})` : ` (${t(lang, 'statsFxNone')})`}
-                        </div>
+                        <div className="stats-summary-label">{t(lang, 'statsKRWEquiv')}{fxRate ? ` ($1=₩${fmtKRW(fxRate)})` : ` (${t(lang, 'statsFxNone')})`}</div>
                         <div className="stats-summary-value">₩{fmtKRW(filteredKRW)}</div>
                       </div>
                     )}
@@ -738,12 +999,11 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               )
             })()}
 
-            {/* ── 파이차트 ── */}
+            {/* ④ 비중 파이차트 */}
             <div className="stats-section">
-              <div className="stats-section-title">{t(lang, 'statsPieTitle')}</div>
+              <div className="stats-section-title">{t(lang, 'statsPieTitle')} {isStockUnit ? `— ${overviewGroup || groupNames[0]} 종목별` : '— 그룹별'}</div>
               {effectivePieItems.length > 0
                 ? <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                    {/* 좌측 50%: 범례 + 도넛 */}
                     <div style={{ flex: '0 0 calc(50% - 0.75rem)', minWidth: 0, display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', flex: '0 0 auto' }}>
                         {effectivePieItems.map((item, i) => {
@@ -758,14 +1018,11 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
                         <div style={{ width: 180, height: 180, flexShrink: 0 }}><canvas ref={pieRef} /></div>
-                        {overviewGroup && <div style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>{overviewGroup}</div>}
                       </div>
                     </div>
-                    {/* 우측 50%: 계산 내역 */}
                     <div style={{ flex: '1 1 0', minWidth: 0 }}>
                       {(() => {
                         const total = effectivePieItems.reduce((a, b) => a + b.evalAmt, 0)
-                        const sym = effectivePieItems[0]?.isKRW ? '₩' : '$'
                         const fmt = v => effectivePieItems[0]?.isKRW ? '₩' + fmtKRW(v) : '$' + fmtUSD(v)
                         return (
                           <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
@@ -803,174 +1060,235 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               }
             </div>
 
-            {/* ── 세 차트 공유 기간 필터 그룹 ── */}
-            {(lineDatasets?.length > 0 || periodStockEvals.length > 0 || histData.length > 0) && (
+            {/* ⑤ 수익률% 바차트 */}
+            <div className="stats-section">
+              <div className="stats-section-title">{t(lang, 'statsReturnTitle')}</div>
+              {returnRates.length > 0
+                ? <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                    <div style={{ flex: '0 0 calc(50% - 0.75rem)', minWidth: 0 }}><div className="stats-chart-wrap"><canvas ref={returnBarRef} /></div></div>
+                    <div style={{ flex: '1 1 0', minWidth: 0 }}>
+                      <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ color: 'var(--ink3)', borderBottom: '1px solid var(--border)' }}>
+                            <th style={{ textAlign: 'left', padding: '0.3rem 0.4rem', fontWeight: 500 }}>종목</th>
+                            <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>{t(lang, 'statsReturnHoldQty')}</th>
+                            <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>{t(lang, 'statsReturnAvgCost')}</th>
+                            <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>{t(lang, 'statsReturnCurPrice')}</th>
+                            <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>{t(lang, 'statsReturnRate')}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {returnRates.map((s, i) => {
+                            const fmt = v => s.isKRW ? '₩' + fmtKRW(v) : '$' + fmtUSD(v)
+                            const pos = s.returnPct >= 0
+                            return (
+                              <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                                <td style={{ padding: '0.3rem 0.4rem', color: 'var(--ink)', fontWeight: 600 }}>{s.ticker || s.name}</td>
+                                <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{s.holdQty % 1 === 0 ? s.holdQty : s.holdQty.toFixed(3)}</td>
+                                <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{fmt(s.avgCost)}</td>
+                                <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink)' }}>{fmt(s.curPrice)}</td>
+                                <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? '#16a34a' : '#dc2626', fontWeight: 700 }}>
+                                  {pos ? '+' : ''}{s.returnPct.toFixed(2)}%
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
+              }
+            </div>
+
+            {/* ⑦ 집중도 섹션 */}
+            {renderConcentration()}
+
+            {/* ⑥ 포트폴리오 vs 벤치마크 */}
+            <div className="stats-section">
+              <div className="stats-section-title">{t(lang, 'statsBenchmarkTitle')}</div>
+              {benchmarkLoading ? (
+                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)' }}>{t(lang, 'statsBenchmarkLoading')}</div>
+              ) : (benchmarkData && Object.keys(benchmarkData).length > 0) || histData.length > 0 ? (
+                <>
+                  <div className="stats-chart-wrap"><canvas ref={benchmarkRef} /></div>
+                  {/* 기간 수익률 요약 테이블 */}
+                  {(() => {
+                    const cutoff = calcCutoff(overviewPeriod, customFrom)
+                    const cutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
+                    const selGroup = overviewGroup ? (stockData?.groups ?? []).find(g => cleanStr(g.name, g.id) === overviewGroup) : null
+                    const useKRW = selGroup ? selGroup.currency === 'KRW' : overviewCurrency === 'KRW'
+                    const getValue = (r) => {
+                      try {
+                        const parsed = JSON.parse(r.data || '{}')
+                        if (parsed.groups) {
+                          if (overviewGroup) {
+                            const gid = Object.entries(parsed.group_names ?? {}).find(([, n]) => n === overviewGroup)?.[0]
+                            if (gid && parsed.groups[gid] != null) return parsed.groups[gid].total ?? 0
+                            if (parsed.groups[overviewGroup] != null) return parsed.groups[overviewGroup].total ?? 0
+                            return 0
+                          }
+                          if (useKRW) return Object.values(parsed.groups).filter(g => g.currency === 'KRW').reduce((a, g) => a + (g.total ?? 0), 0)
+                          return Object.values(parsed.groups).filter(g => g.currency !== 'KRW').reduce((a, g) => a + (g.total ?? 0), 0)
+                        }
+                      } catch {}
+                      return useKRW ? (r.total_krw ?? 0) : (r.total_usd ?? 0)
+                    }
+                    const filteredHist = [...histData]
+                      .filter(r => (!cutoff || r.snapshot_date >= cutoff) && (!cutoffEnd || r.snapshot_date <= cutoffEnd))
+                      .sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date))
+                    const portStart = filteredHist.length ? getValue(filteredHist[0]) : null
+                    const portEnd = filteredHist.length ? getValue(filteredHist[filteredHist.length - 1]) : null
+                    const portRet = portStart && portEnd && portStart > 0 ? (portEnd - portStart) / portStart * 100 : null
+
+                    const rows = [{ name: t(lang, 'statsBenchmarkPortfolio'), ret: portRet }]
+                    if (benchmarkData) {
+                      Object.entries(benchmarkData).forEach(([ticker, d]) => {
+                        if (d.normalized?.length >= 2) {
+                          const ret = d.normalized[d.normalized.length - 1] - 100
+                          rows.push({ name: ticker, ret })
+                        }
+                      })
+                    }
+
+                    return (
+                      <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse', marginTop: '0.75rem' }}>
+                        <thead>
+                          <tr style={{ color: 'var(--ink3)', borderBottom: '1px solid var(--border)' }}>
+                            <th style={{ textAlign: 'left', padding: '0.3rem 0.4rem', fontWeight: 500 }}>종목</th>
+                            <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>{t(lang, 'statsBenchmarkReturn')}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rows.map((r, i) => (
+                            <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                              <td style={{ padding: '0.3rem 0.4rem', color: 'var(--ink)', fontWeight: i === 0 ? 700 : 500 }}>{r.name}</td>
+                              <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: r.ret == null ? 'var(--ink3)' : r.ret >= 0 ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
+                                {r.ret == null ? '—' : `${r.ret >= 0 ? '+' : ''}${r.ret.toFixed(2)}%`}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )
+                  })()}
+                </>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)' }}>{t(lang, 'statsBenchmarkNoData')}</div>
+              )}
+            </div>
+
+            {/* 기간 필터 적용 차트들 */}
+            {(effectiveLineDatasets.length > 0 || effectiveStockEvals.length > 0 || histData.length > 0) && (
               <div className="stats-section">
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
-                  <PeriodSelector
-                    value={overviewPeriod}
-                    onChange={setOverviewPeriod}
-                    customFrom={customFrom}
-                    customTo={customTo}
-                    onCustomChange={(f, t2) => { setCustomFrom(f); setCustomTo(t2) }}
-                  />
-                </div>
                 {/* 그룹별 누적 투자금액 추이 */}
-                {lineDatasets?.length > 0 && (
+                {effectiveLineDatasets.length > 0 && (
                   <div style={{ marginBottom: '1.5rem' }}>
                     <div className="stats-section-title">{t(lang, 'statsLineTitle')}</div>
-                    {effectiveLineDatasets.length > 0
-                      ? <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                          <div style={{ flex: '0 0 calc(50% - 0.75rem)', minWidth: 0 }}><div className="stats-chart-wrap"><canvas ref={lineRef} /></div></div>
-                          <div style={{ flex: '1 1 0', minWidth: 0 }}>
-                            <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
-                              <tbody>
-                                {effectiveLineDatasets.map((ds, i) => {
-                                  const last = ds.data[ds.data.length - 1]
-                                  const isKRW = ds.isKRW
-                                  const fmt = v => isKRW ? '₩' + fmtKRW(v) : '$' + fmtUSD(v)
-
-                                  // ① 총 매입비용 (라인차트 마지막 값 = 모든 매입 누적)
-                                  const totalInvested = last?.y ?? 0
-
-                                  // ② 현재 보유 원가 (매도분 원가 제외) = 보유수량 × 평균단가
-                                  const grpStocks = (stockData?.groups ?? []).find(g => cleanStr(g.name, g.id) === ds.label)?.stocks ?? []
-                                  const pm = stockData?.priceMap || {}
-                                  let costBasis = 0, currentValue = 0
-                                  grpStocks.filter(s => !s.is_deleted).forEach(s => {
-                                    const pp = s.purchases || [], sl = s.sells || []
-                                    const bq = pp.reduce((a, p) => a + (p.qty || 0), 0)
-                                    const sq = sl.reduce((a, p) => a + (p.qty || 0), 0)
-                                    const hq = Math.max(0, bq - sq)
-                                    const valid = pp.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
-                                    const ws = valid.reduce((a, p) => a + p.price * p.qty, 0)
-                                    const vqt = valid.reduce((a, p) => a + p.qty, 0)
-                                    const avg = vqt > 0 ? ws / vqt : 0
-                                    const cur = pm[s.ticker]?.current_price ?? avg
-                                    costBasis += avg * hq
-                                    currentValue += cur * hq
-                                  })
-
-                                  const purchases = grpStocks
-                                    .flatMap(s => (s.purchases || []).filter(p => p.date && (!periodCutoff || p.date >= periodCutoff) && (!periodCutoffEnd || p.date <= periodCutoffEnd) && (p.price || 0) > 0 && (p.qty || 0) > 0)
-                                      .map(p => ({ ticker: s.ticker, date: p.date, qty: p.qty, price: p.price, amt: p.qty * p.price })))
-                                  purchases.sort((a, b) => b.date.localeCompare(a.date))
-
-                                  const evalPL = currentValue - costBasis
-                                  const evalPct = costBasis > 0 ? evalPL / costBasis * 100 : 0
-                                  const pos = evalPL >= 0
-
-                                  return (
-                                    <tr key={i}>
-                                      <td style={{ padding: 0 }}>
-                                        {/* 그룹 헤더 */}
-                                        <div style={{ padding: '0.35rem 0.4rem', fontWeight: 700, color: 'var(--ink)', borderBottom: '1px solid var(--border)', fontSize: '0.8rem' }}>
-                                          {ds.label}
-                                        </div>
-                                        {/* 3줄 요약 */}
-                                        <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse', marginBottom: '0.4rem' }}>
-                                          <tbody>
-                                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                                              <td style={{ padding: '0.28rem 0.6rem', color: 'var(--ink3)' }}>총 매입비용 <span style={{ fontSize: '0.65rem' }}>(매도분 포함)</span></td>
-                                              <td style={{ padding: '0.28rem 0.6rem', textAlign: 'right', color: 'var(--ink)', fontWeight: 600 }}>{fmt(totalInvested)}</td>
-                                            </tr>
-                                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                                              <td style={{ padding: '0.28rem 0.6rem', color: 'var(--ink3)' }}>현재 보유 원가 <span style={{ fontSize: '0.65rem' }}>(매도분 제외)</span></td>
-                                              <td style={{ padding: '0.28rem 0.6rem', textAlign: 'right', color: 'var(--ink)', fontWeight: 600 }}>{fmt(costBasis)}</td>
-                                            </tr>
-                                            <tr style={{ borderBottom: '1.5px solid var(--border)' }}>
-                                              <td style={{ padding: '0.28rem 0.6rem', color: 'var(--ink3)' }}>현재 평가금액</td>
-                                              <td style={{ padding: '0.28rem 0.6rem', textAlign: 'right', color: 'var(--ink)', fontWeight: 600 }}>{fmt(currentValue)}</td>
-                                            </tr>
-                                            <tr>
-                                              <td style={{ padding: '0.28rem 0.6rem', color: 'var(--ink3)' }}>미실현 손익</td>
-                                              <td style={{ padding: '0.28rem 0.6rem', textAlign: 'right', fontWeight: 700, color: pos ? '#16a34a' : '#dc2626' }}>
-                                                {pos ? '+' : ''}{fmt(evalPL)} ({pos ? '+' : ''}{evalPct.toFixed(1)}%)
-                                              </td>
-                                            </tr>
-                                          </tbody>
-                                        </table>
-                                        {purchases.length > 0 && (
-                                          <table style={{ width: '100%', fontSize: '0.72rem', borderCollapse: 'collapse' }}>
-                                            <thead>
-                                              <tr style={{ color: 'var(--ink3)' }}>
-                                                <th style={{ padding: '0.2rem 0.6rem', fontWeight: 400, textAlign: 'left' }}>종목</th>
-                                                <th style={{ padding: '0.2rem 0.4rem', fontWeight: 400, textAlign: 'right' }}>날짜</th>
-                                                <th style={{ padding: '0.2rem 0.4rem', fontWeight: 400, textAlign: 'right' }}>수량</th>
-                                                <th style={{ padding: '0.2rem 0.4rem', fontWeight: 400, textAlign: 'right' }}>단가</th>
-                                                <th style={{ padding: '0.2rem 0.6rem', fontWeight: 400, textAlign: 'right' }}>금액</th>
-                                              </tr>
-                                            </thead>
-                                            <tbody>
-                                              {purchases.map((p, j) => (
-                                                <tr key={j} style={{ borderTop: '1px solid var(--border)' }}>
-                                                  <td style={{ padding: '0.2rem 0.6rem', color: 'var(--ink)', fontWeight: 500 }}>{p.ticker}</td>
-                                                  <td style={{ padding: '0.2rem 0.4rem', color: 'var(--ink3)', textAlign: 'right' }}>{p.date}</td>
-                                                  <td style={{ padding: '0.2rem 0.4rem', color: 'var(--ink)', textAlign: 'right' }}>{p.qty}</td>
-                                                  <td style={{ padding: '0.2rem 0.4rem', color: 'var(--ink)', textAlign: 'right' }}>{isKRW ? '₩' + fmtKRW(p.price) : '$' + fmtUSD(p.price)}</td>
-                                                  <td style={{ padding: '0.2rem 0.6rem', color: 'var(--ink)', textAlign: 'right', fontWeight: 500 }}>{isKRW ? '₩' + fmtKRW(p.amt) : '$' + fmtUSD(p.amt)}</td>
-                                                </tr>
-                                              ))}
-                                            </tbody>
-                                          </table>
-                                        )}
-                                      </td>
-                                    </tr>
-                                  )
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
-                    }
+                    <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                      <div style={{ flex: '0 0 calc(50% - 0.75rem)', minWidth: 0 }}><div className="stats-chart-wrap"><canvas ref={lineRef} /></div></div>
+                      <div style={{ flex: '1 1 0', minWidth: 0 }}>
+                        <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
+                          <tbody>
+                            {effectiveLineDatasets.map((ds, i) => {
+                              const last = ds.data[ds.data.length - 1]
+                              const isKRW = ds.currency === 'KRW'
+                              const fmt = v => isKRW ? '₩' + fmtKRW(v) : '$' + fmtUSD(v)
+                              const totalInvested = last?.y ?? 0
+                              const grpStocks = (stockData?.groups ?? []).find(g => cleanStr(g.name, g.id) === ds.label)?.stocks ?? []
+                              const pm = stockData?.priceMap || {}
+                              let costBasis = 0, currentValue = 0
+                              grpStocks.filter(s => !s.is_deleted).forEach(s => {
+                                const pp = s.purchases || [], sl = s.sells || []
+                                const bq = pp.reduce((a, p) => a + (p.qty || 0), 0)
+                                const sq = sl.reduce((a, p) => a + (p.qty || 0), 0)
+                                const hq = Math.max(0, bq - sq)
+                                const valid = pp.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
+                                const ws = valid.reduce((a, p) => a + p.price * p.qty, 0)
+                                const vqt = valid.reduce((a, p) => a + p.qty, 0)
+                                const avg = vqt > 0 ? ws / vqt : 0
+                                const cur = pm[s.ticker]?.current_price ?? avg
+                                costBasis += avg * hq
+                                currentValue += cur * hq
+                              })
+                              const evalPL = currentValue - costBasis
+                              const evalPct = costBasis > 0 ? evalPL / costBasis * 100 : 0
+                              const pos = evalPL >= 0
+                              return (
+                                <tr key={i}><td style={{ padding: 0 }}>
+                                  <div style={{ padding: '0.35rem 0.4rem', fontWeight: 700, color: 'var(--ink)', borderBottom: '1px solid var(--border)', fontSize: '0.8rem' }}>{ds.label}</div>
+                                  <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse', marginBottom: '0.4rem' }}>
+                                    <tbody>
+                                      <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                                        <td style={{ padding: '0.28rem 0.6rem', color: 'var(--ink3)' }}>총 매입비용</td>
+                                        <td style={{ padding: '0.28rem 0.6rem', textAlign: 'right', color: 'var(--ink)', fontWeight: 600 }}>{fmt(totalInvested)}</td>
+                                      </tr>
+                                      <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                                        <td style={{ padding: '0.28rem 0.6rem', color: 'var(--ink3)' }}>보유 원가</td>
+                                        <td style={{ padding: '0.28rem 0.6rem', textAlign: 'right', color: 'var(--ink)', fontWeight: 600 }}>{fmt(costBasis)}</td>
+                                      </tr>
+                                      <tr style={{ borderBottom: '1.5px solid var(--border)' }}>
+                                        <td style={{ padding: '0.28rem 0.6rem', color: 'var(--ink3)' }}>평가금액</td>
+                                        <td style={{ padding: '0.28rem 0.6rem', textAlign: 'right', color: 'var(--ink)', fontWeight: 600 }}>{fmt(currentValue)}</td>
+                                      </tr>
+                                      <tr>
+                                        <td style={{ padding: '0.28rem 0.6rem', color: 'var(--ink3)' }}>미실현 손익</td>
+                                        <td style={{ padding: '0.28rem 0.6rem', textAlign: 'right', fontWeight: 700, color: pos ? '#16a34a' : '#dc2626' }}>
+                                          {pos ? '+' : ''}{fmt(evalPL)} ({pos ? '+' : ''}{evalPct.toFixed(1)}%)
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </td></tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   </div>
                 )}
-                {/* 종목별 평가손익 */}
-                {periodStockEvals.length > 0 && (
+
+                {/* 종목별 평가손익 (기존 바차트 - 절대값) */}
+                {effectiveStockEvals.length > 0 && (
                   <div style={{ marginBottom: '1.5rem' }}>
                     <div className="stats-section-title">{t(lang, 'statsBarTitle')}</div>
-                    {effectiveStockEvals.length > 0
-                      ? <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                          <div style={{ flex: '0 0 calc(50% - 0.75rem)', minWidth: 0 }}><div className="stats-chart-wrap"><canvas ref={barRef} /></div></div>
-                          <div style={{ flex: '1 1 0', minWidth: 0 }}>
-                            <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
-                              <thead>
-                                <tr style={{ color: 'var(--ink3)', borderBottom: '1px solid var(--border)' }}>
-                                  <th style={{ textAlign: 'left', padding: '0.3rem 0.4rem', fontWeight: 500 }}>종목</th>
-                                  <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>수량</th>
-                                  <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>평균단가</th>
-                                  <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>현재가</th>
-                                  <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>평가손익</th>
-                                  <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>손익률</th>
+                    <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                      <div style={{ flex: '0 0 calc(50% - 0.75rem)', minWidth: 0 }}><div className="stats-chart-wrap"><canvas ref={barRef} /></div></div>
+                      <div style={{ flex: '1 1 0', minWidth: 0 }}>
+                        <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr style={{ color: 'var(--ink3)', borderBottom: '1px solid var(--border)' }}>
+                              <th style={{ textAlign: 'left', padding: '0.3rem 0.4rem', fontWeight: 500 }}>종목</th>
+                              <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>수량</th>
+                              <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>평균단가</th>
+                              <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>현재가</th>
+                              <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>평가손익</th>
+                              <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>손익률</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {stockEvalBreakdown.map((s, i) => {
+                              const fmt = v => s.isKRW ? '₩' + fmtKRW(v) : '$' + fmtUSD(v)
+                              const pos = s.evalPL >= 0
+                              return (
+                                <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                                  <td style={{ padding: '0.3rem 0.4rem', color: 'var(--ink)', fontWeight: 600 }}>{s.ticker}</td>
+                                  <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{s.totalHQ % 1 === 0 ? s.totalHQ : s.totalHQ.toFixed(3)}</td>
+                                  <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{fmt(s.allAvg)}</td>
+                                  <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink)' }}>{fmt(s.cur)}</td>
+                                  <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{pos ? '+' : ''}{fmt(s.evalPL)}</td>
+                                  <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? '#16a34a' : '#dc2626' }}>{pos ? '+' : ''}{s.pct.toFixed(1)}%</td>
                                 </tr>
-                              </thead>
-                              <tbody>
-                                {stockEvalBreakdown.map((s, i) => {
-                                  const fmt = v => s.isKRW ? '₩' + fmtKRW(v) : '$' + fmtUSD(v)
-                                  const pos = s.evalPL >= 0
-                                  return (
-                                    <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-                                      <td style={{ padding: '0.3rem 0.4rem', color: 'var(--ink)', fontWeight: 600 }}>{s.ticker}</td>
-                                      <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{s.totalHQ % 1 === 0 ? s.totalHQ : s.totalHQ.toFixed(3)}</td>
-                                      <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{fmt(s.allAvg)}</td>
-                                      <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink)' }}>{fmt(s.cur)}</td>
-                                      <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{pos ? '+' : ''}{fmt(s.evalPL)}</td>
-                                      <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? '#16a34a' : '#dc2626' }}>{pos ? '+' : ''}{s.pct.toFixed(1)}%</td>
-                                    </tr>
-                                  )
-                                })}
-                              </tbody>
-                            </table>
-                            <div style={{ fontSize: '0.68rem', color: 'var(--ink3)', marginTop: '0.5rem', lineHeight: 1.5 }}>
-                              (현재가 − 평균매입단가) × 보유수량
-                            </div>
-                          </div>
-                        </div>
-                      : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
-                    }
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   </div>
                 )}
+
                 {/* 종목별 기간 시장손익 */}
                 {calcCutoff(overviewPeriod, customFrom) && (
                   <div style={{ marginBottom: '1.5rem' }}>
@@ -1018,7 +1336,8 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                     }
                   </div>
                 )}
-                {/* 일별 자산 추이 */}
+
+                {/* ⑧ 일별 자산 추이 */}
                 {histData.length > 0 && (
                   <div>
                     <div className="stats-section-title">일별 자산 추이</div>
@@ -1027,119 +1346,74 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                 )}
               </div>
             )}
+
+            {/* ⑨ 실현 손익 내역 */}
+            {renderRealizedPL()}
+
           </>
         )}
 
+        {/* 일별 결산 테이블 */}
         {histLoading ? (
           <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)' }}>{t(lang, 'statsLoading')}</div>
-        ) : histData.length > 0 && (() => {
-          const allGroups = stockData?.groups ?? []
-          const currencies = [...new Set(allGroups.map(g => g.currency ?? 'USD'))]
-
-          const getValByCurrency = (r, currency) => {
-            try {
-              const parsed = JSON.parse(r.data || '{}')
-              if (parsed.groups) {
-                if (overviewGroup) {
-                  const gid = Object.entries(parsed.group_names ?? {}).find(([, n]) => n === overviewGroup)?.[0]
-                        ?? Object.keys(parsed.groups).find(k => k === overviewGroup)
-                  const grp = gid ? parsed.groups[gid] : parsed.groups[overviewGroup]
-                  if (grp && grp.currency === currency) return grp.total ?? 0
-                  return null
-                }
-                return Object.values(parsed.groups)
-                  .filter(g => (g.currency ?? 'USD') === currency)
-                  .reduce((a, g) => a + (g.total ?? 0), 0)
-              }
-            } catch {}
-            if (!overviewGroup) {
-              if (currency === 'USD') return r.total_usd ?? 0
-              if (currency === 'KRW') return r.total_krw ?? 0
-            }
-            return null
-          }
-
-          const fmtByCurrency = (val, currency) => {
-            if (val == null) return '—'
-            return currency === 'KRW' ? `₩${fmtKRW(val)}` : `$${fmtUSD(val)}`
-          }
-
-          const tableRows = [...histData]
-            .sort((a, b) => b.snapshot_date.localeCompare(a.snapshot_date))
-            .filter(r => !periodCutoff || r.snapshot_date >= periodCutoff)
-          const totalPages = Math.ceil(tableRows.length / HIST_PAGE_SIZE)
-          const pageRows = tableRows.slice(histPage * HIST_PAGE_SIZE, (histPage + 1) * HIST_PAGE_SIZE)
-
-          return (
-            <>
-              {/* 일별 결산 테이블 */}
-              <div className="stats-section">
-                <div className="stats-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
-                  <span>일별 결산</span>
-                  <button
-                    onClick={async () => {
-                      if (!window.confirm('기존 히스토리를 모두 삭제하고 최초 매입일부터 재계산합니다. 계속하시겠습니까?')) return
-                      try {
-                        const res = await apiFetch('/api/portfolio/backfill-full', { method: 'POST' })
-                        alert(`재계산 완료: ${res.backfilled}일 생성\n최초 매입일: ${res.earliest_purchase_date || '없음'}`)
-
-                        setHistData([])
-                        setHistPage(0)
-                        const d = await apiFetch('/api/portfolio/history')
-                        setHistData(Array.isArray(d) ? d : [])
-                      } catch { alert('재계산 실패') }
-                    }}
-                    style={{ ...periodBtn(false), background: 'var(--accent)', color: '#fff', fontSize: '0.72rem' }}
-                  >전체 재계산</button>
-                </div>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1.5px solid var(--border)', color: 'var(--ink3)', textAlign: 'right' }}>
-                        <th style={{ textAlign: 'left', padding: '0.4rem 0.5rem', fontWeight: 600 }}>날짜</th>
-                        {currencies.map(cur => (
-                          <th key={cur} style={{ padding: '0.4rem 0.5rem', fontWeight: 600 }}>{cur}</th>
-                        ))}
-                        <th style={{ padding: '0.4rem 0.5rem', fontWeight: 600 }}>{t(lang, 'stock.savedBy')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pageRows.map(r => (
-                        <tr key={r.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                          <td style={{ padding: '0.4rem 0.5rem', color: 'var(--ink)', fontWeight: 500 }}>{r.snapshot_date}</td>
-                          {currencies.map(cur => (
-                            <td key={cur} style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: 'var(--ink)', fontWeight: 600 }}>
-                              {fmtByCurrency(getValByCurrency(r, cur), cur)}
-                            </td>
-                          ))}
-                          <td style={{ padding: '0.4rem 0.5rem', textAlign: 'center' }}>
-                            <span style={{
-                              display: 'inline-block', padding: '0.15rem 0.45rem', borderRadius: 4, fontSize: '0.7rem', fontWeight: 600,
-                              background: r.saved_by === 'backfill' ? 'rgba(37,99,235,0.12)' : 'rgba(22,163,74,0.12)',
-                              color: r.saved_by === 'backfill' ? '#2563eb' : '#16a34a',
-                            }}>
-                              {r.saved_by ?? 'frontend'}
-                            </span>
-                          </td>
-                        </tr>
+        ) : histData.length > 0 && (
+          <div className="stats-section">
+            <div className="stats-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+              <span>일별 결산</span>
+              <button
+                onClick={async () => {
+                  if (!window.confirm('기존 히스토리를 모두 삭제하고 최초 매입일부터 재계산합니다. 계속하시겠습니까?')) return
+                  try {
+                    const res = await apiFetch('/api/portfolio/backfill-full', { method: 'POST' })
+                    alert(`재계산 완료: ${res.backfilled}일 생성\n최초 매입일: ${res.earliest_purchase_date || '없음'}`)
+                    setHistData([])
+                    setHistPage(0)
+                    const d = await apiFetch('/api/portfolio/history')
+                    setHistData(Array.isArray(d) ? d : [])
+                  } catch { alert('재계산 실패') }
+                }}
+                style={{ ...periodBtn(false), background: 'var(--accent)', color: '#fff', fontSize: '0.72rem' }}
+              >전체 재계산</button>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1.5px solid var(--border)', color: 'var(--ink3)', textAlign: 'right' }}>
+                    <th style={{ textAlign: 'left', padding: '0.4rem 0.5rem', fontWeight: 600 }}>날짜</th>
+                    {currencies.map(cur => <th key={cur} style={{ padding: '0.4rem 0.5rem', fontWeight: 600 }}>{cur}</th>)}
+                    <th style={{ padding: '0.4rem 0.5rem', fontWeight: 600 }}>{t(lang, 'stock.savedBy')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map(r => (
+                    <tr key={r.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '0.4rem 0.5rem', color: 'var(--ink)', fontWeight: 500 }}>{r.snapshot_date}</td>
+                      {currencies.map(cur => (
+                        <td key={cur} style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: 'var(--ink)', fontWeight: 600 }}>
+                          {fmtByCurrency(getValByCurrency(r, cur), cur)}
+                        </td>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-                {totalPages > 1 && (
-                  <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center', marginTop: '0.75rem' }}>
-                    <button onClick={() => setHistPage(p => Math.max(0, p - 1))} disabled={histPage === 0}
-                      style={{ ...periodBtn(false), opacity: histPage === 0 ? 0.4 : 1 }}>←</button>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--ink3)', alignSelf: 'center' }}>{histPage + 1} / {totalPages}</span>
-                    <button onClick={() => setHistPage(p => Math.min(totalPages - 1, p + 1))} disabled={histPage === totalPages - 1}
-                      style={{ ...periodBtn(false), opacity: histPage === totalPages - 1 ? 0.4 : 1 }}>→</button>
-                  </div>
-                )}
+                      <td style={{ padding: '0.4rem 0.5rem', textAlign: 'center' }}>
+                        <span style={{ display: 'inline-block', padding: '0.15rem 0.45rem', borderRadius: 4, fontSize: '0.7rem', fontWeight: 600, background: r.saved_by === 'backfill' ? 'rgba(37,99,235,0.12)' : 'rgba(22,163,74,0.12)', color: r.saved_by === 'backfill' ? '#2563eb' : '#16a34a' }}>
+                          {r.saved_by ?? 'frontend'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {totalPages > 1 && (
+              <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center', marginTop: '0.75rem' }}>
+                <button onClick={() => setHistPage(p => Math.max(0, p - 1))} disabled={histPage === 0} style={{ ...periodBtn(false), opacity: histPage === 0 ? 0.4 : 1 }}>←</button>
+                <span style={{ fontSize: '0.8rem', color: 'var(--ink3)', alignSelf: 'center' }}>{histPage + 1} / {totalPages}</span>
+                <button onClick={() => setHistPage(p => Math.min(totalPages - 1, p + 1))} disabled={histPage === totalPages - 1} style={{ ...periodBtn(false), opacity: histPage === totalPages - 1 ? 0.4 : 1 }}>→</button>
               </div>
-            </>
-          )
-        })()}
+            )}
+          </div>
+        )}
       </div>
+
     </div>
   )
 }

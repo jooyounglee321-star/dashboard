@@ -4,6 +4,41 @@
 
 ---
 
+## 2026-07-08 (3)
+
+### feat — 주식 통계 페이지 전면 재설계 (옵션 B)
+
+**목표**: 실제 투자자에게 유의미한 정보를 제공하는 통계 페이지
+
+**KPI 카드 4개** (상단)
+- 총 평가금액, 미실현 손익 + 수익률%, 실현 손익, 오늘 등락
+
+**동적 단위 전환**
+- 그룹이 1개 → 자동으로 종목 단위
+- 그룹 여러 개 → 전체 선택 시 그룹 단위, 특정 그룹 선택 시 종목 단위
+- `computeUnits(stockData, selectedGroup)` 유틸 함수로 처리
+
+**수익률% 바차트** (기존 절대 손익 차트 대체)
+- `computeReturnRates()`: 종목별 (현재가 - 평균단가) / 평균단가 × 100%
+
+**포트폴리오 vs SPY/QQQ 벤치마크 라인차트**
+- `GET /api/portfolio/benchmark?tickers=SPY,QQQ&from=YYYY-MM-DD`
+- yfinance로 종가 조회, 100 기준 정규화 후 포트폴리오와 비교
+
+**집중도 수평 바** (`computeConcentration()`)
+- 각 단위(그룹/종목)의 비중% 계산, KRW+USD 혼재 시 fxRate 기반 USD 환산
+
+**실현 손익 내역 테이블**
+- `GET /api/portfolio/realized-pl`: 매도 내역 기준 평균단가 대비 실현 손익 계산
+- `computeRealizedPL()`: 프론트 측 폴백 계산 함수
+
+**단위 테스트 57개 전부 통과**
+- `calcCutoff`: `vi.useFakeTimers`로 날짜 고정 (2026-07-07 기준)
+- `computePeriodStats`: pse(바차트)가 기간 무관하게 전체 보유 기준으로 계산되는 새 동작 반영
+- `computeUnits`, `computeReturnRates`, `computeConcentration`, `computeRealizedPL` 신규 케이스
+
+---
+
 ## 2026-07-08 (2)
 
 ### feat
