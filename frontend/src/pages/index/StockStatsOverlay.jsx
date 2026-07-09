@@ -824,28 +824,72 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                           <div style={{ flex: '0 0 calc(50% - 0.75rem)', minWidth: 0 }}><div className="stats-chart-wrap"><canvas ref={lineRef} /></div></div>
                           <div style={{ flex: '1 1 0', minWidth: 0 }}>
                             <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
-                              <thead>
-                                <tr style={{ color: 'var(--ink3)', borderBottom: '1px solid var(--border)' }}>
-                                  <th style={{ textAlign: 'left', padding: '0.3rem 0.4rem', fontWeight: 500 }}>그룹</th>
-                                  <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>누적 투자금액 (총 매입비용, 현재가 아님)</th>
-                                </tr>
-                              </thead>
                               <tbody>
                                 {effectiveLineDatasets.map((ds, i) => {
                                   const last = ds.data[ds.data.length - 1]
                                   const isKRW = ds.isKRW
-                                  const val = last?.y ?? 0
-                                  const fmt = isKRW ? '₩' + fmtKRW(val) : '$' + fmtUSD(val)
-                                  const purchases = (stockData?.groups ?? []).find(g => cleanStr(g.name, g.id) === ds.label)?.stocks
-                                    ?.flatMap(s => (s.purchases || []).filter(p => p.date && (!periodCutoff || p.date >= periodCutoff) && (!periodCutoffEnd || p.date <= periodCutoffEnd) && (p.price || 0) > 0 && (p.qty || 0) > 0)
-                                      .map(p => ({ ticker: s.ticker, date: p.date, qty: p.qty, price: p.price, amt: p.qty * p.price }))) ?? []
+                                  const fmt = v => isKRW ? '₩' + fmtKRW(v) : '$' + fmtUSD(v)
+
+                                  // ① 총 매입비용 (라인차트 마지막 값 = 모든 매입 누적)
+                                  const totalInvested = last?.y ?? 0
+
+                                  // ② 현재 보유 원가 (매도분 원가 제외) = 보유수량 × 평균단가
+                                  const grpStocks = (stockData?.groups ?? []).find(g => cleanStr(g.name, g.id) === ds.label)?.stocks ?? []
+                                  const pm = stockData?.priceMap || {}
+                                  let costBasis = 0, currentValue = 0
+                                  grpStocks.filter(s => !s.is_deleted).forEach(s => {
+                                    const pp = s.purchases || [], sl = s.sells || []
+                                    const bq = pp.reduce((a, p) => a + (p.qty || 0), 0)
+                                    const sq = sl.reduce((a, p) => a + (p.qty || 0), 0)
+                                    const hq = Math.max(0, bq - sq)
+                                    const valid = pp.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
+                                    const ws = valid.reduce((a, p) => a + p.price * p.qty, 0)
+                                    const vqt = valid.reduce((a, p) => a + p.qty, 0)
+                                    const avg = vqt > 0 ? ws / vqt : 0
+                                    const cur = pm[s.ticker]?.current_price ?? avg
+                                    costBasis += avg * hq
+                                    currentValue += cur * hq
+                                  })
+
+                                  const purchases = grpStocks
+                                    .flatMap(s => (s.purchases || []).filter(p => p.date && (!periodCutoff || p.date >= periodCutoff) && (!periodCutoffEnd || p.date <= periodCutoffEnd) && (p.price || 0) > 0 && (p.qty || 0) > 0)
+                                      .map(p => ({ ticker: s.ticker, date: p.date, qty: p.qty, price: p.price, amt: p.qty * p.price })))
                                   purchases.sort((a, b) => b.date.localeCompare(a.date))
+
+                                  const evalPL = currentValue - costBasis
+                                  const evalPct = costBasis > 0 ? evalPL / costBasis * 100 : 0
+                                  const pos = evalPL >= 0
+
                                   return (
                                     <tr key={i}>
-                                      <td colSpan={2} style={{ padding: 0 }}>
-                                        <div style={{ padding: '0.3rem 0.4rem', fontWeight: 700, color: 'var(--ink)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
-                                          <span>{ds.label}</span><span>{fmt}</span>
+                                      <td style={{ padding: 0 }}>
+                                        {/* 그룹 헤더 */}
+                                        <div style={{ padding: '0.35rem 0.4rem', fontWeight: 700, color: 'var(--ink)', borderBottom: '1px solid var(--border)', fontSize: '0.8rem' }}>
+                                          {ds.label}
                                         </div>
+                                        {/* 3줄 요약 */}
+                                        <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse', marginBottom: '0.4rem' }}>
+                                          <tbody>
+                                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                                              <td style={{ padding: '0.28rem 0.6rem', color: 'var(--ink3)' }}>총 매입비용 <span style={{ fontSize: '0.65rem' }}>(매도분 포함)</span></td>
+                                              <td style={{ padding: '0.28rem 0.6rem', textAlign: 'right', color: 'var(--ink)', fontWeight: 600 }}>{fmt(totalInvested)}</td>
+                                            </tr>
+                                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                                              <td style={{ padding: '0.28rem 0.6rem', color: 'var(--ink3)' }}>현재 보유 원가 <span style={{ fontSize: '0.65rem' }}>(매도분 제외)</span></td>
+                                              <td style={{ padding: '0.28rem 0.6rem', textAlign: 'right', color: 'var(--ink)', fontWeight: 600 }}>{fmt(costBasis)}</td>
+                                            </tr>
+                                            <tr style={{ borderBottom: '1.5px solid var(--border)' }}>
+                                              <td style={{ padding: '0.28rem 0.6rem', color: 'var(--ink3)' }}>현재 평가금액</td>
+                                              <td style={{ padding: '0.28rem 0.6rem', textAlign: 'right', color: 'var(--ink)', fontWeight: 600 }}>{fmt(currentValue)}</td>
+                                            </tr>
+                                            <tr>
+                                              <td style={{ padding: '0.28rem 0.6rem', color: 'var(--ink3)' }}>미실현 손익</td>
+                                              <td style={{ padding: '0.28rem 0.6rem', textAlign: 'right', fontWeight: 700, color: pos ? '#16a34a' : '#dc2626' }}>
+                                                {pos ? '+' : ''}{fmt(evalPL)} ({pos ? '+' : ''}{evalPct.toFixed(1)}%)
+                                              </td>
+                                            </tr>
+                                          </tbody>
+                                        </table>
                                         {purchases.length > 0 && (
                                           <table style={{ width: '100%', fontSize: '0.72rem', borderCollapse: 'collapse' }}>
                                             <thead>
