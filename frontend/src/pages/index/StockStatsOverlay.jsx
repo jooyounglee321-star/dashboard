@@ -152,6 +152,13 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   const [periodPlData, setPeriodPlData] = useState([])
   const [periodPlLoading, setPeriodPlLoading] = useState(false)
 
+  const [dividendData,    setDividendData]    = useState([])
+  const [dividendLoading, setDividendLoading] = useState(false)
+  const divBarRef      = useRef(null)
+  const divBarChartRef = useRef(null)
+  const divPieRef      = useRef(null)
+  const divPieChartRef = useRef(null)
+
   const [benchmarkData, setBenchmarkData] = useState(null)
   const [benchmarkLoading, setBenchmarkLoading] = useState(false)
 
@@ -624,6 +631,100 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       .catch(() => setHistData([]))
       .finally(() => setHistLoading(false))
   }, [isOpen])
+
+  // ── 데이터 fetch: 배당금 ──
+  useEffect(() => {
+    if (!isOpen) return
+    setDividendLoading(true)
+    apiFetch('/api/portfolio/dividends')
+      .then(d => setDividendData(Array.isArray(d) ? d : []))
+      .catch(() => setDividendData([]))
+      .finally(() => setDividendLoading(false))
+  }, [isOpen])
+
+  // ── 배당 월별 바차트 useEffect ──
+  useEffect(() => {
+    if (divBarChartRef.current) { divBarChartRef.current.destroy(); divBarChartRef.current = null }
+    if (!isOpen || !divBarRef.current || !dividendData.length) return
+
+    const cutoff    = calcCutoff(overviewPeriod, customFrom)
+    const cutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
+    const filtered  = dividendData.filter(d =>
+      (!cutoff || d.date >= cutoff) && (!cutoffEnd || d.date <= cutoffEnd)
+    )
+    if (!filtered.length) return
+
+    // 월별 집계
+    const monthMap = {}
+    const tickerSet = new Set()
+    filtered.forEach(d => {
+      const ym = d.date.slice(0, 7)
+      if (!monthMap[ym]) monthMap[ym] = {}
+      monthMap[ym][d.ticker] = (monthMap[ym][d.ticker] || 0) + d.amount
+      tickerSet.add(d.ticker)
+    })
+    const months  = Object.keys(monthMap).sort()
+    const tickers = [...tickerSet]
+    const COLORS  = ['#4a7c59','#2563eb','#f59e0b','#dc2626','#7c3aed','#0891b2','#d97706','#059669','#9333ea','#e11d48','#0284c7','#16a34a']
+    const datasets = tickers.map((tk, i) => ({
+      label: tk,
+      data: months.map(m => monthMap[m][tk] || 0),
+      backgroundColor: COLORS[i % COLORS.length] + 'cc',
+      borderColor: COLORS[i % COLORS.length],
+      borderWidth: 1,
+    }))
+
+    divBarChartRef.current = new Chart(divBarRef.current, {
+      type: 'bar',
+      data: { labels: months, datasets },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 8 } },
+          tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: $${ctx.parsed.y.toFixed(2)}` } },
+        },
+        scales: {
+          x: { stacked: true, ticks: { font: { size: 10 } } },
+          y: { stacked: true, ticks: { callback: v => '$' + v.toFixed(0) } },
+        },
+      },
+    })
+    return () => { if (divBarChartRef.current) { divBarChartRef.current.destroy(); divBarChartRef.current = null } }
+  }, [isOpen, dividendData, overviewPeriod, customFrom, customTo])
+
+  // ── 배당 종목별 파이차트 useEffect ──
+  useEffect(() => {
+    if (divPieChartRef.current) { divPieChartRef.current.destroy(); divPieChartRef.current = null }
+    if (!isOpen || !divPieRef.current || !dividendData.length) return
+
+    const cutoff    = calcCutoff(overviewPeriod, customFrom)
+    const cutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
+    const filtered  = dividendData.filter(d =>
+      (!cutoff || d.date >= cutoff) && (!cutoffEnd || d.date <= cutoffEnd)
+    )
+    if (!filtered.length) return
+
+    const byTicker = {}
+    filtered.forEach(d => { byTicker[d.ticker] = (byTicker[d.ticker] || 0) + d.amount })
+    const sorted  = Object.entries(byTicker).sort((a, b) => b[1] - a[1])
+    const COLORS  = ['#4a7c59','#2563eb','#f59e0b','#dc2626','#7c3aed','#0891b2','#d97706','#059669','#9333ea','#e11d48','#0284c7','#16a34a']
+
+    divPieChartRef.current = new Chart(divPieRef.current, {
+      type: 'doughnut',
+      data: {
+        labels: sorted.map(([tk]) => tk),
+        datasets: [{ data: sorted.map(([, v]) => v), backgroundColor: COLORS.slice(0, sorted.length), borderWidth: 1 }],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 8 } },
+          tooltip: { callbacks: { label: ctx => `${ctx.label}: $${ctx.parsed.toFixed(2)} (${(ctx.parsed / sorted.reduce((a,[,v])=>a+v,0)*100).toFixed(1)}%)` } },
+        },
+      },
+    })
+    return () => { if (divPieChartRef.current) { divPieChartRef.current.destroy(); divPieChartRef.current = null } }
+  }, [isOpen, dividendData, overviewPeriod, customFrom, customTo])
 
   // ── 데이터 fetch: 기간 시장손익 ──
   useEffect(() => {
@@ -1296,6 +1397,61 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
 
           </>
         )}
+
+        {/* 배당금 내역 섹션 */}
+        {dividendLoading ? (
+          <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--ink3)', fontSize: '0.82rem' }}>배당 내역 로딩 중…</div>
+        ) : dividendData.length > 0 && (() => {
+          const cutoff    = calcCutoff(overviewPeriod, customFrom)
+          const cutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
+          const filtered  = dividendData.filter(d =>
+            (!cutoff || d.date >= cutoff) && (!cutoffEnd || d.date <= cutoffEnd)
+          )
+          if (!filtered.length) return null
+          const byTicker  = {}
+          filtered.forEach(d => { byTicker[d.ticker] = (byTicker[d.ticker] || 0) + d.amount })
+          const total = filtered.reduce((a, d) => a + d.amount, 0)
+          const sorted = Object.entries(byTicker).sort((a, b) => b[1] - a[1])
+          return (
+            <div className="stats-section">
+              <div className="stats-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>배당금 내역</span>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#16a34a' }}>합계 ${total.toFixed(2)}</span>
+              </div>
+              {/* 월별 누적 바차트 */}
+              <div style={{ fontSize: '0.72rem', color: 'var(--ink3)', marginBottom: '0.3rem' }}>월별 배당금 (종목별)</div>
+              <div className="stats-chart-wrap"><canvas ref={divBarRef} /></div>
+              {/* 종목별 도넛 + 리스트 */}
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap', marginTop: '0.75rem' }}>
+                <div style={{ flex: '0 0 180px' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--ink3)', marginBottom: '0.3rem' }}>종목별 비중</div>
+                  <canvas ref={divPieRef} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--ink3)', marginBottom: '0.3rem' }}>종목별 합계</div>
+                  <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ color: 'var(--ink3)', borderBottom: '1px solid var(--border)' }}>
+                        <th style={{ textAlign: 'left', padding: '0.25rem 0.4rem', fontWeight: 500 }}>종목</th>
+                        <th style={{ textAlign: 'right', padding: '0.25rem 0.4rem', fontWeight: 500 }}>배당금</th>
+                        <th style={{ textAlign: 'right', padding: '0.25rem 0.4rem', fontWeight: 500 }}>비중</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sorted.map(([tk, amt]) => (
+                        <tr key={tk} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={{ padding: '0.25rem 0.4rem', fontWeight: 600 }}>{tk}</td>
+                          <td style={{ padding: '0.25rem 0.4rem', textAlign: 'right', color: '#16a34a', fontWeight: 600 }}>${amt.toFixed(2)}</td>
+                          <td style={{ padding: '0.25rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{(amt / total * 100).toFixed(1)}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* 일별 결산 테이블 */}
         {histLoading ? (

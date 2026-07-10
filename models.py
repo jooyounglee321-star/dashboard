@@ -357,3 +357,16 @@ class DailyPortfolioSnapshot(Base):
     saved_by: Mapped[str] = mapped_column(String(20), default="frontend")  # 'frontend' | 'scheduler'
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+class DividendHistory(Base):
+    """배당금 수령 내역."""
+    __tablename__ = "dividend_history"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    ticker: Mapped[str] = mapped_column(String(20), nullable=False)
+    amount: Mapped[float] = mapped_column(Numeric(12, 4), nullable=False)
+    currency: Mapped[str] = mapped_column(String(10), nullable=False, default="USD")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
