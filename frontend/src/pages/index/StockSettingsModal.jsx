@@ -15,6 +15,15 @@ const GRP_COLORS = [
   { bg: '#f0d0c0', tx: '#5a2a0a' }, { bg: '#c0c8f5', tx: '#1a1a6a' },
 ]
 
+function calcCashBalance(g) {
+  const contributed = (g.contributions || []).reduce((a, c) => a + (c.amount || 0), 0)
+  const totalBuy    = (g.stocks || []).reduce((a, s) =>
+    a + (s.purchases || []).reduce((b, p) => b + (p.price || 0) * (p.qty || 0), 0), 0)
+  const totalSell   = (g.stocks || []).reduce((a, s) =>
+    a + (s.sells || []).reduce((b, sv) => b + (sv.price || 0) * (sv.qty || 0), 0), 0)
+  return { contributed, totalBuy, totalSell, balance: contributed - totalBuy + totalSell }
+}
+
 function stockSummary(s) {
   const pp = s.purchases || [], sl = s.sells || []
   const totalBuyQty  = pp.reduce((a, p) => a + (p.qty || 0), 0)
@@ -144,7 +153,79 @@ function AddStockRow({ gid, onAdd }) {
   )
 }
 
-function StockDetailPanel({ g, s, onUpdate }) {
+function CashSection({ g, onUpdate, sym, fmtA }) {
+  const [open,       setOpen]       = useState(false)
+  const [cashDate,   setCashDate]   = useState(() => new Date().toISOString().split('T')[0])
+  const [cashAmount, setCashAmount] = useState('')
+  const { contributed, totalBuy, totalSell, balance } = calcCashBalance(g)
+
+  function addContribution() {
+    const amt = parseFloat(cashAmount) || 0
+    if (!amt) return
+    onUpdate(g.id, 'addContribution', { id: Math.random().toString(36).slice(2, 10), date: cashDate, amount: amt })
+    setCashAmount('')
+  }
+
+  return (
+    <div style={{ borderTop: '1px dashed var(--border)', background: 'rgba(0,0,0,0.025)' }}>
+      <div
+        onClick={() => setOpen(v => !v)}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.9rem', cursor: 'pointer' }}
+      >
+        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--ink2)', letterSpacing: '0.08em' }}>CASH</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
+          {contributed > 0 ? (
+            <span style={{ fontSize: '0.76rem', fontWeight: 600, color: balance >= 0 ? '#16a34a' : '#dc2626' }}>
+              잔고 {sym}{fmtA(Math.abs(balance))}{balance < 0 ? ' ⚠ 초과' : ''}
+            </span>
+          ) : (
+            <span style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>납입금 미등록</span>
+          )}
+          <span style={{ fontSize: '0.65rem', color: 'var(--ink3)' }}>{open ? '▲' : '▼'}</span>
+        </div>
+      </div>
+
+      {open && (
+        <div style={{ padding: '0 0.9rem 0.7rem', display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+          {/* 잔고 요약 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.3rem', fontSize: '0.72rem', color: 'var(--ink3)', background: 'var(--card2)', borderRadius: 6, padding: '0.4rem 0.6rem' }}>
+            <div>납입금<br /><span style={{ color: 'var(--ink)', fontWeight: 600 }}>{sym}{fmtA(contributed)}</span></div>
+            <div>매수<br /><span style={{ color: '#dc2626', fontWeight: 600 }}>−{sym}{fmtA(totalBuy)}</span></div>
+            <div>매도<br /><span style={{ color: '#16a34a', fontWeight: 600 }}>+{sym}{fmtA(totalSell)}</span></div>
+          </div>
+
+          {/* 납입 내역 목록 */}
+          {(g.contributions || []).length > 0 && (
+            <div style={{ maxHeight: 110, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 6 }}>
+              {[...(g.contributions || [])].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(c => (
+                <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.22rem 0.5rem', fontSize: '0.72rem', borderBottom: '1px solid var(--border)' }}>
+                  <span style={{ color: 'var(--ink3)' }}>{c.date}</span>
+                  <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{sym}{fmtA(c.amount)}</span>
+                  <button onClick={() => onUpdate(g.id, 'deleteContribution', c.id)} style={{ background: 'none', border: 'none', color: '#c0392b', cursor: 'pointer', fontSize: '0.75rem', padding: '0 0.2rem' }}>✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 입금 추가 */}
+          <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+            <input type="date" value={cashDate} onChange={e => setCashDate(e.target.value)}
+              style={{ flex: '0 0 auto', padding: '0.28rem 0.4rem', fontSize: '0.75rem', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit' }} />
+            <input type="number" value={cashAmount} onChange={e => setCashAmount(e.target.value)}
+              placeholder={`금액 (${sym})`} onKeyDown={e => e.key === 'Enter' && addContribution()}
+              style={{ flex: 1, padding: '0.28rem 0.4rem', fontSize: '0.75rem', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit' }} />
+            <button onClick={addContribution}
+              style={{ padding: '0.28rem 0.7rem', fontSize: '0.75rem', border: 'none', borderRadius: 6, background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500, whiteSpace: 'nowrap' }}>
+              + 입금
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function StockDetailPanel({ g, s, onUpdate, cashBalance }) {
   const [buyDate,   setBuyDate]   = useState(() => new Date().toISOString().split('T')[0])
   const [buyQty,    setBuyQty]    = useState('')
   const [buyPrice,  setBuyPrice]  = useState('')
@@ -174,6 +255,11 @@ function StockDetailPanel({ g, s, onUpdate }) {
       const close = await fetchHistPrice(buyDate)
       if (close != null) { price = close; showToast(`✓ ${buyDate} 종가: ${sym}${close}`, 'ok') }
       else showToast('⚠ 시세 조회 실패', 'err')
+    }
+    const cost = qty * (price || 0)
+    if (cashBalance !== undefined && cost > 0 && cashBalance < cost) {
+      const msg = `⚠ CASH 잔고 부족!\n필요: ${sym}${fmtA(cost)}\n잔고: ${sym}${fmtA(Math.max(0, cashBalance))}\n계속 등록하시겠습니까?`
+      if (!window.confirm(msg)) return
     }
     onUpdate(g.id, s.id, 'addPurchase', { id: genId(), date: buyDate || new Date().toISOString().split('T')[0], qty, price: price || 0 })
     setBuyDate(''); setBuyQty(''); setBuyPrice('')
@@ -324,7 +410,21 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
 
   function addGroup() {
     if (groups.length >= 10) { showToast('그룹은 최대 10개까지 가능합니다', 'err'); return }
-    saveGroupsToDB([...groups, { id: genId(), name: t(lang, 'admin.newGroup'), currency: 'USD', stocks: [] }])
+    saveGroupsToDB([...groups, { id: genId(), name: t(lang, 'admin.newGroup'), currency: 'USD', stocks: [], contributions: [] }])
+  }
+
+  function handleCashUpdate(gid, action, payload) {
+    setGroups(prev => {
+      const next = prev.map(g => {
+        if (g.id !== gid) return g
+        const contributions = g.contributions || []
+        if (action === 'addContribution')    return { ...g, contributions: [...contributions, payload] }
+        if (action === 'deleteContribution') return { ...g, contributions: contributions.filter(c => c.id !== payload) }
+        return g
+      })
+      apiFetch('/api/portfolio/groups', { method: 'POST', body: JSON.stringify({ data: next }) }).catch(() => {})
+      return next
+    })
   }
   function delGroup(gid) {
     if (!window.confirm('그룹과 모든 종목을 삭제하시겠습니까?')) return
@@ -495,11 +595,12 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
                               </div>
                             </div>
                           )}
-                          {isOpenS && <StockDetailPanel g={g} s={s} onUpdate={handleStockUpdate} />}
+                          {isOpenS && <StockDetailPanel g={g} s={s} onUpdate={handleStockUpdate} cashBalance={calcCashBalance(g).balance} />}
                         </div>
                       )
                     })}
                 </div>
+                <CashSection g={g} onUpdate={handleCashUpdate} sym={sym} fmtA={fmtA} />
                 {activeStocks.length < 10
                   ? <AddStockRow gid={g.id} onAdd={(tk, nm) => addStock(g.id, tk, nm)} />
                   : <div style={{ fontSize: '0.75rem', color: 'var(--ink3)', textAlign: 'center', padding: '0.4rem' }}>최대 10개 종목 도달</div>
