@@ -2,6 +2,8 @@ from __future__ import annotations
 """포트폴리오 데일리 스냅샷 API."""
 import json
 import logging
+import random
+import string
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -500,6 +502,17 @@ def save_groups(
     그룹 이름 변경 시 daily_portfolio_snapshot.data.group_names도 일괄 동기화.
     """
     groups = body.get("data", [])
+
+    # id 없는 그룹·종목에 자동 생성 (UI 외부에서 직접 삽입된 데이터 방어)
+    def _gen_id() -> str:
+        return ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+
+    for g in groups:
+        if not g.get("id"):
+            g["id"] = _gen_id()
+        for s in g.get("stocks", []):
+            if not s.get("id"):
+                s["id"] = _gen_id()
 
     # 이름 변경된 그룹 감지
     renamed: dict[str, str] = {}  # group_id → new_name
