@@ -181,14 +181,22 @@ export function computeReturnRates(stockData, selectedGroup, cutoff = null, cuto
     for (const s of g.stocks || []) {
       if (s.is_deleted) continue
       const allPp = s.purchases || [], sl = s.sells || []
-      // 기간 필터: cutoff 설정 시 해당 기간 내 매수만 대상
+
+      // 전체 보유수량 (기간 무관) — 실제 보유 여부 확인용
+      const allBQ = allPp.reduce((a, p) => a + (p.qty || 0), 0)
+      const sq    = sl.reduce((a, p) => a + (p.qty || 0), 0)
+      const totalHQ = Math.max(0, allBQ - sq)
+      if (totalHQ <= 0) continue  // 현재 보유 없으면 스킵
+
+      // 기간 필터: cutoff 설정 시 해당 기간 내 매수만 평균단가 계산에 사용
       const pp = (cutoff || cutoffEnd)
         ? allPp.filter(p => (!cutoff || !p.date || p.date >= cutoff) && (!cutoffEnd || !p.date || p.date <= cutoffEnd))
         : allPp
-      const bq = pp.reduce((a, p) => a + (p.qty || 0), 0)
-      const sq = sl.reduce((a, p) => a + (p.qty || 0), 0)
-      const hq = Math.max(0, bq - sq)
-      if (hq <= 0) continue
+
+      // 기간 필터 적용 시: 기간 내 매입 없으면 차트에서 제외
+      const periodBQ = pp.reduce((a, p) => a + (p.qty || 0), 0)
+      if ((cutoff || cutoffEnd) && periodBQ <= 0) continue
+
       const valid = pp.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
       const ws = valid.reduce((a, p) => a + p.price * p.qty, 0)
       const vqt = valid.reduce((a, p) => a + p.qty, 0)
@@ -199,7 +207,7 @@ export function computeReturnRates(stockData, selectedGroup, cutoff = null, cuto
       result.push({
         ticker: s.ticker,
         name: cleanStr(s.name, s.ticker) || s.ticker,
-        holdQty: hq,
+        holdQty: totalHQ,
         avgCost,
         curPrice,
         returnPct,
