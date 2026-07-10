@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import DailyPortfolioSnapshot, ExchangeRate, PortfolioGroups, Stock, User
+from models import DailyPortfolioSnapshot, DividendHistory, ExchangeRate, PortfolioGroups, Stock, User
 from routers.auth import get_current_user
 from routers._shared import resolve_yf_ticker as _backfill_resolve_ticker
 from schemas import PortfolioSnapshotCreate, PortfolioSnapshotOut
@@ -838,3 +838,66 @@ def get_history_by_date(
     if not row:
         raise HTTPException(status_code=404, detail=f"{snapshot_date} 스냅샷 없음")
     return row
+
+
+# ── GET /api/portfolio/dividends ─────────────────────────────────────────────
+@router.get("/dividends")
+def get_dividends(
+    from_date: str = Query(None, alias="from"),
+    to_date:   str = Query(None, alias="to"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """배당금 내역 조회. from/to(YYYY-MM-DD)로 기간 필터."""
+    q = db.query(DividendHistory).filter(DividendHistory.user_id == current_user.id)
+    if from_date:
+        q = q.filter(DividendHistory.date >= from_date)
+    if to_date:
+        q = q.filter(DividendHistory.date <= to_date)
+    rows = q.order_by(DividendHistory.date).all()
+    return [
+        {"id": r.id, "date": str(r.date), "ticker": r.ticker,
+         "amount": float(r.amount), "currency": r.currency}
+        for r in rows
+    ]
+
+
+# ── POST /api/portfolio/dividends ────────────────────────────────────────────
+@router.post("/dividends")
+def add_dividend(
+    body: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """배당금 단건 추가."""
+    row = DividendHistory(
+        user_id  = current_user.id,
+        date     = body["date"],
+        ticker   = body["ticker"].upper(),
+        amount   = body["amount"],
+        currency = body.get("currency", "USD"),
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return {"id": row.id, "date": str(row.date), "ticker": row.ticker,
+            "amount": float(row.amount), "currency": row.currency}
+
+
+# ── DELETE /api/portfolio/dividends/{id} ─────────────────────────────────────
+@router.delete("/dividends/{div_id}")
+def delete_dividend(
+    div_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """배당금 단건 삭제."""
+    row = db.query(DividendHistory).filter(
+        DividendHistory.id == div_id,
+        DividendHistory.user_id == current_user.id,
+    ).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="배당 내역 없음")
+    db.delete(row)
+    db.commit()
+    return {"deleted": div_id}
