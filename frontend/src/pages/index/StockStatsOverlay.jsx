@@ -120,7 +120,6 @@ function computeStockStats(stockData) {
 export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = 'ko' }) {
   // ── refs ──
   const pieRef = useRef(null)
-  const lineRef = useRef(null)
   const barRef = useRef(null)
   const plBarRef = useRef(null)
   const plBarChartRef = useRef(null)
@@ -262,18 +261,6 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     if (effGroup) return stockValues.filter(s => s.groupName?.toLowerCase() === effGroup.toLowerCase())
     return grpTotals.filter(g => g.total > 0)
   }, [computed, overviewGroup])
-
-  // ── effectiveLineDatasets ──
-  const effectiveLineDatasets = useMemo(() => {
-    if (!computed?.lineDatasets) return []
-    const periodCutoff = calcCutoff(overviewPeriod, customFrom)
-    const periodCutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
-    let ds = overviewGroup ? computed.lineDatasets.filter(d => d.label === overviewGroup) : computed.lineDatasets
-    if (periodCutoff || periodCutoffEnd) {
-      ds = ds.map(d => ({ ...d, data: d.data.filter(pt => (!periodCutoff || pt.x >= periodCutoff) && (!periodCutoffEnd || pt.x <= periodCutoffEnd)) })).filter(d => d.data.length > 0)
-    }
-    return ds
-  }, [computed, overviewGroup, overviewPeriod, customFrom, customTo])
 
   // ── effectiveStockEvals (기간 시장손익 바차트용 필터) ──
   const effectiveStockEvals = useMemo(() => {
@@ -483,40 +470,9 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     chartsRef.current.forEach(c => c.destroy())
     chartsRef.current = []
 
-    const { lineDatasets, stockEvals, fxRate, groupTickers } = computed
+    const { stockEvals, fxRate, groupTickers } = computed
     const cutoff = calcCutoff(overviewPeriod, customFrom)
     const cutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
-    const toDisplay = (val, isKRW) => {
-      if (overviewCurrency === 'USD' && isKRW && fxRate) return val / fxRate
-      if (overviewCurrency === 'KRW' && !isKRW && fxRate) return val * fxRate
-      return val
-    }
-
-    // 라인차트
-    if (lineRef.current) {
-      let datasets = overviewGroup ? lineDatasets.filter(ds => ds.label === overviewGroup) : lineDatasets
-      if (cutoff || cutoffEnd) {
-        datasets = datasets.map(d => ({ ...d, data: d.data.filter(pt => (!cutoff || pt.x >= cutoff) && (!cutoffEnd || pt.x <= cutoffEnd)) })).filter(d => d.data.length > 0)
-      }
-      if (datasets.length > 0) {
-        const inst = new Chart(lineRef.current, {
-          type: 'line',
-          data: { datasets },
-          options: {
-            responsive: true,
-            scales: {
-              x: { type: 'time', time: { unit: 'day', displayFormats: { day: 'yyyy-MM-dd' } }, ticks: { maxTicksLimit: 10 }, ...(cutoff ? { min: cutoff } : {}), ...(cutoffEnd ? { max: cutoffEnd } : {}) },
-              y: { title: { display: true, text: t(lang, 'statsAxisInvest') }, ticks: { callback: v => { const ds = datasets[0]; const cur = ds?.currency ?? (overviewCurrency === 'USD' ? 'USD' : 'KRW'); return cur === 'USD' ? fmtUSDShort(v) : '₩' + fmtKRWShort(v) } } },
-            },
-            plugins: {
-              legend: { position: 'bottom' },
-              tooltip: { callbacks: { label: ctx => { const v = ctx.parsed.y; const ds = datasets[ctx.datasetIndex]; const cur = ds?.currency ?? (overviewCurrency === 'USD' ? 'USD' : 'KRW'); return cur === 'USD' ? fmtUSDShort(v) : '₩' + fmtKRWShort(v) } } },
-            },
-          },
-        })
-        chartsRef.current.push(inst)
-      }
-    }
 
     // 바차트 (평가손익 절대값)
     if (barRef.current && periodStockEvals.length) {
@@ -1179,76 +1135,8 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             </div>
 
             {/* 기간 필터 적용 차트들 */}
-            {(effectiveLineDatasets.length > 0 || effectiveStockEvals.length > 0 || histData.length > 0) && (
+            {(effectiveStockEvals.length > 0 || histData.length > 0) && (
               <div className="stats-section">
-                {/* 그룹별 누적 투자금액 추이 */}
-                {effectiveLineDatasets.length > 0 && (
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <div className="stats-section-title">{t(lang, 'statsLineTitle')}</div>
-                    <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                      <div style={{ flex: '0 0 calc(50% - 0.75rem)', minWidth: 0 }}><div className="stats-chart-wrap"><canvas ref={lineRef} /></div></div>
-                      <div style={{ flex: '1 1 0', minWidth: 0 }}>
-                        <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
-                          <tbody>
-                            {effectiveLineDatasets.map((ds, i) => {
-                              const last = ds.data[ds.data.length - 1]
-                              const isKRW = ds.currency === 'KRW'
-                              const fmt = v => isKRW ? '₩' + fmtKRW(v) : '$' + fmtUSD(v)
-                              const totalInvested = last?.y ?? 0
-                              const grpStocks = (stockData?.groups ?? []).find(g => cleanStr(g.name, g.id) === ds.label)?.stocks ?? []
-                              const pm = stockData?.priceMap || {}
-                              let costBasis = 0, currentValue = 0
-                              grpStocks.filter(s => !s.is_deleted).forEach(s => {
-                                const pp = s.purchases || [], sl = s.sells || []
-                                const bq = pp.reduce((a, p) => a + (p.qty || 0), 0)
-                                const sq = sl.reduce((a, p) => a + (p.qty || 0), 0)
-                                const hq = Math.max(0, bq - sq)
-                                const valid = pp.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
-                                const ws = valid.reduce((a, p) => a + p.price * p.qty, 0)
-                                const vqt = valid.reduce((a, p) => a + p.qty, 0)
-                                const avg = vqt > 0 ? ws / vqt : 0
-                                const cur = pm[s.ticker]?.current_price ?? avg
-                                costBasis += avg * hq
-                                currentValue += cur * hq
-                              })
-                              const evalPL = currentValue - costBasis
-                              const evalPct = costBasis > 0 ? evalPL / costBasis * 100 : 0
-                              const pos = evalPL >= 0
-                              return (
-                                <tr key={i}><td style={{ padding: 0 }}>
-                                  <div style={{ padding: '0.35rem 0.4rem', fontWeight: 700, color: 'var(--ink)', borderBottom: '1px solid var(--border)', fontSize: '0.8rem' }}>{ds.label}</div>
-                                  <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse', marginBottom: '0.4rem' }}>
-                                    <tbody>
-                                      <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                                        <td style={{ padding: '0.28rem 0.6rem', color: 'var(--ink3)' }}>총 매입비용</td>
-                                        <td style={{ padding: '0.28rem 0.6rem', textAlign: 'right', color: 'var(--ink)', fontWeight: 600 }}>{fmt(totalInvested)}</td>
-                                      </tr>
-                                      <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                                        <td style={{ padding: '0.28rem 0.6rem', color: 'var(--ink3)' }}>보유 원가</td>
-                                        <td style={{ padding: '0.28rem 0.6rem', textAlign: 'right', color: 'var(--ink)', fontWeight: 600 }}>{fmt(costBasis)}</td>
-                                      </tr>
-                                      <tr style={{ borderBottom: '1.5px solid var(--border)' }}>
-                                        <td style={{ padding: '0.28rem 0.6rem', color: 'var(--ink3)' }}>평가금액</td>
-                                        <td style={{ padding: '0.28rem 0.6rem', textAlign: 'right', color: 'var(--ink)', fontWeight: 600 }}>{fmt(currentValue)}</td>
-                                      </tr>
-                                      <tr>
-                                        <td style={{ padding: '0.28rem 0.6rem', color: 'var(--ink3)' }}>미실현 손익</td>
-                                        <td style={{ padding: '0.28rem 0.6rem', textAlign: 'right', fontWeight: 700, color: pos ? '#16a34a' : '#dc2626' }}>
-                                          {pos ? '+' : ''}{fmt(evalPL)} ({pos ? '+' : ''}{evalPct.toFixed(1)}%)
-                                        </td>
-                                      </tr>
-                                    </tbody>
-                                  </table>
-                                </td></tr>
-                              )
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {/* 종목별 평가손익 (기존 바차트 - 절대값) */}
                 {effectiveStockEvals.length > 0 && (
                   <div style={{ marginBottom: '1.5rem' }}>
