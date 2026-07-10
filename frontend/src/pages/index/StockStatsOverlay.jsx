@@ -1176,9 +1176,34 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                     const filteredHist = [...histData]
                       .filter(r => (!cutoff || r.snapshot_date >= cutoff) && (!cutoffEnd || r.snapshot_date <= cutoffEnd))
                       .sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date))
-                    const portStart = filteredHist.length ? getValue(filteredHist[0]) : null
-                    const portEnd = filteredHist.length ? getValue(filteredHist[filteredHist.length - 1]) : null
-                    const portRet = portStart && portEnd && portStart > 0 ? (portEnd - portStart) / portStart * 100 : null
+
+                    // 전체 기간: 원금(매수총액) 대비 현재 평가액으로 계산 (스냅샷 방식은 점진 투자 시 왜곡)
+                    // 특정 기간: 기간 시작 스냅샷 vs 기간 종료 스냅샷 비교
+                    let portRet = null
+                    if (!cutoff) {
+                      // 전체 기간 — 원금 대비 현재 평가액
+                      const targetGroups = (stockData?.groups ?? []).filter(g => {
+                        if (overviewGroup) return cleanStr(g.name, g.id) === overviewGroup
+                        return useKRW ? g.currency === 'KRW' : g.currency !== 'KRW'
+                      })
+                      let totalCost = 0, totalEval = 0
+                      for (const g of targetGroups) {
+                        for (const s of g.stocks || []) {
+                          if (s.is_deleted) continue
+                          const buys = (s.purchases || []).filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
+                          const sells = s.sells || []
+                          const holdQty = Math.max(0, buys.reduce((a, p) => a + p.qty, 0) - sells.reduce((a, p) => a + (p.qty || 0), 0))
+                          const cur = stockData?.priceMap?.[s.ticker]?.current_price
+                          if (holdQty > 0 && cur) totalEval += holdQty * cur
+                          totalCost += buys.reduce((a, p) => a + p.price * p.qty, 0)
+                        }
+                      }
+                      if (totalCost > 0 && totalEval > 0) portRet = (totalEval - totalCost) / totalCost * 100
+                    } else {
+                      const portStart = filteredHist.length ? getValue(filteredHist[0]) : null
+                      const portEnd = filteredHist.length ? getValue(filteredHist[filteredHist.length - 1]) : null
+                      portRet = portStart && portEnd && portStart > 0 ? (portEnd - portStart) / portStart * 100 : null
+                    }
 
                     const rows = [{ name: t(lang, 'statsBenchmarkPortfolio'), ret: portRet }]
                     if (benchmarkData) {
@@ -1195,7 +1220,12 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                         <thead>
                           <tr style={{ color: 'var(--ink3)', borderBottom: '1px solid var(--border)' }}>
                             <th style={{ textAlign: 'left', padding: '0.3rem 0.4rem', fontWeight: 500 }}>종목</th>
-                            <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>{t(lang, 'statsBenchmarkReturn')}</th>
+                            <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>
+                              {t(lang, 'statsBenchmarkReturn')}
+                              <span style={{ fontSize: '0.65rem', color: 'var(--ink3)', marginLeft: '0.3rem', fontWeight: 400 }}>
+                                {!cutoff ? '(원금대비)' : '(기간대비)'}
+                              </span>
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
