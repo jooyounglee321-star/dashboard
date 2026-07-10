@@ -1245,7 +1245,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               <span>일별 결산</span>
               <button
                 onClick={async () => {
-                  if (!window.confirm('기존 히스토리를 모두 삭제하고 최초 매입일부터 재계산합니다. 계속하시겠습니까?')) return
+                  if (!window.confirm('기존 히스토리를 모두 삭제하고 최초 매입일부터 재계산합니다.\n※ 최대 10년(3,650일)까지 계산 가능합니다.\n계속하시겠습니까?')) return
                   try {
                     const res = await apiFetch('/api/portfolio/backfill-full', { method: 'POST' })
                     alert(`재계산 완료: ${res.backfilled}일 생성\n최초 매입일: ${res.earliest_purchase_date || '없음'}`)
