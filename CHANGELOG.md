@@ -26,6 +26,14 @@
 - DB UPDATE 완료 (user_id=3 portfolio_groups)
 - 백업: `backup_portfolio_groups_user3_20260709_225109.json`
 
+### fix — 신규 종목 클릭 시 모달 닫힘 오류 수정 (id 필드 누락)
+- PDF 임포트로 추가된 10개 신규 종목에 `id` 필드가 없어 `s.id = undefined` → React key 충돌로 ▼ 클릭 시 모달 닫히는 버그
+- DB에서 직접 랜덤 8자 id 생성·삽입 (EWY/GLW/GOOG/META/SCHD/SHOP/VFIAX/VOO/VTSAX/VUSTX)
+
+### fix — 전량 매도 종목 '수량 미등록' 표시 오류 수정
+- `holdQty > 0` 조건 → `totalBuyQty > 0` 으로 변경
+- 매수 기록이 있지만 전량 매도(holdQty=0)된 종목이 이제 '보유 0주'로 표시됨
+
 ### refactor — 주식 통계 UI 섹션 재배치 및 수익률 버그 수정
 
 - **그룹별 누적 투자금액 추이** 차트 완전 삭제
