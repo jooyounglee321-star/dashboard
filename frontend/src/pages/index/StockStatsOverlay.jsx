@@ -935,6 +935,35 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                       </div>
                     )}
                   </div>
+                  {/* CASH 잔고 섹션 */}
+                  {(() => {
+                    const cashGroups = (stockData?.groups ?? []).filter(g => {
+                      if (overviewGroup) return cleanStr(g.name, g.id) === overviewGroup
+                      return true
+                    }).filter(g => (g.contributions || []).length > 0)
+                    if (!cashGroups.length) return null
+                    return (
+                      <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ink2)', letterSpacing: '0.08em' }}>CASH</div>
+                        {cashGroups.map(g => {
+                          const contributed = (g.contributions || []).reduce((a, c) => a + (c.amount || 0), 0)
+                          const totalBuy    = (g.stocks || []).reduce((a, s) => a + (s.purchases || []).reduce((b, p) => b + (p.price || 0) * (p.qty || 0), 0), 0)
+                          const totalSell   = (g.stocks || []).reduce((a, s) => a + (s.sells || []).reduce((b, sv) => b + (sv.price || 0) * (sv.qty || 0), 0), 0)
+                          const balance     = contributed - totalBuy + totalSell
+                          const sym = g.currency === 'USD' ? '$' : '₩'
+                          const fmt = v => g.currency === 'USD' ? fmtUSD(v) : fmtKRW(v)
+                          return (
+                            <div key={g.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.3rem', fontSize: '0.72rem', background: 'var(--card2)', borderRadius: 8, padding: '0.45rem 0.7rem' }}>
+                              <div style={{ color: 'var(--ink3)' }}>{cleanStr(g.name, g.id)}<br /><span style={{ fontSize: '0.65rem' }}>{g.currency}</span></div>
+                              <div style={{ color: 'var(--ink3)' }}>납입금<br /><span style={{ color: 'var(--ink)', fontWeight: 600 }}>{sym}{fmt(contributed)}</span></div>
+                              <div style={{ color: 'var(--ink3)' }}>매도수익<br /><span style={{ color: '#16a34a', fontWeight: 600 }}>+{sym}{fmt(totalSell)}</span></div>
+                              <div style={{ color: 'var(--ink3)' }}>잔고<br /><span style={{ color: balance >= 0 ? '#16a34a' : '#dc2626', fontWeight: 700 }}>{sym}{fmt(Math.abs(balance))}{balance < 0 ? ' ⚠' : ''}</span></div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()}
                 </div>
               )
             })()}
@@ -1177,17 +1206,18 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                       .filter(r => (!cutoff || r.snapshot_date >= cutoff) && (!cutoffEnd || r.snapshot_date <= cutoffEnd))
                       .sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date))
 
-                    // 전체 기간: 원금(매수총액) 대비 현재 평가액으로 계산 (스냅샷 방식은 점진 투자 시 왜곡)
+                    // 전체 기간: 납입금(CASH contributions) 대비 현재 평가액
+                    //   contributions 없으면 매수총액으로 폴백
                     // 특정 기간: 기간 시작 스냅샷 vs 기간 종료 스냅샷 비교
                     let portRet = null
                     if (!cutoff) {
-                      // 전체 기간 — 원금 대비 현재 평가액
                       const targetGroups = (stockData?.groups ?? []).filter(g => {
                         if (overviewGroup) return cleanStr(g.name, g.id) === overviewGroup
                         return useKRW ? g.currency === 'KRW' : g.currency !== 'KRW'
                       })
-                      let totalCost = 0, totalEval = 0
+                      let totalContributed = 0, totalEval = 0, totalBuyCost = 0
                       for (const g of targetGroups) {
+                        totalContributed += (g.contributions || []).reduce((a, c) => a + (c.amount || 0), 0)
                         for (const s of g.stocks || []) {
                           if (s.is_deleted) continue
                           const buys = (s.purchases || []).filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
@@ -1195,10 +1225,11 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                           const holdQty = Math.max(0, buys.reduce((a, p) => a + p.qty, 0) - sells.reduce((a, p) => a + (p.qty || 0), 0))
                           const cur = stockData?.priceMap?.[s.ticker]?.current_price
                           if (holdQty > 0 && cur) totalEval += holdQty * cur
-                          totalCost += buys.reduce((a, p) => a + p.price * p.qty, 0)
+                          totalBuyCost += buys.reduce((a, p) => a + p.price * p.qty, 0)
                         }
                       }
-                      if (totalCost > 0 && totalEval > 0) portRet = (totalEval - totalCost) / totalCost * 100
+                      const base = totalContributed > 0 ? totalContributed : totalBuyCost
+                      if (base > 0 && totalEval > 0) portRet = (totalEval - base) / base * 100
                     } else {
                       const portStart = filteredHist.length ? getValue(filteredHist[0]) : null
                       const portEnd = filteredHist.length ? getValue(filteredHist[filteredHist.length - 1]) : null
