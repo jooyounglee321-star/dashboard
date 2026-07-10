@@ -619,7 +619,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   useEffect(() => {
     if (!isOpen) return
     setHistLoading(true)
-    apiFetch('/api/portfolio/history')
+    apiFetch('/api/portfolio/history?days=3650')
       .then(d => { setHistData(Array.isArray(d) ? d : []); setHistPage(0) })
       .catch(() => setHistData([]))
       .finally(() => setHistLoading(false))
@@ -1251,7 +1251,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                     alert(`재계산 완료: ${res.backfilled}일 생성\n최초 매입일: ${res.earliest_purchase_date || '없음'}`)
                     setHistData([])
                     setHistPage(0)
-                    const d = await apiFetch('/api/portfolio/history')
+                    const d = await apiFetch('/api/portfolio/history?days=3650')
                     setHistData(Array.isArray(d) ? d : [])
                   } catch { alert('재계산 실패') }
                 }}
