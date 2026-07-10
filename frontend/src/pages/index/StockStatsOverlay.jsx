@@ -1095,6 +1095,54 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               }
             </div>
 
+            {/* 종목별 기간 시장손익 */}
+            {calcCutoff(overviewPeriod, customFrom) && (
+              <div className="stats-section">
+                <div className="stats-section-title">{t(lang, 'statsPeriodPlTitle')}</div>
+                {periodPlLoading
+                  ? <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'statsPeriodPlLoading')}</div>
+                  : periodPlData.length > 0
+                    ? <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                        <div style={{ flex: '0 0 calc(50% - 0.75rem)', minWidth: 0 }}><div className="stats-chart-wrap"><canvas ref={plBarRef} /></div></div>
+                        <div style={{ flex: '1 1 0', minWidth: 0 }}>
+                          <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
+                            <thead>
+                              <tr style={{ color: 'var(--ink3)', borderBottom: '1px solid var(--border)' }}>
+                                <th style={{ textAlign: 'left', padding: '0.3rem 0.4rem', fontWeight: 500 }}>종목</th>
+                                <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>수량</th>
+                                <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>시작가</th>
+                                <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>현재가</th>
+                                <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>기간손익</th>
+                                <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>손익률</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {periodPlData.map((d, i) => {
+                                const fmt = v => d.currency === 'KRW' ? '₩' + fmtKRW(v) : '$' + fmtUSD(v)
+                                const pos = d.pl >= 0
+                                return (
+                                  <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                                    <td style={{ padding: '0.3rem 0.4rem', color: 'var(--ink)', fontWeight: 600 }}>{d.ticker}</td>
+                                    <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{d.qty % 1 === 0 ? d.qty : d.qty.toFixed(3)}</td>
+                                    <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{fmt(d.price_start)}</td>
+                                    <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink)' }}>{fmt(d.price_now)}</td>
+                                    <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{pos ? '+' : ''}{fmt(d.pl)}</td>
+                                    <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? '#16a34a' : '#dc2626' }}>{pos ? '+' : ''}{d.pl_pct.toFixed(1)}%</td>
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                          </table>
+                          <div style={{ fontSize: '0.68rem', color: 'var(--ink3)', marginTop: '0.5rem', lineHeight: 1.5 }}>
+                            (현재가 − 기간 시작일 종가) × 보유수량 &nbsp;|&nbsp; 시작일: {calcCutoff(overviewPeriod, customFrom)}
+                          </div>
+                        </div>
+                      </div>
+                    : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
+                }
+              </div>
+            )}
+
             {/* ⑥ 포트폴리오 vs 벤치마크 */}
             <div className="stats-section">
               <div className="stats-section-title">{t(lang, 'statsBenchmarkTitle')}</div>
@@ -1170,56 +1218,8 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             </div>
 
             {/* 기간 필터 적용 차트들 */}
-            {(calcCutoff(overviewPeriod, customFrom) || histData.length > 0) && (
+            {histData.length > 0 && (
               <div className="stats-section">
-                {/* 종목별 기간 시장손익 */}
-                {calcCutoff(overviewPeriod, customFrom) && (
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <div className="stats-section-title">{t(lang, 'statsPeriodPlTitle')}</div>
-                    {periodPlLoading
-                      ? <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'statsPeriodPlLoading')}</div>
-                      : periodPlData.length > 0
-                        ? <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                            <div style={{ flex: '0 0 calc(50% - 0.75rem)', minWidth: 0 }}><div className="stats-chart-wrap"><canvas ref={plBarRef} /></div></div>
-                            <div style={{ flex: '1 1 0', minWidth: 0 }}>
-                              <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
-                                <thead>
-                                  <tr style={{ color: 'var(--ink3)', borderBottom: '1px solid var(--border)' }}>
-                                    <th style={{ textAlign: 'left', padding: '0.3rem 0.4rem', fontWeight: 500 }}>종목</th>
-                                    <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>수량</th>
-                                    <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>시작가</th>
-                                    <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>현재가</th>
-                                    <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>기간손익</th>
-                                    <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>손익률</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {periodPlData.map((d, i) => {
-                                    const fmt = v => d.currency === 'KRW' ? '₩' + fmtKRW(v) : '$' + fmtUSD(v)
-                                    const pos = d.pl >= 0
-                                    return (
-                                      <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-                                        <td style={{ padding: '0.3rem 0.4rem', color: 'var(--ink)', fontWeight: 600 }}>{d.ticker}</td>
-                                        <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{d.qty % 1 === 0 ? d.qty : d.qty.toFixed(3)}</td>
-                                        <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{fmt(d.price_start)}</td>
-                                        <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink)' }}>{fmt(d.price_now)}</td>
-                                        <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{pos ? '+' : ''}{fmt(d.pl)}</td>
-                                        <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? '#16a34a' : '#dc2626' }}>{pos ? '+' : ''}{d.pl_pct.toFixed(1)}%</td>
-                                      </tr>
-                                    )
-                                  })}
-                                </tbody>
-                              </table>
-                              <div style={{ fontSize: '0.68rem', color: 'var(--ink3)', marginTop: '0.5rem', lineHeight: 1.5 }}>
-                                (현재가 − 기간 시작일 종가) × 보유수량 &nbsp;|&nbsp; 시작일: {calcCutoff(overviewPeriod, customFrom)}
-                              </div>
-                            </div>
-                          </div>
-                        : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
-                    }
-                  </div>
-                )}
-
                 {/* ⑧ 일별 자산 추이 */}
                 {histData.length > 0 && (
                   <div>
