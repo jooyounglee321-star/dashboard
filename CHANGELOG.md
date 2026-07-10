@@ -4,6 +4,38 @@
 
 ---
 
+## 2026-07-09
+
+### feat — Vanguard IRA PDF 거래내역 DB 반영 (10개 종목 신규 추가)
+
+**파싱**: `customActivityReport.pdf` (Vanguard Traditional IRA, 2018~2026) → 217건 추출
+- `pdftotext -layout` + 블록 기반 파싱 (멀티라인 레코드 지원)
+- 매입 유형: Buy, Reinvestment, Reinvestment (LT/ST gain) 모두 매입 처리
+- 제외: Contribution, Dividend, Capital gain, Sweep, Interest, VMFXX
+
+**병합 전략** (기존 7개 종목 중복 방지):
+- 중복 판정: `qty 일치 AND (price ±0.05 OR date ±3일)` — DB에 날짜·가격 오기입이 있는 경우도 흡수
+- 기존 7개 (GOOGL/QQQ/MU/SNDK/NVDA/NVDY/DRAM): NVDY만 +1건(7/6 재투자) 추가, 나머지 변경 없음
+
+**신규 종목 10개** (전량 매도 완료된 과거 보유 이력):
+- VTSAX(30매입/4매도), VUSTX(65매입/1매도), VOO(19매입/2매도), SCHD(7매입/2매도)
+- SHOP(3매입/2매도), VFIAX(4매입/1매도), META(3매입/1매도), GLW(1매입/1매도)
+- EWY(1매입/1매도), GOOG(1매입/1매도)
+
+**검증**: 순보유 17종목 전부 기대값과 일치 (SNDK 31주 포함)
+- DB UPDATE 완료 (user_id=3 portfolio_groups)
+- 백업: `backup_portfolio_groups_user3_20260709_225109.json`
+
+### refactor — 주식 통계 UI 섹션 재배치 및 수익률 버그 수정
+
+- **그룹별 누적 투자금액 추이** 차트 완전 삭제
+- **기간 버튼** 위치: 상단 → 집중도 섹션 하단 (비기간 차트와 분리)
+- **수익률(%)** 차트: y축이 절대 손익(₩/$) 값을 표시하던 버그 수정 → `pct` 필드(%) 사용으로 교체
+- **수익률 분석** 차트: 기간 버튼 연동 추가 (매수 날짜 cutoff 필터)
+- 차트 순서 재배치: 수익률(%) → 수익률 분석 → 종목별 기간 시장손익 → 포트폴리오 vs 벤치마크 → 일별 자산 추이
+
+---
+
 ## 2026-07-08 (3)
 
 ### feat — 주식 통계 페이지 전면 재설계 (옵션 B)
