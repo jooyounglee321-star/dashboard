@@ -246,7 +246,7 @@ function StockDetailPanel({ g, s, onUpdate }) {
               const bg = isBuy ? '#eff6ff' : '#fff1f2'
               const borderC = isBuy ? '#bfdbfe' : '#fecaca'
               const badgeStyle = { fontSize: '0.65rem', padding: '0.08rem 0.38rem', borderRadius: 4, background: isBuy ? '#dbeafe' : '#fee2e2', color: isBuy ? '#1d4ed8' : '#b91c1c', fontWeight: 600 }
-              if (editRec?.id === r.id) {
+              if (editRec !== null && editRec.id !== undefined && editRec.id === r.id) {
                 return (
                   <div key={r.id} style={{ background: bg, border: `1px solid ${borderC}`, borderRadius: 7, padding: '0.45rem 0.6rem' }}>
                     <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>

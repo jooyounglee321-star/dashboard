@@ -513,6 +513,12 @@ def save_groups(
         for s in g.get("stocks", []):
             if not s.get("id"):
                 s["id"] = _gen_id()
+            for r in s.get("purchases", []):
+                if not r.get("id"):
+                    r["id"] = _gen_id()
+            for r in s.get("sells", []):
+                if not r.get("id"):
+                    r["id"] = _gen_id()
 
     # 이름 변경된 그룹 감지
     renamed: dict[str, str] = {}  # group_id → new_name
