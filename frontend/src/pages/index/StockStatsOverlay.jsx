@@ -919,17 +919,6 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               )
             })()}
 
-            {/* 기간 선택 (전체 공유) */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0.7rem 1.2rem', borderBottom: '1px solid var(--border)' }}>
-              <PeriodSelector
-                value={overviewPeriod}
-                onChange={setOverviewPeriod}
-                customFrom={customFrom}
-                customTo={customTo}
-                onCustomChange={(f, t2) => { setCustomFrom(f); setCustomTo(t2) }}
-              />
-            </div>
-
             {/* ③ 전체 합계 요약 카드 */}
             {(() => {
               const filteredGroups = (grpTotals ?? []).filter(g => !overviewGroup || g.name?.toLowerCase() === overviewGroup.toLowerCase())
@@ -1059,6 +1048,17 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
 
             {/* ⑦ 집중도 섹션 */}
             {renderConcentration()}
+
+            {/* 기간 선택 (전체 공유) */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0.7rem 1.2rem', borderBottom: '1px solid var(--border)' }}>
+              <PeriodSelector
+                value={overviewPeriod}
+                onChange={setOverviewPeriod}
+                customFrom={customFrom}
+                customTo={customTo}
+                onCustomChange={(f, t2) => { setCustomFrom(f); setCustomTo(t2) }}
+              />
+            </div>
 
             {/* ⑥ 포트폴리오 vs 벤치마크 */}
             <div className="stats-section">
