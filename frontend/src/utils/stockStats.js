@@ -165,7 +165,7 @@ export function computeUnits(stockData, selectedGroup) {
  * @param {string} selectedGroup
  * @returns {Array<{ticker, name, holdQty, avgCost, curPrice, returnPct, isKRW}>}
  */
-export function computeReturnRates(stockData, selectedGroup) {
+export function computeReturnRates(stockData, selectedGroup, cutoff = null, cutoffEnd = null) {
   if (!stockData?.groups) return []
   const { groups, priceMap = {} } = stockData
   const groupNames = groups.map(g => cleanStr(g.name, g.id))
@@ -178,7 +178,11 @@ export function computeReturnRates(stockData, selectedGroup) {
   for (const g of targetGroups) {
     for (const s of g.stocks || []) {
       if (s.is_deleted) continue
-      const pp = s.purchases || [], sl = s.sells || []
+      const allPp = s.purchases || [], sl = s.sells || []
+      // 기간 필터: cutoff 설정 시 해당 기간 내 매수만 대상
+      const pp = (cutoff || cutoffEnd)
+        ? allPp.filter(p => (!cutoff || !p.date || p.date >= cutoff) && (!cutoffEnd || !p.date || p.date <= cutoffEnd))
+        : allPp
       const bq = pp.reduce((a, p) => a + (p.qty || 0), 0)
       const sq = sl.reduce((a, p) => a + (p.qty || 0), 0)
       const hq = Math.max(0, bq - sq)

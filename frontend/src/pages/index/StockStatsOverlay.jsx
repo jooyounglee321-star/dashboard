@@ -242,10 +242,11 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   )
 
   // ── 수익률 계산 ──
-  const returnRates = useMemo(
-    () => computeReturnRates(stockData, overviewGroup),
-    [stockData, overviewGroup]
-  )
+  const returnRates = useMemo(() => {
+    const cutoff = calcCutoff(overviewPeriod, customFrom)
+    const cutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
+    return computeReturnRates(stockData, overviewGroup, cutoff, cutoffEnd)
+  }, [stockData, overviewGroup, overviewPeriod, customFrom, customTo])
 
   // ── 집중도 계산 ──
   const concentration = useMemo(
@@ -371,7 +372,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
       },
     })
     return () => { if (returnBarChartRef.current) { returnBarChartRef.current.destroy(); returnBarChartRef.current = null } }
-  }, [isOpen, returnRates, lang])
+  }, [isOpen, returnRates, lang, overviewPeriod, customFrom, customTo])
 
   // ── 벤치마크 차트 useEffect ──
   useEffect(() => {
@@ -1005,6 +1006,20 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               }
             </div>
 
+            {/* ⑦ 집중도 섹션 */}
+            {renderConcentration()}
+
+            {/* 기간 선택 (전체 공유) */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0.7rem 1.2rem', borderBottom: '1px solid var(--border)' }}>
+              <PeriodSelector
+                value={overviewPeriod}
+                onChange={setOverviewPeriod}
+                customFrom={customFrom}
+                customTo={customTo}
+                onCustomChange={(f, t2) => { setCustomFrom(f); setCustomTo(t2) }}
+              />
+            </div>
+
             {/* ⑤ 수익률% 바차트 */}
             <div className="stats-section">
               <div className="stats-section-title">{t(lang, 'statsReturnTitle')}</div>
@@ -1044,20 +1059,6 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                   </div>
                 : <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)', fontSize: '0.85rem' }}>{t(lang, 'stock.noData')}</div>
               }
-            </div>
-
-            {/* ⑦ 집중도 섹션 */}
-            {renderConcentration()}
-
-            {/* 기간 선택 (전체 공유) */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0.7rem 1.2rem', borderBottom: '1px solid var(--border)' }}>
-              <PeriodSelector
-                value={overviewPeriod}
-                onChange={setOverviewPeriod}
-                customFrom={customFrom}
-                customTo={customTo}
-                onCustomChange={(f, t2) => { setCustomFrom(f); setCustomTo(t2) }}
-              />
             </div>
 
             {/* ⑥ 포트폴리오 vs 벤치마크 */}
