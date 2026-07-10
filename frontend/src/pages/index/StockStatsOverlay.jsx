@@ -1489,7 +1489,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                     <tr key={r.id} style={{ borderBottom: '1px solid var(--border)' }}>
                       <td style={{ padding: '0.4rem 0.5rem', color: 'var(--ink)', fontWeight: 500 }}>{r.snapshot_date}</td>
                       {currencies.map(cur => (
-                        <td key={cur} style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: 'var(--ink)', fontWeight: 600 }}>
+                        <td key={cur} style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: 'var(--ink)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
                           {fmtByCurrency(getValByCurrency(r, cur), cur)}
                         </td>
                       ))}
