@@ -438,7 +438,7 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
                   {!activeStocks.length
                     ? <div style={{ fontSize: '0.78rem', color: 'var(--ink3)', fontStyle: 'italic', textAlign: 'center', padding: '0.4rem 0.8rem' }}>종목이 없습니다. 아래에서 추가하세요.</div>
                     : activeStocks.map(s => {
-                      const { holdQty, avgBuyPrice, totalSellQty } = stockSummary(s)
+                      const { holdQty, totalBuyQty, avgBuyPrice, totalSellQty } = stockSummary(s)
                       const isOpenS = expanded.has(s.id)
                       return (
                         <div key={s.id}>
@@ -448,7 +448,7 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
                                 <strong>{s.ticker}</strong>{s.name ? ` · ${s.name}` : ''} <span style={{ fontSize: '0.68rem', color: 'var(--ink3)' }}>{isOpenS ? '▲' : '▼'}</span>
                               </div>
                               <div style={{ fontSize: '0.72rem', color: 'var(--ink3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {holdQty > 0 ? `보유 ${holdQty.toLocaleString()}주` : '수량 미등록'}
+                                {totalBuyQty > 0 ? `보유 ${holdQty.toLocaleString()}주` : '수량 미등록'}
                                 {avgBuyPrice > 0 ? ` · 평균 ${sym}${fmtA(avgBuyPrice)}` : ''}
                                 {totalSellQty > 0 ? ` · 매도 ${totalSellQty.toLocaleString()}주` : ''}
                               </div>
