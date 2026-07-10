@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-07-10
+
+### fix — 주식통계 전체재계산 365일 제한 해제
+- `backfill_portfolio_snapshots()` 함수에 `override_max_days` 파라미터 추가
+- `POST /api/portfolio/backfill-full` 엔드포인트에서 `override_max_days=0` (무제한)으로 호출
+- 기존: 전체재계산 버튼 클릭 시 최초 매입일부터 최근 365일만 계산 → 2020년 내역 누락
+- 수정 후: 최초 매입일(2020년)부터 어제까지 전체 날짜 제한 없이 계산
+- 일반 스냅샷 자동 백필(365일/30일 제한)은 기존 동작 유지
+
+---
+
 ## 2026-07-09
 
 ### feat — Vanguard IRA PDF 거래내역 DB 반영 (10개 종목 신규 추가)

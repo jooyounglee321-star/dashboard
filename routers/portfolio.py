@@ -81,7 +81,7 @@ def _get_historical_prices_batch(
         return {}
 
 
-def backfill_portfolio_snapshots(user_id: int, db: Session, force_start_date=None) -> dict:
+def backfill_portfolio_snapshots(user_id: int, db: Session, force_start_date=None, override_max_days: int | None = None) -> dict:
     """누락된 날짜의 포트폴리오 스냅샷을 해당일 종가로 백필.
 
     신규 유저 (스냅샷 0건):
@@ -181,6 +181,9 @@ def backfill_portfolio_snapshots(user_id: int, db: Session, force_start_date=Non
         start_date = latest.snapshot_date + timedelta(days=1)
         max_days = 30
 
+    if override_max_days is not None:
+        max_days = override_max_days
+
     # ② 이미 존재하는 날짜 집합 (범위 내 한 번에 조회, NULL 제외)
     # total_krw_equiv == 0인 날짜는 제외 → 0원짜리 스냅샷은 재계산 대상으로 취급
     existing = {
@@ -210,7 +213,7 @@ def backfill_portfolio_snapshots(user_id: int, db: Session, force_start_date=Non
     if not missing:
         return {"backfilled": 0, "dates": [], "is_new_user": is_new_user}
 
-    if len(missing) > max_days:
+    if max_days > 0 and len(missing) > max_days:
         missing = missing[-max_days:]  # 가장 최근 N일만
 
     # ④ portfolio_groups.data를 1차 소스 — 전량 매도 포함 모든 종목 처리
@@ -463,9 +466,8 @@ def run_full_backfill(
         except Exception:
             pass
 
-    # 신규 유저처럼 취급하여 최대 365일 백필
-    # (삭제했으니 is_new_user=True로 동작)
-    result = backfill_portfolio_snapshots(user_id, db, force_start_date=earliest_purchase_date)
+    # 전체 재계산: 날짜 제한 없이 최초 매입일부터 전부 계산 (override_max_days=0)
+    result = backfill_portfolio_snapshots(user_id, db, force_start_date=earliest_purchase_date, override_max_days=0)
 
     result["deleted"] = deleted
     result["earliest_purchase_date"] = str(earliest_purchase_date) if earliest_purchase_date else None
