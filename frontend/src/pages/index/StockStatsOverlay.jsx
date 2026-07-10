@@ -475,28 +475,22 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     const cutoff = calcCutoff(overviewPeriod, customFrom)
     const cutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
 
-    // 바차트 (평가손익 절대값)
+    // 바차트 (수익률 %)
     if (barRef.current && periodStockEvals.length) {
       const tickerSet = overviewGroup ? new Set(groupTickers[overviewGroup] ?? []) : null
       const filtered = tickerSet ? periodStockEvals.filter(s => tickerSet.has(s.label)) : periodStockEvals
       if (filtered.length) {
-        const converted = filtered.map(s => {
-          if (overviewCurrency === 'KRW' && !s.isKRW && fxRate) return { ...s, evalPL: s.evalPL * fxRate, sym: '₩', isKRW: true }
-          if (overviewCurrency === 'USD' && s.isKRW && fxRate) return { ...s, evalPL: s.evalPL / fxRate, sym: '$', isKRW: false }
-          return s
-        })
-        const sorted = [...converted].sort((a, b) => b.evalPL - a.evalPL)
-        const axisSymbol = overviewCurrency === 'KRW' ? '₩' : '$'
+        const sorted = [...filtered].filter(s => s.pct != null).sort((a, b) => b.pct - a.pct)
         const inst = new Chart(barRef.current, {
           type: 'bar',
           data: {
             labels: sorted.map(s => s.isKRW ? s.name : (s.label && s.label !== 'undefined' ? s.label : s.name)),
-            datasets: [{ label: t(lang, 'statsBarLabel'), data: sorted.map(s => parseFloat(s.evalPL.toFixed(2))), backgroundColor: sorted.map(s => s.evalPL >= 0 ? 'rgba(74,124,89,0.75)' : 'rgba(220,38,38,0.75)'), borderColor: sorted.map(s => s.evalPL >= 0 ? '#4a7c59' : '#dc2626'), borderWidth: 1 }],
+            datasets: [{ label: '수익률', data: sorted.map(s => parseFloat(s.pct.toFixed(2))), backgroundColor: sorted.map(s => s.pct >= 0 ? 'rgba(74,124,89,0.75)' : 'rgba(220,38,38,0.75)'), borderColor: sorted.map(s => s.pct >= 0 ? '#4a7c59' : '#dc2626'), borderWidth: 1 }],
           },
           options: {
             responsive: true,
-            scales: { y: { title: { display: true, text: `${t(lang, 'statsAxisPL')} (${axisSymbol})` }, ticks: { callback: v => { const fmt = fmtShort(Math.abs(v), overviewCurrency); return v >= 0 ? `+${fmt}` : `-${fmt}` } } } },
-            plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => { const s = sorted[ctx.dataIndex]; const fmt = fmtShort(Math.abs(s.evalPL), overviewCurrency); return `${s.evalPL >= 0 ? '+' : '-'}${fmt}` } } } },
+            scales: { y: { title: { display: true, text: '수익률 (%)' }, ticks: { callback: v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%` } } },
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => { const s = sorted[ctx.dataIndex]; return `${s.pct >= 0 ? '+' : ''}${s.pct.toFixed(2)}%` } } } },
           },
         })
         chartsRef.current.push(inst)

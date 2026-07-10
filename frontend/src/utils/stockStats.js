@@ -77,10 +77,12 @@ export function computePeriodStats(stockData, period, customFrom = null, customT
       const allVQT = allValidPP.reduce((a, p) => a + p.qty, 0)
       const allAvg = allVQT > 0 ? allWS / allVQT : 0
       const evalPL = allAvg > 0 && totalHQ > 0 ? (cur - allAvg) * totalHQ : null
+      const pct    = allAvg > 0 ? (cur - allAvg) / allAvg * 100 : null
       if (evalPL != null) pse.push({
         label: s.ticker,
         name: cleanStr(s.name, s.ticker),
         evalPL,
+        pct,
         sym,
         isKRW,
       })
