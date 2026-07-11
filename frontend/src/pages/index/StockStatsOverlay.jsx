@@ -1483,7 +1483,20 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                     } else {
                       const portStart = filteredHist.length ? getValue(filteredHist[0]) : null
                       const portEnd = filteredHist.length ? getValue(filteredHist[filteredHist.length - 1]) : null
-                      portRet = portStart && portEnd && portStart > 0 ? (portEnd - portStart) / portStart * 100 : null
+                      if (portStart && portEnd && portStart > 0) {
+                        // 기간 중 추가된 납입금을 차감해야 진짜 수익률이 나옴
+                        const targetGroups = (stockData?.groups ?? []).filter(g => {
+                          if (overviewGroup) return cleanStr(g.name, g.id) === overviewGroup
+                          return useKRW ? g.currency === 'KRW' : g.currency !== 'KRW'
+                        })
+                        const periodContribs = targetGroups.reduce((sum, g) =>
+                          sum + (g.contributions || [])
+                            .filter(c => c.date && c.date >= cutoff)
+                            .reduce((a, c) => a + (c.amount || 0), 0)
+                        , 0)
+                        const netGain = portEnd - portStart - periodContribs
+                        portRet = netGain / (portStart + periodContribs) * 100
+                      }
                     }
 
                     const rows = [{ name: t(lang, 'statsBenchmarkPortfolio'), ret: portRet }]
