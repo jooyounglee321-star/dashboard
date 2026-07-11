@@ -277,7 +277,7 @@
   "scheduleGcalLine2": "일정이 자동으로 표시돼요",
   "scheduleGcalBtn": "Google 계정 연동",
   "scheduleRefresh": "🔄 일정 새로고침",
-  "todoTitle": "오늘 할 일",
+  "todoTitle": "할 일",
   "todoPlaceholder": "할 일 입력…",
   "todoDuePlaceholder": "마감일 (선택사항 · 미입력시 계속 표시)",
   "todoStartPlaceholder": "시작일 (선택사항 · 미입력시 오늘부터)",
