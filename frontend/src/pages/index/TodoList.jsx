@@ -3,6 +3,9 @@ import { t } from './i18n'
 import { authH, authHJ } from '../../utils/api'
 
 export default function TodoList({ date, lang = 'ko', isMobile = false }) {
+  const today = date   // 실제 오늘 날짜 (변하지 않음)
+
+  const [viewDate, setViewDate] = useState(date)
   const [todos, setTodos]       = useState([])
   const [loading, setLoading]   = useState(false)
   const [showForm, setShowForm] = useState(false)
@@ -14,15 +17,23 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
   const [saving,   setSaving]   = useState(false)
   const [savedMsg, setSavedMsg] = useState('')
 
+  const isViewingToday = viewDate === today
+
+  function shiftDay(delta) {
+    const d = new Date(viewDate + 'T00:00:00')
+    d.setDate(d.getDate() + delta)
+    setViewDate(d.toISOString().slice(0, 10))
+  }
+
   const load = useCallback(async () => {
-    if (!date) return
+    if (!viewDate) return
     setLoading(true)
     try {
-      const res = await fetch(`/api/todos?date=${date}`, { headers: authH() })
+      const res = await fetch(`/api/todos?date=${viewDate}`, { headers: authH() })
       setTodos(res.ok ? await res.json() : [])
     } catch { setTodos([]) }
     finally { setLoading(false) }
-  }, [date])
+  }, [viewDate])
 
   useEffect(() => { load() }, [load])
 
@@ -54,7 +65,7 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
         }),
       })
       if (res.ok) {
-        const isFuture = newStart && newStart > date
+        const isFuture = newStart && newStart > viewDate
         resetForm()
         setShowForm(false)
         if (isFuture) {
@@ -69,19 +80,18 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
   }
 
   async function toggleCheck(todo) {
-    const isDone = todo.is_done_dates.includes(date)
+    const isDone = todo.is_done_dates.includes(viewDate)
     await fetch(`/api/todos/${todo.id}/check`, {
       method: 'PUT',
       headers: authHJ(),
-      body: JSON.stringify({ date, checked: !isDone }),
+      body: JSON.stringify({ date: viewDate, checked: !isDone }),
     })
-    const todoType = todo.todo_type || 'repeat'
     setTodos(prev => prev.map(td =>
       td.id !== todo.id ? td : {
         ...td,
         is_done_dates: isDone
-          ? td.is_done_dates.filter(d => d !== date)
-          : [...td.is_done_dates, date],
+          ? td.is_done_dates.filter(d => d !== viewDate)
+          : [...td.is_done_dates, viewDate],
       }
     ))
   }
@@ -91,7 +101,6 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
     setTodos(prev => prev.filter(td => td.id !== id))
   }
 
-  // 날짜 표시 타입 판별
   function dateDisplay(todo) {
     const s = todo.start_date
     const d = todo.due_date
@@ -104,12 +113,11 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
     return { label: t(lang, 'todoDueLabel') + ' ' + dLabel, oneDay: false }
   }
 
-  function isToday(dueStr) { return dueStr && date && dueStr === date }
-  function isOverdue(dueStr) { return dueStr && date && dueStr < date }
+  function isToday(dueStr) { return dueStr && viewDate && dueStr === viewDate }
+  function isOverdue(dueStr) { return dueStr && viewDate && dueStr < viewDate }
 
   const fs = isMobile ? { title: '0.82rem', sub: '0.74rem' } : { title: '0.85rem', sub: '0.75rem' }
 
-  // 타입 토글 버튼 스타일
   function typeBtnStyle(active) {
     return {
       fontSize: '0.72rem', padding: '0.25rem 0.5rem', borderRadius: 6, cursor: 'pointer',
@@ -119,21 +127,49 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
     }
   }
 
+  const navBtnSt = {
+    fontSize: '0.75rem', padding: '0.18rem 0.45rem', borderRadius: 5, cursor: 'pointer',
+    fontFamily: 'inherit', border: '1px solid var(--border)',
+    background: 'var(--bg)', color: 'var(--ink3)', lineHeight: 1,
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       {/* 섹션 헤더 */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
-        <span style={{ fontSize: fs.title, fontWeight: 600, color: 'var(--ink)' }}>
-          ✅ {t(lang, 'todoTitle')}
-        </span>
-        {!showForm && (
-          <button
-            onClick={() => setShowForm(true)}
-            style={{ fontSize: '0.75rem', color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '0.1rem 0.3rem' }}
-          >
-            {t(lang, 'todoAddBtn')}
-          </button>
-        )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.6rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: fs.title, fontWeight: 600, color: 'var(--ink)' }}>
+            ✅ {t(lang, 'todoTitle')}
+          </span>
+          {!showForm && (
+            <button
+              onClick={() => setShowForm(true)}
+              style={{ fontSize: '0.75rem', color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '0.1rem 0.3rem' }}
+            >
+              {t(lang, 'todoAddBtn')}
+            </button>
+          )}
+        </div>
+
+        {/* 날짜 네비게이션 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+          <button onClick={() => shiftDay(-1)} style={navBtnSt}>←</button>
+          <input
+            type="date"
+            value={viewDate}
+            onChange={e => e.target.value && setViewDate(e.target.value)}
+            style={{ flex: 1, fontSize: '0.73rem', border: '1px solid var(--border)', borderRadius: 5, padding: '0.18rem 0.35rem', background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit', cursor: 'pointer', textAlign: 'center' }}
+          />
+          <button onClick={() => shiftDay(1)} style={navBtnSt}>→</button>
+          {!isViewingToday && (
+            <button
+              onClick={() => setViewDate(today)}
+              style={{ ...navBtnSt, color: 'var(--accent)', fontSize: '0.65rem', padding: '0.18rem 0.45rem', fontWeight: 600 }}
+            >
+              오늘
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 인라인 추가 폼 */}
@@ -217,7 +253,7 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
         )}
         {todos.map(todo => {
           const todoType = todo.todo_type || 'repeat'
-          const done     = todo.is_done_dates.includes(date)
+          const done     = todo.is_done_dates.includes(viewDate)
           const disp     = dateDisplay(todo)
           const overdue  = isOverdue(todo.due_date)
           const todayDue = isToday(todo.due_date)
