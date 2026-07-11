@@ -208,7 +208,7 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
     })
     const stockRows = sortedStocks.flatMap(s => {
       const { holdQty, avgCost, cur, chP, val, evalPL, evalPct, realizedPL, totalSellQty, isLive, hasPrice, marketState } = stockCalcMap.get(s) ?? calcStock(s, priceMap)
-      if (holdQty === 0) return []
+      if (holdQty <= 0) return []
       grpTotal += val
       const cs = chP >= 0 ? 'up' : 'down'; const sg = chP >= 0 ? '▲' : '▼'
       const eps = evalPL != null ? (evalPL >= 0 ? 'up' : 'down') : ''
