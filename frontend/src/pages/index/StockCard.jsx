@@ -206,8 +206,9 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
       const bEtf = (b.name || b.ticker || '').toUpperCase().includes('ETF') ? 1 : 0
       return aEtf - bEtf
     })
-    const stockRows = sortedStocks.map(s => {
+    const stockRows = sortedStocks.flatMap(s => {
       const { holdQty, avgCost, cur, chP, val, evalPL, evalPct, realizedPL, totalSellQty, isLive, hasPrice, marketState } = stockCalcMap.get(s) ?? calcStock(s, priceMap)
+      if (holdQty === 0) return []
       grpTotal += val
       const cs = chP >= 0 ? 'up' : 'down'; const sg = chP >= 0 ? '▲' : '▼'
       const eps = evalPL != null ? (evalPL >= 0 ? 'up' : 'down') : ''
