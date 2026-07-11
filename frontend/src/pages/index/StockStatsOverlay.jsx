@@ -892,23 +892,6 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         color: 'var(--ink)',
       },
       {
-        label: t(lang, 'statsKpiUnrealized'),
-        value: hasMultiCurrency
-          ? `${kpi.unrealizedKRWTotal >= 0 ? '+' : ''}₩${fmtKRW(kpi.unrealizedKRWTotal)}`
-          : kpi.unrealizedKRW !== 0 ? `${kpi.unrealizedKRW >= 0 ? '+' : ''}₩${fmtKRW(kpi.unrealizedKRW)}`
-          : `${kpi.unrealizedUSD >= 0 ? '+' : ''}$${fmtUSD(kpi.unrealizedUSD)}`,
-        sub: `${kpi.unrealizedPct >= 0 ? '+' : ''}${kpi.unrealizedPct.toFixed(2)}%`,
-        color: kpi.unrealizedKRWTotal >= 0 ? '#16a34a' : '#dc2626',
-      },
-      {
-        label: t(lang, 'statsKpiRealized'),
-        value: realizedLoading ? t(lang, 'statsRealizedLoading') : realizedData
-          ? `${realizedData.total >= 0 ? '+' : ''}${fmtShort(Math.abs(realizedData.total), 'USD')}`
-          : '—',
-        sub: realizedData?.items?.length ? `${realizedData.items.length}건` : null,
-        color: !realizedData || realizedData.total === 0 ? 'var(--ink)' : realizedData.total > 0 ? '#16a34a' : '#dc2626',
-      },
-      {
         label: t(lang, 'statsKpiToday'),
         value: hasMultiCurrency
           ? `${kpi.todayChgKRWTotal >= 0 ? '+' : ''}₩${fmtKRW(kpi.todayChgKRWTotal)}`
@@ -920,7 +903,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     ]
 
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', padding: '1rem 1.2rem', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', padding: '1rem 1.2rem', borderBottom: '1px solid var(--border)' }}>
         {cards.map((c, i) => (
           <div key={i} style={{ background: 'var(--card)', borderRadius: 10, padding: '0.85rem 1rem', border: '1px solid var(--border)', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
             <div style={{ fontSize: '0.72rem', color: 'var(--ink3)', marginBottom: '0.35rem', fontWeight: 500 }}>{c.label}</div>
@@ -1135,17 +1118,12 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                         <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ink2)', letterSpacing: '0.08em' }}>CASH</div>
                         {cashGroups.map(g => {
                           const contributed = (g.contributions || []).reduce((a, c) => a + (c.amount || 0), 0)
-                          const totalBuy    = (g.stocks || []).reduce((a, s) => a + (s.purchases || []).reduce((b, p) => b + (p.price || 0) * (p.qty || 0), 0), 0)
-                          const totalSell   = (g.stocks || []).reduce((a, s) => a + (s.sells || []).reduce((b, sv) => b + (sv.price || 0) * (sv.qty || 0), 0), 0)
-                          const balance     = contributed - totalBuy + totalSell
                           const sym = g.currency === 'USD' ? '$' : '₩'
                           const fmt = v => g.currency === 'USD' ? fmtUSD(v) : fmtKRW(v)
                           return (
-                            <div key={g.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.3rem', fontSize: '0.72rem', background: 'var(--card2)', borderRadius: 8, padding: '0.45rem 0.7rem' }}>
+                            <div key={g.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.3rem', fontSize: '0.72rem', background: 'var(--card2)', borderRadius: 8, padding: '0.45rem 0.7rem' }}>
                               <div style={{ color: 'var(--ink3)' }}>{cleanStr(g.name, g.id)}<br /><span style={{ fontSize: '0.65rem' }}>{g.currency}</span></div>
                               <div style={{ color: 'var(--ink3)' }}>납입금<br /><span style={{ color: 'var(--ink)', fontWeight: 600 }}>{sym}{fmt(contributed)}</span></div>
-                              <div style={{ color: 'var(--ink3)' }}>매도수익<br /><span style={{ color: '#16a34a', fontWeight: 600 }}>+{sym}{fmt(totalSell)}</span></div>
-                              <div style={{ color: 'var(--ink3)' }}>잔고<br /><span style={{ color: balance >= 0 ? '#16a34a' : '#dc2626', fontWeight: 700 }}>{sym}{fmt(Math.abs(balance))}{balance < 0 ? ' ⚠' : ''}</span></div>
                             </div>
                           )
                         })}
