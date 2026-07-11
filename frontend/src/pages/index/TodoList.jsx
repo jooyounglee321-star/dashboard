@@ -12,6 +12,7 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
   const [newDue,   setNewDue]   = useState('')
   const [dateErr,  setDateErr]  = useState(false)
   const [saving,   setSaving]   = useState(false)
+  const [savedMsg, setSavedMsg] = useState('')
 
   const load = useCallback(async () => {
     if (!date) return
@@ -53,8 +54,13 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
         }),
       })
       if (res.ok) {
+        const isFuture = newStart && newStart > date
         resetForm()
         setShowForm(false)
+        if (isFuture) {
+          setSavedMsg(`✓ 저장됨 (${newStart}부터 표시)`)
+          setTimeout(() => setSavedMsg(''), 3000)
+        }
       }
     } finally {
       setSaving(false)
@@ -193,6 +199,13 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
               style={{ fontSize: fs.sub, padding: '0.3rem 0.5rem', background: 'var(--card2)', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit', color: 'var(--ink3)' }}
             >{t(lang, 'todoCancelBtn')}</button>
           </div>
+        </div>
+      )}
+
+      {/* 저장 확인 메시지 */}
+      {savedMsg && (
+        <div style={{ fontSize: '0.75rem', color: '#16a34a', padding: '0.3rem 0.5rem', background: '#f0fdf4', borderRadius: 6, marginBottom: '0.4rem', border: '1px solid #bbf7d0' }}>
+          {savedMsg}
         </div>
       )}
 
