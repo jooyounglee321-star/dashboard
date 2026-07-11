@@ -55,9 +55,11 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
       if (res.ok) {
         resetForm()
         setShowForm(false)
-        await load()
       }
-    } finally { setSaving(false) }
+    } finally {
+      setSaving(false)
+    }
+    await load()
   }
 
   async function toggleCheck(todo) {
