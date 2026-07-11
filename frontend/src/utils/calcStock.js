@@ -5,7 +5,7 @@ export function calcStock(s, priceMap) {
   const activeSL = sl.filter(p => !p.date || p.date <= today)
   const totalBuyQty  = activePP.reduce((a, p) => a + (p.qty || 0), 0)
   const totalSellQty = activeSL.reduce((a, p) => a + (p.qty || 0), 0)
-  const holdQty  = Math.max(0, totalBuyQty - totalSellQty)
+  const holdQty  = Math.max(0, parseFloat((totalBuyQty - totalSellQty).toFixed(8)))
   const validPP  = activePP.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
   const ws       = validPP.reduce((a, p) => a + p.price * p.qty, 0)
   const vq       = validPP.reduce((a, p) => a + p.qty, 0)

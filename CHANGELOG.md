@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-07-11
+
+### fix — 보유수량 0 주식 메인화면 노출 버그 수정 (부동소수점)
+- **문제**: 전량 매도한 VOO 등 주식이 메인화면에 계속 표시됨
+- **원인**: `totalBuyQty - totalSellQty`가 IEEE 754 부동소수점 오차로 인해 `2.22e-16` 같은 극소 양수 반환 → `holdQty <= 0` 조건 통과 실패
+- **수정**: `calcStock.js`에서 차이값을 `toFixed(8)` 으로 8자리 반올림 후 0 판별 → 오차 제거
+  - `Math.max(0, parseFloat((totalBuyQty - totalSellQty).toFixed(8)))`
+
+---
+
 ## 2026-07-10 (6)
 
 ### fix — 수익률 (%) 차트 기간 필터 미적용 버그 수정
