@@ -12,3 +12,5 @@ python-jose[cryptography]
 feedparser
 slowapi
 pytz
+authlib
+httpx

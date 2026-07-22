@@ -31,6 +31,21 @@ export default function LoginPage() {
     return () => window.removeEventListener('languageChanged', handleLangChange)
   }, [])
 
+  // 구글 OAuth 콜백 토큰 처리
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const token = params.get('token')
+    const error = params.get('error')
+    if (token) {
+      localStorage.setItem('token', token)
+      window.history.replaceState({}, '', '/login')
+      navigate('/')
+    } else if (error) {
+      setMsg({ type: 'error', text: t(lang, 'auth.errLogin') })
+      window.history.replaceState({}, '', '/login')
+    }
+  }, [])
+
   async function handleSubmit(e) {
     e.preventDefault()
     setMsg({ type: '', text: '' })
@@ -82,7 +97,7 @@ export default function LoginPage() {
           <div className="card-sub">{t(lang, 'auth.loginSub')}</div>
 
           <div className="social-btns">
-            <button className="btn-social btn-google" type="button" onClick={() => alert(t(lang, 'auth.googleComingSoon'))}>
+            <button className="btn-social btn-google" type="button" onClick={() => { window.location.href = '/api/auth/google/login' }}>
               <GoogleLogo /> {t(lang, 'auth.googleLogin')}
             </button>
             <button className="btn-social btn-facebook" type="button" onClick={() => alert(t(lang, 'auth.facebookComingSoon'))}>
