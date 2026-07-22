@@ -4,6 +4,23 @@
 
 ---
 
+## 2026-07-22
+
+### feat — Google 소셜 로그인 구현
+- **백엔드** (`routers/auth.py`):
+  - `GET /api/auth/google/login` — 구글 OAuth2 인증 페이지로 리디렉트
+  - `GET /api/auth/google/callback` — 인증 코드 교환 → 유저 정보 조회 → 기존 회원 조회 또는 자동 회원가입 → JWT 발급 → `/login?token=xxxx` 리디렉트
+  - 기존 `provider`/`provider_id` 컬럼 활용 (User 모델 변경 없음)
+  - `httpx` 직접 사용으로 구글 API 통신
+- **프론트엔드** (`LoginPage.jsx`):
+  - 구글 로그인 버튼 onClick: `window.location.href = '/api/auth/google/login'`
+  - 마운트 시 `?token=xxxx` 파라미터 감지 → `localStorage.setItem('token', ...)` → 대시보드로 이동
+  - `?error=` 파라미터 시 에러 메시지 표시
+- **패키지**: `requirements.txt`에 `authlib`, `httpx` 추가
+- **확인**: grep으로 핵심 키워드 존재 확인 완료
+
+---
+
 ## 2026-07-11 (2)
 
 ### feat — 할 일 날짜 탐색 기능 추가

@@ -3,11 +3,14 @@ import json
 import logging
 import os
 import re
+import urllib.parse
 from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 
+import httpx
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi.responses import RedirectResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from jose import JWTError, jwt
@@ -29,6 +32,14 @@ EMAIL_RE   = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "")   # 이 이메일로 가입하면 자동 admin
 if not ADMIN_EMAIL:
     logger.warning("[AUTH] ADMIN_EMAIL 환경변수가 설정되지 않았습니다. 자동 admin 부여가 비활성화됩니다.")
+
+# Google OAuth 설정
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+GOOGLE_REDIRECT_URI = "https://dashboard-production-4a18.up.railway.app/api/auth/google/callback"
+GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
 
 # JWT 설정
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -244,6 +255,95 @@ def update_me(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+# ── GET /api/auth/google/login ───────────────────────────────────────────────
+
+@router.get("/google/login", summary="구글 소셜 로그인 시작")
+def google_login():
+    """구글 OAuth2 인증 페이지로 리디렉트합니다."""
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=500, detail="Google OAuth가 설정되지 않았습니다.")
+    params = {
+        "client_id": GOOGLE_CLIENT_ID,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "redirect_uri": GOOGLE_REDIRECT_URI,
+        "access_type": "offline",
+    }
+    url = GOOGLE_AUTH_URL + "?" + urllib.parse.urlencode(params)
+    return RedirectResponse(url)
+
+
+# ── GET /api/auth/google/callback ────────────────────────────────────────────
+
+@router.get("/google/callback", summary="구글 OAuth2 콜백 처리")
+def google_callback(code: str | None = None, error: str | None = None, db: Session = Depends(get_db)):
+    """구글 인증 후 콜백 — JWT 발급 후 프론트엔드로 리디렉트."""
+    if error or not code:
+        return RedirectResponse("/login?error=google_cancelled")
+
+    # 코드 → 액세스 토큰 교환
+    try:
+        token_res = httpx.post(GOOGLE_TOKEN_URL, data={
+            "code": code,
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "redirect_uri": GOOGLE_REDIRECT_URI,
+            "grant_type": "authorization_code",
+        }, timeout=10)
+    except Exception:
+        return RedirectResponse("/login?error=google_token_failed")
+
+    if token_res.status_code != 200:
+        return RedirectResponse("/login?error=google_token_failed")
+
+    access_token = token_res.json().get("access_token")
+
+    # 구글 유저 정보 조회
+    try:
+        userinfo_res = httpx.get(
+            GOOGLE_USERINFO_URL,
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=10,
+        )
+    except Exception:
+        return RedirectResponse("/login?error=google_userinfo_failed")
+
+    if userinfo_res.status_code != 200:
+        return RedirectResponse("/login?error=google_userinfo_failed")
+
+    userinfo = userinfo_res.json()
+    email = userinfo.get("email")
+    google_id = userinfo.get("id")
+    name = userinfo.get("name")
+
+    if not email:
+        return RedirectResponse("/login?error=no_email")
+
+    # 기존 유저 조회 또는 자동 회원가입
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        auto_role = "admin" if email.lower() == ADMIN_EMAIL else "free"
+        user = User(
+            email=email,
+            provider="google",
+            provider_id=google_id,
+            name=name,
+            role=auto_role,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    # 로그인 통계 업데이트
+    user.last_login_at = datetime.now(timezone.utc)
+    user.login_count = (user.login_count or 0) + 1
+    db.commit()
+    db.refresh(user)
+
+    jwt_token = _create_token(user.id, user.email, user.role)
+    return RedirectResponse(f"/login?token={jwt_token}")
 
 
 # ── POST /api/auth/logout ────────────────────────────────────────────────────
