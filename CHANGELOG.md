@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-07-23 (3)
+
+### test — 전체 테스트 실행 및 버그 수정
+- **프론트엔드 단위 테스트 (Vitest)**: 57/57 passed ✅
+  - 대상: `calcCutoff`, `cleanStr`, `computePeriodStats`, `computeUnits`, `computeReturnRates`, `computeConcentration`, `computeRealizedPL`
+  - 버그 발견·수정: `describe('calcCutoff')`의 `afterAll(() => vi.useRealTimers())`가 이후 describe 블록 전체를 real 타이머로 전환 → 현재 날짜(2026-07-23) 기준 1M cutoff가 2026-06-23이 되어 TSLA(2026-06-20 매입) 케이스 실패
+  - 수정: `vi.useRealTimers()` → `vi.useFakeTimers({ now: new Date('2026-07-07T12:00:00Z') })`로 전역 설정 복원
+- **백엔드 단위 테스트 (Python)**: 8/8 passed ✅
+  - `_get_or_create_social_user` 6케이스: social_id 우선 조회, 이메일 계정 통합, 신규 생성, 폴백 이메일, admin 역할 부여, social_id 우선순위
+  - CHANGELOG 파서: 7월 11개 날짜 정상 인식
+  - 마이그레이션 정규식: `facebook_숫자@facebook.com` → `social_id` 추출
+- **배포 API 테스트 (curl)**: 5/5 passed ✅
+  - `/api/health` → `{"status":"ok"}`
+  - `/api/auth/google/login` → 307 Google OAuth 리디렉트
+  - `/api/auth/facebook/login` → 307 Facebook OAuth (scope=public_profile, email 제외 확인)
+  - `/api/auth/facebook/callback` (코드 없음) → `/login?error=facebook_cancelled`
+  - 잘못된 JWT → 401 인증 오류
+
+---
+
 ## 2026-07-23 (2)
 
 ### feat — 소셜 로그인 social_id 기반으로 완전 개편
