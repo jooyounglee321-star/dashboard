@@ -6,11 +6,14 @@
 
 ## 2026-07-22
 
-### fix — 오늘 가입자 카운트 0 버그 수정
+### fix — 오늘 가입자 카운트 0 버그 수정 (KST 타임존 대응)
 - **`routers/admin.py`** `get_admin_stats()`:
-  - 기존: `func.date(User.created_at) == today` — SQLAlchemy `func.date()` 반환 타입이 `NullType`이라 Python `date` 객체와 타입 불일치로 항상 0 반환
-  - 수정: datetime 범위 비교 (`User.created_at >= today_start, User.created_at < today_start + timedelta(days=1)`) 방식으로 교체
-  - `timedelta` import 추가
+  - 1차 수정: `func.date(User.created_at) == today` → datetime 범위 비교로 교체 (SQLAlchemy NullType 타입 불일치 해소)
+  - 2차 수정: `date.today()` (서버 UTC 기준) → KST(UTC+9) 기준으로 변경
+    - `datetime.now(KST)` → KST 자정으로 변환 → `.astimezone(UTC).replace(tzinfo=None)` → UTC naive datetime으로 DB 비교
+    - 이유: Railway 서버는 UTC 환경. `date.today()`를 쓰면 KST 00:00~08:59 사이 오늘 가입자가 전날 카운트로 집계됨
+    - `month_start`도 동일하게 KST 1일 00:00 → UTC 변환 적용
+  - `timezone` import 추가
 
 ### feat — Google 소셜 로그인 구현
 - **백엔드** (`routers/auth.py`):
@@ -48,7 +51,7 @@
 
 ---
 
-## 2026-07-11
+## 2026-07-11 (3)
 
 ### fix — 보유수량 0 주식 메인화면 노출 버그 수정 (부동소수점)
 - **문제**: 전량 매도한 VOO 등 주식이 메인화면에 계속 표시됨
@@ -311,11 +314,24 @@
 - 파이차트 색상 팔레트 8색 → 15색 확대 (중복 없는 고채도 팔레트 적용)
 - `cleanStr` fallback `'알 수 없음'` → `null` 반환으로 변경 — 미식별 항목 필터링 가능
 - `generateLabels`에서 `'알 수 없음'` / `'(없음)'` / `'undefined'` 항목을 파이차트 범례에서 완전 제외
+- 파이차트 범례(`effectivePieItems`)도 기간 필터에서 제외 — 캔버스와 범례 불일치 해소
+- 파이차트 드릴다운 시 `val=0` 및 `'알 수 없음'` 항목 필터링
+- 히스토리 라인차트 항상 USD 기준으로 표시 (KRW 통화 혼재 시 잘못된 값 표시 방지)
+- `histRange` state 누락으로 인한 런타임 크래시 수정
+- DietCard: 식단 중복 제출 방지 (`isSubmitting` 가드 추가 + Enter 키 기본 동작 차단)
+- 1M 등 기간 필터에서 종목별 평가손익(바차트)에 과거 매입 종목 누락 버그 수정
 
 ### feat
 - 파이차트 제목: "그룹별 자산 비중 — 그룹명" → "그룹별 자산 비중" (고정 제목, 그룹명은 차트 하단에 표시)
 - 파이차트 레이블: 미국주식은 티커(예: AAPL), 한국주식은 종목명으로 표기
 - 파이차트 그룹 선택 시 도넛 차트 아래 그룹명 표시
+- 현황/히스토리 탭 병합 — 탭 버튼 제거, 단일 스크롤 뷰로 통합 (`overviewPeriod`로 기간 상태 통합)
+- 히스토리 섹션 재작성 — `overviewGroup` 공유, 통화별 동적 컬럼, 그룹/통화 필터 UI 제거
+- 히스토리 섹션 구분선 + 제목 추가
+- `POST /api/portfolio/backfill-full` 엔드포인트 추가 (히스토리 전체 초기화 후 재백필)
+- 히스토리 섹션 '전체 재계산' 버튼 추가 (backfill-full 호출)
+- 그룹별 누적 투자금액 추이 / 종목별 평가손익 / 일별 자산 추이를 공유 기간 필터로 묶음
+- 라인/바차트 좌우 배치 통합 + 바차트 미국주식 티커 레이블
 
 ---
 

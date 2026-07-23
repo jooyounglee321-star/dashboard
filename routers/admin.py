@@ -3,7 +3,7 @@ import os
 import re
 import secrets
 import string
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -58,14 +58,19 @@ def list_admin_users(
 
 @router.get("/stats")
 def get_admin_stats(db: Session = Depends(get_db), _: User = Depends(_require_admin)):
-    today = date.today()
-    today_start = datetime(today.year, today.month, today.day)
-    month_start = datetime(today.year, today.month, 1)
+    # KST(UTC+9) 기준 오늘 경계를 UTC로 변환 (Railway DB는 UTC 저장)
+    KST = timezone(timedelta(hours=9))
+    now_kst = datetime.now(KST)
+    today_kst_midnight = now_kst.replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = today_kst_midnight.astimezone(timezone.utc).replace(tzinfo=None)
+    tomorrow_start = today_start + timedelta(days=1)
+    month_kst_midnight = today_kst_midnight.replace(day=1)
+    month_start = month_kst_midnight.astimezone(timezone.utc).replace(tzinfo=None)
 
     total = db.query(func.count(User.id)).scalar() or 0
     today_new = db.query(func.count(User.id)).filter(
         User.created_at >= today_start,
-        User.created_at < today_start + timedelta(days=1),
+        User.created_at < tomorrow_start,
     ).scalar() or 0
     premium = db.query(func.count(User.id)).filter(User.plan == "premium").scalar() or 0
     month_new = db.query(func.count(User.id)).filter(
