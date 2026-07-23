@@ -10,8 +10,9 @@
 
 ## GitHub Push 규칙
 - 작업 완료 후 git add, git commit, git push까지 자동으로 할 것.
+- 매번 사용자에게 푸시 여부 묻지 말 것.
 - 푸시 후 Railway 배포 완료까지 확인할 것 (health check: GET /api/health → {"status":"ok"} 응답 확인).
-- 배포 확인 완료 후 사용자에게 완료 사실을 알릴 것.
+- 배포 확인 완료 후 "✅ 배포 완료됐습니다! (테스트 통과: X개)" 형식으로 알릴 것.
 
 ## 프론트엔드 빌드 규칙
 - React 소스 파일(frontend/src/) 수정 후 반드시 npm run build 실행할 것.
@@ -71,6 +72,39 @@
 - grep 결과 핵심 키워드 확인됨 → "완료"로 기재
 - grep 결과 없거나 의심스러움 → 해당 부분 재작업 후 재확인
 - 확인 없이 "완료" 기재 금지
+
+## 작업 완료 후 테스트 규칙
+모든 작업 완료 후 반드시 아래 테스트를 순서대로 진행할 것.
+
+### 1. 코드 검증
+- grep으로 핵심 키워드 존재 확인 (기존 규칙 유지)
+- import 누락 확인
+- syntax 오류 확인
+
+### 2. 백엔드 테스트
+- pytest가 있으면 실행: pytest -v
+- 없으면 주요 엔드포인트 curl로 직접 테스트:
+  curl -X GET http://localhost:8000/api/auth/me
+  curl -X POST http://localhost:8000/api/auth/login
+- 500 에러 발생 시 즉시 수정 후 재테스트
+
+### 3. 프론트엔드 빌드 테스트
+- npm run build 실행 (frontend/ 디렉토리에서)
+- 빌드 에러 발생 시 즉시 수정 후 재빌드
+- 빌드 성공 확인 후 다음 단계 진행
+
+### 4. 타입/린트 체크 (있는 경우)
+- eslint 있으면: npm run lint
+- 경고/에러 있으면 수정
+
+### 5. 테스트 결과에 따른 처리
+- 모든 테스트 통과 → git add + git commit + git push 자동 진행
+- 테스트 실패 → 즉시 수정 → 재테스트 → 통과 후 push
+- 수정 후에도 실패 시 → 사용자에게 보고 후 대기
+
+### 6. 푸시 완료 후
+- CHANGELOG.md 업데이트 확인
+- "✅ 배포 완료됐습니다! (테스트 통과: X개)" 형식으로 보고
 
 ## 변경 이력 및 결정 기록
 - 작업 완료 후 GitHub push 전에 항상 CHANGELOG.md에 오늘 날짜로 작업 내용을 기록할 것.
