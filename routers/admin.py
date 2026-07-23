@@ -3,7 +3,7 @@ import os
 import re
 import secrets
 import string
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -59,11 +59,13 @@ def list_admin_users(
 @router.get("/stats")
 def get_admin_stats(db: Session = Depends(get_db), _: User = Depends(_require_admin)):
     today = date.today()
+    today_start = datetime(today.year, today.month, today.day)
     month_start = datetime(today.year, today.month, 1)
 
     total = db.query(func.count(User.id)).scalar() or 0
     today_new = db.query(func.count(User.id)).filter(
-        func.date(User.created_at) == today
+        User.created_at >= today_start,
+        User.created_at < today_start + timedelta(days=1),
     ).scalar() or 0
     premium = db.query(func.count(User.id)).filter(User.plan == "premium").scalar() or 0
     month_new = db.query(func.count(User.id)).filter(
