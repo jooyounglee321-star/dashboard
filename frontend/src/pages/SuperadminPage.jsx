@@ -325,9 +325,9 @@ export default function SuperadminPage() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr className="state-row"><td colSpan={13}>{t(lang, 'superadmin.loading')}</td></tr>
+                  <tr className="state-row"><td colSpan={14}>{t(lang, 'superadmin.loading')}</td></tr>
                 ) : !page.length ? (
-                  <tr className="state-row"><td colSpan={13}>{t(lang, 'superadmin.noResults')}</td></tr>
+                  <tr className="state-row"><td colSpan={14}>{t(lang, 'superadmin.noResults')}</td></tr>
                 ) : page.map((u, i) => (
                   <tr key={u.id} style={{ cursor: 'pointer' }} onClick={() => openModal(u.id)}>
                     <td style={{ color: 'var(--ink3)', fontSize: '0.75rem' }}>{start + i + 1}</td>
@@ -344,7 +344,8 @@ export default function SuperadminPage() {
                     <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(u.plan_expires_at, lang)}</td>
                     <td><span className={`badge badge-${u.status}`}>{statusLabel(u.status)}</span></td>
                     <td style={{ whiteSpace: 'nowrap' }}>{fmtDatetime(u.last_login_at)}</td>
-                    <td style={{ textAlign: 'right' }}>{(u.login_count ?? 0).toLocaleString()} / {(u.auto_login_count ?? 0).toLocaleString()}</td>
+                    <td style={{ textAlign: 'right' }}>{(u.login_count ?? 0).toLocaleString()}</td>
+                    <td style={{ textAlign: 'right' }}>{(u.auto_login_count ?? 0).toLocaleString()}</td>
                     <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>₩{Math.round(u.total_payment ?? 0).toLocaleString()}</td>
                     <td>{u.primary_device
                       ? <span className={`badge badge-${u.primary_device.toLowerCase()}`}>{u.primary_device}</span>
@@ -477,7 +478,7 @@ export default function SuperadminPage() {
         <div className="modal-overlay open" onClick={e => { if (e.target === e.currentTarget) setModal(null) }}>
           <div className="modal">
             <div className="modal-header">
-              <span className="modal-title">#{modal.id} {modal.name || modal.email}</span>
+              <span className="modal-title">#{modal.id} {modal.email}</span>
               <button className="modal-close" onClick={() => setModal(null)}>✕</button>
             </div>
             <div className="modal-body">
