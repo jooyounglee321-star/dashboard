@@ -257,17 +257,22 @@ def get_changelog(_: User = Depends(_require_admin)):
     current_type: str = "feat"
 
     for line in text.splitlines():
-        # ## [YYYY-MM-DD] — type: 제목
-        m = re.match(r"^## \[(\d{4}-\d{2}-\d{2})\]\s*[—-]\s*(.+)$", line)
+        # ## YYYY-MM-DD 또는 ## YYYY-MM-DD (N)
+        m = re.match(r"^## (\d{4}-\d{2}-\d{2})", line)
         if m:
             current_date = m.group(1)
-            title_rest = m.group(2).strip()
-            tm = _TYPE_RE.match(title_rest)
-            current_type = tm.group(1).lower() if tm else "feat"
+            current_type = "feat"
             if current_date not in date_map:
                 date_map[current_date] = []
                 date_order.append(current_date)
             continue
+        # ### type — 제목  (서브헤딩에서 타입 추출)
+        if current_date:
+            sh = re.match(r"^### (.+)$", line)
+            if sh:
+                tm = _TYPE_RE.match(sh.group(1).strip())
+                current_type = tm.group(1).lower() if tm else "feat"
+                continue
         # 최상위 bullet (들여쓰기 없는 - 또는 *)
         if current_date and re.match(r"^[-*]\s+", line):
             raw = re.sub(r"^[-*]\s+", "", line)
