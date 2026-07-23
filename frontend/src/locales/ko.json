@@ -228,6 +228,7 @@
     "colAutoLogins": "자동",
     "colPayment": "누적결제",
     "colDevice": "기기",
+    "colProvider": "가입경로",
     "fieldId": "ID",
     "fieldName": "이름",
     "fieldEmail": "이메일",

@@ -4,6 +4,25 @@
 
 ---
 
+## 2026-07-23 (2)
+
+### feat — 소셜 로그인 social_id 기반으로 완전 개편
+- **DB** (`models.py`, `main.py`):
+  - `users` 테이블에 `social_provider` (google/facebook/null), `social_id` 컬럼 추가
+  - 마이그레이션: 기존 `provider='google'` → `social_provider='google'`, `social_id=provider_id`
+  - 마이그레이션: 기존 `facebook_숫자@facebook.com` 임시 유저 → `social_id` 숫자 추출
+- **백엔드** (`routers/auth.py`):
+  - `_get_or_create_social_user()` 공통 헬퍼 추가
+    1. `social_id` 기반 조회 (최우선)
+    2. 이메일 기반 조회 (계정 통합)
+    3. 신규 생성 (랜덤 비밀번호)
+  - 구글·페이스북 콜백 모두 헬퍼 사용으로 교체
+- **스키마** (`schemas.py`): `UserOut`, `UserAdminOut`에 `social_provider`, `social_id` 추가
+- **프론트** (`SuperadminPage.jsx`): 회원 목록 + 모달에 가입경로 컬럼 추가 (🔵 구글 / 🔷 페이스북 / 📧 이메일)
+- **확인**: grep으로 핵심 키워드 존재 확인 완료
+
+---
+
 ## 2026-07-23
 
 ### feat — Facebook 소셜 로그인 구현

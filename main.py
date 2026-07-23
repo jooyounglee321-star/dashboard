@@ -943,6 +943,54 @@ def _migrate_recurring_frequency_columns():
     logger.info("[MIGRATE] recurring_expenses frequency/day_of_week/day_of_month_2 확인/추가 완료")
 
 
+def _migrate_social_columns():
+    """users 테이블에 social_provider, social_id 컬럼 추가 및 기존 데이터 마이그레이션."""
+    import re as _re
+    with engine.connect() as conn:
+        for sql in [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS social_provider VARCHAR(30)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS social_id VARCHAR(255)",
+        ]:
+            try:
+                conn.execute(text(sql))
+                conn.commit()
+            except Exception as e:
+                logger.warning("[MIGRATE] social 컬럼 추가 실패(이미 존재): %s", e)
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+
+        # 기존 구글 유저: provider='google' → social_provider/social_id 채우기
+        try:
+            conn.execute(text(
+                "UPDATE users SET social_provider='google', social_id=provider_id "
+                "WHERE provider='google' AND social_provider IS NULL"
+            ))
+            conn.commit()
+        except Exception as e:
+            logger.warning("[MIGRATE] google social 마이그레이션 실패: %s", e)
+            conn.rollback()
+
+        # 기존 페이스북 임시 이메일 유저: facebook_숫자@facebook.com → social_id 추출
+        try:
+            rows = conn.execute(text(
+                "SELECT id, email FROM users WHERE provider='facebook' AND social_provider IS NULL"
+            )).fetchall()
+            for row in rows:
+                m = _re.match(r"^facebook_(\d+)@facebook\.com$", row[1])
+                social_id = m.group(1) if m else None
+                conn.execute(text(
+                    "UPDATE users SET social_provider='facebook', social_id=:sid WHERE id=:uid"
+                ), {"sid": social_id, "uid": row[0]})
+            conn.commit()
+        except Exception as e:
+            logger.warning("[MIGRATE] facebook social 마이그레이션 실패: %s", e)
+            conn.rollback()
+
+    logger.info("[MIGRATE] social_provider / social_id 컬럼 확인/마이그레이션 완료")
+
+
 def _seed_default_permissions():
     """permissions 테이블이 비어 있을 때 기본 권한을 시드."""
     db = SessionLocal()
@@ -1002,6 +1050,7 @@ async def lifespan(app: FastAPI):
     _migrate_recurring_expenses_table()
     _migrate_recurring_type_column()
     _migrate_recurring_frequency_columns()
+    _migrate_social_columns()
     logger.info("[DB] 테이블 생성/확인 완료")
 
     # APScheduler: 30분마다 환율 자동 갱신

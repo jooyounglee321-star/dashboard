@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import re
+import secrets
 import urllib.parse
 from datetime import datetime, timedelta, timezone
 
@@ -265,6 +266,48 @@ def update_me(
     return current_user
 
 
+# ── 소셜 공통 헬퍼 ───────────────────────────────────────────────────────────
+
+def _get_or_create_social_user(db: Session, social_provider: str, social_id: str, email: str | None, name: str | None) -> "User":
+    """social_id → email 순으로 유저를 찾고, 없으면 신규 생성."""
+    # 1. social_id 기반 조회 (가장 우선)
+    user = db.query(User).filter(
+        User.social_provider == social_provider,
+        User.social_id == social_id,
+    ).first()
+    if user:
+        return user
+
+    # 2. 이메일 기반 조회 (계정 통합)
+    if email:
+        user = db.query(User).filter(User.email == email).first()
+        if user:
+            user.social_provider = social_provider
+            user.social_id = social_id
+            user.provider = social_provider
+            user.provider_id = social_id
+            db.commit()
+            return user
+
+    # 3. 신규 유저 생성
+    fallback_email = email or f"{social_provider}_{social_id}@{social_provider}.com"
+    auto_role = "admin" if fallback_email.lower() == ADMIN_EMAIL else "free"
+    user = User(
+        email=fallback_email,
+        name=name,
+        social_provider=social_provider,
+        social_id=social_id,
+        provider=social_provider,
+        provider_id=social_id,
+        role=auto_role,
+        hashed_password=pwd_context.hash(secrets.token_hex(16)),
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 # ── GET /api/auth/google/login ───────────────────────────────────────────────
 
 @router.get("/google/login", summary="구글 소셜 로그인 시작")
@@ -322,27 +365,11 @@ def google_callback(code: str | None = None, error: str | None = None, db: Sessi
         return RedirectResponse("/login?error=google_userinfo_failed")
 
     userinfo = userinfo_res.json()
-    email = userinfo.get("email")
     google_id = userinfo.get("id")
+    email = userinfo.get("email")
     name = userinfo.get("name")
 
-    if not email:
-        return RedirectResponse("/login?error=no_email")
-
-    # 기존 유저 조회 또는 자동 회원가입
-    user = db.query(User).filter(User.email == email).first()
-    if not user:
-        auto_role = "admin" if email.lower() == ADMIN_EMAIL else "free"
-        user = User(
-            email=email,
-            provider="google",
-            provider_id=google_id,
-            name=name,
-            role=auto_role,
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+    user = _get_or_create_social_user(db, "google", google_id, email, name)
 
     # 로그인 통계 업데이트
     user.last_login_at = datetime.now(timezone.utc)
@@ -411,22 +438,9 @@ def facebook_callback(code: str | None = None, error: str | None = None, db: Ses
     userinfo = userinfo_res.json()
     facebook_id = userinfo.get("id")
     name = userinfo.get("name")
-    email = userinfo.get("email") or f"facebook_{facebook_id}@facebook.com"
+    email = userinfo.get("email")
 
-    # 기존 유저 조회 또는 자동 회원가입
-    user = db.query(User).filter(User.email == email).first()
-    if not user:
-        auto_role = "admin" if email.lower() == ADMIN_EMAIL else "free"
-        user = User(
-            email=email,
-            provider="facebook",
-            provider_id=facebook_id,
-            name=name,
-            role=auto_role,
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+    user = _get_or_create_social_user(db, "facebook", facebook_id, email, name)
 
     # 로그인 통계 업데이트
     user.last_login_at = datetime.now(timezone.utc)

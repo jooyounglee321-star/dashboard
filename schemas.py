@@ -282,6 +282,7 @@ class UserOut(BaseModel):
     email: str
     role: str
     provider: str
+    social_provider: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -302,6 +303,8 @@ class UserAdminOut(BaseModel):
     role: str
     provider: str
     provider_id: str | None = None
+    social_provider: str | None = None
+    social_id: str | None = None
     plan: str = "free"
     plan_expires_at: date | None = None
     status: str = "active"
