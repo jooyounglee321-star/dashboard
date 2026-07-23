@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-07-23
+
+### feat — Facebook 소셜 로그인 구현
+- **백엔드** (`routers/auth.py`):
+  - `GET /api/auth/facebook/login` — Facebook OAuth 인증 페이지로 리디렉트
+  - `GET /api/auth/facebook/callback` — 인증 코드 교환 → 유저 정보 조회 → 기존 회원 조회 또는 자동 회원가입 → JWT 발급 → `/login?token=xxxx` 리디렉트
+  - Facebook Graph API v19.0 사용 (`id,name,email` 필드)
+  - `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET` 환경변수 사용
+  - 기존 `provider`/`provider_id` 컬럼 활용 (User 모델 변경 없음)
+- **프론트엔드** (`LoginPage.jsx`):
+  - 페이스북 버튼 onClick: `alert(준비중)` → `window.location.href = '/api/auth/facebook/login'` 으로 변경
+  - `?token=xxxx` 콜백 처리 로직은 구글 로그인과 공유 (기존 코드 재사용)
+- **확인**: grep으로 핵심 키워드 존재 확인 완료
+
+---
+
 ## 2026-07-22
 
 ### fix — 오늘 가입자 카운트 0 버그 수정 (KST 타임존 대응)
