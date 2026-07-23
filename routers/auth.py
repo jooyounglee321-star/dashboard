@@ -364,7 +364,7 @@ def facebook_login():
     params = {
         "client_id": FACEBOOK_CLIENT_ID,
         "redirect_uri": FACEBOOK_REDIRECT_URI,
-        "scope": "email,public_profile",
+        "scope": "public_profile",
         "response_type": "code",
     }
     url = FACEBOOK_AUTH_URL + "?" + urllib.parse.urlencode(params)
@@ -409,12 +409,9 @@ def facebook_callback(code: str | None = None, error: str | None = None, db: Ses
         return RedirectResponse("/login?error=facebook_userinfo_failed")
 
     userinfo = userinfo_res.json()
-    email = userinfo.get("email")
     facebook_id = userinfo.get("id")
     name = userinfo.get("name")
-
-    if not email:
-        return RedirectResponse("/login?error=no_email")
+    email = userinfo.get("email") or f"facebook_{facebook_id}@facebook.com"
 
     # 기존 유저 조회 또는 자동 회원가입
     user = db.query(User).filter(User.email == email).first()
