@@ -250,8 +250,8 @@ def get_changelog(_: User = Depends(_require_admin)):
     except FileNotFoundError:
         return []
 
-    # date → list[item] (같은 날짜 여러 블록 병합)
-    date_map: dict[str, list[dict]] = {}
+    # date → {items, titles} (같은 날짜 여러 블록 병합)
+    date_map: dict[str, dict] = {}
     date_order: list[str] = []
     current_date: str | None = None
     current_type: str = "feat"
@@ -263,20 +263,22 @@ def get_changelog(_: User = Depends(_require_admin)):
             current_date = m.group(1)
             current_type = "feat"
             if current_date not in date_map:
-                date_map[current_date] = []
+                date_map[current_date] = {"items": [], "titles": []}
                 date_order.append(current_date)
             continue
-        # ### type — 제목  (서브헤딩에서 타입 추출)
+        # ### type — 제목  (서브헤딩에서 타입 추출 + 제목 저장)
         if current_date:
             sh = re.match(r"^### (.+)$", line)
             if sh:
-                tm = _TYPE_RE.match(sh.group(1).strip())
+                title_text = sh.group(1).strip()
+                tm = _TYPE_RE.match(title_text)
                 current_type = tm.group(1).lower() if tm else "feat"
+                date_map[current_date]["titles"].append(title_text)
                 continue
         # 최상위 bullet (들여쓰기 없는 - 또는 *)
         if current_date and re.match(r"^[-*]\s+", line):
             raw = re.sub(r"^[-*]\s+", "", line)
-            date_map[current_date].append(_parse_item(raw, current_type))
+            date_map[current_date]["items"].append(_parse_item(raw, current_type))
 
     date_order.sort(reverse=True)
-    return [{"date": d, "items": date_map[d]} for d in date_order]
+    return [{"date": d, "items": date_map[d]["items"], "titles": date_map[d]["titles"]} for d in date_order]

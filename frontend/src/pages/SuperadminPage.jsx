@@ -232,6 +232,7 @@ export default function SuperadminPage() {
     if (!clSearch.trim()) return true
     const q = clSearch.toLowerCase()
     return entry.date.includes(q) ||
+      (entry.titles || []).some(title => title.toLowerCase().includes(q)) ||
       entry.items.some(item =>
         (item.widget || '').toLowerCase().includes(q) ||
         (item.desc || '').toLowerCase().includes(q) ||
