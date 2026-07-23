@@ -37,6 +37,7 @@ export default function SuperadminPage() {
     try { return localStorage.getItem('dashboard_lang') || 'ko' } catch { return 'ko' }
   })
   const [modal, setModal] = useState(null)
+  const [modalListPos, setModalListPos] = useState(null)
   const [modalPlan, setModalPlan] = useState('free')
   const [modalExpires, setModalExpires] = useState('')
   const [modalMemo, setModalMemo] = useState('')
@@ -329,7 +330,14 @@ export default function SuperadminPage() {
                 ) : !page.length ? (
                   <tr className="state-row"><td colSpan={14}>{t(lang, 'superadmin.noResults')}</td></tr>
                 ) : page.map((u, i) => (
-                  <tr key={u.id} style={{ cursor: 'pointer' }} onClick={() => openModal(u.id)}>
+                  <tr key={u.id} style={{ cursor: 'pointer' }} onClick={() => {
+                    setPwResult('')
+                    setModal(u)
+                    setModalListPos(start + i + 1)
+                    setModalPlan(u.plan || 'free')
+                    setModalExpires(u.plan_expires_at ? u.plan_expires_at.slice(0, 10) : '')
+                    setModalMemo(u.admin_memo || '')
+                  }}>
                     <td style={{ color: 'var(--ink3)', fontSize: '0.75rem' }}>{start + i + 1}</td>
                     <td>{u.name || '—'}</td>
                     <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</td>
@@ -478,7 +486,7 @@ export default function SuperadminPage() {
         <div className="modal-overlay open" onClick={e => { if (e.target === e.currentTarget) setModal(null) }}>
           <div className="modal">
             <div className="modal-header">
-              <span className="modal-title">#{modal.id} {modal.email}</span>
+              <span className="modal-title">#{modalListPos} {modal.email}</span>
               <button className="modal-close" onClick={() => setModal(null)}>✕</button>
             </div>
             <div className="modal-body">

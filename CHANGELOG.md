@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-07-23 (4)
+
+### fix — 슈퍼어드민 회원 목록 # 번호 vs 모달 ID 불일치 버그 수정
+- **원인**: `openModal(u.id)` API 재요청 후 `modal.id`(DB ID)를 타이틀에 표시 → 목록 위치(start+i+1)와 불일치
+- **수정 내용**:
+  - `modalListPos` state 추가 → row 클릭 시 목록 위치(start+i+1) 저장
+  - row 클릭 핸들러: `openModal(u.id)` → 직접 `setModal(u)` + `setModalListPos(start+i+1)` (API 재요청 제거)
+  - 모달 타이틀: `#{modal.id} {modal.email}` → `#{modalListPos} {modal.email}`
+- **결과**: 목록 #1 클릭 → 모달 제목 #1 표시 (일치)
+
 ## 2026-07-23 (3)
 
 ### test — 전체 테스트 실행 및 버그 수정
