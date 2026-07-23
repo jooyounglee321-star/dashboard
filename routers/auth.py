@@ -34,10 +34,13 @@ ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "")   # 이 이메일로 가입하면 자
 if not ADMIN_EMAIL:
     logger.warning("[AUTH] ADMIN_EMAIL 환경변수가 설정되지 않았습니다. 자동 admin 부여가 비활성화됩니다.")
 
+# 앱 베이스 URL (소셜 OAuth redirect_uri 구성에 사용)
+BASE_URL = os.getenv("BASE_URL", "https://dashboard-production-4a18.up.railway.app")
+
 # Google OAuth 설정
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-GOOGLE_REDIRECT_URI = "https://dashboard-production-4a18.up.railway.app/api/auth/google/callback"
+GOOGLE_REDIRECT_URI = f"{BASE_URL}/api/auth/google/callback"
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
@@ -45,7 +48,7 @@ GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
 # Facebook OAuth 설정
 FACEBOOK_CLIENT_ID = os.getenv("FACEBOOK_CLIENT_ID")
 FACEBOOK_CLIENT_SECRET = os.getenv("FACEBOOK_CLIENT_SECRET")
-FACEBOOK_REDIRECT_URI = "https://dashboard-production-4a18.up.railway.app/api/auth/facebook/callback"
+FACEBOOK_REDIRECT_URI = f"{BASE_URL}/api/auth/facebook/callback"
 FACEBOOK_AUTH_URL = "https://www.facebook.com/v19.0/dialog/oauth"
 FACEBOOK_TOKEN_URL = "https://graph.facebook.com/v19.0/oauth/access_token"
 FACEBOOK_USERINFO_URL = "https://graph.facebook.com/me?fields=id,name,email"

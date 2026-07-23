@@ -1144,18 +1144,23 @@ limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-_cors_origins_env = os.getenv("CORS_ALLOWED_ORIGINS", "")
-_cors_origins = [o.strip() for o in _cors_origins_env.split(",") if o.strip()]
-if not _cors_origins:
-    logger.warning(
-        "[CORS] CORS_ALLOWED_ORIGINS 환경변수가 설정되지 않았습니다. "
-        "모든 출처를 차단합니다. 필요 시 CORS_ALLOWED_ORIGINS=https://yourdomain.com 으로 설정하세요."
-    )
+_allowed_origins = os.getenv(
+    "ALLOWED_ORIGINS",
+    "https://dashboard-production-4a18.up.railway.app",
+).split(",")
+_allowed_origins = [o.strip() for o in _allowed_origins if o.strip()]
+if os.getenv("ENVIRONMENT") == "development":
+    _allowed_origins += [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost:8000",
+    ]
+logger.info("[CORS] 허용 출처: %s", _allowed_origins)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_cors_origins,
+    allow_origins=_allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
 

@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-07-23 (7)
+
+### fix — CORS 설정 강화 + 하드코딩 URL 환경변수화
+- `main.py`: CORS를 `ALLOWED_ORIGINS` 환경변수 기반으로 교체 (기본값: Railway 프로덕션 도메인)
+- `main.py`: `ENVIRONMENT=development` 시 localhost 3종 자동 추가
+- `main.py`: `allow_methods=["*"]` → `["GET", "POST", "PUT", "DELETE"]` 명시 제한
+- `routers/auth.py`: `GOOGLE_REDIRECT_URI`, `FACEBOOK_REDIRECT_URI` 하드코딩 → `BASE_URL` 환경변수 기반으로 교체
+- Railway Variables 추가: `ALLOWED_ORIGINS`, `ENVIRONMENT=production`, `BASE_URL`
+
 ## 2026-07-23 (5)
 
 ### feat — 회원 탈퇴 기능 구현 (30일 유예 후 삭제)
