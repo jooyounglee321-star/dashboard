@@ -32,7 +32,7 @@ const priceMap = {
 // ────────────────────────────────────────────────────────────
 describe('calcCutoff', () => {
   beforeAll(() => vi.useFakeTimers({ now: new Date(2026, 6, 7, 12, 0, 0) })) // 로컬 시간 7월7일 정오
-  afterAll(() => vi.useRealTimers())
+  afterAll(() => vi.useFakeTimers({ now: new Date('2026-07-07T12:00:00Z') })) // 전역 설정으로 복원
 
   it('1m → 2026-06-07', () => expect(calcCutoff('1m')).toBe('2026-06-07'))
   it('3m → 2026-04-07', () => expect(calcCutoff('3m')).toBe('2026-04-07'))
