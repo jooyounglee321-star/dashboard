@@ -41,6 +41,14 @@ GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
 
+# Facebook OAuth 설정
+FACEBOOK_CLIENT_ID = os.getenv("FACEBOOK_CLIENT_ID")
+FACEBOOK_CLIENT_SECRET = os.getenv("FACEBOOK_CLIENT_SECRET")
+FACEBOOK_REDIRECT_URI = "https://dashboard-production-4a18.up.railway.app/api/auth/facebook/callback"
+FACEBOOK_AUTH_URL = "https://www.facebook.com/v19.0/dialog/oauth"
+FACEBOOK_TOKEN_URL = "https://graph.facebook.com/v19.0/oauth/access_token"
+FACEBOOK_USERINFO_URL = "https://graph.facebook.com/me?fields=id,name,email"
+
 # JWT 설정
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
@@ -329,6 +337,93 @@ def google_callback(code: str | None = None, error: str | None = None, db: Sessi
             email=email,
             provider="google",
             provider_id=google_id,
+            name=name,
+            role=auto_role,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    # 로그인 통계 업데이트
+    user.last_login_at = datetime.now(timezone.utc)
+    user.login_count = (user.login_count or 0) + 1
+    db.commit()
+    db.refresh(user)
+
+    jwt_token = _create_token(user.id, user.email, user.role)
+    return RedirectResponse(f"/login?token={jwt_token}")
+
+
+# ── GET /api/auth/facebook/login ─────────────────────────────────────────────
+
+@router.get("/facebook/login", summary="페이스북 소셜 로그인 시작")
+def facebook_login():
+    """페이스북 OAuth 인증 페이지로 리디렉트합니다."""
+    if not FACEBOOK_CLIENT_ID:
+        raise HTTPException(status_code=500, detail="Facebook OAuth가 설정되지 않았습니다.")
+    params = {
+        "client_id": FACEBOOK_CLIENT_ID,
+        "redirect_uri": FACEBOOK_REDIRECT_URI,
+        "scope": "email,public_profile",
+        "response_type": "code",
+    }
+    url = FACEBOOK_AUTH_URL + "?" + urllib.parse.urlencode(params)
+    return RedirectResponse(url)
+
+
+# ── GET /api/auth/facebook/callback ──────────────────────────────────────────
+
+@router.get("/facebook/callback", summary="페이스북 OAuth 콜백 처리")
+def facebook_callback(code: str | None = None, error: str | None = None, db: Session = Depends(get_db)):
+    """페이스북 인증 후 콜백 — JWT 발급 후 프론트엔드로 리디렉트."""
+    if error or not code:
+        return RedirectResponse("/login?error=facebook_cancelled")
+
+    # 코드 → 액세스 토큰 교환
+    try:
+        token_res = httpx.get(FACEBOOK_TOKEN_URL, params={
+            "client_id": FACEBOOK_CLIENT_ID,
+            "client_secret": FACEBOOK_CLIENT_SECRET,
+            "redirect_uri": FACEBOOK_REDIRECT_URI,
+            "code": code,
+        }, timeout=10)
+    except Exception:
+        return RedirectResponse("/login?error=facebook_token_failed")
+
+    if token_res.status_code != 200:
+        return RedirectResponse("/login?error=facebook_token_failed")
+
+    access_token = token_res.json().get("access_token")
+
+    # 페이스북 유저 정보 조회
+    try:
+        userinfo_res = httpx.get(
+            FACEBOOK_USERINFO_URL,
+            params={"access_token": access_token},
+            timeout=10,
+        )
+    except Exception:
+        return RedirectResponse("/login?error=facebook_userinfo_failed")
+
+    if userinfo_res.status_code != 200:
+        return RedirectResponse("/login?error=facebook_userinfo_failed")
+
+    userinfo = userinfo_res.json()
+    email = userinfo.get("email")
+    facebook_id = userinfo.get("id")
+    name = userinfo.get("name")
+
+    if not email:
+        return RedirectResponse("/login?error=no_email")
+
+    # 기존 유저 조회 또는 자동 회원가입
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        auto_role = "admin" if email.lower() == ADMIN_EMAIL else "free"
+        user = User(
+            email=email,
+            provider="facebook",
+            provider_id=facebook_id,
             name=name,
             role=auto_role,
         )

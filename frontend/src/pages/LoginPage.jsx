@@ -100,7 +100,7 @@ export default function LoginPage() {
             <button className="btn-social btn-google" type="button" onClick={() => { window.location.href = '/api/auth/google/login' }}>
               <GoogleLogo /> {t(lang, 'auth.googleLogin')}
             </button>
-            <button className="btn-social btn-facebook" type="button" onClick={() => alert(t(lang, 'auth.facebookComingSoon'))}>
+            <button className="btn-social btn-facebook" type="button" onClick={() => { window.location.href = '/api/auth/facebook/login' }}>
               <div style={{ width: 20, height: 20, background: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <span style={{ color: '#1877f2', fontSize: '1rem', fontWeight: 700, lineHeight: 1, marginTop: 1 }}>f</span>
               </div>
