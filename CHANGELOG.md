@@ -6,6 +6,12 @@
 
 ## 2026-07-22
 
+### fix — 오늘 가입자 카운트 0 버그 수정
+- **`routers/admin.py`** `get_admin_stats()`:
+  - 기존: `func.date(User.created_at) == today` — SQLAlchemy `func.date()` 반환 타입이 `NullType`이라 Python `date` 객체와 타입 불일치로 항상 0 반환
+  - 수정: datetime 범위 비교 (`User.created_at >= today_start, User.created_at < today_start + timedelta(days=1)`) 방식으로 교체
+  - `timedelta` import 추가
+
 ### feat — Google 소셜 로그인 구현
 - **백엔드** (`routers/auth.py`):
   - `GET /api/auth/google/login` — 구글 OAuth2 인증 페이지로 리디렉트
