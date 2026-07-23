@@ -311,6 +311,7 @@ class UserAdminOut(BaseModel):
     created_at: datetime
     last_login_at: datetime | None = None
     login_count: int = 0
+    auto_login_count: int = 0
     total_payment: float = 0.0
     primary_device: str | None = None
     admin_memo: str | None = None
