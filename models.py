@@ -44,6 +44,9 @@ class User(Base):
     gender:     Mapped[Optional[str]]   = mapped_column(String(10), nullable=True)   # 'male'|'female'|'other'
     height_cm:  Mapped[Optional[float]] = mapped_column(Float, nullable=True)        # 항상 cm 저장
     weight_kg:  Mapped[Optional[float]] = mapped_column(Float, nullable=True)        # 항상 kg 저장
+    # 회원 탈퇴 유예
+    withdrawal_status: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)  # 'pending' | null
+    withdrawal_requested_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class ExpenseCategory(Base):

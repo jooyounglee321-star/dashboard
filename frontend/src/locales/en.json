@@ -127,7 +127,15 @@
     "other": "Other",
     "height": "Height",
     "weight": "Weight",
-    "dietAIPrompt": "Add your birth year, gender, height & weight in your profile to get AI diet analysis →"
+    "dietAIPrompt": "Add your birth year, gender, height & weight in your profile to get AI diet analysis →",
+    "withdrawSection": "Delete Account",
+    "withdrawBtn": "Delete Account",
+    "withdrawConfirmTitle": "Are you sure you want to delete your account?",
+    "withdrawConfirmBody": "Your data will be kept for 30 days after deletion request.\nAll data will be permanently deleted after 30 days.\nYou can cancel within 30 days by logging in.",
+    "withdrawConfirmOk": "Request Deletion",
+    "withdrawConfirmCancel": "Go Back",
+    "withdrawSuccess": "Deletion requested. Your account will be deleted in 30 days.",
+    "withdrawError": "Failed to request deletion. Please try again."
   },
   "admin": {
     "title": "Admin Settings",
@@ -715,5 +723,15 @@
     "biweekly": "Bi-weekly (every 2 weeks)",
     "dayOfWeekLabel": "Day of Week",
     "secondDayLabel": "Second Day"
+  },
+  "withdrawal": {
+    "title": "Deletion Pending",
+    "desc": "This account has a pending deletion request.",
+    "requestedAt": "Requested on",
+    "deleteAt": "Scheduled deletion",
+    "cancelBtn": "Cancel Deletion",
+    "cancelSuccess": "Account deletion has been cancelled.",
+    "cancelError": "Failed to cancel deletion. Please try again.",
+    "backToLogin": "Login with another account"
   }
 }

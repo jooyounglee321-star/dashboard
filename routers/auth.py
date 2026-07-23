@@ -159,6 +159,7 @@ def login(request: Request, body: UserLogin, db: Session = Depends(get_db)):
     db.refresh(user)
 
     token = _create_token(user.id, user.email, user.role)
+    # 탈퇴 대기 유저: 토큰 발급하되 withdrawal_status 포함 (프론트에서 안내 페이지로 이동)
     return AuthOut(access_token=token, user=UserOut.model_validate(user))
 
 
@@ -378,6 +379,8 @@ def google_callback(code: str | None = None, error: str | None = None, db: Sessi
     db.refresh(user)
 
     jwt_token = _create_token(user.id, user.email, user.role)
+    if user.withdrawal_status == "pending":
+        return RedirectResponse(f"/login?token={jwt_token}&withdrawal_pending=true")
     return RedirectResponse(f"/login?token={jwt_token}")
 
 
@@ -449,7 +452,37 @@ def facebook_callback(code: str | None = None, error: str | None = None, db: Ses
     db.refresh(user)
 
     jwt_token = _create_token(user.id, user.email, user.role)
+    if user.withdrawal_status == "pending":
+        return RedirectResponse(f"/login?token={jwt_token}&withdrawal_pending=true")
     return RedirectResponse(f"/login?token={jwt_token}")
+
+
+# ── POST /api/auth/withdraw ──────────────────────────────────────────────────
+
+@router.post("/withdraw", status_code=status.HTTP_200_OK, summary="회원 탈퇴 신청")
+def request_withdrawal(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """탈퇴 신청. withdrawal_status='pending' 설정 후 30일 후 자동 삭제."""
+    current_user.withdrawal_status = "pending"
+    current_user.withdrawal_requested_at = datetime.now(timezone.utc)
+    db.commit()
+    return {"message": "탈퇴 신청이 완료됐습니다. 30일 후 계정이 삭제됩니다."}
+
+
+@router.post("/withdraw/cancel", status_code=status.HTTP_200_OK, summary="회원 탈퇴 취소")
+def cancel_withdrawal(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """탈퇴 취소. withdrawal_status/requested_at 초기화."""
+    if current_user.withdrawal_status != "pending":
+        raise HTTPException(status_code=400, detail="탈퇴 신청 상태가 아닙니다.")
+    current_user.withdrawal_status = None
+    current_user.withdrawal_requested_at = None
+    db.commit()
+    return {"message": "탈퇴 신청이 취소됐습니다."}
 
 
 # ── POST /api/auth/logout ────────────────────────────────────────────────────

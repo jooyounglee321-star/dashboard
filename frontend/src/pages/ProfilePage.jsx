@@ -21,6 +21,8 @@ export default function ProfilePage() {
   const [avatarSrc, setAvatarSrc] = useState(null)
   const [saving, setSaving]     = useState(false)
   const [msg, setMsg]           = useState(null) // { type: 'success'|'error', text }
+  const [withdrawModal, setWithdrawModal] = useState(false)
+  const [withdrawing, setWithdrawing]     = useState(false)
   const [widgetCfg, setWidgetCfg] = useState(null)
   const [langSaving, setLangSaving] = useState(false)
   const fileRef = useRef(null)
@@ -162,6 +164,31 @@ export default function ProfilePage() {
       setMsg({ type: 'error', text: t(lang, 'profile.errServer') })
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleWithdraw() {
+    setWithdrawing(true)
+    try {
+      const res = await fetch('/api/auth/withdraw', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token },
+      })
+      if (res.ok) {
+        setWithdrawModal(false)
+        localStorage.removeItem('token')
+        sessionStorage.removeItem('token')
+        navigate('/login')
+      } else {
+        const d = await res.json().catch(() => ({}))
+        setMsg({ type: 'error', text: d.detail || t(lang, 'profile.withdrawError') })
+        setWithdrawModal(false)
+      }
+    } catch {
+      setMsg({ type: 'error', text: t(lang, 'profile.withdrawError') })
+      setWithdrawModal(false)
+    } finally {
+      setWithdrawing(false)
     }
   }
 
@@ -395,8 +422,81 @@ export default function ProfilePage() {
             </div>
           )}
 
+          {/* 계정 탈퇴 섹션 */}
+          <div style={{ marginTop: '2.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>
+            <SectionLabel>{t(lang, 'profile.withdrawSection')}</SectionLabel>
+            <p style={{ fontSize: '0.8rem', color: 'var(--ink3)', lineHeight: 1.6, marginBottom: '1rem' }}>
+              {t(lang, 'profile.withdrawConfirmBody').split('\n').map((line, i) => (
+                <span key={i}>{line}<br /></span>
+              ))}
+            </p>
+            <button
+              type="button"
+              onClick={() => setWithdrawModal(true)}
+              style={{
+                padding: '0.6rem 1.4rem', fontSize: '0.85rem', fontWeight: 500,
+                background: 'transparent', color: '#c0392b',
+                border: '1.5px solid #c0392b', borderRadius: 8,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              {t(lang, 'profile.withdrawBtn')}
+            </button>
+          </div>
+
         </div>
       </div>
+
+      {/* 탈퇴 확인 모달 */}
+      {withdrawModal && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setWithdrawModal(false) }}
+        >
+          <div style={{
+            background: 'var(--card)', borderRadius: 16, padding: '2rem',
+            width: '100%', maxWidth: 360, boxShadow: '0 8px 40px rgba(0,0,0,0.18)',
+          }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#c0392b', marginBottom: '0.8rem' }}>
+              {t(lang, 'profile.withdrawConfirmTitle')}
+            </h3>
+            <p style={{ fontSize: '0.83rem', color: 'var(--ink2)', lineHeight: 1.7, marginBottom: '1.5rem', whiteSpace: 'pre-line' }}>
+              {t(lang, 'profile.withdrawConfirmBody')}
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                type="button"
+                onClick={() => setWithdrawModal(false)}
+                style={{
+                  flex: 1, padding: '0.65rem', fontSize: '0.88rem', fontWeight: 500,
+                  background: 'var(--card2)', color: 'var(--ink2)',
+                  border: '1.5px solid var(--border)', borderRadius: 8,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                {t(lang, 'profile.withdrawConfirmCancel')}
+              </button>
+              <button
+                type="button"
+                onClick={handleWithdraw}
+                disabled={withdrawing}
+                style={{
+                  flex: 1, padding: '0.65rem', fontSize: '0.88rem', fontWeight: 500,
+                  background: withdrawing ? '#e88' : '#c0392b', color: '#fff',
+                  border: 'none', borderRadius: 8,
+                  cursor: withdrawing ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                {withdrawing ? '처리 중…' : t(lang, 'profile.withdrawConfirmOk')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

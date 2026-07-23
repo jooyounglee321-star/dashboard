@@ -284,6 +284,7 @@ class UserOut(BaseModel):
     provider: str
     social_provider: str | None = None
     created_at: datetime
+    withdrawal_status: str | None = None
 
     model_config = {"from_attributes": True}
 

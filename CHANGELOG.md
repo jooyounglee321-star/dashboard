@@ -4,6 +4,34 @@
 
 ---
 
+## 2026-07-23 (5)
+
+### feat — 회원 탈퇴 기능 구현 (30일 유예 후 삭제)
+
+#### 백엔드
+- `models.py`: `withdrawal_status` (VARCHAR20, nullable), `withdrawal_requested_at` (TIMESTAMPTZ, nullable) 컬럼 추가
+- `main.py`: `_migrate_withdrawal_columns()` 마이그레이션 추가 (서버 시작 시 자동 실행)
+- `main.py`: `_delete_pending_withdrawals_job()` 스케줄러 추가 (매일 자정 KST, 30일 경과 유저 자동 삭제)
+- `routers/auth.py`: `POST /api/auth/withdraw` 탈퇴 신청 API (인증 필요)
+- `routers/auth.py`: `POST /api/auth/withdraw/cancel` 탈퇴 취소 API (인증 필요)
+- `routers/auth.py`: 로그인/소셜콜백 응답에 `withdrawal_status` 포함, 탈퇴 대기 유저는 `/withdrawal-pending` 이동
+- `schemas.py`: `UserOut`에 `withdrawal_status` 필드 추가
+
+#### 프론트엔드
+- `ProfilePage.jsx`: 최하단 "계정 탈퇴" 섹션 + 확인 모달 추가 (탈퇴 완료 시 로그아웃 후 /login 이동)
+- `WithdrawalPendingPage.jsx`: 탈퇴 대기 안내 페이지 신규 생성 (신청일/삭제예정일 표시, 취소 버튼)
+- `App.jsx`: `/withdrawal-pending` 라우트 추가 (인증 불필요)
+- `LoginPage.jsx`: 일반/소셜 로그인 후 `withdrawal_status='pending'` 감지 시 `/withdrawal-pending` 이동
+- `ko.json` / `en.json`: `profile.withdraw*`, `withdrawal.*` i18n 키 추가
+
+#### DB_SCHEMA.md 업데이트
+- `users` 테이블 withdrawal 컬럼 2개 추가
+- 서버 시작 시 자동 실행 작업 표에 단계 13, 14 및 스케줄러 표 추가
+
+#### 테스트 결과
+- 단위 테스트 7 passed, 0 failed
+- 빌드: ✅ (npm run build 성공)
+
 ## 2026-07-23 (4)
 
 ### fix — 슈퍼어드민 회원 목록 # 번호 vs 모달 ID 불일치 버그 수정

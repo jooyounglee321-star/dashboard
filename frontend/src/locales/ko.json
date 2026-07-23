@@ -127,7 +127,15 @@
     "other": "기타",
     "height": "키",
     "weight": "몸무게",
-    "dietAIPrompt": "프로필에 출생년도/성별/키/몸무게를 입력하면 AI 식단 분석을 받을 수 있어요 →"
+    "dietAIPrompt": "프로필에 출생년도/성별/키/몸무게를 입력하면 AI 식단 분석을 받을 수 있어요 →",
+    "withdrawSection": "계정 탈퇴",
+    "withdrawBtn": "회원 탈퇴",
+    "withdrawConfirmTitle": "정말 탈퇴하시겠습니까?",
+    "withdrawConfirmBody": "탈퇴 신청 후 30일간 데이터가 보관되며\n30일 후 모든 데이터가 영구 삭제됩니다.\n30일 이내 로그인하면 취소할 수 있습니다.",
+    "withdrawConfirmOk": "탈퇴 신청",
+    "withdrawConfirmCancel": "돌아가기",
+    "withdrawSuccess": "탈퇴 신청이 완료됐습니다. 30일 후 계정이 삭제됩니다.",
+    "withdrawError": "탈퇴 신청에 실패했습니다. 다시 시도해주세요."
   },
   "admin": {
     "title": "관리자 설정",
@@ -715,5 +723,15 @@
     "biweekly": "격주 (2주마다)",
     "dayOfWeekLabel": "요일",
     "secondDayLabel": "두 번째 날"
+  },
+  "withdrawal": {
+    "title": "탈퇴 신청 중",
+    "desc": "탈퇴 신청된 계정입니다.",
+    "requestedAt": "신청일",
+    "deleteAt": "삭제 예정일",
+    "cancelBtn": "탈퇴 취소",
+    "cancelSuccess": "탈퇴 신청이 취소됐습니다.",
+    "cancelError": "탈퇴 취소에 실패했습니다. 다시 시도해주세요.",
+    "backToLogin": "다른 계정으로 로그인"
   }
 }
