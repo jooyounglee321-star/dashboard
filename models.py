@@ -11,8 +11,9 @@ from database import Base
 class User(Base):
     """SaaS 회원 테이블.
 
-    - provider: 'local' | 'google' | 'facebook' 등 가입 경로
-    - provider_id: 소셜 로그인 시 외부 서비스의 고유 ID (local 가입은 NULL)
+    - social_provider: 'google' | 'facebook' | null (소셜 가입 경로)
+    - social_id: 소셜 로그인 시 외부 서비스의 고유 ID
+    - provider / provider_id: 하위호환용 (레거시)
     - hashed_password: local 가입 시에만 사용 (소셜 가입은 NULL)
     """
     __tablename__ = "users"
@@ -23,6 +24,8 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(50), nullable=False, default="Member")
     provider: Mapped[str] = mapped_column(String(30), nullable=False, default="local")
     provider_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    social_provider: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+    social_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     # 슈퍼어드민 확장 컬럼
     name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)

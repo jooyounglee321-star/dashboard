@@ -228,6 +228,7 @@
     "colAutoLogins": "Auto",
     "colPayment": "Payments",
     "colDevice": "Device",
+    "colProvider": "Provider",
     "fieldId": "ID",
     "fieldName": "Name",
     "fieldEmail": "Email",

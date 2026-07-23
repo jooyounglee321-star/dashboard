@@ -310,6 +310,7 @@ export default function SuperadminPage() {
                   <th>{t(lang, 'superadmin.colId')}</th>
                   <th>{t(lang, 'superadmin.colName')}</th>
                   <th>{t(lang, 'superadmin.colEmail')}</th>
+                  <th>{t(lang, 'superadmin.colProvider')}</th>
                   <th>{t(lang, 'superadmin.colJoined')}</th>
                   <th>{t(lang, 'superadmin.colPlan')}</th>
                   <th>{t(lang, 'superadmin.colRole')}</th>
@@ -324,14 +325,19 @@ export default function SuperadminPage() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr className="state-row"><td colSpan={12}>{t(lang, 'superadmin.loading')}</td></tr>
+                  <tr className="state-row"><td colSpan={13}>{t(lang, 'superadmin.loading')}</td></tr>
                 ) : !page.length ? (
-                  <tr className="state-row"><td colSpan={12}>{t(lang, 'superadmin.noResults')}</td></tr>
+                  <tr className="state-row"><td colSpan={13}>{t(lang, 'superadmin.noResults')}</td></tr>
                 ) : page.map((u, i) => (
                   <tr key={u.id} style={{ cursor: 'pointer' }} onClick={() => openModal(u.id)}>
                     <td style={{ color: 'var(--ink3)', fontSize: '0.75rem' }}>{start + i + 1}</td>
                     <td>{u.name || '—'}</td>
                     <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</td>
+                    <td style={{ whiteSpace: 'nowrap', fontSize: '0.8rem' }}>
+                      {u.social_provider === 'google' ? '🔵 구글'
+                        : u.social_provider === 'facebook' ? '🔷 페이스북'
+                        : '📧 이메일'}
+                    </td>
                     <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(u.created_at, lang)}</td>
                     <td><span className={`badge badge-${u.plan}`}>{planLabel(u.plan)}</span></td>
                     <td><span className={`badge badge-role-${u.role}`}>{roleLabel(u.role)}</span></td>
@@ -483,7 +489,10 @@ export default function SuperadminPage() {
                   [t(lang, 'superadmin.fieldName'), modal.name || '—'],
                   [t(lang, 'superadmin.fieldEmail'), modal.email],
                   [t(lang, 'superadmin.fieldRole'), modal.role],
-                  [t(lang, 'superadmin.fieldProvider'), modal.provider],
+                  [t(lang, 'superadmin.fieldProvider'),
+                    modal.social_provider === 'google' ? '🔵 구글'
+                    : modal.social_provider === 'facebook' ? '🔷 페이스북'
+                    : '📧 이메일'],
                   [t(lang, 'superadmin.fieldJoined'), fmtDatetime(modal.created_at)],
                   [t(lang, 'superadmin.fieldPlan'), planLabel(modal.plan)],
                   [t(lang, 'superadmin.fieldExpires'), fmtDate(modal.plan_expires_at, lang)],
@@ -527,7 +536,7 @@ export default function SuperadminPage() {
               <div style={{ fontSize: '0.7rem', fontWeight: 500, letterSpacing: '0.1em', color: 'var(--ink3)', textTransform: 'uppercase', marginBottom: '0.75rem' }}>{t(lang, 'superadmin.resetPassword')}</div>
               <p style={{ fontSize: '0.8rem', color: 'var(--ink3)', marginBottom: '0.5rem' }}>{t(lang, 'superadmin.resetPwNote')}</p>
               <button className="btn btn-blue btn-sm"
-                disabled={modal.provider !== 'local'}
+                disabled={!!modal.social_provider}
                 onClick={resetPassword}>{t(lang, 'superadmin.resetPwBtn')}</button>
               {pwResult && (
                 <div style={{ marginTop: '0.5rem' }}>

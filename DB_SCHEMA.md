@@ -42,8 +42,10 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 | `email` | VARCHAR(320) | NOT NULL, UNIQUE, INDEX | 이메일 주소 (로그인 ID) |
 | `hashed_password` | VARCHAR(255) | NULLABLE | bcrypt 해시 비밀번호 (소셜 가입 시 NULL) |
 | `role` | VARCHAR(50) | NOT NULL, DEFAULT `'Member'` | 회원 레벨: `admin` / `premium` / `free` / `guest` |
-| `provider` | VARCHAR(30) | NOT NULL, DEFAULT `'local'` | 가입 경로: `local` / `google` / 기타 |
-| `provider_id` | VARCHAR(255) | NULLABLE, INDEX | 소셜 로그인 외부 서비스 고유 ID |
+| `provider` | VARCHAR(30) | NOT NULL, DEFAULT `'local'` | 가입 경로 (레거시): `local` / `google` / `facebook` |
+| `provider_id` | VARCHAR(255) | NULLABLE, INDEX | 소셜 ID (레거시) |
+| `social_provider` | VARCHAR(30) | NULLABLE | 소셜 가입 경로: `google` / `facebook` / null(이메일) |
+| `social_id` | VARCHAR(255) | NULLABLE, INDEX | 소셜 로그인 시 외부 서비스 고유 ID |
 | `created_at` | DATETIME | DEFAULT `now()` (서버) | 가입 일시 |
 | `name` | VARCHAR(100) | NULLABLE | 닉네임 (사용자 설정) |
 | `plan` | VARCHAR(20) | NOT NULL, DEFAULT `'free'` | 구독 플랜: `free` / `premium` 등 |
