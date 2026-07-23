@@ -9,6 +9,7 @@ import ProfilePage from './pages/ProfilePage'
 import BudgetPage from './pages/BudgetPage'
 import DietStatsPage from './pages/DietStatsPage'
 import RecurringPage from './pages/RecurringPage'
+import WithdrawalPendingPage from './pages/WithdrawalPendingPage'
 import DebugPanel from './DebugPanel'
 
 function hasValidToken() {
@@ -111,6 +112,7 @@ export default function App() {
         <Route path="/budget"      element={<AuthGuard><BudgetPage /></AuthGuard>} />
         <Route path="/recurring"   element={<AuthGuard><RecurringPage /></AuthGuard>} />
         <Route path="/diet-stats"  element={<AuthGuard><DietStatsPage /></AuthGuard>} />
+        <Route path="/withdrawal-pending" element={<WithdrawalPendingPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
       {debugMode && <DebugPanel />}

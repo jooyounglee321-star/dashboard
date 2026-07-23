@@ -991,6 +991,65 @@ def _migrate_social_columns():
     logger.info("[MIGRATE] social_provider / social_id 컬럼 확인/마이그레이션 완료")
 
 
+def _migrate_withdrawal_columns():
+    """users 테이블에 탈퇴 유예 컬럼 추가."""
+    with engine.connect() as conn:
+        for sql in [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS withdrawal_status VARCHAR(20)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS withdrawal_requested_at TIMESTAMPTZ",
+        ]:
+            try:
+                conn.execute(text(sql))
+                conn.commit()
+            except Exception as e:
+                logger.warning("[MIGRATE] withdrawal 컬럼 추가 실패(이미 존재): %s", e)
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+    logger.info("[MIGRATE] withdrawal_status / withdrawal_requested_at 컬럼 확인 완료")
+
+
+async def _delete_pending_withdrawals_job():
+    """탈퇴 신청 후 30일 지난 유저 자동 삭제 (매일 자정 KST 실행)."""
+    from datetime import timedelta
+    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+    db = SessionLocal()
+    try:
+        targets = db.query(User).filter(
+            User.withdrawal_status == "pending",
+            User.withdrawal_requested_at < cutoff,
+        ).all()
+        deleted = 0
+        for user in targets:
+            uid = user.id
+            for tbl in [
+                "expenses", "diets", "diet_analyses", "memos", "pinned_memos",
+                "todos", "bookmarks", "youtube_channels", "stock_price_history",
+                "dividend_history", "recurring_expenses", "expense_budgets",
+                "daily_portfolio_snapshot", "portfolio_groups", "stocks",
+                "timezone_config",
+            ]:
+                try:
+                    db.execute(text(f"DELETE FROM {tbl} WHERE user_id = :uid"), {"uid": uid})
+                except Exception:
+                    pass
+            try:
+                db.execute(text("DELETE FROM widget_configs WHERE user_id = :uid"), {"uid": uid})
+            except Exception:
+                pass
+            db.delete(user)
+            deleted += 1
+            logger.info("[WITHDRAWAL] 유저 삭제 완료: id=%s, email=%s", uid, user.email)
+        db.commit()
+        logger.info("[WITHDRAWAL] 자동 탈퇴 처리 완료: %s명 삭제", deleted)
+    except Exception as e:
+        logger.error("[WITHDRAWAL] 자동 탈퇴 처리 오류: %s", e)
+        db.rollback()
+    finally:
+        db.close()
+
+
 def _seed_default_permissions():
     """permissions 테이블이 비어 있을 때 기본 권한을 시드."""
     db = SessionLocal()
@@ -1051,18 +1110,27 @@ async def lifespan(app: FastAPI):
     _migrate_recurring_type_column()
     _migrate_recurring_frequency_columns()
     _migrate_social_columns()
+    _migrate_withdrawal_columns()
     logger.info("[DB] 테이블 생성/확인 완료")
 
     # APScheduler: 30분마다 환율 자동 갱신
     from apscheduler.triggers.interval import IntervalTrigger
+    from apscheduler.triggers.cron import CronTrigger
     _scheduler.add_job(
         _refresh_rates_job,
         IntervalTrigger(minutes=30),
         id="refresh_exchange_rates",
         replace_existing=True,
     )
+    # APScheduler: 매일 자정(KST) 탈퇴 유예 30일 경과 유저 자동 삭제
+    _scheduler.add_job(
+        _delete_pending_withdrawals_job,
+        CronTrigger(hour=0, minute=0, timezone="Asia/Seoul"),
+        id="delete_pending_withdrawals",
+        replace_existing=True,
+    )
     _scheduler.start()
-    logger.info("[SCHEDULER] APScheduler 시작 — 30분마다 환율 갱신")
+    logger.info("[SCHEDULER] APScheduler 시작 — 환율 갱신(30분), 탈퇴 자동 삭제(매일 자정)")
 
     yield
 

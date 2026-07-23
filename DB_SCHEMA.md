@@ -61,6 +61,8 @@ SaaS 회원 테이블. 로컬(이메일/비밀번호) 및 소셜 로그인 회�
 | `gender` | VARCHAR(10) | NULLABLE | 성별: `male` / `female` / `other` |
 | `height_cm` | FLOAT | NULLABLE | 키 (항상 cm 단위로 저장, 단위 변환은 프론트에서 처리) |
 | `weight_kg` | FLOAT | NULLABLE | 몸무게 (항상 kg 단위로 저장, 단위 변환은 프론트에서 처리) |
+| `withdrawal_status` | VARCHAR(20) | NULLABLE | 탈퇴 상태: `'pending'` (신청 중) / `null` (정상) |
+| `withdrawal_requested_at` | TIMESTAMPTZ | NULLABLE | 탈퇴 신청 일시 (UTC). 신청 후 30일 경과 시 자동 삭제 |
 
 **비고:**
 - `role` 컬럼 레거시 값 `'Member'`는 서버 시작 시 `'free'`로 자동 마이그레이션
@@ -474,3 +476,12 @@ permissions     — 독립 테이블 (FK 없음)
 | 10 | `_migrate_recurring_expenses_table()` | `recurring_expenses` 테이블 없으면 생성 |
 | 11 | `_migrate_recurring_type_column()` | `recurring_expenses.type` 컬럼 누락 시 `ALTER TABLE`로 추가 |
 | 12 | `_migrate_recurring_frequency_columns()` | `recurring_expenses`에 `frequency` / `day_of_week` / `day_of_month_2` 컬럼 누락 시 추가 |
+| 13 | `_migrate_social_columns()` | `users`에 `social_provider` / `social_id` 컬럼 추가, 기존 구글/페이스북 유저 자동 마이그레이션 |
+| 14 | `_migrate_withdrawal_columns()` | `users`에 `withdrawal_status` / `withdrawal_requested_at` 컬럼 추가 |
+
+### 스케줄러 (APScheduler, 서버 시작 후 백그라운드 실행)
+
+| 주기 | 함수 | 내용 |
+|------|------|------|
+| 30분마다 | `_refresh_rates_job()` | 환율 자동 갱신 |
+| 매일 자정 KST | `_delete_pending_withdrawals_job()` | `withdrawal_status='pending'`이고 `withdrawal_requested_at`이 30일 경과한 유저 및 전체 데이터 삭제 |

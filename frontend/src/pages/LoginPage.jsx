@@ -31,15 +31,20 @@ export default function LoginPage() {
     return () => window.removeEventListener('languageChanged', handleLangChange)
   }, [])
 
-  // 구글 OAuth 콜백 토큰 처리
+  // 소셜 OAuth 콜백 토큰 처리
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const token = params.get('token')
     const error = params.get('error')
+    const withdrawalPending = params.get('withdrawal_pending')
     if (token) {
       localStorage.setItem('token', token)
       window.history.replaceState({}, '', '/login')
-      navigate('/')
+      if (withdrawalPending === 'true') {
+        navigate('/withdrawal-pending')
+      } else {
+        navigate('/')
+      }
     } else if (error) {
       setMsg({ type: 'error', text: t(lang, 'auth.errLogin') })
       window.history.replaceState({}, '', '/login')
@@ -71,6 +76,11 @@ export default function LoginPage() {
         const storage = autoLogin ? localStorage : sessionStorage
         storage.setItem('token', jwt)
         if (data.user) storage.setItem('user', JSON.stringify(data.user))
+        // 탈퇴 대기 중이면 안내 페이지로 이동
+        if (data.user?.withdrawal_status === 'pending') {
+          navigate('/withdrawal-pending')
+          return
+        }
         setMsg({ type: 'success', text: t(lang, 'auth.successLogin') })
         setTimeout(() => navigate('/'), 800)
       } else {
