@@ -388,11 +388,27 @@ export default function SuperadminPage() {
                     onClick={() => toggleCl(i)}
                     style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.7rem 1rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', gap: '0.75rem' }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', minWidth: 0 }}>
-                      <span style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--ink)', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>{entry.date}</span>
-                      <span style={{ fontSize: '0.72rem', background: 'var(--bg2)', color: 'var(--ink3)', padding: '0.1rem 0.45rem', borderRadius: 10, whiteSpace: 'nowrap' }}>
-                        {entry.items.length}{t(lang, 'superadmin.changelogCount')}
-                      </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem', minWidth: 0, flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--ink)', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>{entry.date}</span>
+                        <span style={{ fontSize: '0.72rem', background: 'var(--bg2)', color: 'var(--ink3)', padding: '0.1rem 0.45rem', borderRadius: 10, whiteSpace: 'nowrap' }}>
+                          {entry.items.length}{t(lang, 'superadmin.changelogCount')}
+                        </span>
+                      </div>
+                      {(entry.titles || []).length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                          {(entry.titles || []).map((title, ti) => {
+                            const tm = title.match(/^(feat|fix|refactor|design|perf|docs|chore|style|test)\s*[—-]\s*/i)
+                            const label = tm ? title.slice(tm[0].length) : title
+                            return (
+                              <span key={ti} style={{ fontSize: '0.72rem', color: 'var(--ink3)', lineHeight: 1.4 }}>
+                                {ti > 0 && <span style={{ marginRight: '0.3rem', opacity: 0.4 }}>·</span>}
+                                {label}
+                              </span>
+                            )
+                          })}
+                        </div>
+                      )}
                     </div>
                     <span style={{ color: 'var(--ink3)', fontSize: '0.8rem', flexShrink: 0 }}>{isOpen ? '▲' : '▼'}</span>
                   </button>
