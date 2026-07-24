@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-07-23 (8)
+
+### fix — Rate limiting 단일 인스턴스 통합 + 탈퇴 엔드포인트 rate limit 추가
+- `routers/_limiter.py` 신규 생성: Limiter 단일 공유 인스턴스
+- `routers/auth.py`: 로컬 `Limiter()` 생성 제거 → `_limiter.py`에서 import (카운터 통합)
+- `main.py`: 로컬 `Limiter()` 생성 제거 → `_limiter.py`에서 import, `app.state.limiter` 등록
+- `POST /api/auth/withdraw`, `POST /api/auth/withdraw/cancel`: `@limiter.limit("5/minute")` 추가
+
+### Rate limit 적용 현황
+- `POST /api/auth/register`: 5회/분
+- `POST /api/auth/login`: 10회/분
+- `POST /api/auth/withdraw`: 5회/분 (신규)
+- `POST /api/auth/withdraw/cancel`: 5회/분 (신규)
+
 ## 2026-07-23 (7)
 
 ### fix — CORS 설정 강화 + 하드코딩 URL 환경변수화
