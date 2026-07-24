@@ -619,10 +619,12 @@ def kakao_callback(code: str | None = None, error: str | None = None, db: Sessio
             "redirect_uri": KAKAO_REDIRECT_URI,
             "code": code,
         }, headers={"Content-Type": "application/x-www-form-urlencoded"}, timeout=10)
-    except Exception:
+    except Exception as e:
+        logger.error("[KAKAO] 토큰 요청 예외: %s", e)
         return RedirectResponse("/login?error=kakao_token_failed")
 
     if token_res.status_code != 200:
+        logger.error("[KAKAO] 토큰 응답 %s: %s", token_res.status_code, token_res.text)
         return RedirectResponse("/login?error=kakao_token_failed")
 
     access_token = token_res.json().get("access_token")
