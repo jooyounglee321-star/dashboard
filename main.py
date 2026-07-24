@@ -1217,17 +1217,6 @@ def health_check():
     return {"status": "ok"}
 
 
-@app.get("/api/debug/ip")
-def debug_ip(request: Request):
-    """Railway 프록시 헤더 진단용 — rate limit 디버깅 후 제거 예정."""
-    from routers._limiter import _get_real_ip
-    return {
-        "client_host": request.client.host if request.client else None,
-        "x_forwarded_for": request.headers.get("X-Forwarded-For"),
-        "x_real_ip": request.headers.get("X-Real-IP"),
-        "effective_ip": _get_real_ip(request),
-    }
-
 
 _DIST   = Path("frontend/dist")
 _STATIC = Path("static")          # legacy fallback during development
