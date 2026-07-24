@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-07-23 (9)
+
+### fix — Rate limit key를 X-Forwarded-For 실제 IP로 교체 (Railway 프록시 대응)
+- `routers/_limiter.py`: Railway 로드밸런서가 `request.client.host`를 매 요청마다 다른 내부 IP(`100.64.x.x`)로 설정하는 문제 수정
+- `_get_real_ip()` 함수 추가: `X-Forwarded-For` → `X-Real-IP` → `client.host` 순서로 실제 IP 추출
+- 테스트 확인: 연속 11회 로그인 시 [11] HTTP 429 정상 반환 ✅
+
 ## 2026-07-23 (8)
 
 ### fix — Rate limiting 단일 인스턴스 통합 + 탈퇴 엔드포인트 rate limit 추가
