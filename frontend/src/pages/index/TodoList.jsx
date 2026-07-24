@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import { t } from './i18n'
-import { authH, authHJ } from '../../utils/api'
 
 export default function TodoList({ date, lang = 'ko', isMobile = false }) {
   const today = date   // 실제 오늘 날짜 (변하지 않음)
@@ -29,7 +28,7 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
     if (!viewDate) return
     setLoading(true)
     try {
-      const res = await fetch(`/api/todos?date=${viewDate}`, { headers: authH() })
+      const res = await fetch(`/api/todos?date=${viewDate}`, { credentials: 'include' })
       setTodos(res.ok ? await res.json() : [])
     } catch { setTodos([]) }
     finally { setLoading(false) }
@@ -56,7 +55,8 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
     try {
       const res = await fetch('/api/todos', {
         method: 'POST',
-        headers: authHJ(),
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           title:      newTitle.trim(),
           todo_type:  newType,
@@ -83,7 +83,8 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
     const isDone = todo.is_done_dates.includes(viewDate)
     await fetch(`/api/todos/${todo.id}/check`, {
       method: 'PUT',
-      headers: authHJ(),
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ date: viewDate, checked: !isDone }),
     })
     setTodos(prev => prev.map(td =>
@@ -97,7 +98,7 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
   }
 
   async function deleteTodo(id) {
-    await fetch(`/api/todos/${id}`, { method: 'DELETE', headers: authH() })
+    await fetch(`/api/todos/${id}`, { method: 'DELETE', credentials: 'include' })
     setTodos(prev => prev.filter(td => td.id !== id))
   }
 

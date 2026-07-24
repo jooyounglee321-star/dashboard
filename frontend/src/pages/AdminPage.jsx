@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Toast, { useToast } from '../components/Toast'
 import { t, T } from './index/i18n'
-import { authH } from '../utils/api'
 
 /* ── 유틸 ── */
 const sv = (k, v) => localStorage.setItem(k, JSON.stringify(v))
@@ -98,7 +97,7 @@ export default function AdminPage() {
 
   /* ── 유튜브 ── */
   async function loadYTChannels() {
-    const ch = await fetch('/api/youtube-channels', { headers: authH() }).then(r => r.ok ? r.json() : []).catch(() => [])
+    const ch = await fetch('/api/youtube-channels', { credentials: 'include' }).then(r => r.ok ? r.json() : []).catch(() => [])
     setYtChannels(ch)
   }
   function saveYTAccount() {
@@ -109,14 +108,14 @@ export default function AdminPage() {
   async function addYT() {
     if (!ytName || !ytUrl) { showToast('이름과 URL을 모두 입력해주세요', 'err'); return }
     try {
-      const r = await fetch('/api/youtube-channels', { method: 'POST', headers: { ...authH(), 'Content-Type': 'application/json' }, body: JSON.stringify({ channel_name: ytName, channel_url: ytUrl }) })
+      const r = await fetch('/api/youtube-channels', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ channel_name: ytName, channel_url: ytUrl }) })
       if (!r.ok) throw new Error('HTTP ' + r.status)
       setYtName(''); setYtUrl(''); await loadYTChannels(); showToast('✓ 채널이 추가되었습니다', 'ok')
     } catch { showToast('저장 실패 - 서버 연결을 확인해주세요', 'err') }
   }
   async function delYT(id) {
     try {
-      const r = await fetch('/api/youtube-channels/' + id, { method: 'DELETE', headers: authH() })
+      const r = await fetch('/api/youtube-channels/' + id, { method: 'DELETE', credentials: 'include' })
       if (!r.ok) throw new Error('HTTP ' + r.status)
       await loadYTChannels(); showToast('삭제되었습니다', 'ok')
     } catch { showToast('삭제 실패 - 서버 연결을 확인해주세요', 'err') }
@@ -125,13 +124,13 @@ export default function AdminPage() {
   /* ── 시간대 ── */
   async function loadTZData() {
     try {
-      const r = await fetch('/api/timezone', { headers: authH() })
+      const r = await fetch('/api/timezone', { credentials: 'include' })
       if (r.ok) { const d = await r.json(); if (d.zones?.length === 3) setTzData(d.zones) }
     } catch {}
   }
   async function saveTZ() {
     try {
-      await fetch('/api/timezone', { method: 'PUT', headers: { ...authH(), 'Content-Type': 'application/json' }, body: JSON.stringify({ zones: tzData }) })
+      await fetch('/api/timezone', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ zones: tzData }) })
       showToast('✓ 시간대가 저장되었습니다', 'ok')
     } catch { showToast('저장 실패 - 서버 연결을 확인해주세요', 'err') }
   }
@@ -142,7 +141,7 @@ export default function AdminPage() {
   /* ── 위젯 설정 로드/저장 ── */
   async function loadWidgetCfg() {
     try {
-      const r = await fetch('/api/auth/widget-config', { headers: authH() })
+      const r = await fetch('/api/auth/widget-config', { credentials: 'include' })
       if (r.ok) { const d = await r.json(); setWidgetCfg(d.config) }
     } catch {}
   }
@@ -150,7 +149,8 @@ export default function AdminPage() {
     try {
       const r = await fetch('/api/auth/widget-config', {
         method: 'PUT',
-        headers: { ...authH(), 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ config: widgetCfg }),
       })
       if (r.ok) showToast('✓ 위젯 설정이 저장되었습니다', 'ok')

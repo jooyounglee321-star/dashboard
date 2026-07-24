@@ -1304,7 +1304,6 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
               </div>
               )
             })()}
-            )}
 
             {/* ⑤ 수익률% 바차트 */}
             <div className="stats-section">

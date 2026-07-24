@@ -4,6 +4,37 @@
 
 ---
 
+## 2026-07-23 (10)
+
+### feat — SEC-01: JWT → HttpOnly Cookie 인증 전환
+
+#### 백엔드 (routers/auth.py, schemas.py)
+- `Cookie`, `Response` import 추가
+- `_SECURE_COOKIE` 상수: production=True(HTTPS only), development=False
+- `_set_auth_cookie(response, token)` 헬퍼 함수 추가
+- `POST /api/auth/register`: `response: Response` 파라미터 추가, Cookie 발급
+- `POST /api/auth/login`: Cookie 발급, 응답에서 `access_token` 제거
+- `get_current_user()`: Cookie 우선 → Authorization 헤더 fallback (하위호환)
+- `POST /api/auth/logout`: `response.delete_cookie("access_token")` 추가
+- Google/Facebook 콜백: `?token=JWT` URL 파라미터 대신 Cookie 설정 후 `/` 또는 `/withdrawal-pending`으로 직접 리디렉트
+- `schemas.py`: `AuthOut` 개편 (access_token 제거, message+user 반환)
+
+#### 프론트엔드 (16개 파일)
+- `api.js`: `getToken()` 제거, `apiFetch`에 `credentials: 'include'` 기본 설정
+- `utils/api.js`: `getToken`/`authH`/`authHJ` 제거 → `credOpts`/`credOptsJ` 교체
+- `App.jsx`: `hasValidToken()` → `isLoggedIn()` (localStorage `dashboard_logged_in` 플래그 기반), 모든 fetch에 credentials 적용
+- `LoginPage.jsx`: 토큰 저장 제거, `dashboard_logged_in=1` 설정, 소셜 콜백 `?token=` 파라미터 처리 제거
+- `RegisterPage.jsx`: 토큰 저장 제거, `dashboard_logged_in=1` 설정
+- `ProfilePage.jsx`, `WithdrawalPendingPage.jsx`, `RecurringPage.jsx`, `BudgetPage.jsx`, `DietStatsPage.jsx`, `SuperadminPage.jsx`, `AdminPage.jsx`, `IndexPage.jsx`: Bearer 헤더 → `credentials: 'include'`
+- `YoutubeCard.jsx`, `SitesSettingsModal.jsx`, `SitesCard.jsx`, `TodoList.jsx`, `PinnedMemoCard.jsx`, `DietCard.jsx`: 동일 전환
+- `DebugPanel.jsx`: `token` 표시 → `cookie` 로그인 상태 표시
+- `StockStatsOverlay.jsx`: 기존 JSX 오류(`)}` 고아 코드) 수정
+
+#### 보안 효과
+- XSS로 JWT 탈취 불가 (HttpOnly)
+- HTTPS 전용 전송 (secure=True in production)
+- SameSite=lax CSRF 기본 방어
+
 ## 2026-07-23 (9)
 
 ### fix — Rate limit key를 X-Forwarded-For 실제 IP로 교체 (Railway 프록시 대응)

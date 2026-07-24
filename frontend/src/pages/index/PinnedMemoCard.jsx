@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react'
 import { t } from './i18n'
-import { authH as authHdr } from '../../utils/api'
 
 const PASTEL = {
   yellow:   { bg: '#FFF9C4', text: '#5a4a00' },
@@ -69,7 +68,7 @@ const PinnedMemoCard = forwardRef(function PinnedMemoCard({ lang = 'ko' }, ref) 
   const [saving,   setSaving]   = useState(false)
 
   const load = useCallback(async () => {
-    const list = await fetch('/api/pinned-memos', { headers: authHdr() })
+    const list = await fetch('/api/pinned-memos', { credentials: 'include' })
       .then(r => r.ok ? r.json() : []).catch(() => [])
     setMemos(list)
   }, [])
@@ -103,13 +102,13 @@ const PinnedMemoCard = forwardRef(function PinnedMemoCard({ lang = 'ko' }, ref) 
       if (editId) {
         await fetch(`/api/pinned-memos/${editId}`, {
           method: 'PUT',
-          headers: { ...authHdr(), 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json' }, credentials: 'include',
           body: JSON.stringify(form),
         })
       } else {
         await fetch('/api/pinned-memos', {
           method: 'POST',
-          headers: { ...authHdr(), 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json' }, credentials: 'include',
           body: JSON.stringify(form),
         })
       }
@@ -121,7 +120,7 @@ const PinnedMemoCard = forwardRef(function PinnedMemoCard({ lang = 'ko' }, ref) 
   }
 
   async function deleteMemo(id) {
-    await fetch(`/api/pinned-memos/${id}`, { method: 'DELETE', headers: authHdr() })
+    await fetch(`/api/pinned-memos/${id}`, { method: 'DELETE', credentials: 'include' })
     await load()
   }
 

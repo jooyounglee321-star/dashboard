@@ -6,7 +6,7 @@ export default function YoutubeCard({ isMobile = false, maxCount = 10, lang = 'k
   const [ytAccount, setYtAccount] = useState('')
 
   useEffect(() => {
-    fetch('/api/youtube-channels', { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } })
+    fetch('/api/youtube-channels', { credentials: 'include' })
       .then(r => r.ok ? r.json() : [])
       .catch(() => [])
       .then(setChannels)

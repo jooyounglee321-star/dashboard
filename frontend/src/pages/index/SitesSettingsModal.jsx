@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { t } from './i18n'
 
-const authH = () => ({ Authorization: 'Bearer ' + localStorage.getItem('token') })
 
 function getFavicon(url) {
   try { return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=32` }
@@ -25,7 +24,7 @@ export default function SitesSettingsModal({ isOpen, onClose, onChanged, lang = 
   const [adding, setAdding] = useState(false)
 
   async function load() {
-    const data = await fetch('/api/bookmarks', { headers: authH() })
+    const data = await fetch('/api/bookmarks', { credentials: 'include' })
       .then(r => r.ok ? r.json() : []).catch(() => [])
     setSites(data)
   }
@@ -41,7 +40,7 @@ export default function SitesSettingsModal({ isOpen, onClose, onChanged, lang = 
     setAdding(true)
     await fetch('/api/bookmarks', {
       method: 'POST',
-      headers: { ...authH(), 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' }, credentials: 'include',
       body: JSON.stringify({ title: n, url: u }),
     })
     setName(''); setUrl('')
@@ -54,7 +53,7 @@ export default function SitesSettingsModal({ isOpen, onClose, onChanged, lang = 
     if (sites.find(s => s.url === u)) return
     await fetch('/api/bookmarks', {
       method: 'POST',
-      headers: { ...authH(), 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' }, credentials: 'include',
       body: JSON.stringify({ title: n, url: u }),
     })
     await load()
@@ -62,7 +61,7 @@ export default function SitesSettingsModal({ isOpen, onClose, onChanged, lang = 
   }
 
   async function del(id) {
-    await fetch('/api/bookmarks/' + id, { method: 'DELETE', headers: authH() })
+    await fetch('/api/bookmarks/' + id, { method: 'DELETE', credentials: 'include' })
     await load()
     onChanged?.()
   }

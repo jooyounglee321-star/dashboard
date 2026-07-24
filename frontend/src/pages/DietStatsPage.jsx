@@ -13,9 +13,6 @@ const WEEKDAY_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 function getLang() {
   try { return localStorage.getItem('dashboard_lang') || 'ko' } catch { return 'ko' }
 }
-function authHeader() {
-  return { Authorization: 'Bearer ' + localStorage.getItem('token') }
-}
 function formatDateHeader(dateStr, lang) {
   const d = new Date(dateStr + 'T00:00:00')
   if (lang === 'en') {
@@ -154,8 +151,8 @@ export default function DietStatsPage() {
     setLoading(true)
     try {
       const [dietsRes, analysisRes] = await Promise.all([
-        fetch(`/api/diets`, { headers: authHeader() }),
-        fetch(`/api/diets/analysis/history?year=${year}&month=${month}`, { headers: authHeader() }),
+        fetch(`/api/diets`, { credentials: 'include' }),
+        fetch(`/api/diets/analysis/history?year=${year}&month=${month}`, { credentials: 'include' }),
       ])
       const allDiets    = dietsRes.ok    ? await dietsRes.json()    : []
       const allAnalyses = analysisRes.ok ? await analysisRes.json() : []

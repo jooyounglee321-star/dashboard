@@ -84,11 +84,10 @@ export default function SuperadminPage() {
     if (s)  params.set('search', s)
     if (p)  params.set('plan', p)
     if (st) params.set('status', st)
-    const tok = { Authorization: 'Bearer ' + localStorage.getItem('token') }
     try {
       const [usersRes, statsRes] = await Promise.all([
-        fetch('/api/admin/users?' + params, { headers: tok }),
-        fetch('/api/admin/stats', { headers: tok }),
+        fetch('/api/admin/users?' + params, { credentials: 'include' }),
+        fetch('/api/admin/stats', { credentials: 'include' }),
       ])
       setAllUsers(usersRes.ok ? await usersRes.json() : [])
       if (statsRes.ok) setStats(await statsRes.json())
@@ -100,8 +99,7 @@ export default function SuperadminPage() {
 
   useEffect(() => {
     setClLoading(true)
-    const tok = { Authorization: 'Bearer ' + localStorage.getItem('token') }
-    fetch('/api/admin/superadmin/changelog', { headers: tok })
+    fetch('/api/admin/superadmin/changelog', { credentials: 'include' })
       .then(r => r.ok ? r.json() : [])
       .catch(() => [])
       .then(data => {
@@ -124,7 +122,7 @@ export default function SuperadminPage() {
   async function openModal(id) {
     setPwResult('')
     try {
-      const res = await fetch(`/api/admin/users/${id}`, { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } })
+      const res = await fetch(`/api/admin/users/${id}`, { credentials: 'include' })
       if (!res.ok) throw new Error()
       const u = await res.json()
       setModal(u)
@@ -137,7 +135,7 @@ export default function SuperadminPage() {
   async function savePlan() {
     if (!modal) return
     const res = await fetch(`/api/admin/users/${modal.id}/plan`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('token') },
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
       body: JSON.stringify({ plan: modalPlan, plan_expires_at: modalExpires || null }),
     })
     if (res.ok) { showToast(t(lang, 'superadmin.toastPlanSaved'), 'ok'); loadUsers() }
@@ -147,13 +145,13 @@ export default function SuperadminPage() {
   async function saveStatus(status) {
     if (!modal) return
     const res = await fetch(`/api/admin/users/${modal.id}/status`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('token') },
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
       body: JSON.stringify({ status }),
     })
     if (res.ok) {
       showToast(`[${statusLabel(status)}]`, 'ok')
       loadUsers()
-      const r2 = await fetch(`/api/admin/users/${modal.id}`, { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } })
+      const r2 = await fetch(`/api/admin/users/${modal.id}`, { credentials: 'include' })
       if (r2.ok) { const u = await r2.json(); setModal(u) }
     } else showToast(t(lang, 'superadmin.toastSaveErr'), 'err')
   }
@@ -161,7 +159,7 @@ export default function SuperadminPage() {
   async function resetPassword() {
     if (!modal) return
     if (!window.confirm(t(lang, 'superadmin.confirmResetPw'))) return
-    const res = await fetch(`/api/admin/users/${modal.id}/reset-password`, { method: 'POST', headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } })
+    const res = await fetch(`/api/admin/users/${modal.id}/reset-password`, { method: 'POST', credentials: 'include' })
     if (res.ok) {
       const data = await res.json()
       setPwResult(data.new_password)
@@ -175,7 +173,7 @@ export default function SuperadminPage() {
   async function saveMemo() {
     if (!modal) return
     const res = await fetch(`/api/admin/users/${modal.id}/memo`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('token') },
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
       body: JSON.stringify({ admin_memo: modalMemo }),
     })
     if (res.ok) showToast(t(lang, 'superadmin.toastMemoSaved'), 'ok')

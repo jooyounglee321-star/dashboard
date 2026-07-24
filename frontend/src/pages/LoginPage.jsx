@@ -19,7 +19,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
-  const [autoLogin, setAutoLogin] = useState(false)
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState({ type: '', text: '' })
 
@@ -31,21 +30,11 @@ export default function LoginPage() {
     return () => window.removeEventListener('languageChanged', handleLangChange)
   }, [])
 
-  // 소셜 OAuth 콜백 토큰 처리
+  // 소셜 OAuth 콜백 — Cookie는 서버가 이미 설정했으므로 에러 파라미터만 처리
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    const token = params.get('token')
     const error = params.get('error')
-    const withdrawalPending = params.get('withdrawal_pending')
-    if (token) {
-      localStorage.setItem('token', token)
-      window.history.replaceState({}, '', '/login')
-      if (withdrawalPending === 'true') {
-        navigate('/withdrawal-pending')
-      } else {
-        navigate('/')
-      }
-    } else if (error) {
+    if (error) {
       setMsg({ type: 'error', text: t(lang, 'auth.errLogin') })
       window.history.replaceState({}, '', '/login')
     }
@@ -63,19 +52,14 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       })
       const data = await res.json()
       if (res.ok) {
-        // access_token 키가 없거나 빈값이면 명시적으로 경고
-        const jwt = data.access_token || data.token || ''
-        if (!jwt) {
-          setMsg({ type: 'error', text: t(lang, 'auth.errLogin') })
-          return
-        }
-        const storage = autoLogin ? localStorage : sessionStorage
-        storage.setItem('token', jwt)
-        if (data.user) storage.setItem('user', JSON.stringify(data.user))
+        // Cookie는 서버가 설정. 로그인 상태 힌트와 유저 정보만 저장
+        localStorage.setItem('dashboard_logged_in', '1')
+        if (data.user) localStorage.setItem('user', JSON.stringify(data.user))
         // 탈퇴 대기 중이면 안내 페이지로 이동
         if (data.user?.withdrawal_status === 'pending') {
           navigate('/withdrawal-pending')
@@ -141,16 +125,6 @@ export default function LoginPage() {
                   {showPw ? '🙈' : '👁️'}
                 </button>
               </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 12px' }}>
-              <input
-                type="checkbox" id="autoLogin"
-                checked={autoLogin} onChange={e => setAutoLogin(e.target.checked)}
-                style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--accent)' }}
-              />
-              <label htmlFor="autoLogin" style={{ fontSize: '0.875rem', color: 'var(--text-sub)', cursor: 'pointer', userSelect: 'none' }}>
-                {t(lang, 'auth.autoLogin')}
-              </label>
             </div>
             <button type="submit" className="btn-submit" disabled={loading}>
               {loading ? t(lang, 'auth.processing') : t(lang, 'auth.loginBtn')}

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { t, T } from './i18n'
 import { useToast } from '../../components/Toast'
 import Toast from '../../components/Toast'
-import { authH as authHeader } from '../../utils/api'
 import { Link } from 'react-router-dom'
 
 // 로컬 날짜 (UTC 파싱 금지)
@@ -44,7 +43,7 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
 
   // 날짜 변경 시 자동 재조회
   async function loadMeal(d = date, autoAdvance = false) {
-    const list = await fetch('/api/diets?date=' + d, { headers: authHeader() })
+    const list = await fetch('/api/diets?date=' + d, { credentials: 'include' })
       .then(r => r.ok ? r.json() : [])
       .catch(() => [])
     setDietList(list)
@@ -64,7 +63,7 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
   // 저장된 분석 자동 로드
   async function loadSavedAnalysis(d = date) {
     try {
-      const res = await fetch('/api/diets/analysis?date=' + d, { headers: authHeader() })
+      const res = await fetch('/api/diets/analysis?date=' + d, { credentials: 'include' })
       if (!res.ok) { setAnalysisResult(null); setIsSavedResult(false); setShowAnalysis(false); return }
       const data = await res.json()
       if (data && data.id) {
@@ -87,7 +86,7 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
 
   // 신체정보 미입력 여부 체크 (마운트 시 1회)
   useEffect(() => {
-    fetch('/api/auth/me', { headers: authHeader() })
+    fetch('/api/auth/me', { credentials: 'include' })
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         if (!d) return
@@ -103,7 +102,7 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
     setIsSubmitting(true)
     await fetch('/api/diets', {
       method: 'POST',
-      headers: { ...authHeader(), 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' }, credentials: 'include',
       body: JSON.stringify({
         date,
         meal_type: mtime,
@@ -125,7 +124,7 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
     if (e && e.preventDefault) e.preventDefault()
     setDietList(prev => prev.filter(d => d.id !== id))
     try {
-      await fetch('/api/diets/' + id, { method: 'DELETE', headers: authHeader() })
+      await fetch('/api/diets/' + id, { method: 'DELETE', credentials: 'include' })
       showToast(t(lang, 'common.deleteSuccess'), 'ok')
     } catch {
       await loadMeal(date)
@@ -168,7 +167,7 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
       }
       const res = await fetch('/api/diets/analysis', {
         method: 'POST',
-        headers: { ...authHeader(), 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' }, credentials: 'include',
         body: JSON.stringify(body),
       })
       if (res.ok) {
@@ -185,7 +184,7 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
     const toDelete = dietList.filter(d => d.meal_type === mealType)
     setDietList(prev => prev.filter(d => d.meal_type !== mealType))
     try {
-      await Promise.all(toDelete.map(d => fetch('/api/diets/' + d.id, { method: 'DELETE', headers: authHeader() })))
+      await Promise.all(toDelete.map(d => fetch('/api/diets/' + d.id, { method: 'DELETE', credentials: 'include' })))
       showToast(t(lang, 'common.deleteSuccess'), 'ok')
     } catch {
       await loadMeal(date)
