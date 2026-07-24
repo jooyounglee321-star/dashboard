@@ -67,6 +67,13 @@ FACEBOOK_AUTH_URL = "https://www.facebook.com/v19.0/dialog/oauth"
 FACEBOOK_TOKEN_URL = "https://graph.facebook.com/v19.0/oauth/access_token"
 FACEBOOK_USERINFO_URL = "https://graph.facebook.com/me?fields=id,name,email"
 
+# Kakao OAuth 설정
+KAKAO_CLIENT_ID = os.getenv("KAKAO_CLIENT_ID")
+KAKAO_REDIRECT_URI = "https://dashboard-production-4a18.up.railway.app/auth/kakao/callback"
+KAKAO_AUTH_URL = "https://kauth.kakao.com/oauth/authorize"
+KAKAO_TOKEN_URL = "https://kauth.kakao.com/oauth/token"
+KAKAO_USERINFO_URL = "https://kapi.kakao.com/v2/user/me"
+
 # JWT 설정
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
@@ -576,3 +583,79 @@ def list_users(
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="관리자만 접근할 수 있습니다.")
     return db.query(User).order_by(User.created_at.desc()).all()
+
+
+# ── GET /api/auth/kakao/login ────────────────────────────────────────────────
+
+@router.get("/kakao/login", summary="카카오 소셜 로그인 시작")
+def kakao_login():
+    """카카오 OAuth 인증 페이지로 리디렉트합니다."""
+    if not KAKAO_CLIENT_ID:
+        raise HTTPException(status_code=500, detail="Kakao OAuth가 설정되지 않았습니다.")
+    params = {
+        "client_id": KAKAO_CLIENT_ID,
+        "redirect_uri": KAKAO_REDIRECT_URI,
+        "response_type": "code",
+    }
+    url = KAKAO_AUTH_URL + "?" + urllib.parse.urlencode(params)
+    return RedirectResponse(url)
+
+
+# ── GET /auth/kakao/callback (prefix 없이 main.py에 직접 마운트) ──────────────
+
+kakao_router = APIRouter()
+
+@kakao_router.get("/auth/kakao/callback", summary="카카오 OAuth 콜백 처리")
+def kakao_callback(code: str | None = None, error: str | None = None, db: Session = Depends(get_db)):
+    """카카오 인증 후 콜백 — JWT 발급 후 프론트엔드로 리디렉트."""
+    if error or not code:
+        return RedirectResponse("/login?error=kakao_cancelled")
+
+    # 코드 → 액세스 토큰 교환
+    try:
+        token_res = httpx.post(KAKAO_TOKEN_URL, data={
+            "grant_type": "authorization_code",
+            "client_id": KAKAO_CLIENT_ID,
+            "redirect_uri": KAKAO_REDIRECT_URI,
+            "code": code,
+        }, headers={"Content-Type": "application/x-www-form-urlencoded"}, timeout=10)
+    except Exception:
+        return RedirectResponse("/login?error=kakao_token_failed")
+
+    if token_res.status_code != 200:
+        return RedirectResponse("/login?error=kakao_token_failed")
+
+    access_token = token_res.json().get("access_token")
+
+    # 카카오 유저 정보 조회 (이메일 심사 없이 id + nickname만 사용)
+    try:
+        userinfo_res = httpx.get(
+            KAKAO_USERINFO_URL,
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=10,
+        )
+    except Exception:
+        return RedirectResponse("/login?error=kakao_userinfo_failed")
+
+    if userinfo_res.status_code != 200:
+        return RedirectResponse("/login?error=kakao_userinfo_failed")
+
+    userinfo = userinfo_res.json()
+    kakao_id = str(userinfo.get("id"))
+    name = userinfo.get("properties", {}).get("nickname")
+
+    user = _get_or_create_social_user(db, "kakao", kakao_id, None, name)
+
+    # 로그인 통계 업데이트
+    user.last_login_at = datetime.now(timezone.utc)
+    user.login_count = (user.login_count or 0) + 1
+    db.commit()
+    db.refresh(user)
+
+    jwt_token = _create_token(user.id, user.email, user.role)
+    if user.withdrawal_status == "pending":
+        redirect = RedirectResponse("/withdrawal-pending", status_code=302)
+    else:
+        redirect = RedirectResponse("/", status_code=302)
+    _set_auth_cookie(redirect, jwt_token)
+    return redirect

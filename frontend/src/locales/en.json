@@ -45,6 +45,7 @@
     "registerSub": "Get started quickly with a social account or email.",
     "googleLogin": "Continue with Google",
     "facebookLogin": "Continue with Facebook",
+    "kakaoLogin": "Continue with Kakao",
     "googleRegister": "Sign up with Google",
     "facebookRegister": "Sign up with Facebook",
     "orEmailLogin": "Or sign in with email",

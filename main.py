@@ -42,6 +42,7 @@ from models import (  # noqa: F401  (import side-effect 목적)
 )
 
 from routers import auth as auth_router
+from routers.auth import kakao_router
 from routers import bookmarks, diets, expenses, memos, pinned_memos, stocks, timezone, todos, youtube
 from routers import portfolio as portfolio_router
 from routers import admin as admin_router
@@ -1196,6 +1197,7 @@ if DEBUG_MODE:
         return response
 
 app.include_router(auth_router.router, prefix="/api")
+app.include_router(kakao_router)          # /auth/kakao/callback (prefix 없음)
 # app.include_router(expenses.router, prefix="/api")  # 레거시 /api/expenses — expense.py로 통합됨 (2026-07-03)
 app.include_router(expense_router,   prefix="/api")       # 신규 /api/expense
 app.include_router(exchange_router,  prefix="/api")       # 신규 /api/exchange-rates
