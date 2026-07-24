@@ -12,21 +12,19 @@ logger = logging.getLogger(__name__)
 import httpx
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from database import get_db
 from models import User
+from routers._limiter import limiter
 from schemas import (
     AuthOut, ProfileOut, ProfileUpdate, UserLogin, UserOut, UserRegister,
     WidgetConfigOut, WidgetConfigUpdate, DEFAULT_WIDGET_CONFIG,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-limiter = Limiter(key_func=get_remote_address)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 EMAIL_RE   = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -463,7 +461,9 @@ def facebook_callback(code: str | None = None, error: str | None = None, db: Ses
 # ── POST /api/auth/withdraw ──────────────────────────────────────────────────
 
 @router.post("/withdraw", status_code=status.HTTP_200_OK, summary="회원 탈퇴 신청")
+@limiter.limit("5/minute")
 def request_withdrawal(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -475,7 +475,9 @@ def request_withdrawal(
 
 
 @router.post("/withdraw/cancel", status_code=status.HTTP_200_OK, summary="회원 탈퇴 취소")
+@limiter.limit("5/minute")
 def cancel_withdrawal(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
