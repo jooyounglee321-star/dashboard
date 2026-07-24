@@ -5,13 +5,12 @@ import { t } from '../i18n'
 export default function WithdrawalPendingPage() {
   const navigate = useNavigate()
   const lang = (() => { try { return localStorage.getItem('dashboard_lang') || 'ko' } catch { return 'ko' } })()
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
 
   const [cancelling, setCancelling] = useState(false)
   const [msg, setMsg] = useState(null)
 
   // withdrawal_requested_at은 user 스토리지에서 읽거나 없으면 today
-  const stored = (() => { try { return JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || '{}') } catch { return {} } })()
+  const stored = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} } })()
   const requestedAt = stored.withdrawal_requested_at ? new Date(stored.withdrawal_requested_at) : new Date()
   const deleteAt = new Date(requestedAt.getTime() + 30 * 24 * 60 * 60 * 1000)
 
@@ -23,9 +22,10 @@ export default function WithdrawalPendingPage() {
     try {
       const res = await fetch('/api/auth/withdraw/cancel', {
         method: 'POST',
-        headers: { Authorization: 'Bearer ' + token },
+        credentials: 'include',
       })
       if (res.ok) {
+        localStorage.setItem('dashboard_logged_in', '1')
         setMsg({ type: 'success', text: t(lang, 'withdrawal.cancelSuccess') })
         setTimeout(() => navigate('/'), 1200)
       } else {
@@ -40,8 +40,9 @@ export default function WithdrawalPendingPage() {
   }
 
   function handleLogout() {
-    localStorage.removeItem('token')
-    sessionStorage.removeItem('token')
+    localStorage.removeItem('dashboard_logged_in')
+    localStorage.removeItem('user')
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {})
     navigate('/login')
   }
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { calcStock } from '../../utils/calcStock'
-import { apiFetch, getToken } from '../../api'
+import { apiFetch } from '../../api'
 import './index.css'
 
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
@@ -120,8 +120,6 @@ export default function IndexPage() {
 
   // 포트폴리오 백필 — IndexPage 마운트 시 1회 (로그인 직후 및 페이지 새로고침 모두 커버)
   useEffect(() => {
-    const token = getToken()
-    if (!token || token.trim() === '' || token === 'undefined' || token === 'null') return
     const ctrl = new AbortController()
     apiFetch('/api/portfolio/backfill', { method: 'POST', signal: ctrl.signal })
       .then(d => { if (d.backfilled > 0) console.log('[BACKFILL] 포트폴리오 백필 완료:', d) })
@@ -140,9 +138,8 @@ export default function IndexPage() {
 
   // 로그아웃
   async function handleLogout() {
-    const token = getToken()
-    try { await fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + token } }).catch(() => {}) } catch {}
-    try { localStorage.removeItem('token'); localStorage.removeItem('user') } catch {}
+    try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {}) } catch {}
+    try { localStorage.removeItem('dashboard_logged_in'); localStorage.removeItem('user') } catch {}
     try { sessionStorage.clear() } catch {}
     navigate('/login', { replace: true })
   }
@@ -154,8 +151,6 @@ export default function IndexPage() {
 
   // auth/me + timezone + widget-config 병렬 로드
   useEffect(() => {
-    const token = getToken()
-    if (!token) return
     // 로컬 캐시 우선 표시
     try {
       const cached = JSON.parse(getLsItem('user') || '{}')
@@ -166,8 +161,7 @@ export default function IndexPage() {
     if (av) setAvatarSrc(av)
 
     const ctrl = new AbortController()
-    const h = { Authorization: 'Bearer ' + token }
-    const sig = { signal: ctrl.signal }
+    const sig = { signal: ctrl.signal, credentials: 'include' }
 
     const meCache = ssGet('cache_me')
     const tzCache = ssGet('cache_timezone')
@@ -175,11 +169,11 @@ export default function IndexPage() {
 
     Promise.all([
       meCache ? Promise.resolve(meCache)
-        : fetch('/api/auth/me', { headers: h, ...sig }).then(r => r.ok ? r.json() : null).catch(() => null).then(d => { if (d) ssSet('cache_me', d); return d }),
+        : fetch('/api/auth/me', sig).then(r => r.ok ? r.json() : null).catch(() => null).then(d => { if (d) ssSet('cache_me', d); return d }),
       tzCache ? Promise.resolve(tzCache)
-        : fetch('/api/timezone', { headers: h, ...sig }).then(r => r.ok ? r.json() : null).catch(() => null).then(d => { if (d) ssSet('cache_timezone', d); return d }),
+        : fetch('/api/timezone', sig).then(r => r.ok ? r.json() : null).catch(() => null).then(d => { if (d) ssSet('cache_timezone', d); return d }),
       wcCache ? Promise.resolve(wcCache)
-        : fetch('/api/auth/widget-config', { headers: h, ...sig }).then(r => r.ok ? r.json() : null).catch(() => null).then(d => { if (d) ssSet('cache_widget_config', d); return d }),
+        : fetch('/api/auth/widget-config', sig).then(r => r.ok ? r.json() : null).catch(() => null).then(d => { if (d) ssSet('cache_widget_config', d); return d }),
     ]).then(([me, tz, wc]) => {
       if (me?.name) setUserName(me.name)
       if (me?.role) setUserRole(me.role)
@@ -356,14 +350,13 @@ export default function IndexPage() {
 
   // 통화 표시 방식 변경 → widget_config 서버 저장
   async function saveCurrencyDisplay(mode) {
-    const token = localStorage.getItem('token')
-    if (!token) return
     const newCfg = { ...(widgetCfg || {}), stock: { ...(widgetCfg?.stock || {}), currency_display: mode } }
     setWidgetCfg(newCfg)
     try {
       await fetch('/api/auth/widget-config', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(newCfg),
       })
     } catch (e) { console.warn('widget-config 저장 실패', e) }
@@ -374,12 +367,12 @@ export default function IndexPage() {
   function cancelEdit()    { setEditMode(false); setDraftItems([]) }
 
   async function saveEdit() {
-    const token  = getToken()
     const newCfg = { ...(widgetCfg || {}), layout: { items: draftItems } }
     try {
       await fetch('/api/auth/widget-config', {
         method:  'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body:    JSON.stringify({ config: newCfg }),
       })
       setLayoutItems(draftItems)

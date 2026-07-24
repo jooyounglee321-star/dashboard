@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 logger = logging.getLogger(__name__)
 
 import httpx
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Request, Response, status
 from fastapi.responses import RedirectResponse
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -23,6 +23,22 @@ from schemas import (
     AuthOut, ProfileOut, ProfileUpdate, UserLogin, UserOut, UserRegister,
     WidgetConfigOut, WidgetConfigUpdate, DEFAULT_WIDGET_CONFIG,
 )
+
+# 운영환경(HTTPS)에서만 secure Cookie 전송. 로컬 http://localhost 에서는 False.
+_SECURE_COOKIE = os.getenv("ENVIRONMENT", "production") != "development"
+_COOKIE_MAX_AGE = 30 * 24 * 60 * 60  # 30일
+
+
+def _set_auth_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=_SECURE_COOKIE,
+        samesite="lax",
+        max_age=_COOKIE_MAX_AGE,
+        path="/",
+    )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -87,8 +103,8 @@ def _create_token(user_id: int, email: str, role: str = "free") -> str:
     summary="이메일 회원가입",
 )
 @limiter.limit("5/minute")
-def register(request: Request, body: UserRegister, db: Session = Depends(get_db)):
-    """이메일·비밀번호로 신규 회원을 등록하고 JWT 토큰을 반환합니다."""
+def register(request: Request, response: Response, body: UserRegister, db: Session = Depends(get_db)):
+    """이메일·비밀번호로 신규 회원을 등록하고 HttpOnly Cookie로 JWT를 발급합니다."""
     if not EMAIL_RE.match(body.email):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -128,7 +144,8 @@ def register(request: Request, body: UserRegister, db: Session = Depends(get_db)
     db.refresh(user)
 
     token = _create_token(user.id, user.email, user.role)
-    return AuthOut(access_token=token, user=UserOut.model_validate(user))
+    _set_auth_cookie(response, token)
+    return AuthOut(message="회원가입 성공", user=UserOut.model_validate(user))
 
 
 # ── POST /api/auth/login ──────────────────────────────────────────────────────
@@ -139,8 +156,8 @@ def register(request: Request, body: UserRegister, db: Session = Depends(get_db)
     summary="이메일 로그인",
 )
 @limiter.limit("10/minute")
-def login(request: Request, body: UserLogin, db: Session = Depends(get_db)):
-    """이메일·비밀번호로 로그인하고 JWT 토큰을 반환합니다."""
+def login(request: Request, response: Response, body: UserLogin, db: Session = Depends(get_db)):
+    """이메일·비밀번호로 로그인하고 HttpOnly Cookie로 JWT를 발급합니다."""
     user = db.query(User).filter(User.email == body.email).first()
     if not user or user.provider != "local" or not user.hashed_password:
         raise HTTPException(
@@ -160,25 +177,32 @@ def login(request: Request, body: UserLogin, db: Session = Depends(get_db)):
     db.refresh(user)
 
     token = _create_token(user.id, user.email, user.role)
-    # 탈퇴 대기 유저: 토큰 발급하되 withdrawal_status 포함 (프론트에서 안내 페이지로 이동)
-    return AuthOut(access_token=token, user=UserOut.model_validate(user))
+    _set_auth_cookie(response, token)
+    # 탈퇴 대기 유저: withdrawal_status 포함 (프론트에서 안내 페이지로 이동)
+    return AuthOut(message="로그인 성공", user=UserOut.model_validate(user))
 
 
 # ── JWT 인증 의존성 ───────────────────────────────────────────────────────────
 
 def get_current_user(
+    access_token: str | None = Cookie(None),
     authorization: str | None = Header(None, alias="Authorization"),
     db: Session = Depends(get_db),
 ) -> User:
-    """Authorization: Bearer <token> 헤더에서 현재 로그인 사용자를 추출."""
+    """HttpOnly Cookie → Authorization Bearer 헤더 순으로 JWT를 추출해 사용자를 반환."""
     credentials_exc = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="인증이 필요합니다.",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    if not authorization or not authorization.startswith("Bearer "):
+    # Cookie 우선, 없으면 Authorization 헤더 (하위호환)
+    token: str | None = None
+    if access_token:
+        token = access_token
+    elif authorization and authorization.startswith("Bearer "):
+        token = authorization[7:]
+    if not token:
         raise credentials_exc
-    token = authorization[7:]
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = int(payload.get("sub"))
@@ -381,8 +405,11 @@ def google_callback(code: str | None = None, error: str | None = None, db: Sessi
 
     jwt_token = _create_token(user.id, user.email, user.role)
     if user.withdrawal_status == "pending":
-        return RedirectResponse(f"/login?token={jwt_token}&withdrawal_pending=true")
-    return RedirectResponse(f"/login?token={jwt_token}")
+        redirect = RedirectResponse("/withdrawal-pending", status_code=302)
+    else:
+        redirect = RedirectResponse("/", status_code=302)
+    _set_auth_cookie(redirect, jwt_token)
+    return redirect
 
 
 # ── GET /api/auth/facebook/login ─────────────────────────────────────────────
@@ -454,8 +481,11 @@ def facebook_callback(code: str | None = None, error: str | None = None, db: Ses
 
     jwt_token = _create_token(user.id, user.email, user.role)
     if user.withdrawal_status == "pending":
-        return RedirectResponse(f"/login?token={jwt_token}&withdrawal_pending=true")
-    return RedirectResponse(f"/login?token={jwt_token}")
+        redirect = RedirectResponse("/withdrawal-pending", status_code=302)
+    else:
+        redirect = RedirectResponse("/", status_code=302)
+    _set_auth_cookie(redirect, jwt_token)
+    return redirect
 
 
 # ── POST /api/auth/withdraw ──────────────────────────────────────────────────
@@ -493,12 +523,9 @@ def cancel_withdrawal(
 # ── POST /api/auth/logout ────────────────────────────────────────────────────
 
 @router.post("/logout", status_code=status.HTTP_200_OK, summary="로그아웃")
-def logout(current_user: User = Depends(get_current_user)):
-    """로그아웃 처리.
-
-    JWT는 무상태(stateless)이므로 서버에서 토큰을 강제 무효화하려면 블랙리스트 DB가 필요합니다.
-    현재는 클라이언트 측에서 토큰을 삭제하는 방식으로 로그아웃을 처리합니다.
-    """
+def logout(response: Response, current_user: User = Depends(get_current_user)):
+    """HttpOnly Cookie를 삭제해 로그아웃합니다."""
+    response.delete_cookie(key="access_token", path="/")
     return {"message": "로그아웃 되었습니다."}
 
 

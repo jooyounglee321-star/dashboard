@@ -42,41 +42,21 @@ const toLocalDateStr = (inputValue) => {
 }
 
 
-/**
- * localStorage에서 JWT를 읽어 유효성 검증 후 반환.
- * null / 'null' / 'undefined' / 빈 문자열이면 로그인 페이지로 강제 이동.
- */
-function getToken() {
-  const raw = localStorage.getItem('token')
-  if (!raw || raw === 'null' || raw === 'undefined' || raw.trim() === '') {
-    // 토큰 없음 → 로그인 페이지로 이동
-    window.location.href = '/login'
-    return ''
-  }
-  return raw.trim()
-}
-
-/** GET 요청 — JWT 자동 첨부, 401 시 로그인 리다이렉트 */
+/** GET 요청 — Cookie 자동 전송, 401 시 로그인 리다이렉트 */
 function apiGet(url) {
-  const token = getToken()
-  return fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
-  }).then(r => {
+  return fetch(url, { credentials: 'include' }).then(r => {
     if (r.status === 401) { window.location.href = '/login'; throw new Error('401') }
     if (!r.ok) throw new Error(r.status)
     return r.json()
   })
 }
 
-/** POST / PUT / DELETE 요청 — JWT 자동 첨부, 401 시 로그인 리다이렉트 */
+/** POST / PUT / DELETE 요청 — Cookie 자동 전송, 401 시 로그인 리다이렉트 */
 function apiReq(method, url, body) {
-  const token = getToken()
   return fetch(url, {
     method,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: body ? JSON.stringify(body) : undefined,
   }).then(r => {
     if (r.status === 401) { window.location.href = '/login'; throw new Error('401') }

@@ -4,7 +4,7 @@ import { apiLog } from './api'
 function getLocalStorageSnapshot() {
   const snap = {}
   try {
-    const KEYS = ['token', 'user', 'dashboard_lang', 'theme', 'stock_total_mode']
+    const KEYS = ['dashboard_logged_in', 'user', 'dashboard_lang', 'theme', 'stock_total_mode']
     KEYS.forEach(k => {
       const v = localStorage.getItem(k)
       if (v !== null) snap[k] = v.length > 80 ? v.slice(0, 80) + '…' : v
@@ -38,7 +38,7 @@ export default function DebugPanel() {
 
   let user = null
   try { user = JSON.parse(localStorage.getItem('user') || 'null') } catch {}
-  const token = localStorage.getItem('token')
+  const loggedIn = localStorage.getItem('dashboard_logged_in') === '1'
   const lsSnap = getLocalStorageSnapshot()
 
   const statusColor = (s) => {
@@ -87,7 +87,7 @@ export default function DebugPanel() {
             <div>email: <span style={{ color: '#e2e8f0' }}>{user?.email ?? '—'}</span></div>
             <div>role: <span style={{ color: '#e2e8f0' }}>{user?.role ?? '—'}</span></div>
             <div style={{ marginTop: '0.25rem' }}>
-              token: <span style={{ color: token ? '#4ade80' : '#f87171' }}>{token ? '✓ 있음' : '✗ 없음'}</span>
+              cookie: <span style={{ color: loggedIn ? '#4ade80' : '#f87171' }}>{loggedIn ? '✓ 로그인' : '✗ 미로그인'}</span>
             </div>
           </div>
 

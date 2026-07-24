@@ -12,9 +12,10 @@ import RecurringPage from './pages/RecurringPage'
 import WithdrawalPendingPage from './pages/WithdrawalPendingPage'
 import DebugPanel from './DebugPanel'
 
-function hasValidToken() {
-  const token = localStorage.getItem('token')
-  return token && token.trim() !== '' && token !== 'undefined' && token !== 'null'
+// HttpOnly Cookie는 JS에서 읽을 수 없으므로, "로그인 여부" 힌트만 localStorage에 보관.
+// 실제 인증은 Cookie로 하며, 이 플래그는 UI 라우팅용 힌트일 뿐이다.
+function isLoggedIn() {
+  return localStorage.getItem('dashboard_logged_in') === '1'
 }
 
 function getStoredRole() {
@@ -24,9 +25,9 @@ function getStoredRole() {
   } catch { return 'free' }
 }
 
-/** 로그인 필요 페이지 — 토큰 없으면 /login으로 */
+/** 로그인 필요 페이지 — 플래그 없으면 /login으로 */
 function AuthGuard({ children }) {
-  if (!hasValidToken()) return <Navigate to="/login" replace />
+  if (!isLoggedIn()) return <Navigate to="/login" replace />
   return children
 }
 
@@ -35,17 +36,16 @@ function AdminRoleGuard({ children }) {
   const [state, setState] = useState('pending') // pending | allowed | denied
 
   useEffect(() => {
-    if (!hasValidToken()) { setState('denied'); return }
-    const token = localStorage.getItem('token')
+    if (!isLoggedIn()) { setState('denied'); return }
     const ctrl = new AbortController()
-    fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token }, signal: ctrl.signal })
+    fetch('/api/auth/me', { credentials: 'include', signal: ctrl.signal })
       .then(r => r.ok ? r.json() : null)
       .then(d => setState(d?.role === 'admin' ? 'allowed' : 'denied'))
       .catch(err => { if (err?.name !== 'AbortError') setState('denied') })
     return () => ctrl.abort()
   }, [])
 
-  if (!hasValidToken()) return <Navigate to="/login" replace />
+  if (!isLoggedIn()) return <Navigate to="/login" replace />
   if (state === 'pending') return null
   if (state === 'denied') return <Navigate to="/" replace />
   return children
@@ -53,7 +53,7 @@ function AdminRoleGuard({ children }) {
 
 /** 로그인/회원가입 페이지 — 이미 로그인됐으면 /로 */
 function LoginGuard({ children }) {
-  if (hasValidToken()) return <Navigate to="/" replace />
+  if (isLoggedIn()) return <Navigate to="/" replace />
   return children
 }
 
@@ -74,12 +74,11 @@ export default function App() {
 
   // 세션당 한 번만 자동 로그인 카운트
   useEffect(() => {
-    if (!hasValidToken()) return
+    if (!isLoggedIn()) return
     if (sessionStorage.getItem('session_pinged')) return
-    const token = localStorage.getItem('token')
     fetch('/api/auth/session-ping', {
       method: 'POST',
-      headers: { Authorization: 'Bearer ' + token },
+      credentials: 'include',
     }).then(() => {
       sessionStorage.setItem('session_pinged', '1')
     }).catch(() => {})
@@ -87,13 +86,12 @@ export default function App() {
 
   // 월별 1회 정기지출 자동 등록 (월이 바뀌면 재실행, 500 실패 시 재시도)
   useEffect(() => {
-    if (!hasValidToken()) return
+    if (!isLoggedIn()) return
     const ym = new Date().toISOString().slice(0, 7)
     if (sessionStorage.getItem(`recurring_applied_${ym}`)) return
-    const token = localStorage.getItem('token')
     fetch('/api/expense/recurring/apply', {
       method: 'POST',
-      headers: { Authorization: 'Bearer ' + token },
+      credentials: 'include',
     }).then(r => {
       if (r.ok) sessionStorage.setItem(`recurring_applied_${ym}`, '1')
     }).catch(() => {})

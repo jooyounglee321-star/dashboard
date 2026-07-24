@@ -6,18 +6,8 @@ import { useToast } from '../components/Toast'
 import Toast from '../components/Toast'
 import './BudgetPage.css'
 
-function getToken() {
-  const raw = localStorage.getItem('token')
-  if (!raw || raw === 'null' || raw === 'undefined' || raw.trim() === '') {
-    window.location.href = '/login'
-    return ''
-  }
-  return raw.trim()
-}
-
 function apiGet(url) {
-  const token = getToken()
-  return fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+  return fetch(url, { credentials: 'include' })
     .then(r => {
       if (r.status === 401) { window.location.href = '/login'; throw new Error('401') }
       if (!r.ok) throw new Error(r.status)
@@ -26,10 +16,10 @@ function apiGet(url) {
 }
 
 function apiReq(method, url, body) {
-  const token = getToken()
   return fetch(url, {
     method,
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: body ? JSON.stringify(body) : undefined,
   }).then(r => {
     if (r.status === 401) { window.location.href = '/login'; throw new Error('401') }

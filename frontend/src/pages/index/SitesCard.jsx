@@ -15,7 +15,7 @@ export default function SitesCard({ isMobile = false, lang = 'ko' }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   async function load() {
-    const data = await fetch('/api/bookmarks', { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } })
+    const data = await fetch('/api/bookmarks', { credentials: 'include' })
       .then(r => r.ok ? r.json() : []).catch(() => [])
     setSites(data)
   }

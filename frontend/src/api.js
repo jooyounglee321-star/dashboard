@@ -7,25 +7,19 @@ const DEBUG = import.meta.env.VITE_DEBUG_MODE === 'true'
 export const apiLog = []
 const MAX_LOG = 50
 
-export function getToken() {
-  try { return sessionStorage.getItem('token') || localStorage.getItem('token') || '' } catch { return '' }
-}
-
 /**
  * apiFetch(url, options?)
- * - Authorization 헤더 자동 첨부
+ * - credentials: 'include' 로 HttpOnly Cookie 자동 전송
  * - DEBUG 모드 시 console.group으로 요청/응답 출력
  * - 비-2xx 응답은 { status, message } 포함한 Error로 throw
  */
 export async function apiFetch(url, options = {}) {
-  const token = getToken()
   const headers = {
     ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   }
 
-  const init = { ...options, headers }
+  const init = { ...options, headers, credentials: 'include' }
   const t0 = performance.now()
 
   if (DEBUG) {

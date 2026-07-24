@@ -290,7 +290,13 @@ class UserOut(BaseModel):
 
 
 class AuthOut(BaseModel):
-    """로그인/가입 성공 응답 — JWT 토큰 + 회원 정보."""
+    """로그인/가입 성공 응답 — HttpOnly Cookie 전환 후 token 미포함."""
+    message: str = "성공"
+    user: UserOut
+
+
+class AuthOutLegacy(BaseModel):
+    """하위호환 — Cookie 전환 전 구형 응답 (더 이상 사용 안 함)."""
     access_token: str
     token_type: str = "bearer"
     user: UserOut

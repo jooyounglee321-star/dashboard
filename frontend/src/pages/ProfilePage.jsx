@@ -34,7 +34,6 @@ export default function ProfilePage() {
   const [weightVal,   setWeightVal]   = useState('')
   const [weightUnit,  setWeightUnit]  = useState('kg')   // 'kg' | 'lb'
 
-  const token = localStorage.getItem('token')
   const lang = widgetCfg?.language ?? 'ko'
 
   useEffect(() => {
@@ -43,7 +42,7 @@ export default function ProfilePage() {
     if (saved) setAvatarSrc(saved)
 
     // 프로필 로드
-    fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } })
+    fetch('/api/auth/me', { credentials: 'include' })
       .then(r => { if (r.status === 401) navigate('/login', { replace: true }); return r.ok ? r.json() : null })
       .then(d => {
         if (!d) return
@@ -61,15 +60,15 @@ export default function ProfilePage() {
         setWeightVal(d.weight_kg ? String(d.weight_kg) : '')
       })
       .catch(() => {})
-  }, [token, navigate])
+  }, [navigate])
 
   // 위젯 설정(언어) 로드
   useEffect(() => {
-    fetch('/api/auth/widget-config', { headers: { Authorization: 'Bearer ' + token } })
+    fetch('/api/auth/widget-config', { credentials: 'include' })
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.config) setWidgetCfg(d.config) })
       .catch(() => {})
-  }, [token])
+  }, [])
 
   // 언어 변경 — 온도단위(수동 미설정 시)·통화 자동 연동 후 즉시 저장
   async function handleLangChange(newLang) {
@@ -84,7 +83,8 @@ export default function ProfilePage() {
     try {
       const res = await fetch('/api/auth/widget-config', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ config: next }),
       })
       if (!res.ok) {
@@ -146,7 +146,8 @@ export default function ProfilePage() {
     try {
       const res = await fetch('/api/auth/me', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(body),
       })
       const data = await res.json()
@@ -172,12 +173,12 @@ export default function ProfilePage() {
     try {
       const res = await fetch('/api/auth/withdraw', {
         method: 'POST',
-        headers: { Authorization: 'Bearer ' + token },
+        credentials: 'include',
       })
       if (res.ok) {
         setWithdrawModal(false)
-        localStorage.removeItem('token')
-        sessionStorage.removeItem('token')
+        localStorage.removeItem('dashboard_logged_in')
+        localStorage.removeItem('user')
         navigate('/login')
       } else {
         const d = await res.json().catch(() => ({}))

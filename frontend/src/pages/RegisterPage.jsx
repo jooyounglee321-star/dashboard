@@ -55,16 +55,13 @@ export default function RegisterPage() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       })
       const data = await res.json()
       if (res.ok) {
-        const jwt = data.access_token || data.token || ''
-        if (!jwt) {
-          setMsg({ type: 'error', text: t(lang, 'auth.errRegister') })
-          return
-        }
-        localStorage.setItem('token', jwt)
+        // Cookie는 서버가 설정. 로그인 상태 힌트와 유저 정보만 저장
+        localStorage.setItem('dashboard_logged_in', '1')
         if (data.user) localStorage.setItem('user', JSON.stringify(data.user))
         setMsg({ type: 'success', text: t(lang, 'auth.successRegister') })
         setTimeout(() => navigate('/'), 1800)
