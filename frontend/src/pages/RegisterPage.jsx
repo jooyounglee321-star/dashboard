@@ -2,6 +2,12 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { t } from '../i18n'
 
+const KakaoLogo = () => (
+  <svg viewBox="0 0 24 24" style={{ width: 20, height: 20, flexShrink: 0 }}>
+    <path fill="#3C1E1E" d="M12 3C6.477 3 2 6.477 2 10.8c0 2.7 1.6 5.1 4.1 6.6l-1 3.7 4.3-2.8c.85.15 1.72.22 2.6.22 5.523 0 10-3.477 10-7.8S17.523 3 12 3z"/>
+  </svg>
+)
+
 const GoogleLogo = () => (
   <svg viewBox="0 0 48 48" style={{ width: 20, height: 20, flexShrink: 0 }}>
     <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -89,6 +95,9 @@ export default function RegisterPage() {
           <div className="card-sub">{t(lang, 'auth.registerSub')}</div>
 
           <div className="social-btns">
+            <button className="btn-social btn-kakao" type="button" onClick={() => { window.location.href = '/api/auth/kakao/login' }}>
+              <KakaoLogo /> {t(lang, 'auth.kakaoRegister')}
+            </button>
             <button className="btn-social btn-google" type="button" onClick={() => alert(t(lang, 'auth.googleComingSoon'))}>
               <GoogleLogo /> {t(lang, 'auth.googleRegister')}
             </button>
