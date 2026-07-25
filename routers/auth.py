@@ -415,7 +415,7 @@ def google_callback(code: str | None = None, error: str | None = None, db: Sessi
     if user.withdrawal_status == "pending":
         redirect = RedirectResponse("/withdrawal-pending", status_code=302)
     else:
-        redirect = RedirectResponse("/", status_code=302)
+        redirect = RedirectResponse("/auth/social-callback", status_code=302)
     _set_auth_cookie(redirect, jwt_token)
     return redirect
 
@@ -491,7 +491,7 @@ def facebook_callback(code: str | None = None, error: str | None = None, db: Ses
     if user.withdrawal_status == "pending":
         redirect = RedirectResponse("/withdrawal-pending", status_code=302)
     else:
-        redirect = RedirectResponse("/", status_code=302)
+        redirect = RedirectResponse("/auth/social-callback", status_code=302)
     _set_auth_cookie(redirect, jwt_token)
     return redirect
 
@@ -663,6 +663,6 @@ def kakao_callback(code: str | None = None, error: str | None = None, db: Sessio
     if user.withdrawal_status == "pending":
         redirect = RedirectResponse("/withdrawal-pending", status_code=302)
     else:
-        redirect = RedirectResponse("/", status_code=302)
+        redirect = RedirectResponse("/auth/social-callback", status_code=302)
     _set_auth_cookie(redirect, jwt_token)
     return redirect

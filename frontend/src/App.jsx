@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import SuperadminPage from './pages/SuperadminPage'
@@ -49,6 +49,26 @@ function AdminRoleGuard({ children }) {
   if (state === 'pending') return null
   if (state === 'denied') return <Navigate to="/" replace />
   return children
+}
+
+/** OAuth 콜백 처리 — /api/auth/me로 인증 확인 후 localStorage 설정 */
+function SocialCallbackPage() {
+  const nav = useNavigate()
+  useEffect(() => {
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(user => {
+        if (user) {
+          localStorage.setItem('dashboard_logged_in', '1')
+          localStorage.setItem('user', JSON.stringify(user))
+          nav('/', { replace: true })
+        } else {
+          nav('/login?error=oauth_failed', { replace: true })
+        }
+      })
+      .catch(() => nav('/login?error=oauth_failed', { replace: true }))
+  }, [])
+  return null
 }
 
 /** 로그인/회원가입 페이지 — 이미 로그인됐으면 /로 */
@@ -110,6 +130,7 @@ export default function App() {
         <Route path="/budget"      element={<AuthGuard><BudgetPage /></AuthGuard>} />
         <Route path="/recurring"   element={<AuthGuard><RecurringPage /></AuthGuard>} />
         <Route path="/diet-stats"  element={<AuthGuard><DietStatsPage /></AuthGuard>} />
+        <Route path="/auth/social-callback" element={<SocialCallbackPage />} />
         <Route path="/withdrawal-pending" element={<WithdrawalPendingPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
