@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-07-25 (2)
+
+### fix — 소셜 로그인 후 localStorage 미설정으로 로그인 안 되던 버그 수정
+
+- 원인: OAuth 콜백은 HttpOnly Cookie만 설정하고 `/`로 리다이렉트하는데, 프론트엔드 `AuthGuard`가 `localStorage.dashboard_logged_in === '1'` 여부로 로그인 확인 → 항상 미설정 상태라 `/login`으로 튕김
+- `routers/auth.py`: Google/Facebook/Kakao 콜백 성공 리다이렉트 경로를 `/` → `/auth/social-callback`으로 변경
+- `frontend/src/App.jsx`: `SocialCallbackPage` 컴포넌트 추가 — `/api/auth/me` 호출 후 localStorage 설정하고 `/`로 이동
+- `/auth/social-callback` 라우트 등록 (AuthGuard 없음)
+
 ## 2026-07-25
 
 ### fix — 카카오 로그인 Client Secret 토큰 교환 미포함 버그 수정
