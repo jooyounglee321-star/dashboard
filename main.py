@@ -1248,8 +1248,8 @@ async def serve_superadmin():
     # 빌드된 SPA가 있으면 React 라우터에 위임
     dist_index = _DIST / "index.html"
     if dist_index.exists():
-        return FileResponse(dist_index)
-    return FileResponse(_STATIC / "index.html")
+        return FileResponse(dist_index, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+    return FileResponse(_STATIC / "index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
 
 @app.get("/{full_path:path}", include_in_schema=False)
@@ -1269,7 +1269,7 @@ async def spa_fallback(full_path: str):
     # 2) React SPA — index.html 반환 (클라이언트 라우팅)
     dist_index = _DIST / "index.html"
     if dist_index.exists():
-        return FileResponse(dist_index)
+        return FileResponse(dist_index, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
     # 3) 레거시: npm build 전 개발 단계에서 static/ 사용
     legacy = _STATIC / (full_path or "index.html")
