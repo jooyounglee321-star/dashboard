@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-07-25
+
+### fix — 카카오 로그인 Client Secret 토큰 교환 미포함 버그 수정
+
+- `KAKAO_CLIENT_SECRET` 환경변수를 읽어도 토큰 교환 POST 요청에 포함하지 않던 버그 수정
+- `routers/auth.py`: `KAKAO_CLIENT_SECRET = os.getenv("KAKAO_CLIENT_SECRET")` 추가
+- 토큰 교환 데이터에 `client_secret` 조건부 포함 (환경변수 있을 때만)
+- 원인: 카카오 앱 보안 설정에서 Client Secret 활성화 상태였으나 코드가 전달하지 않아 `KOE010 Bad client credentials` 401 에러 발생
+
+---
+
 ## 2026-07-23 (10)
 
 ### feat — SEC-01: JWT → HttpOnly Cookie 인증 전환
