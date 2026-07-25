@@ -69,6 +69,7 @@ FACEBOOK_USERINFO_URL = "https://graph.facebook.com/me?fields=id,name,email"
 
 # Kakao OAuth 설정
 KAKAO_CLIENT_ID = os.getenv("KAKAO_CLIENT_ID")
+KAKAO_CLIENT_SECRET = os.getenv("KAKAO_CLIENT_SECRET")
 KAKAO_REDIRECT_URI = "https://dashboard-production-4a18.up.railway.app/auth/kakao/callback"
 KAKAO_AUTH_URL = "https://kauth.kakao.com/oauth/authorize"
 KAKAO_TOKEN_URL = "https://kauth.kakao.com/oauth/token"
@@ -613,12 +614,16 @@ def kakao_callback(code: str | None = None, error: str | None = None, db: Sessio
 
     # 코드 → 액세스 토큰 교환
     try:
-        token_res = httpx.post(KAKAO_TOKEN_URL, data={
+        token_data = {
             "grant_type": "authorization_code",
             "client_id": KAKAO_CLIENT_ID,
             "redirect_uri": KAKAO_REDIRECT_URI,
             "code": code,
-        }, headers={"Content-Type": "application/x-www-form-urlencoded"}, timeout=10)
+        }
+        if KAKAO_CLIENT_SECRET:
+            token_data["client_secret"] = KAKAO_CLIENT_SECRET
+        token_res = httpx.post(KAKAO_TOKEN_URL, data=token_data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"}, timeout=10)
     except Exception as e:
         logger.error("[KAKAO] 토큰 요청 예외: %s", e)
         return RedirectResponse("/login?error=kakao_token_failed")
