@@ -188,6 +188,16 @@ def update_permissions(body: PermissionBulkUpdate, db: Session = Depends(get_db)
 
 # ── POST /api/admin/users/{id}/reset-password ─────────────────────────────────
 
+@router.delete("/users/{user_id}")
+def delete_user(user_id: int, db: Session = Depends(get_db), _: User = Depends(_require_admin)):
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+    db.delete(user)
+    db.commit()
+    return {"ok": True, "message": f"사용자 {user_id} 삭제 완료"}
+
+
 @router.post("/users/{user_id}/reset-password")
 def reset_password(user_id: int, db: Session = Depends(get_db), _: User = Depends(_require_admin)):
     user = db.get(User, user_id)
