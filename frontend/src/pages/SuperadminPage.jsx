@@ -156,6 +156,20 @@ export default function SuperadminPage() {
     } else showToast(t(lang, 'superadmin.toastSaveErr'), 'err')
   }
 
+  async function deleteUser() {
+    if (!modal) return
+    if (!window.confirm(`'${modal.email}' 계정을 삭제합니다.\n모든 데이터(지출/예산/포트폴리오 등)가 함께 삭제되며 복구할 수 없습니다.\n계속하시겠습니까?`)) return
+    const res = await fetch(`/api/admin/users/${modal.id}`, { method: 'DELETE', credentials: 'include' })
+    if (res.ok) {
+      showToast('계정이 삭제되었습니다.', 'ok')
+      setModal(null)
+      loadUsers()
+    } else {
+      const err = await res.json().catch(() => ({}))
+      showToast(err.detail || '삭제 중 오류가 발생했습니다.', 'err')
+    }
+  }
+
   async function resetPassword() {
     if (!modal) return
     if (!window.confirm(t(lang, 'superadmin.confirmResetPw'))) return
@@ -563,6 +577,13 @@ export default function SuperadminPage() {
                 style={{ width: '100%', minHeight: 80, resize: 'vertical', padding: '0.55rem 0.75rem', fontSize: '0.83rem', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit', marginBottom: '0.5rem' }}
               />
               <button className="btn btn-outline btn-sm" onClick={saveMemo}>{t(lang, 'superadmin.memoSave')}</button>
+
+              <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '1rem 0' }} />
+
+              {/* 계정 삭제 */}
+              <div style={{ fontSize: '0.7rem', fontWeight: 500, letterSpacing: '0.1em', color: '#c0392b', textTransform: 'uppercase', marginBottom: '0.75rem' }}>계정 삭제</div>
+              <p style={{ fontSize: '0.8rem', color: 'var(--ink3)', marginBottom: '0.5rem' }}>모든 데이터가 영구 삭제됩니다. 복구 불가.</p>
+              <button className="btn btn-red btn-sm" onClick={deleteUser}>계정 영구 삭제</button>
             </div>
           </div>
         </div>
