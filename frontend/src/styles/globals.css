@@ -415,6 +415,7 @@ tbody tr:hover td { background: rgba(196, 102, 42, 0.04); }
 .btn-google { background: #fff; color: #3c4043; }
 .btn-facebook { background: #1877f2; color: #fff; border-color: #1877f2; }
 .btn-kakao { background: #FEE500; color: #000; border-color: #FEE500; }
+.btn-naver { background: #03C75A; color: #fff; border-color: #03C75A; }
 .divider {
   display: flex;
   align-items: center;

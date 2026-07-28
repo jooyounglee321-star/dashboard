@@ -47,6 +47,8 @@
     "facebookLogin": "Continue with Facebook",
     "kakaoLogin": "Continue with Kakao",
     "kakaoRegister": "Sign up with Kakao",
+    "naverLogin": "Continue with Naver",
+    "naverRegister": "Sign up with Naver",
     "googleRegister": "Sign up with Google",
     "facebookRegister": "Sign up with Facebook",
     "orEmailLogin": "Or sign in with email",

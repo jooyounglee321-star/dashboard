@@ -369,6 +369,7 @@ export default function SuperadminPage() {
                       {u.social_provider === 'google' ? '🔵 구글'
                         : u.social_provider === 'facebook' ? '🔷 페이스북'
                         : u.social_provider === 'kakao' ? '🟡 카카오'
+                        : u.social_provider === 'naver' ? '🟢 네이버'
                         : '📧 이메일'}
                     </td>
                     <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(u.created_at, lang)}</td>
@@ -532,6 +533,7 @@ export default function SuperadminPage() {
                     modal.social_provider === 'google' ? '🔵 구글'
                     : modal.social_provider === 'facebook' ? '🔷 페이스북'
                     : modal.social_provider === 'kakao' ? '🟡 카카오'
+                    : modal.social_provider === 'naver' ? '🟢 네이버'
                     : '📧 이메일'],
                   [t(lang, 'superadmin.fieldJoined'), fmtDatetime(modal.created_at)],
                   [t(lang, 'superadmin.fieldPlan'), planLabel(modal.plan)],
