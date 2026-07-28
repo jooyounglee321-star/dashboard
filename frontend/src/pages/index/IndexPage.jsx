@@ -137,7 +137,9 @@ export default function IndexPage() {
   }, [])
 
   // 로그아웃
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   async function handleLogout() {
+    setShowLogoutConfirm(false)
     try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {}) } catch {}
     try { localStorage.removeItem('dashboard_logged_in'); localStorage.removeItem('user') } catch {}
     try { sessionStorage.clear() } catch {}
@@ -468,7 +470,7 @@ export default function IndexPage() {
             }}>{t(lang, 'superadminBtn')}</Link>
           )}
           <button
-            onClick={handleLogout}
+            onClick={() => setShowLogoutConfirm(true)}
             title={t(lang, 'logout')}
             style={{
               fontSize: '0.78rem', color: '#c0392b', background: 'none',
@@ -624,6 +626,28 @@ export default function IndexPage() {
           {t(lang, 'budgetNavLink')}
         </Link>
       </nav>
+
+      {/* 로그아웃 확인 모달 */}
+      {showLogoutConfirm && (
+        <div className="modal-overlay open" onClick={e => { if (e.target === e.currentTarget) setShowLogoutConfirm(false) }}>
+          <div className="modal" style={{ maxWidth: 360 }}>
+            <div className="modal-header">
+              <span className="modal-title">{t(lang, 'logoutConfirmTitle')}</span>
+              <button className="modal-close" onClick={() => setShowLogoutConfirm(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                <button className="btn btn-gray btn-sm" onClick={() => setShowLogoutConfirm(false)}>
+                  {t(lang, 'common.cancel')}
+                </button>
+                <button className="btn btn-red btn-sm" onClick={handleLogout}>
+                  {t(lang, 'logout')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

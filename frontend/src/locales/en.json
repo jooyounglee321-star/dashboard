@@ -276,6 +276,7 @@
   "myDay": "My Day",
   "ofDay": "'s Day",
   "logout": "Logout",
+  "logoutConfirmTitle": "Are you sure you want to log out?",
   "navHome": "Home",
   "navMoney": "Finance",
   "navHealth": "Health",
