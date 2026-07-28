@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-07-28 (2)
+
+### feat — 슈퍼어드민 회원 목록에 탈퇴 신청 상태 표시 및 필터 추가
+
+- `UserAdminOut` 스키마에 `withdrawal_status`, `withdrawal_requested_at` 필드 추가
+- `GET /api/admin/users?status=withdrawal_pending` 필터 처리 추가 (admin.py)
+- 슈퍼어드민 상태 필터 드롭다운에 "탈퇴 신청" 옵션 추가
+- 회원 목록 테이블 상태 셀에 🔴 탈퇴 신청 배지 표시 (withdrawal_status=pending)
+- 회원 상세 모달에 탈퇴 신청 상태 · 신청일 필드 추가
+- `.badge-withdrawal` CSS 스타일 추가
+- ko.json / en.json에 관련 번역 키 추가
+
+---
+
 ## 2026-07-28
 
 ### fix — 슈퍼어드민 회원 목록에서 카카오 가입 경로 오표시 수정

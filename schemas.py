@@ -322,6 +322,8 @@ class UserAdminOut(BaseModel):
     total_payment: float = 0.0
     primary_device: str | None = None
     admin_memo: str | None = None
+    withdrawal_status: str | None = None
+    withdrawal_requested_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 

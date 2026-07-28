@@ -72,6 +72,10 @@ export default function SuperadminPage() {
     const map = { active: t(lang, 'superadmin.statusActive'), inactive: t(lang, 'superadmin.statusInactive'), suspended: t(lang, 'superadmin.statusSuspended') }
     return map[s] || s || '—'
   }
+  function withdrawalLabel(ws) {
+    if (ws === 'pending') return t(lang, 'superadmin.statusWithdrawalPending')
+    return null
+  }
 
   const loadUsers = useCallback(async (overrides = {}) => {
     setLoading(true)
@@ -304,6 +308,7 @@ export default function SuperadminPage() {
                 <option value="active">{t(lang, 'superadmin.statusActive')}</option>
                 <option value="inactive">{t(lang, 'superadmin.statusInactive')}</option>
                 <option value="suspended">{t(lang, 'superadmin.statusSuspended')}</option>
+                <option value="withdrawal_pending">{t(lang, 'superadmin.statusWithdrawalPending')}</option>
               </select>
               <select value={sortSelect} onChange={e => handleSortChange(e.target.value)}>
                 <option value="created_at|desc">{t(lang, 'superadmin.sortNewest')}</option>
@@ -363,7 +368,12 @@ export default function SuperadminPage() {
                     <td><span className={`badge badge-${u.plan}`}>{planLabel(u.plan)}</span></td>
                     <td><span className={`badge badge-role-${u.role}`}>{roleLabel(u.role)}</span></td>
                     <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(u.plan_expires_at, lang)}</td>
-                    <td><span className={`badge badge-${u.status}`}>{statusLabel(u.status)}</span></td>
+                    <td>
+                      <span className={`badge badge-${u.status}`}>{statusLabel(u.status)}</span>
+                      {u.withdrawal_status === 'pending' && (
+                        <span className="badge badge-withdrawal" style={{ marginLeft: '0.3rem' }}>🔴 {t(lang, 'superadmin.statusWithdrawalPending')}</span>
+                      )}
+                    </td>
                     <td style={{ whiteSpace: 'nowrap' }}>{fmtDatetime(u.last_login_at)}</td>
                     <td style={{ textAlign: 'right' }}>{(u.login_count ?? 0).toLocaleString()}</td>
                     <td style={{ textAlign: 'right' }}>{(u.auto_login_count ?? 0).toLocaleString()}</td>
@@ -520,6 +530,8 @@ export default function SuperadminPage() {
                   [t(lang, 'superadmin.fieldPlan'), planLabel(modal.plan)],
                   [t(lang, 'superadmin.fieldExpires'), fmtDate(modal.plan_expires_at, lang)],
                   [t(lang, 'superadmin.fieldStatus'), statusLabel(modal.status)],
+                  [t(lang, 'superadmin.fieldWithdrawalStatus'), withdrawalLabel(modal.withdrawal_status) || '—'],
+                  [t(lang, 'superadmin.fieldWithdrawalRequestedAt'), fmtDatetime(modal.withdrawal_requested_at)],
                   [t(lang, 'superadmin.fieldLastLogin'), fmtDatetime(modal.last_login_at)],
                   [t(lang, 'superadmin.fieldLoginCount'), `${(modal.login_count ?? 0).toLocaleString()} / ${(modal.auto_login_count ?? 0).toLocaleString()}`],
                   [t(lang, 'superadmin.fieldPayment'), '₩' + Math.round(modal.total_payment ?? 0).toLocaleString()],
@@ -598,6 +610,7 @@ export default function SuperadminPage() {
         .badge-active   { background: #c0edd8; color: #0d4a2a; }
         .badge-inactive { background: #e8e4dc; color: #6b5e4a; }
         .badge-suspended{ background: #fce0dc; color: #7a1a0d; }
+        .badge-withdrawal { background: #fff0c0; color: #7a4a00; font-weight: 600; }
         .badge-local    { background: #ede8e0; color: #6b5e4a; }
         .badge-google   { background: #fce8e6; color: #c5221f; }
         .badge-facebook { background: #dce8ff; color: #1a3d7c; }
