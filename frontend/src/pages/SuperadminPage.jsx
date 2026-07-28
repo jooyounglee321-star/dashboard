@@ -76,6 +76,13 @@ export default function SuperadminPage() {
     if (ws === 'pending') return t(lang, 'superadmin.statusWithdrawalPending')
     return null
   }
+  function withdrawalDday(requestedAt) {
+    if (!requestedAt) return ''
+    const elapsed = Math.floor((Date.now() - new Date(requestedAt).getTime()) / 86400000)
+    const remaining = 30 - elapsed
+    if (remaining <= 0) return 'D-0'
+    return `D-${remaining}`
+  }
 
   const loadUsers = useCallback(async (overrides = {}) => {
     setLoading(true)
@@ -371,7 +378,7 @@ export default function SuperadminPage() {
                     <td>
                       <span className={`badge badge-${u.status}`}>{statusLabel(u.status)}</span>
                       {u.withdrawal_status === 'pending' && (
-                        <span className="badge badge-withdrawal" style={{ marginLeft: '0.3rem' }}>🔴 {t(lang, 'superadmin.statusWithdrawalPending')}</span>
+                        <span className="badge badge-withdrawal" style={{ marginLeft: '0.3rem' }}>🔴 {t(lang, 'superadmin.statusWithdrawalPending')} {withdrawalDday(u.withdrawal_requested_at)}</span>
                       )}
                     </td>
                     <td style={{ whiteSpace: 'nowrap' }}>{fmtDatetime(u.last_login_at)}</td>
@@ -531,7 +538,7 @@ export default function SuperadminPage() {
                   [t(lang, 'superadmin.fieldExpires'), fmtDate(modal.plan_expires_at, lang)],
                   [t(lang, 'superadmin.fieldStatus'), statusLabel(modal.status)],
                   [t(lang, 'superadmin.fieldWithdrawalStatus'), withdrawalLabel(modal.withdrawal_status) || '—'],
-                  [t(lang, 'superadmin.fieldWithdrawalRequestedAt'), fmtDatetime(modal.withdrawal_requested_at)],
+                  [t(lang, 'superadmin.fieldWithdrawalRequestedAt'), modal.withdrawal_requested_at ? `${fmtDatetime(modal.withdrawal_requested_at)} (${withdrawalDday(modal.withdrawal_requested_at)} 삭제)` : '—'],
                   [t(lang, 'superadmin.fieldLastLogin'), fmtDatetime(modal.last_login_at)],
                   [t(lang, 'superadmin.fieldLoginCount'), `${(modal.login_count ?? 0).toLocaleString()} / ${(modal.auto_login_count ?? 0).toLocaleString()}`],
                   [t(lang, 'superadmin.fieldPayment'), '₩' + Math.round(modal.total_payment ?? 0).toLocaleString()],
