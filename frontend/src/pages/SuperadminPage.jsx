@@ -350,12 +350,12 @@ export default function SuperadminPage() {
                   <tr key={u.id} style={{ cursor: 'pointer' }} onClick={() => {
                     setPwResult('')
                     setModal(u)
-                    setModalListPos(start + i + 1)
+                    setModalListPos(u.id)
                     setModalPlan(u.plan || 'free')
                     setModalExpires(u.plan_expires_at ? u.plan_expires_at.slice(0, 10) : '')
                     setModalMemo(u.admin_memo || '')
                   }}>
-                    <td style={{ color: 'var(--ink3)', fontSize: '0.75rem' }}>{start + i + 1}</td>
+                    <td style={{ color: 'var(--ink3)', fontSize: '0.75rem' }}>{u.id}</td>
                     <td>{u.name || '—'}</td>
                     <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</td>
                     <td style={{ whiteSpace: 'nowrap', fontSize: '0.8rem' }}>
