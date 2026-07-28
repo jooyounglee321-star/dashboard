@@ -46,7 +46,9 @@ def list_admin_users(
         q = q.filter(User.email.ilike(term) | User.name.ilike(term))
     if plan:
         q = q.filter(User.plan == plan)
-    if status:
+    if status == 'withdrawal_pending':
+        q = q.filter(User.withdrawal_status == 'pending')
+    elif status:
         q = q.filter(User.status == status)
 
     if sort_by not in ALLOWED_SORT:
