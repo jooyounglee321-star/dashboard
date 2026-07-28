@@ -8,6 +8,12 @@ const KakaoLogo = () => (
   </svg>
 )
 
+const NaverLogo = () => (
+  <svg viewBox="0 0 24 24" style={{ width: 20, height: 20, flexShrink: 0 }}>
+    <path fill="#fff" d="M13.527 12.388L10.3 7H7v10h3.473V11.612L13.7 17H17V7h-3.473z"/>
+  </svg>
+)
+
 const GoogleLogo = () => (
   <svg className="g-logo" viewBox="0 0 48 48" style={{ width: 20, height: 20, flexShrink: 0 }}>
     <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -109,6 +115,10 @@ export default function LoginPage() {
             <button className="btn-social btn-kakao" type="button" onClick={() => { window.location.href = '/api/auth/kakao/login' }}>
               <KakaoLogo />
               {t(lang, 'auth.kakaoLogin')}
+            </button>
+            <button className="btn-social btn-naver" type="button" onClick={() => { window.location.href = '/api/auth/naver/login' }}>
+              <NaverLogo />
+              {t(lang, 'auth.naverLogin')}
             </button>
           </div>
 

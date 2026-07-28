@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-07-28 (3)
+
+### feat — 네이버 소셜 로그인 추가
+
+- `routers/auth.py`: NAVER_* 상수 선언, `/api/auth/naver/login` 라우트, `naver_router` + `/auth/naver/callback` 콜백 추가
+- 네이버 userinfo API (`/v1/nid/me`)에서 id·email·name 수신
+- `_get_or_create_social_user(db, "naver", ...)` 호출로 social_provider·provider 모두 'naver' 저장
+- 콜백 내 provider 저장 검증 로그 추가 (`[NAVER] user.id=... social_provider=naver provider=naver`)
+- `main.py`: `naver_router` import 및 마운트
+- `LoginPage.jsx` / `RegisterPage.jsx`: NaverLogo SVG + 네이버 버튼 추가
+- `globals.css`: `.btn-naver { background: #03C75A }` 추가
+- `SuperadminPage.jsx`: 가입경로 표시에 '🟢 네이버' 추가 (목록·모달 두 곳)
+- ko.json / en.json: `auth.naverLogin`, `auth.naverRegister` 번역 키 추가
+
+---
+
 ## 2026-07-28 (2)
 
 ### feat — 슈퍼어드민 회원 목록에 탈퇴 신청 상태 표시 및 필터 추가

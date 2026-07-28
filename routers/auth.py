@@ -75,6 +75,14 @@ KAKAO_AUTH_URL = "https://kauth.kakao.com/oauth/authorize"
 KAKAO_TOKEN_URL = "https://kauth.kakao.com/oauth/token"
 KAKAO_USERINFO_URL = "https://kapi.kakao.com/v2/user/me"
 
+# Naver OAuth 설정
+NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID")
+NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET")
+NAVER_REDIRECT_URI = "https://dashboard-production-4a18.up.railway.app/auth/naver/callback"
+NAVER_AUTH_URL = "https://nid.naver.com/oauth2.0/authorize"
+NAVER_TOKEN_URL = "https://nid.naver.com/oauth2.0/token"
+NAVER_USERINFO_URL = "https://openapi.naver.com/v1/nid/me"
+
 # JWT 설정
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
@@ -586,6 +594,23 @@ def list_users(
     return db.query(User).order_by(User.created_at.desc()).all()
 
 
+# ── GET /api/auth/naver/login ────────────────────────────────────────────────
+
+@router.get("/naver/login", summary="네이버 소셜 로그인 시작")
+def naver_login():
+    """네이버 OAuth 인증 페이지로 리디렉트합니다."""
+    if not NAVER_CLIENT_ID:
+        raise HTTPException(status_code=500, detail="Naver OAuth가 설정되지 않았습니다.")
+    params = {
+        "client_id": NAVER_CLIENT_ID,
+        "redirect_uri": NAVER_REDIRECT_URI,
+        "response_type": "code",
+        "state": secrets.token_hex(8),
+    }
+    url = NAVER_AUTH_URL + "?" + urllib.parse.urlencode(params)
+    return RedirectResponse(url)
+
+
 # ── GET /api/auth/kakao/login ────────────────────────────────────────────────
 
 @router.get("/kakao/login", summary="카카오 소셜 로그인 시작")
@@ -658,6 +683,75 @@ def kakao_callback(code: str | None = None, error: str | None = None, db: Sessio
     user.login_count = (user.login_count or 0) + 1
     db.commit()
     db.refresh(user)
+
+    jwt_token = _create_token(user.id, user.email, user.role)
+    if user.withdrawal_status == "pending":
+        redirect = RedirectResponse("/withdrawal-pending", status_code=302)
+    else:
+        redirect = RedirectResponse("/auth/social-callback", status_code=302)
+    _set_auth_cookie(redirect, jwt_token)
+    return redirect
+
+
+# ── GET /auth/naver/callback (prefix 없이 main.py에 직접 마운트) ──────────────
+
+naver_router = APIRouter()
+
+@naver_router.get("/auth/naver/callback", summary="네이버 OAuth 콜백 처리")
+def naver_callback(code: str | None = None, state: str | None = None, error: str | None = None, db: Session = Depends(get_db)):
+    """네이버 인증 후 콜백 — JWT 발급 후 프론트엔드로 리디렉트."""
+    if error or not code:
+        return RedirectResponse("/login?error=naver_cancelled")
+
+    # 코드 → 액세스 토큰 교환
+    try:
+        token_res = httpx.post(NAVER_TOKEN_URL, data={
+            "grant_type": "authorization_code",
+            "client_id": NAVER_CLIENT_ID,
+            "client_secret": NAVER_CLIENT_SECRET,
+            "redirect_uri": NAVER_REDIRECT_URI,
+            "code": code,
+            "state": state or "",
+        }, headers={"Content-Type": "application/x-www-form-urlencoded"}, timeout=10)
+    except Exception as e:
+        logger.error("[NAVER] 토큰 요청 예외: %s", e)
+        return RedirectResponse("/login?error=naver_token_failed")
+
+    if token_res.status_code != 200:
+        logger.error("[NAVER] 토큰 응답 %s: %s", token_res.status_code, token_res.text)
+        return RedirectResponse("/login?error=naver_token_failed")
+
+    access_token = token_res.json().get("access_token")
+
+    # 네이버 유저 정보 조회 (id, email, name 포함)
+    try:
+        userinfo_res = httpx.get(
+            NAVER_USERINFO_URL,
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=10,
+        )
+    except Exception:
+        return RedirectResponse("/login?error=naver_userinfo_failed")
+
+    if userinfo_res.status_code != 200:
+        return RedirectResponse("/login?error=naver_userinfo_failed")
+
+    resp = userinfo_res.json().get("response", {})
+    naver_id = str(resp.get("id", ""))
+    email = resp.get("email")
+    name = resp.get("name") or resp.get("nickname")
+
+    # provider='naver' 로 정확히 저장 (_get_or_create_social_user 내부에서 설정)
+    user = _get_or_create_social_user(db, "naver", naver_id, email, name)
+
+    # 로그인 통계 업데이트
+    user.last_login_at = datetime.now(timezone.utc)
+    user.login_count = (user.login_count or 0) + 1
+    db.commit()
+    db.refresh(user)
+
+    # provider 저장 검증 로그
+    logger.info("[NAVER] user.id=%s social_provider=%s provider=%s", user.id, user.social_provider, user.provider)
 
     jwt_token = _create_token(user.id, user.email, user.role)
     if user.withdrawal_status == "pending":
