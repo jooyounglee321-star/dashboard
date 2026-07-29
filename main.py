@@ -39,7 +39,7 @@ from models import (  # noqa: F401  (import side-effect 목적)
     PortfolioGroups,
     DailyPortfolioSnapshot,
     RolePermission,
-    GoogleCalendarToken,
+    GoogleServiceToken,
 )
 
 from routers import auth as auth_router
@@ -48,6 +48,7 @@ from routers import bookmarks, diets, expenses, memos, pinned_memos, stocks, tim
 from routers import portfolio as portfolio_router
 from routers import admin as admin_router
 from routers import calendar as calendar_router
+from routers import youtube_oauth as youtube_oauth_router
 from routers.expense import expense_router, exchange_router, do_refresh_rates
 from routers.income import income_router
 
@@ -1013,6 +1014,65 @@ def _migrate_withdrawal_columns():
     logger.info("[MIGRATE] withdrawal_status / withdrawal_requested_at 컬럼 확인 완료")
 
 
+def _migrate_google_service_tokens():
+    """google_calendar_tokens → google_service_tokens 데이터 이전.
+
+    기존 캘린더 연동 데이터를 service_type='calendar'로 복사한 뒤
+    google_calendar_tokens는 그대로 둠(DROP하지 않아 안전).
+    google_service_tokens에 이미 데이터가 있으면 재실행 스킵.
+    """
+    with engine.connect() as conn:
+        try:
+            insp = inspect(conn)
+            tables = set(insp.get_table_names())
+
+            # google_service_tokens에 이미 calendar 행이 있으면 스킵
+            if "google_service_tokens" in tables:
+                cnt = conn.execute(text(
+                    "SELECT COUNT(*) FROM google_service_tokens WHERE service_type='calendar'"
+                )).scalar()
+                if cnt and cnt > 0:
+                    logger.info("[MIGRATE] google_service_tokens calendar 행 이미 존재(%d), 스킵", cnt)
+                    return
+            else:
+                logger.info("[MIGRATE] google_service_tokens 테이블 없음 — create_all 후 재시도 예정")
+                return
+
+            # google_calendar_tokens가 있으면 데이터 복사
+            if "google_calendar_tokens" not in tables:
+                logger.info("[MIGRATE] google_calendar_tokens 없음 — 신규 배포, 스킵")
+                return
+
+            rows = conn.execute(text(
+                "SELECT user_id, access_token, refresh_token, expires_at, google_email "
+                "FROM google_calendar_tokens"
+            )).fetchall()
+
+            migrated = 0
+            for row in rows:
+                try:
+                    conn.execute(text(
+                        "INSERT INTO google_service_tokens "
+                        "(user_id, service_type, access_token, refresh_token, expires_at, google_email) "
+                        "VALUES (:uid, 'calendar', :at, :rt, :exp, :email) "
+                        "ON CONFLICT (user_id, service_type) DO NOTHING"
+                    ), {
+                        "uid": row[0], "at": row[1],
+                        "rt": row[2], "exp": row[3], "email": row[4],
+                    })
+                    migrated += 1
+                except Exception as e:
+                    logger.warning("[MIGRATE] google_service_tokens 행 삽입 실패: %s", e)
+            conn.commit()
+            logger.info("[MIGRATE] google_calendar_tokens → google_service_tokens %d행 이전 완료", migrated)
+        except Exception as e:
+            logger.warning("[MIGRATE] google_service_tokens 마이그레이션 실패: %s", e)
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+
+
 async def _delete_pending_withdrawals_job():
     """탈퇴 신청 후 30일 지난 유저 자동 삭제 (매일 자정 KST 실행)."""
     from datetime import timedelta
@@ -1031,7 +1091,7 @@ async def _delete_pending_withdrawals_job():
                 "todos", "bookmarks", "youtube_channels", "stock_price_history",
                 "dividend_history", "recurring_expenses", "expense_budgets",
                 "daily_portfolio_snapshot", "portfolio_groups", "stocks",
-                "timezone_config", "google_calendar_tokens",
+                "timezone_config", "google_calendar_tokens", "google_service_tokens",
             ]:
                 try:
                     db.execute(text(f"DELETE FROM {tbl} WHERE user_id = :uid"), {"uid": uid})
@@ -1114,6 +1174,7 @@ async def lifespan(app: FastAPI):
     _migrate_recurring_frequency_columns()
     _migrate_social_columns()
     _migrate_withdrawal_columns()
+    _migrate_google_service_tokens()
     logger.info("[DB] 테이블 생성/확인 완료")
 
     # APScheduler: 30분마다 환율 자동 갱신
@@ -1216,6 +1277,7 @@ app.include_router(timezone.router, prefix="/api")
 app.include_router(portfolio_router.router, prefix="/api")
 app.include_router(admin_router.router, prefix="/api")
 app.include_router(calendar_router.router, prefix="/api")
+app.include_router(youtube_oauth_router.router, prefix="/api")
 
 
 @app.get("/api/health")

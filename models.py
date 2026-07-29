@@ -365,18 +365,22 @@ class DailyPortfolioSnapshot(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
 
-class GoogleCalendarToken(Base):
-    """Google Calendar OAuth 토큰 테이블.
+class GoogleServiceToken(Base):
+    """Google OAuth 서비스 토큰 테이블.
 
-    로그인 토큰과 완전히 분리된 캘린더 전용 토큰.
-    user_id 당 1개의 row (unique).
+    calendar, youtube 등 여러 Google 서비스 연동을 하나의 테이블에서 관리.
+    (user_id, service_type) 쌍이 유니크 — 서비스별로 별도 계정 연동 가능.
     """
-    __tablename__ = "google_calendar_tokens"
+    __tablename__ = "google_service_tokens"
+    __table_args__ = (
+        UniqueConstraint("user_id", "service_type", name="uq_user_service_type"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False, index=True
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    service_type: Mapped[str] = mapped_column(String(30), nullable=False)  # 'calendar' | 'youtube'
     access_token: Mapped[str] = mapped_column(Text, nullable=False)
     refresh_token: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
