@@ -210,41 +210,75 @@ def youtube_playlists(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """연동된 YouTube 계정의 재생목록을 최대 50개 반환."""
+    """연동된 YouTube 계정의 재생목록을 반환.
+
+    mine=true (사용자 생성 재생목록) + 특수 재생목록 (좋아요/나중에 볼) 병합.
+    특수 재생목록은 channels.list contentDetails.relatedPlaylists 에서 실제 ID를 가져온 뒤
+    playlists.list 로 메타데이터를 조회한다.
+    """
     token = get_valid_token(current_user.id, SERVICE, db, LOG)
     if not token:
         raise HTTPException(status_code=401, detail="YouTube가 연동되지 않았습니다.")
 
+    headers = {"Authorization": f"Bearer {token.access_token}"}
+
+    def _fetch(params: dict) -> list:
+        try:
+            r = httpx.get(f"{YOUTUBE_API}/playlists", headers=headers, params=params, timeout=15)
+        except Exception as e:
+            logger.error("%s 재생목록 조회 실패: %s", LOG, e)
+            return []
+        if r.status_code == 401:
+            if refresh_access_token(token, db, LOG):
+                try:
+                    r = httpx.get(f"{YOUTUBE_API}/playlists", headers=headers, params=params, timeout=15)
+                except Exception:
+                    return []
+            else:
+                raise HTTPException(status_code=401, detail="인증이 만료됐습니다. 다시 연동해 주세요.")
+        if r.status_code != 200:
+            logger.error("%s YouTube playlists API 오류 %s: %s", LOG, r.status_code, r.text)
+            return []
+        return r.json().get("items", [])
+
+    # 1) 사용자 생성 재생목록
+    mine_items = _fetch({"part": "snippet,contentDetails", "mine": "true", "maxResults": 50})
+
+    # 2) 특수 재생목록 실제 ID 조회 (channels.list → relatedPlaylists)
+    special_items: list = []
     try:
-        res = httpx.get(
-            f"{YOUTUBE_API}/playlists",
-            headers={"Authorization": f"Bearer {token.access_token}"},
-            params={
-                "part": "snippet,contentDetails",
-                "mine": "true",
-                "maxResults": 50,
-            },
-            timeout=15,
+        ch_res = httpx.get(
+            f"{YOUTUBE_API}/channels",
+            headers=headers,
+            params={"part": "contentDetails", "mine": "true"},
+            timeout=10,
         )
+        if ch_res.status_code == 200:
+            related = (
+                ch_res.json()
+                .get("items", [{}])[0]
+                .get("contentDetails", {})
+                .get("relatedPlaylists", {})
+            )
+            special_ids = [v for v in [related.get("likes"), related.get("watchLater")] if v]
+            if special_ids:
+                special_items = _fetch({
+                    "part": "snippet,contentDetails",
+                    "id": ",".join(special_ids),
+                    "maxResults": len(special_ids),
+                })
     except Exception as e:
-        logger.error("%s 재생목록 조회 실패: %s", LOG, e)
-        raise HTTPException(status_code=503, detail="YouTube 재생목록 조회에 실패했습니다.")
+        logger.warning("%s 특수 재생목록 ID 조회 실패 (무시): %s", LOG, e)
 
-    if res.status_code == 401:
-        if refresh_access_token(token, db, LOG):
-            return youtube_playlists(current_user=current_user, db=db)
-        raise HTTPException(status_code=401, detail="인증이 만료됐습니다. 다시 연동해 주세요.")
-
-    if res.status_code != 200:
-        logger.error("%s YouTube API 오류 %s: %s", LOG, res.status_code, res.text)
-        raise HTTPException(status_code=502, detail="YouTube API 오류가 발생했습니다.")
-
-    raw_pl = res.json()
-    items = raw_pl.get("items", [])
-    logger.warning("%s playlists raw: totalResults=%s items=%d",
-                   LOG, raw_pl.get("pageInfo", {}).get("totalResults"), len(items))
+    # 3) 병합 — 사용자 생성 우선, 특수는 뒤에 (중복 제거)
+    seen_ids: set = set()
+    all_items = mine_items + special_items
     playlists = []
-    for item in items:
+    for item in all_items:
+        pid = item.get("id", "")
+        if not pid or pid in seen_ids:
+            continue
+        seen_ids.add(pid)
         snippet = item.get("snippet", {})
         thumbnails = snippet.get("thumbnails", {})
         thumb = (
@@ -253,14 +287,16 @@ def youtube_playlists(
             or ""
         )
         playlists.append({
-            "playlist_id": item.get("id", ""),
+            "playlist_id": pid,
             "title": snippet.get("title", ""),
             "description": snippet.get("description", "")[:100],
             "thumbnail": thumb,
             "item_count": item.get("contentDetails", {}).get("itemCount", 0),
-            "url": f"https://www.youtube.com/playlist?list={item.get('id', '')}",
+            "url": f"https://www.youtube.com/playlist?list={pid}",
         })
 
+    logger.warning("%s playlists 최종: mine=%d special=%d total=%d",
+                   LOG, len(mine_items), len(special_items), len(playlists))
     return {"playlists": playlists, "total": len(playlists)}
 
 
