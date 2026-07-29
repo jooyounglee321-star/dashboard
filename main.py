@@ -39,6 +39,7 @@ from models import (  # noqa: F401  (import side-effect 목적)
     PortfolioGroups,
     DailyPortfolioSnapshot,
     RolePermission,
+    GoogleCalendarToken,
 )
 
 from routers import auth as auth_router
@@ -46,6 +47,7 @@ from routers.auth import kakao_router, naver_router
 from routers import bookmarks, diets, expenses, memos, pinned_memos, stocks, timezone, todos, youtube
 from routers import portfolio as portfolio_router
 from routers import admin as admin_router
+from routers import calendar as calendar_router
 from routers.expense import expense_router, exchange_router, do_refresh_rates
 from routers.income import income_router
 
@@ -1029,7 +1031,7 @@ async def _delete_pending_withdrawals_job():
                 "todos", "bookmarks", "youtube_channels", "stock_price_history",
                 "dividend_history", "recurring_expenses", "expense_budgets",
                 "daily_portfolio_snapshot", "portfolio_groups", "stocks",
-                "timezone_config",
+                "timezone_config", "google_calendar_tokens",
             ]:
                 try:
                     db.execute(text(f"DELETE FROM {tbl} WHERE user_id = :uid"), {"uid": uid})
@@ -1213,6 +1215,7 @@ app.include_router(youtube.router, prefix="/api")
 app.include_router(timezone.router, prefix="/api")
 app.include_router(portfolio_router.router, prefix="/api")
 app.include_router(admin_router.router, prefix="/api")
+app.include_router(calendar_router.router, prefix="/api")
 
 
 @app.get("/api/health")
