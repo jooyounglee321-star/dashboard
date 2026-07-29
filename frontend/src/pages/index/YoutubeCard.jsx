@@ -5,20 +5,16 @@ export default function YoutubeCard({ isMobile = false, maxCount = 20, lang = 'k
   const [connected, setConnected] = useState(false)
   const [googleEmail, setGoogleEmail] = useState(null)
   const [statusLoading, setStatusLoading] = useState(true)
-  const [tab, setTab] = useState('subscriptions') // 'subscriptions' | 'playlists'
   const [data, setData] = useState([])
   const [dataLoading, setDataLoading] = useState(false)
   const [dataError, setDataError] = useState(false)
 
-  const loadData = useCallback((activeTab) => {
-    const endpoint = activeTab === 'playlists'
-      ? '/api/youtube/playlists'
-      : '/api/youtube/subscriptions'
+  const loadData = useCallback(() => {
     setDataLoading(true)
     setDataError(false)
-    fetch(endpoint, { credentials: 'include' })
+    fetch('/api/youtube/subscriptions', { credentials: 'include' })
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
-      .then(res => setData(activeTab === 'playlists' ? (res.playlists || []) : (res.channels || [])))
+      .then(res => setData(res.channels || []))
       .catch(() => setDataError(true))
       .finally(() => setDataLoading(false))
   }, [])
@@ -30,7 +26,7 @@ export default function YoutubeCard({ isMobile = false, maxCount = 20, lang = 'k
         if (res?.connected) {
           setConnected(true)
           setGoogleEmail(res.google_email || null)
-          loadData('subscriptions')
+          loadData()
         } else {
           setConnected(false)
         }
@@ -46,18 +42,12 @@ export default function YoutubeCard({ isMobile = false, maxCount = 20, lang = 'k
     const handler = (e) => {
       if (e.data === 'youtube_connected') {
         setStatusLoading(true)
-        setTab('subscriptions')
         checkStatus()
       }
     }
     window.addEventListener('message', handler)
     return () => window.removeEventListener('message', handler)
   }, [checkStatus])
-
-  function handleTabChange(newTab) {
-    setTab(newTab)
-    loadData(newTab)
-  }
 
   function connectYouTube() {
     const popup = window.open(
@@ -127,31 +117,13 @@ export default function YoutubeCard({ isMobile = false, maxCount = 20, lang = 'k
           </button>
         </div>
 
-        {/* 탭 — 구독채널 / 재생목록 */}
-        <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.6rem', flexWrap: 'wrap' }}>
-          {['subscriptions', 'playlists'].map(tabKey => (
-            <button
-              key={tabKey}
-              onClick={() => handleTabChange(tabKey)}
-              style={{
-                fontSize: isMobile ? '0.73rem' : '0.78rem',
-                padding: isMobile ? '0.15rem 0.55rem' : '0.2rem 0.7rem',
-                borderRadius: '999px',
-                border: '1px solid var(--border)',
-                background: tab === tabKey ? 'var(--accent)' : 'transparent',
-                color: tab === tabKey ? '#fff' : 'var(--text-secondary)',
-                cursor: 'pointer',
-                fontWeight: tab === tabKey ? 600 : 400,
-              }}
-            >
-              {t(lang, tabKey === 'playlists' ? 'youtubePlaylists' : 'youtubeSubscriptions')}
-            </button>
-          ))}
+        {/* 새로고침 버튼 */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.4rem' }}>
           <button
-            onClick={() => loadData(tab)}
+            onClick={() => loadData()}
             disabled={dataLoading}
             style={{
-              marginLeft: 'auto', fontSize: isMobile ? '0.73rem' : '0.78rem', background: 'none',
+              fontSize: isMobile ? '0.73rem' : '0.78rem', background: 'none',
               border: 'none', color: 'var(--text-secondary)', cursor: 'pointer',
             }}
           >
@@ -168,7 +140,7 @@ export default function YoutubeCard({ isMobile = false, maxCount = 20, lang = 'k
           <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
             {t(lang, 'youtubeDataError')}{' '}
             <button
-              onClick={() => loadData(tab)}
+              onClick={() => loadData()}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', fontSize: '0.85rem', textDecoration: 'underline' }}
             >
               {t(lang, 'youtubeRetry')}
@@ -176,12 +148,10 @@ export default function YoutubeCard({ isMobile = false, maxCount = 20, lang = 'k
           </div>
         ) : data.length === 0 ? (
           <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-            <div>{t(lang, tab === 'playlists' ? 'youtubeNoPlaylists' : 'youtubeNoSubscriptions')}</div>
-            {tab !== 'playlists' && (
-              <div style={{ fontSize: '0.75rem', marginTop: '0.4rem', lineHeight: 1.5 }}>
-                {t(lang, 'youtubePrivateNote')}
-              </div>
-            )}
+            <div>{t(lang, 'youtubeNoSubscriptions')}</div>
+            <div style={{ fontSize: '0.75rem', marginTop: '0.4rem', lineHeight: 1.5 }}>
+              {t(lang, 'youtubePrivateNote')}
+            </div>
           </div>
         ) : (
           <ul className={isMobile ? 'm-yt-list' : 'yt-list'}>
@@ -189,7 +159,7 @@ export default function YoutubeCard({ isMobile = false, maxCount = 20, lang = 'k
               const href = item.url || '#'
               const name = item.title || ''
               const thumb = item.thumbnail || ''
-              const sub = tab === 'playlists' ? `${item.item_count ?? ''}곡` : ''
+              const sub = ''
               return (
                 <li key={item.channel_id || item.playlist_id} className={isMobile ? 'm-yt-item' : 'yt-item'}>
                   <a href={href} target="_blank" rel="noreferrer">
