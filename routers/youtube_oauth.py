@@ -179,8 +179,8 @@ def youtube_subscriptions(
 
     raw = res.json()
     items = raw.get("items", [])
-    logger.info("%s subscriptions raw: totalResults=%s items=%d nextPageToken=%s",
-                LOG, raw.get("pageInfo", {}).get("totalResults"), len(items), bool(raw.get("nextPageToken")))
+    logger.warning("%s subscriptions raw: totalResults=%s items=%d nextPageToken=%s",
+                   LOG, raw.get("pageInfo", {}).get("totalResults"), len(items), bool(raw.get("nextPageToken")))
     channels = []
     for item in items:
         snippet = item.get("snippet", {})
