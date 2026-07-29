@@ -334,7 +334,7 @@
   "youtubeRetry": "다시 시도",
   "youtubeRefreshBtn": "🔄 새로고침",
   "youtubePopupBlocked": "팝업이 차단됐습니다. 브라우저 팝업 허용 후 다시 시도해 주세요.",
-  "youtubePrivateNote": "YouTube 구독 목록이 비공개로 설정된 경우 표시되지 않을 수 있어요. YouTube 설정 > 공개 범위 설정에서 구독 목록을 공개로 변경해 보세요.",
+  "youtubePrivateNote": "YouTube 설정 > 공개 범위 설정 > 내 구독정보 모두 비공개를 공개로 변경해 보세요.",
   "stockTitle": "보유 주식",
   "stockLoading": "⏳ 시세 불러오는 중…",
   "stockEmpty": "관리자에서 종목을 추가하세요",
