@@ -128,38 +128,36 @@ export default function YoutubeCard({ isMobile = false, maxCount = 20, lang = 'k
         </div>
 
         {/* 탭 — 구독채널 / 재생목록 */}
-        {!isMobile && (
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.6rem' }}>
-            {['subscriptions', 'playlists'].map(tabKey => (
-              <button
-                key={tabKey}
-                onClick={() => handleTabChange(tabKey)}
-                style={{
-                  fontSize: '0.78rem',
-                  padding: '0.2rem 0.7rem',
-                  borderRadius: '999px',
-                  border: '1px solid var(--border)',
-                  background: tab === tabKey ? 'var(--accent)' : 'transparent',
-                  color: tab === tabKey ? '#fff' : 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  fontWeight: tab === tabKey ? 600 : 400,
-                }}
-              >
-                {t(lang, tabKey === 'playlists' ? 'youtubePlaylists' : 'youtubeSubscriptions')}
-              </button>
-            ))}
+        <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.6rem', flexWrap: 'wrap' }}>
+          {['subscriptions', 'playlists'].map(tabKey => (
             <button
-              onClick={() => loadData(tab)}
-              disabled={dataLoading}
+              key={tabKey}
+              onClick={() => handleTabChange(tabKey)}
               style={{
-                marginLeft: 'auto', fontSize: '0.78rem', background: 'none',
-                border: 'none', color: 'var(--text-secondary)', cursor: 'pointer',
+                fontSize: isMobile ? '0.73rem' : '0.78rem',
+                padding: isMobile ? '0.15rem 0.55rem' : '0.2rem 0.7rem',
+                borderRadius: '999px',
+                border: '1px solid var(--border)',
+                background: tab === tabKey ? 'var(--accent)' : 'transparent',
+                color: tab === tabKey ? '#fff' : 'var(--text-secondary)',
+                cursor: 'pointer',
+                fontWeight: tab === tabKey ? 600 : 400,
               }}
             >
-              {t(lang, 'youtubeRefreshBtn')}
+              {t(lang, tabKey === 'playlists' ? 'youtubePlaylists' : 'youtubeSubscriptions')}
             </button>
-          </div>
-        )}
+          ))}
+          <button
+            onClick={() => loadData(tab)}
+            disabled={dataLoading}
+            style={{
+              marginLeft: 'auto', fontSize: isMobile ? '0.73rem' : '0.78rem', background: 'none',
+              border: 'none', color: 'var(--text-secondary)', cursor: 'pointer',
+            }}
+          >
+            {t(lang, 'youtubeRefreshBtn')}
+          </button>
+        </div>
 
         {/* 데이터 목록 */}
         {dataLoading ? (
