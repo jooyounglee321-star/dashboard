@@ -1,24 +1,80 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { t } from './i18n'
 import { todayStr } from '../../utils/date'
 import TodoList from './TodoList'
 
 export default function ScheduleCard({ isMobile = false, lang = 'ko', date }) {
-  const [connected] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('gcal_connected')) } catch { return false }
-  })
+  const [connected, setConnected] = useState(false)
+  const [googleEmail, setGoogleEmail] = useState(null)
+  const [events, setEvents] = useState([])
+  const [statusLoading, setStatusLoading] = useState(true)
+  const [eventsLoading, setEventsLoading] = useState(false)
+  const [eventsError, setEventsError] = useState(false)
 
   const selectedDate = date || todayStr()
 
+  const loadEvents = useCallback(() => {
+    setEventsLoading(true)
+    setEventsError(false)
+    fetch('/api/calendar/today', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(data => setEvents(data.events || []))
+      .catch(() => setEventsError(true))
+      .finally(() => setEventsLoading(false))
+  }, [])
+
+  const checkStatus = useCallback(() => {
+    fetch('/api/calendar/status', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.connected) {
+          setConnected(true)
+          setGoogleEmail(data.google_email || null)
+          loadEvents()
+        } else {
+          setConnected(false)
+        }
+      })
+      .catch(() => setConnected(false))
+      .finally(() => setStatusLoading(false))
+  }, [loadEvents])
+
+  useEffect(() => {
+    checkStatus()
+  }, [checkStatus])
+
+  // 팝업에서 연동 완료 신호 수신
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.data === 'gcal_connected') {
+        setStatusLoading(true)
+        checkStatus()
+      }
+    }
+    window.addEventListener('message', handler)
+    return () => window.removeEventListener('message', handler)
+  }, [checkStatus])
+
   function connectGCal() {
-    alert('⚙️ Google Calendar 연동은 Spring Boot 백엔드 구성 후 사용 가능합니다.\n\n관리자 페이지에서 Google OAuth 설정을 완료해 주세요.')
+    const popup = window.open(
+      '/api/calendar/connect',
+      'gcal_connect',
+      'width=520,height=640,scrollbars=yes,resizable=yes'
+    )
+    if (!popup) {
+      alert(t(lang, 'scheduleGcalPopupBlocked'))
+    }
   }
 
-  const sampleEvents = [
-    { time: '09:00', text: '팀 미팅' },
-    { time: '12:30', text: '점심 약속' },
-    { time: '15:00', text: '병원 예약' },
-  ]
+  function disconnectGCal() {
+    fetch('/api/calendar/disconnect', { method: 'DELETE', credentials: 'include' })
+      .then(() => {
+        setConnected(false)
+        setGoogleEmail(null)
+        setEvents([])
+      })
+      .catch(() => {})
+  }
 
   const hdr     = isMobile ? 'm-card-header' : 'card-header'
   const title   = isMobile ? 'm-card-title'  : 'card-title'
@@ -27,7 +83,11 @@ export default function ScheduleCard({ isMobile = false, lang = 'ko', date }) {
 
   const gcalPane = (
     <div style={{ flex: 1, minWidth: 0 }}>
-      {!connected ? (
+      {statusLoading ? (
+        <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', padding: '0.5rem 0' }}>
+          {t(lang, 'scheduleEventsLoading')}
+        </div>
+      ) : !connected ? (
         <div className="gcal-connect">
           <div className="gcal-icon" style={isMobile ? { fontSize: '1.5rem' } : {}}>📆</div>
           <div className="gcal-desc" style={isMobile ? { fontSize: '0.82rem' } : {}}>
@@ -43,17 +103,74 @@ export default function ScheduleCard({ isMobile = false, lang = 'ko', date }) {
         </div>
       ) : (
         <>
-          <ul className={isMobile ? 'm-sched-list' : 'sched-list'}>
-            {sampleEvents.map((e, i) => (
-              <li key={i} className={isMobile ? 'm-sched-item' : 'sched-item'}>
-                {!isMobile && <span className="sched-dot" />}
-                <span className={isMobile ? 'm-sched-time' : 'sched-time'}>{e.time}</span>
-                <span className={isMobile ? 'm-sched-text' : 'sched-text'}>{e.text}</span>
-              </li>
-            ))}
-          </ul>
+          {googleEmail && (
+            <div style={{
+              fontSize: '0.75rem',
+              color: 'var(--text-secondary)',
+              marginBottom: '0.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '0.5rem',
+            }}>
+              <span>{t(lang, 'scheduleGcalConnectedLabel')}: {googleEmail}</span>
+              <button
+                onClick={disconnectGCal}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  fontSize: '0.72rem',
+                  padding: '0 0.2rem',
+                  textDecoration: 'underline',
+                  flexShrink: 0,
+                }}
+              >
+                {t(lang, 'scheduleGcalDisconnect')}
+              </button>
+            </div>
+          )}
+
+          {eventsLoading ? (
+            <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+              {t(lang, 'scheduleEventsLoading')}
+            </div>
+          ) : eventsError ? (
+            <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+              {t(lang, 'scheduleGcalError')}{' '}
+              <button
+                onClick={loadEvents}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--accent)', fontSize: '0.85rem', textDecoration: 'underline',
+                }}
+              >
+                {t(lang, 'scheduleRetry')}
+              </button>
+            </div>
+          ) : events.length === 0 ? (
+            <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', padding: '0.25rem 0' }}>
+              {t(lang, 'scheduleNoEvents')}
+            </div>
+          ) : (
+            <ul className={isMobile ? 'm-sched-list' : 'sched-list'}>
+              {events.map((e) => (
+                <li key={e.id} className={isMobile ? 'm-sched-item' : 'sched-item'}>
+                  {!isMobile && <span className="sched-dot" />}
+                  <span className={isMobile ? 'm-sched-time' : 'sched-time'}>
+                    {e.is_all_day ? t(lang, 'scheduleAllDay') : e.time}
+                  </span>
+                  <span className={isMobile ? 'm-sched-text' : 'sched-text'}>{e.summary}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
           {!isMobile && (
-            <button className="sched-refresh">{t(lang, 'scheduleRefresh')}</button>
+            <button className="sched-refresh" onClick={loadEvents} disabled={eventsLoading}>
+              {t(lang, 'scheduleRefresh')}
+            </button>
           )}
         </>
       )}

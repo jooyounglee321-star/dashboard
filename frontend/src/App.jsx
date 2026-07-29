@@ -51,6 +51,20 @@ function AdminRoleGuard({ children }) {
   return children
 }
 
+/** 캘린더 연동 팝업 콜백 — 부모 창에 신호 보내고 팝업 닫기 */
+function CalendarCallbackPage() {
+  const nav = useNavigate()
+  useEffect(() => {
+    if (window.opener) {
+      window.opener.postMessage('gcal_connected', window.location.origin)
+      window.close()
+    } else {
+      nav('/', { replace: true })
+    }
+  }, [nav])
+  return null
+}
+
 /** OAuth 콜백 처리 — /api/auth/me로 인증 확인 후 localStorage 설정 */
 function SocialCallbackPage() {
   const nav = useNavigate()
@@ -131,6 +145,7 @@ export default function App() {
         <Route path="/recurring"   element={<AuthGuard><RecurringPage /></AuthGuard>} />
         <Route path="/diet-stats"  element={<AuthGuard><DietStatsPage /></AuthGuard>} />
         <Route path="/auth/social-callback" element={<SocialCallbackPage />} />
+        <Route path="/auth/calendar-callback" element={<CalendarCallbackPage />} />
         <Route path="/withdrawal-pending" element={<WithdrawalPendingPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

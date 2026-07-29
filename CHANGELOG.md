@@ -4,6 +4,35 @@
 
 ---
 
+## 2026-07-29
+
+### feat — Google Calendar 연동 기능 추가
+
+**배경**: 오늘의 일정 카드에 실제 구글 캘린더 일정을 표시하는 기능 요구
+
+**변경 파일**
+- `models.py` — `GoogleCalendarToken` 테이블 모델 추가 (user_id, access_token, refresh_token, expires_at, google_email)
+- `routers/calendar.py` — 신규 라우터 생성
+  - `GET /api/calendar/connect` — 캘린더 연동용 OAuth 시작 (인증 필요, calendar.readonly 권한만 요청)
+  - `GET /api/calendar/callback` — OAuth 콜백, HMAC-signed state로 CSRF 방지, 토큰 저장
+  - `GET /api/calendar/status` — 연동 여부 + 연동된 구글 계정 이메일 반환
+  - `GET /api/calendar/today` — 오늘 일정 목록 (만료 시 자동 갱신)
+  - `DELETE /api/calendar/disconnect` — 연동 해제
+- `main.py` — 모델/라우터 등록, 탈퇴 처리 시 google_calendar_tokens 삭제 추가
+- `frontend/src/pages/index/ScheduleCard.jsx` — 실제 API 연동, 팝업 OAuth 흐름, 연동 해제 버튼
+- `frontend/src/App.jsx` — `/auth/calendar-callback` 라우트 추가 (팝업 → 부모 창 postMessage)
+- `frontend/src/locales/ko.json`, `en.json` — 8개 i18n 키 추가
+- `DB_SCHEMA.md` — 19번 테이블 문서 추가
+
+**주요 설계 결정**
+- 로그인 토큰과 캘린더 토큰 완전 분리: 다른 구글 계정으로 캘린더 연동 가능
+- OAuth 팝업 방식: 대시보드 페이지에서 벗어나지 않고 연동 완료
+- HMAC-signed state로 CSRF 방지 (state = user_id.hmac_sig)
+- access_token 만료 5분 전 자동 갱신 (refresh_token 사용)
+- prompt=consent로 항상 refresh_token 발급
+
+---
+
 ## 2026-07-28 (7)
 
 ### feat — 버튼 색상 통일: 원색 → 웜샌드 베이지 팔레트

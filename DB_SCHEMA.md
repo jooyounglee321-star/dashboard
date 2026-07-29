@@ -29,6 +29,7 @@
 | 16 | `daily_portfolio_snapshot` | 일별 포트폴리오 스냅샷 (user_id 기준 격리) |
 | 17 | `todos` | 수동 할 일 체크리스트 (user_id 기준 격리, start_date~due_date 범위 표시, 날짜별 체크 독립) |
 | 18 | `recurring_expenses` | 정기지출/수입 설정 (monthly·semi-monthly·weekly·biweekly, user_id 기준 격리) |
+| 19 | `google_calendar_tokens` | Google Calendar 연동 토큰 (로그인 토큰과 완전 분리, user_id 당 1행) |
 
 ---
 
@@ -478,6 +479,26 @@ permissions     — 독립 테이블 (FK 없음)
 | 12 | `_migrate_recurring_frequency_columns()` | `recurring_expenses`에 `frequency` / `day_of_week` / `day_of_month_2` 컬럼 누락 시 추가 |
 | 13 | `_migrate_social_columns()` | `users`에 `social_provider` / `social_id` 컬럼 추가, 기존 구글/페이스북 유저 자동 마이그레이션 |
 | 14 | `_migrate_withdrawal_columns()` | `users`에 `withdrawal_status` / `withdrawal_requested_at` 컬럼 추가 |
+
+---
+
+## 19. `google_calendar_tokens`
+
+Google Calendar 연동 전용 OAuth 토큰 테이블. 로그인 토큰(`users` 테이블)과 완전히 분리됨.
+연동된 구글 계정은 서비스 로그인 계정과 달라도 무방.
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+|--------|------|----------|------|
+| `id` | INTEGER | PK, auto | |
+| `user_id` | INTEGER | FK(users), UNIQUE, NOT NULL | 서비스 로그인 유저 ID (1:1) |
+| `access_token` | TEXT | NOT NULL | Google Calendar API 액세스 토큰 |
+| `refresh_token` | TEXT | nullable | 토큰 갱신용 리프레시 토큰 |
+| `expires_at` | TIMESTAMPTZ | nullable | access_token 만료 시각 |
+| `google_email` | VARCHAR(320) | nullable | 연동된 구글 계정 이메일 (표시용) |
+| `created_at` | TIMESTAMP | server_default=now() | |
+| `updated_at` | TIMESTAMP | server_default=now() | |
+
+**생성**: `Base.metadata.create_all()` 자동 생성 (서버 시작 시)
 
 ### 스케줄러 (APScheduler, 서버 시작 후 백그라운드 실행)
 
