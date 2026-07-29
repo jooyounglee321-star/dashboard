@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-07-29 (3)
+
+### fix — YouTube·캘린더 연동 해제 버튼 항상 표시 / 구독 비공개 안내 / 재생목록 탭 제거
+
+- `YoutubeCard`: googleEmail null이어도 연동 해제 버튼 항상 표시
+- `ScheduleCard`: googleEmail null이어도 구글 캘린더 연동 해제 버튼 항상 표시
+- `YoutubeCard`: 구독 0개일 때 "YouTube 설정 > 공개 범위 설정 > 내 구독정보 모두 비공개" 안내 추가
+- `YoutubeCard`: 재생목록 탭 제거 (YouTube API 제약 — 사용자 생성 재생목록 반환 불가)
+- YouTube subscriptions 구독 공개 전환 후 31개 채널 정상 표시 확인
+
+---
+
 ## 2026-07-29 (2)
 
 ### feat — YouTube 계정 연동 + google_service_tokens 테이블 리팩터링
