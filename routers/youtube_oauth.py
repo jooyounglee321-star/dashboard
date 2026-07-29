@@ -239,7 +239,10 @@ def youtube_playlists(
         logger.error("%s YouTube API 오류 %s: %s", LOG, res.status_code, res.text)
         raise HTTPException(status_code=502, detail="YouTube API 오류가 발생했습니다.")
 
-    items = res.json().get("items", [])
+    raw_pl = res.json()
+    items = raw_pl.get("items", [])
+    logger.warning("%s playlists raw: totalResults=%s items=%d",
+                   LOG, raw_pl.get("pageInfo", {}).get("totalResults"), len(items))
     playlists = []
     for item in items:
         snippet = item.get("snippet", {})
