@@ -4,6 +4,37 @@
 
 ---
 
+## 2026-07-28 (6)
+
+### feat — 전체 디자인 리뉴얼 + ConfirmModal 공통 컴포넌트 신설
+**디자인**
+- 색상 팔레트 전면 교체: 크림/갈색 계열 → 슬레이트 뉴트럴 (배경 #F8FAFC, 카드 #FFFFFF)
+- 포인트컬러: 청록 `#0891B2` + 인디고 보라 `#6366F1` 2가지로 통일 (기존 주황/갈색 제거)
+- 폰트: Noto Sans KR → **Pretendard Variable** (한글), Inter (영문/숫자) 조합
+- 헤더: 진한 갈색 배경 → 흰색 + 연한 보더 + 그림자
+- 모달 dim: 각기 다른 rgba(0,0,0,x) → `rgba(15,23,42,0.50) + blur(4px)` 전체 통일
+- 모달 박스: border 제거, 그림자 강화 (`0 20px 60px rgba(15,23,42,0.18)`)
+- `globals.css` CSS 변수 전면 교체, 헤더/버튼/폼/모달 스타일 업데이트
+- `index.css` 통계 헤더 + 레이아웃 편집 오버레이 색상 업데이트
+- `BudgetPage.css` rp-overlay/rp-modal 통일
+
+**window\.confirm → ConfirmModal 교체 (10곳)**
+- `components/ConfirmModal.jsx` 공통 컴포넌트 신설
+- RecurringPage: 정기지출 삭제 1개
+- SuperadminPage: 계정 삭제 + 비밀번호 초기화 2개
+- BudgetPage: 지출/예산/카테고리 삭제 3개 + `alert` → `showToast` 1개
+- StockSettingsModal: CASH잔고확인 + 매입내역삭제 + 그룹삭제 3개
+- StockStatsOverlay: 전체재계산 확인 1개 + `alert` → `showToast` 2개
+
+---
+
+## 2026-07-28 (5)
+
+### feat — 로그아웃 확인 모달 추가
+- 로그아웃 버튼 클릭 시 "정말 로그아웃하시겠습니까?" 확인 모달 표시
+
+---
+
 ## 2026-07-28 (4)
 
 ### feat — 로그아웃 확인 모달 추가
@@ -623,6 +654,50 @@
 - `StockStatsOverlay` 범용화: 그룹/통화 수에 따라 UI 자동 조정
 - USD 자산 있으면 원화환산 카드 항상 표시
 - 필터 바: 그룹 1개면 드롭다운 숨김, 다중 통화일 때만 통화 드롭다운 표시
+
+## 2026-07-01
+
+### feat — SortableCard rowSpan 지원 (행 높이 조절)
+- `SortableCard`에 `↕` 버튼 추가, 클릭 시 행 높이 1/2 토글
+- `handleRowSpanChange` 중복 제거 및 `rowSpan || 1` 폴백 적용
+
+### feat — 시간대별 하늘 배경 시계 카드 (SkyClockCard) 추가
+- 새벽/오전/오후/저녁/밤 시간대에 따라 하늘 배경 그라디언트 변경
+- 밤 달 orb/텍스트 색상, border-radius 개선
+
+### feat — 사용자 카테고리 탭: 소분류 표시 및 인라인 편집
+- BudgetPage 설정 탭에서 대분류/소분류 인라인 편집 지원
+- React.useState를 IIFE 밖으로 이동 (Hooks 규칙 위반 수정)
+
+### feat — 지출/수입/정기등록 목록 대분류-소분류 순 정렬
+- 가계부 리스트 정렬 기준: 대분류 → 소분류 순
+
+### feat — ExpenseCard 수입 항목을 지출보다 먼저 표시
+- 수입(income) 카드가 지출 카드 위에 렌더링되도록 순서 변경
+
+### feat — 주식 시장 상태 뱃지 (LIVE/AFTER/CLOSED)
+- `StockPrice` 스키마에 `market_state` 필드 추가
+- `market_state` 시간 기반 계산 + AFTER/CLOSED 뱃지 추가
+- 장 마감 후 평균가 뱃지 완전 제거
+- 모바일 뱃지 null 처리 누락 수정
+
+### feat — ETF 종목을 일반 주식 뒤에 정렬
+### feat — 일별 지출추이, 수입/지출 비교 차트 제거 (대시보드 간소화)
+
+### fix — [R#숫자] 태그 숨김 처리 (3곳)
+- 정기지출/수입 목록, BudgetPage 3곳, 가계부 달력 셀 미리보기
+
+### fix — 정기지출 자동 등록 세션 단위 → 월별 단위로 변경
+- `day_of_month None` 처리 추가
+- `_to_usd` Decimal/float 타입 충돌 수정
+
+### fix — DB/인프라
+- `uq_user_snapshot_date` 제약: `IF NOT EXISTS` 대신 `pg_constraint` 조회로 수정
+- `pytz` 의존성 추가
+- 주식 통계 오버레이: 종목 없을 때 빈 상태 메시지 표시
+- `once-type todo` 완료 후 취소선 표시 유지 (마감일까지)
+
+---
 
 ## [2026-06-30]
 
