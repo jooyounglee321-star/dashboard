@@ -29,7 +29,7 @@
 | 16 | `daily_portfolio_snapshot` | 일별 포트폴리오 스냅샷 (user_id 기준 격리) |
 | 17 | `todos` | 수동 할 일 체크리스트 (user_id 기준 격리, start_date~due_date 범위 표시, 날짜별 체크 독립) |
 | 18 | `recurring_expenses` | 정기지출/수입 설정 (monthly·semi-monthly·weekly·biweekly, user_id 기준 격리) |
-| 19 | `google_calendar_tokens` | Google Calendar 연동 토큰 (로그인 토큰과 완전 분리, user_id 당 1행) |
+| 19 | `google_service_tokens` | Google 서비스(캘린더·유튜브) 연동 토큰 ((user_id, service_type) 당 1행, 서비스별 다른 계정 연동 가능) |
 
 ---
 

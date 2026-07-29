@@ -4,6 +4,32 @@
 
 ---
 
+## 2026-07-29 (2)
+
+### feat — YouTube 계정 연동 + google_service_tokens 테이블 리팩터링
+
+**배경**: 캘린더에 이어 YouTube 구독채널/재생목록도 OAuth로 연동 요청
+
+**DB 리팩터링**
+- `google_calendar_tokens` → `google_service_tokens` (service_type 컬럼 추가)
+- `(user_id, service_type)` 유니크 → 서비스별로 다른 구글 계정 연동 가능
+- 기존 캘린더 연동 데이터를 `service_type='calendar'`로 자동 마이그레이션
+
+**변경 파일**
+- `models.py` — `GoogleCalendarToken` 제거, `GoogleServiceToken` 추가
+- `routers/_google_oauth.py` (신규) — sign_state/verify_state/get_valid_token/upsert_token 공통 유틸
+- `routers/calendar.py` — 공통 유틸 재사용, `google_service_tokens` 사용으로 전환 (기능 동일)
+- `routers/youtube_oauth.py` (신규) — `/api/youtube/connect|callback|status|subscriptions|playlists|disconnect`
+- `main.py` — 모델/라우터 등록, `_migrate_google_service_tokens()` 마이그레이션 함수 추가
+- `frontend/src/App.jsx` — `/auth/youtube-callback` 라우트 추가
+- `frontend/src/pages/index/YoutubeCard.jsx` — YouTube OAuth 팝업 연동, 구독채널/재생목록 탭 UI
+- `frontend/src/locales/ko.json`, `en.json` — 9개 i18n 키 추가
+- `DB_SCHEMA.md` — google_service_tokens 테이블 문서 추가
+
+**주의**: YouTube Data API v3를 Google Cloud Console에서 별도 활성화 필요
+
+---
+
 ## 2026-07-29
 
 ### feat — Google Calendar 연동 기능 추가
