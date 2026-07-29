@@ -334,7 +334,7 @@
   "youtubeRetry": "Retry",
   "youtubeRefreshBtn": "🔄 Refresh",
   "youtubePopupBlocked": "Popup was blocked. Please allow popups and try again.",
-  "youtubePrivateNote": "If your YouTube subscription list is set to private, it won't appear here. Go to YouTube Settings > Privacy and set your subscriptions to public.",
+  "youtubePrivateNote": "If your YouTube subscription list is set to private, it won't appear here. Go to YouTube Settings > Privacy Settings (공개 범위 설정) and set your subscriptions to public.",
   "stockTitle": "My Stocks",
   "stockLoading": "⏳ Loading prices…",
   "stockEmpty": "Add stocks in Admin",
