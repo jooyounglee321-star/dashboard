@@ -177,7 +177,10 @@ def youtube_subscriptions(
         logger.error("%s YouTube API 오류 %s: %s", LOG, res.status_code, res.text)
         raise HTTPException(status_code=502, detail="YouTube API 오류가 발생했습니다.")
 
-    items = res.json().get("items", [])
+    raw = res.json()
+    items = raw.get("items", [])
+    logger.info("%s subscriptions raw: totalResults=%s items=%d nextPageToken=%s",
+                LOG, raw.get("pageInfo", {}).get("totalResults"), len(items), bool(raw.get("nextPageToken")))
     channels = []
     for item in items:
         snippet = item.get("snippet", {})
