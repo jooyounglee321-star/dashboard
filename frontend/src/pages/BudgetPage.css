@@ -336,9 +336,9 @@
 .bp-icon-btn.del:hover  { color: #e86060; }
 
 .bp-btn-primary {
-  background: var(--accent2);
+  background: var(--accent);
   border: none;
-  color: #fff;
+  color: #3D2009;
   border-radius: 8px;
   padding: 0.35rem 0.8rem;
   font-size: 0.82rem;
@@ -347,7 +347,7 @@
   font-family: inherit;
   white-space: nowrap;
 }
-.bp-btn-primary:hover { background: #f0b070; }
+.bp-btn-primary:hover { background: var(--accent-h); }
 
 .bp-btn-ghost {
   background: var(--card);
@@ -844,8 +844,8 @@
 
 .rp-add-btn {
   padding: 0.38rem 0.85rem;
-  background: var(--accent2);
-  color: #fff;
+  background: var(--accent);
+  color: #3D2009;
   border: none;
   border-radius: 6px;
   font-size: 0.82rem;
@@ -853,7 +853,7 @@
   cursor: pointer;
   white-space: nowrap;
 }
-.rp-add-btn:hover { background: #f0b070; }
+.rp-add-btn:hover { background: var(--accent-h); }
 
 .rp-body {
   max-width: 700px;
@@ -914,10 +914,10 @@
   color: var(--ink2);
 }
 .rp-btn:hover { background: rgba(0,0,0,0.05); }
-.rp-btn.edit   { border-color: var(--blue); color: var(--blue); }
+.rp-btn.edit   { border-color: rgba(196,149,106,0.6); color: #6B4A28; }
 .rp-btn.del    { border-color: #e86060; color: #e86060; }
-.rp-btn.save   { background: var(--accent); color: #fff; border-color: transparent; font-weight: 600; }
-.rp-btn.save:hover { background: #b05518; }
+.rp-btn.save   { background: var(--accent); color: #3D2009; border-color: transparent; font-weight: 600; }
+.rp-btn.save:hover { background: var(--accent-h); }
 .rp-btn.cancel { color: var(--ink3); }
 .rp-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 

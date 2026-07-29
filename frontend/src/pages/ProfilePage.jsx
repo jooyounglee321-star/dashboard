@@ -401,7 +401,7 @@ export default function ProfilePage() {
               style={{
                 width: '100%', padding: '0.78rem', fontSize: '0.95rem', fontWeight: 500,
                 cursor: saving ? 'not-allowed' : 'pointer',
-                background: saving ? 'var(--ink3)' : 'var(--accent)', color: '#fff',
+                background: saving ? 'var(--ink3)' : 'var(--accent)', color: saving ? '#fff' : '#3D2009',
                 border: 'none', borderRadius: 10, fontFamily: 'inherit',
                 marginTop: '1.6rem', letterSpacing: '0.02em',
               }}

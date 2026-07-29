@@ -4,6 +4,31 @@
 
 ---
 
+## 2026-07-28 (7)
+
+### feat — 버튼 색상 통일: 원색 → 웜샌드 베이지 팔레트
+
+**신규 팔레트**
+- Primary 버튼 배경: 청록 `#0891B2` → 웜샌드 `#C4956A`
+- Primary hover: `#0369A1` → `#AD7C50`
+- 버튼 텍스트: `#ffffff` → `#3D2009` (진한 다크 브라운, 밝은 베이지 위 가독성)
+- 관리자/슈퍼어드민 배지: `var(--red)` → `#6B4A28` + `rgba(196,149,106,0.4)` 테두리
+- AI 식단 분석 보라: `#5B21B6` → `#7855AD` (채도 낮춤, 보라 계열 유지)
+
+**파일별 변경**
+- `globals.css`: `--accent`/`--accent-h` CSS 변수 + `.btn-primary`/`.btn-submit` 텍스트 색, input focus ring 색
+- `index.css`: `.gcal-btn` (구글캘린더) `#4285f4` → 베이지, `.layout-btn-save` 초록 → `var(--accent)`
+- `BudgetPage.css`: `.bp-btn-primary`, `.rp-add-btn` (인디고 보라 → 베이지), `.rp-btn.save` hover, `.rp-btn.edit` 파랑 테두리 → 베이지
+- `StockSettingsModal.jsx`: 매입 버튼, 내역 저장 버튼 `#2563eb` → `#C4956A`
+- `IndexPage.jsx`: 슈퍼어드민 배지 + 로그아웃 버튼 → 베이지 톤 통일
+- `ProfilePage.jsx`: 저장 버튼 텍스트 `#fff` → `#3D2009`
+- `DietStatsPage.jsx`: AI 라벨/배경 보라 rgba 전체 채도 다운
+
+**유지 항목**
+- `.btn-red` (삭제/위험 액션), 수입/지출 구분 색, 소셜 로그인 버튼, 포스트잇 카드 색상
+
+---
+
 ## 2026-07-28 (6)
 
 ### feat — 전체 디자인 리뉴얼 + ConfirmModal 공통 컴포넌트 신설

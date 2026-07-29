@@ -35,8 +35,8 @@
 .layout-toolbar{background:#FFFFFF;color:var(--ink);padding:0.65rem 1.4rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;border-bottom:1px solid var(--border);position:sticky;top:60px;z-index:100;box-shadow:0 2px 8px rgba(15,23,42,0.06);}
 .layout-toolbar-tip{font-size:0.78rem;color:var(--ink3);letter-spacing:0.01em;}
 .layout-toolbar-actions{display:flex;gap:0.5rem;}
-.layout-btn-save{padding:0.32rem 1.1rem;background:var(--green);color:#fff;border:none;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:inherit;}
-.layout-btn-save:hover{background:#3a6248;}
+.layout-btn-save{padding:0.32rem 1.1rem;background:var(--accent);color:#3D2009;border:none;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:inherit;}
+.layout-btn-save:hover{background:var(--accent-h);}
 .layout-btn-cancel{padding:0.32rem 1rem;background:var(--card2);color:var(--ink);border:1px solid var(--border);border-radius:6px;font-size:0.8rem;font-weight:500;cursor:pointer;font-family:inherit;}
 .layout-btn-cancel:hover{border-color:var(--accent);}
 
@@ -80,8 +80,8 @@
 .gcal-connect{display:flex;flex-direction:column;align-items:center;gap:0.6rem;padding:1rem 0;text-align:center;}
 .gcal-icon{font-size:2rem;}
 .gcal-desc{font-size:0.8rem;color:var(--ink2);line-height:1.6;}
-.gcal-btn{padding:0.5rem 1.2rem;background:#4285f4;color:#fff;border:none;border-radius:8px;font-size:0.85rem;cursor:pointer;font-family:inherit;font-weight:500;}
-.gcal-btn:hover{background:#2b6ce6;}
+.gcal-btn{padding:0.5rem 1.2rem;background:#C4956A;color:#3D2009;border:none;border-radius:8px;font-size:0.85rem;cursor:pointer;font-family:inherit;font-weight:500;}
+.gcal-btn:hover{background:#AD7C50;}
 .sched-list{list-style:none;display:flex;flex-direction:column;gap:0.4rem;}
 .sched-item{display:flex;align-items:flex-start;gap:0.6rem;padding:0.45rem 0.6rem;background:var(--card2);border-radius:8px;}
 .sched-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);margin-top:0.35rem;flex-shrink:0;}

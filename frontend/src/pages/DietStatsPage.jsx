@@ -57,7 +57,7 @@ function DayDetailModal({ date, dateMap, analysisMap, lang, onClose }) {
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             {analysis && (
-              <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#5b21b6', background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: 20, padding: '0.15rem 0.55rem' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#7855AD', background: 'rgba(120,85,173,0.08)', border: '1px solid rgba(120,85,173,0.2)', borderRadius: 20, padding: '0.15rem 0.55rem' }}>
                 📊 {t(lang, 'diet.analysisOfDay')}
               </span>
             )}
@@ -93,7 +93,7 @@ function DayDetailModal({ date, dateMap, analysisMap, lang, onClose }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
               {analysis.nutrition_analysis && (
                 <div>
-                  <div style={{ fontSize: '0.74rem', fontWeight: 600, color: '#5b21b6', marginBottom: '0.25rem' }}>
+                  <div style={{ fontSize: '0.74rem', fontWeight: 600, color: '#7855AD', marginBottom: '0.25rem' }}>
                     📊 {t(lang, 'diet.nutritionAnalysis')}
                   </div>
                   <p style={{ fontSize: '0.78rem', color: 'var(--ink2, #6b7280)', margin: 0, lineHeight: 1.6 }}>
@@ -103,7 +103,7 @@ function DayDetailModal({ date, dateMap, analysisMap, lang, onClose }) {
               )}
               {parsedRecs.length > 0 && (
                 <div>
-                  <div style={{ fontSize: '0.74rem', fontWeight: 600, color: '#5b21b6', marginBottom: '0.25rem' }}>
+                  <div style={{ fontSize: '0.74rem', fontWeight: 600, color: '#7855AD', marginBottom: '0.25rem' }}>
                     🍽️ {t(lang, 'diet.menuRecommendation')}
                   </div>
                   <ul style={{ margin: 0, paddingLeft: '1rem', display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
@@ -250,7 +250,7 @@ export default function DietStatsPage() {
               return (
                 <>
                   {hasAnal && (
-                    <span style={{ position: 'absolute', top: '0.28rem', right: '0.35rem', fontSize: '0.52rem', background: 'rgba(124,58,237,0.12)', color: '#5b21b6', borderRadius: 4, padding: '0.06rem 0.28rem', fontWeight: 700, lineHeight: 1.4 }}>
+                    <span style={{ position: 'absolute', top: '0.28rem', right: '0.35rem', fontSize: '0.52rem', background: 'rgba(120,85,173,0.12)', color: '#7855AD', borderRadius: 4, padding: '0.06rem 0.28rem', fontWeight: 700, lineHeight: 1.4 }}>
                       📊
                     </span>
                   )}
@@ -296,7 +296,7 @@ export default function DietStatsPage() {
                         {t(lang, 'diet.noAnalysis')}
                       </span>
                     ) : (
-                      <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#5b21b6', background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: 20, padding: '0.15rem 0.55rem' }}>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#7855AD', background: 'rgba(120,85,173,0.08)', border: '1px solid rgba(120,85,173,0.2)', borderRadius: 20, padding: '0.15rem 0.55rem' }}>
                         📊 {t(lang, 'diet.analysisOfDay')}
                       </span>
                     )}
@@ -321,7 +321,7 @@ export default function DietStatsPage() {
                   {analysis && (
                     <>
                       <button type="button" onClick={() => toggleDate(date)}
-                        style={{ width: '100%', padding: '0.55rem 1rem', background: 'rgba(124,58,237,0.04)', border: 'none', borderTop: '1px solid rgba(124,58,237,0.12)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#5b21b6' }}>
+                        style={{ width: '100%', padding: '0.55rem 1rem', background: 'rgba(120,85,173,0.04)', border: 'none', borderTop: '1px solid rgba(120,85,173,0.12)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#7855AD' }}>
                         <span>📋 {t(lang, 'diet.analysisOfDay')}</span>
                         <span style={{ transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
                       </button>
@@ -329,13 +329,13 @@ export default function DietStatsPage() {
                         <div style={{ padding: '0.75rem 1rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                           {analysis.nutrition_analysis && (
                             <div>
-                              <div style={{ fontSize: '0.74rem', fontWeight: 600, color: '#5b21b6', marginBottom: '0.25rem' }}>📊 {t(lang, 'diet.nutritionAnalysis')}</div>
+                              <div style={{ fontSize: '0.74rem', fontWeight: 600, color: '#7855AD', marginBottom: '0.25rem' }}>📊 {t(lang, 'diet.nutritionAnalysis')}</div>
                               <p style={{ fontSize: '0.78rem', color: 'var(--ink2)', margin: 0, lineHeight: 1.6 }}>{analysis.nutrition_analysis}</p>
                             </div>
                           )}
                           {parsedRecs.length > 0 && (
                             <div>
-                              <div style={{ fontSize: '0.74rem', fontWeight: 600, color: '#5b21b6', marginBottom: '0.25rem' }}>🍽️ {t(lang, 'diet.menuRecommendation')}</div>
+                              <div style={{ fontSize: '0.74rem', fontWeight: 600, color: '#7855AD', marginBottom: '0.25rem' }}>🍽️ {t(lang, 'diet.menuRecommendation')}</div>
                               <ul style={{ margin: 0, paddingLeft: '1rem', display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
                                 {parsedRecs.map((rec, i) => <li key={i} style={{ fontSize: '0.78rem', color: 'var(--ink2)', lineHeight: 1.5 }}>{rec}</li>)}
                               </ul>

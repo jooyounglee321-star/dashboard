@@ -318,7 +318,7 @@ function StockDetailPanel({ g, s, onUpdate, cashBalance }) {
           <div style={{ flex: 1, minWidth: 100 }}><div style={{ fontSize: '0.7rem', color: '#475569', marginBottom: '0.18rem' }}>매입일</div><input type="date" value={buyDate} onChange={e => setBuyDate(e.target.value)} style={inpS} /></div>
           <div style={{ flex: 1, minWidth: 70 }}><div style={{ fontSize: '0.7rem', color: '#475569', marginBottom: '0.18rem' }}>수량 *</div><input type="number" value={buyQty} onChange={e => setBuyQty(e.target.value)} placeholder="수량" min="0.0001" step="any" style={inpS} /></div>
           <div style={{ flex: 1, minWidth: 90 }}><div style={{ fontSize: '0.7rem', color: '#475569', marginBottom: '0.18rem' }}>매입가 (선택)</div><input type="number" value={buyPrice} onChange={e => setBuyPrice(e.target.value)} placeholder={`${sym} 단가`} min="0" step="any" style={inpS} /></div>
-          <button onClick={submitBuy} style={{ padding: '0.36rem 0.9rem', fontSize: '0.82rem', border: 'none', borderRadius: 7, background: '#2563eb', color: '#fff', cursor: 'pointer', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>매입</button>
+          <button onClick={submitBuy} style={{ padding: '0.36rem 0.9rem', fontSize: '0.82rem', border: 'none', borderRadius: 7, background: '#C4956A', color: '#3D2009', cursor: 'pointer', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>매입</button>
         </div>
       </div>
       {/* 매도 폼 */}
@@ -350,7 +350,7 @@ function StockDetailPanel({ g, s, onUpdate, cashBalance }) {
                       <div style={{ flex: 1, minWidth: 65 }}><div style={{ fontSize: '0.67rem', color: '#64748b', marginBottom: '0.12rem' }}>수량</div><input type="number" value={editRec.qty || ''} onChange={e => setEditRec(r => ({ ...r, qty: e.target.value }))} min="0.0001" step="any" style={{ ...inpS, fontSize: '0.8rem' }} /></div>
                       <div style={{ flex: 1, minWidth: 85 }}><div style={{ fontSize: '0.67rem', color: '#64748b', marginBottom: '0.12rem' }}>단가</div><input type="number" value={editRec.price || ''} onChange={e => setEditRec(r => ({ ...r, price: e.target.value }))} min="0" step="any" placeholder={sym} style={{ ...inpS, fontSize: '0.8rem' }} /></div>
                       <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
-                        <button onClick={saveEdit} style={{ padding: '0.3rem 0.65rem', fontSize: '0.78rem', border: 'none', borderRadius: 6, background: '#2563eb', color: '#fff', cursor: 'pointer', fontWeight: 500 }}>저장</button>
+                        <button onClick={saveEdit} style={{ padding: '0.3rem 0.65rem', fontSize: '0.78rem', border: 'none', borderRadius: 6, background: '#C4956A', color: '#3D2009', cursor: 'pointer', fontWeight: 500 }}>저장</button>
                         <button onClick={() => setEditRec(null)} style={{ padding: '0.3rem 0.55rem', fontSize: '0.78rem', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--card2)', color: 'var(--ink)', cursor: 'pointer' }}>취소</button>
                       </div>
                     </div>
