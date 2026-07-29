@@ -104,30 +104,28 @@ export default function YoutubeCard({ isMobile = false, maxCount = 20, lang = 'k
 
     return (
       <>
-        {/* 연동 계정 + 해제 버튼 */}
-        {googleEmail && (
-          <div style={{
-            fontSize: '0.75rem',
-            color: 'var(--text-secondary)',
-            marginBottom: '0.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '0.5rem',
-          }}>
-            <span>{t(lang, 'youtubeConnectedLabel')}: {googleEmail}</span>
-            <button
-              onClick={disconnectYouTube}
-              style={{
-                background: 'none', border: 'none', color: 'var(--text-secondary)',
-                cursor: 'pointer', fontSize: '0.72rem', padding: '0 0.2rem',
-                textDecoration: 'underline', flexShrink: 0,
-              }}
-            >
-              {t(lang, 'youtubeDisconnect')}
-            </button>
-          </div>
-        )}
+        {/* 연동 계정 + 해제 버튼 — googleEmail 여부와 무관하게 항상 표시 */}
+        <div style={{
+          fontSize: '0.75rem',
+          color: 'var(--text-secondary)',
+          marginBottom: '0.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '0.5rem',
+        }}>
+          <span>{t(lang, 'youtubeConnectedLabel')}{googleEmail ? `: ${googleEmail}` : ''}</span>
+          <button
+            onClick={disconnectYouTube}
+            style={{
+              background: 'none', border: 'none', color: 'var(--text-secondary)',
+              cursor: 'pointer', fontSize: '0.72rem', padding: '0 0.2rem',
+              textDecoration: 'underline', flexShrink: 0,
+            }}
+          >
+            {t(lang, 'youtubeDisconnect')}
+          </button>
+        </div>
 
         {/* 탭 — 구독채널 / 재생목록 */}
         {!isMobile && (
@@ -180,7 +178,12 @@ export default function YoutubeCard({ isMobile = false, maxCount = 20, lang = 'k
           </div>
         ) : data.length === 0 ? (
           <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-            {t(lang, tab === 'playlists' ? 'youtubeNoPlaylists' : 'youtubeNoSubscriptions')}
+            <div>{t(lang, tab === 'playlists' ? 'youtubeNoPlaylists' : 'youtubeNoSubscriptions')}</div>
+            {tab !== 'playlists' && (
+              <div style={{ fontSize: '0.75rem', marginTop: '0.4rem', lineHeight: 1.5 }}>
+                {t(lang, 'youtubePrivateNote')}
+              </div>
+            )}
           </div>
         ) : (
           <ul className={isMobile ? 'm-yt-list' : 'yt-list'}>
