@@ -103,34 +103,32 @@ export default function ScheduleCard({ isMobile = false, lang = 'ko', date }) {
         </div>
       ) : (
         <>
-          {googleEmail && (
-            <div style={{
-              fontSize: '0.75rem',
-              color: 'var(--text-secondary)',
-              marginBottom: '0.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '0.5rem',
-            }}>
-              <span>{t(lang, 'scheduleGcalConnectedLabel')}: {googleEmail}</span>
-              <button
-                onClick={disconnectGCal}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  fontSize: '0.72rem',
-                  padding: '0 0.2rem',
-                  textDecoration: 'underline',
-                  flexShrink: 0,
-                }}
-              >
-                {t(lang, 'scheduleGcalDisconnect')}
-              </button>
-            </div>
-          )}
+          <div style={{
+            fontSize: '0.75rem',
+            color: 'var(--text-secondary)',
+            marginBottom: '0.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.5rem',
+          }}>
+            <span>{t(lang, 'scheduleGcalConnectedLabel')}{googleEmail ? `: ${googleEmail}` : ''}</span>
+            <button
+              onClick={disconnectGCal}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                fontSize: '0.72rem',
+                padding: '0 0.2rem',
+                textDecoration: 'underline',
+                flexShrink: 0,
+              }}
+            >
+              {t(lang, 'scheduleGcalDisconnect')}
+            </button>
+          </div>
 
           {eventsLoading ? (
             <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
