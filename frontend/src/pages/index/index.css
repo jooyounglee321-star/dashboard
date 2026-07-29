@@ -1,9 +1,10 @@
 /* ── 주식 통계 오버레이 ── */
 #stock-stats-overlay{display:none;position:fixed;inset:0;z-index:500;background:var(--bg);overflow-y:auto;}
 #stock-stats-overlay.open{display:block;}
-.stats-header{position:sticky;top:0;z-index:10;background:var(--ink);color:#f5f0e8;padding:0.8rem 1.2rem;display:flex;align-items:center;gap:0.8rem;}
-.stats-back{background:none;border:1px solid rgba(232,160,96,0.5);color:var(--accent2);padding:0.28rem 0.75rem;border-radius:20px;font-size:0.78rem;cursor:pointer;font-family:inherit;}
-.stats-title{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--accent2);}
+.stats-header{position:sticky;top:0;z-index:10;background:#FFFFFF;color:var(--ink);padding:0 1.4rem;height:60px;display:flex;align-items:center;gap:0.8rem;border-bottom:1px solid var(--border);box-shadow:0 1px 4px rgba(15,23,42,0.06);}
+.stats-back{background:none;border:1px solid var(--border);color:var(--ink2);padding:0.28rem 0.75rem;border-radius:20px;font-size:0.78rem;cursor:pointer;font-family:inherit;transition:all 0.15s;}
+.stats-back:hover{border-color:var(--accent);color:var(--accent);}
+.stats-title{font-family:'Inter','Pretendard Variable',sans-serif;font-size:1rem;font-weight:700;color:var(--ink);letter-spacing:-0.01em;}
 .stats-body{max-width:900px;margin:0 auto;padding:1.2rem;}
 .stats-section{background:var(--card);border-radius:14px;border:1px solid var(--border);box-shadow:var(--shadow);padding:1.1rem 1.2rem;margin-bottom:1rem;}
 .stats-section-title{font-size:0.72rem;font-weight:500;letter-spacing:0.1em;color:var(--ink3);text-transform:uppercase;margin-bottom:0.9rem;}
@@ -17,21 +18,22 @@
 .stock-card-clickable .card-header:hover{background:var(--bg);}
 
 /* ── INDEX HEADER ── */
-.header-right{display:flex;align-items:center;gap:0.8rem;}
-.header-date{font-size:0.78rem;color:#a89880;}
-.admin-link{font-size:0.78rem;color:var(--accent2);text-decoration:none;border:1px solid rgba(232,160,96,0.4);padding:0.28rem 0.7rem;border-radius:20px;}
+.header-right{display:flex;align-items:center;gap:0.6rem;}
+.header-date{font-size:0.78rem;color:var(--ink3);}
+.admin-link{font-size:0.78rem;color:var(--ink2);text-decoration:none;border:1px solid var(--border);padding:0.28rem 0.7rem;border-radius:20px;transition:all 0.15s;}
+.admin-link:hover{border-color:var(--accent);color:var(--accent);}
 
 /* ── PC GRID — 12컬럼 ── */
 .main{max-width:1400px;margin:0 auto;padding:1.2rem;display:grid;grid-template-columns:repeat(12,1fr);grid-auto-flow:row dense;gap:1rem;align-items:start;}
 .card-hero{grid-column:span 12;}
 
 /* ── 레이아웃 편집 버튼 (헤더) ── */
-.layout-edit-btn{font-size:0.78rem;color:var(--accent2);background:none;border:1px solid rgba(232,160,96,0.4);padding:0.28rem 0.7rem;border-radius:20px;cursor:pointer;font-family:inherit;font-weight:400;white-space:nowrap;}
-.layout-edit-btn:hover{background:rgba(232,160,96,0.1);border-color:var(--accent2);}
+.layout-edit-btn{font-size:0.78rem;color:var(--ink2);background:none;border:1px solid var(--border);padding:0.28rem 0.7rem;border-radius:20px;cursor:pointer;font-family:inherit;font-weight:400;white-space:nowrap;transition:all 0.15s;}
+.layout-edit-btn:hover{background:rgba(8,145,178,0.06);border-color:var(--accent);color:var(--accent);}
 
 /* ── 레이아웃 편집 툴바 ── */
-.layout-toolbar{background:var(--ink);color:#f5f0e8;padding:0.65rem 1.4rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;border-bottom:2px solid var(--accent);position:sticky;top:var(--nav-h);z-index:100;}
-.layout-toolbar-tip{font-size:0.78rem;color:var(--accent2);letter-spacing:0.01em;}
+.layout-toolbar{background:#FFFFFF;color:var(--ink);padding:0.65rem 1.4rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;border-bottom:1px solid var(--border);position:sticky;top:60px;z-index:100;box-shadow:0 2px 8px rgba(15,23,42,0.06);}
+.layout-toolbar-tip{font-size:0.78rem;color:var(--ink3);letter-spacing:0.01em;}
 .layout-toolbar-actions{display:flex;gap:0.5rem;}
 .layout-btn-save{padding:0.32rem 1.1rem;background:var(--green);color:#fff;border:none;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:inherit;}
 .layout-btn-save:hover{background:#3a6248;}
@@ -42,16 +44,16 @@
 .layout-editing-card{border-radius:14px;outline:2px dashed var(--accent);outline-offset:2px;}
 
 /* ── 드래그 오버레이 ── */
-.layout-edit-overlay{position:absolute;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:0.3rem 0.6rem;background:rgba(44,36,22,0.88);border-radius:12px 12px 0 0;backdrop-filter:blur(4px);}
-.layout-drag-handle{cursor:grab;background:none;border:none;color:var(--accent2);font-size:1.2rem;line-height:1;padding:0.1rem 0.3rem;border-radius:4px;touch-action:none;}
-.layout-drag-handle:hover{background:rgba(232,160,96,0.18);}
+.layout-edit-overlay{position:absolute;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:0.3rem 0.6rem;background:rgba(15,23,42,0.82);border-radius:12px 12px 0 0;backdrop-filter:blur(4px);}
+.layout-drag-handle{cursor:grab;background:none;border:none;color:rgba(255,255,255,0.75);font-size:1.2rem;line-height:1;padding:0.1rem 0.3rem;border-radius:4px;touch-action:none;}
+.layout-drag-handle:hover{background:rgba(255,255,255,0.15);}
 .layout-drag-handle:active{cursor:grabbing;}
 
 /* ── 크기 버튼 (S/M/L) ── */
 .layout-size-btns{display:flex;gap:0.2rem;}
-.layout-size-btn{background:rgba(255,255,255,0.1);border:1px solid rgba(232,160,96,0.4);color:var(--accent2);padding:0.12rem 0.48rem;border-radius:4px;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.1s;}
+.layout-size-btn{background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.8);padding:0.12rem 0.48rem;border-radius:4px;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.1s;}
 .layout-size-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
-.layout-size-btn:hover:not(.active){background:rgba(232,160,96,0.2);}
+.layout-size-btn:hover:not(.active){background:rgba(255,255,255,0.22);}
 /* ── 위젯 등장 애니메이션 ── */
 @keyframes widget-in{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 .card{animation:widget-in 0.25s ease;}

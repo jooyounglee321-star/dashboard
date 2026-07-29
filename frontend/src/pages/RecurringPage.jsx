@@ -4,6 +4,7 @@ import { t } from '../i18n'
 import { CURRENCY_LIST } from '../data/currencies'
 import { useToast } from '../components/Toast'
 import Toast from '../components/Toast'
+import ConfirmModal from '../components/ConfirmModal'
 import './BudgetPage.css'
 
 function apiGet(url) {
@@ -76,6 +77,7 @@ export default function RecurringPage({ onClose }) {
   const [form, setForm]             = useState(EMPTY_FORM)
   const [saving, setSaving]         = useState(false)
   const { toast, showToast } = useToast()
+  const [delConfirm, setDelConfirm] = useState({ open: false, id: null })
 
   useEffect(() => {
     const onChange = () => setLang(localStorage.getItem('dashboard_lang') || 'ko')
@@ -173,8 +175,12 @@ export default function RecurringPage({ onClose }) {
     }
   }
 
-  async function handleDelete(id) {
-    if (!window.confirm(t(lang, 'recurring.confirmDelete'))) return
+  function handleDelete(id) {
+    setDelConfirm({ open: true, id })
+  }
+  async function doDelete() {
+    const { id } = delConfirm
+    setDelConfirm({ open: false, id: null })
     try {
       await apiReq('DELETE', `/api/expense/recurring/${id}`)
       setItems(prev => prev.filter(x => x.id !== id))
@@ -403,6 +409,13 @@ export default function RecurringPage({ onClose }) {
       )}
 
       <Toast toast={toast} />
+      <ConfirmModal
+        open={delConfirm.open}
+        message={t(lang, 'recurring.confirmDelete')}
+        onConfirm={doDelete}
+        onCancel={() => setDelConfirm({ open: false, id: null })}
+        lang={lang}
+      />
     </div>
   )
 }

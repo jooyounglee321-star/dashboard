@@ -464,8 +464,8 @@ export default function IndexPage() {
           <Link to="/admin" className="admin-link">{t(lang, 'adminLink')}</Link>
           {userRole === 'admin' && (
             <Link to="/superadmin" style={{
-              fontSize: '0.78rem', color: '#c0392b', textDecoration: 'none',
-              border: '1px solid rgba(192,57,43,0.45)', padding: '0.28rem 0.7rem',
+              fontSize: '0.78rem', color: 'var(--red)', textDecoration: 'none',
+              border: '1px solid rgba(220,38,38,0.35)', padding: '0.28rem 0.7rem',
               borderRadius: 20, fontFamily: 'inherit', fontWeight: 500,
             }}>{t(lang, 'superadminBtn')}</Link>
           )}
@@ -473,9 +473,10 @@ export default function IndexPage() {
             onClick={() => setShowLogoutConfirm(true)}
             title={t(lang, 'logout')}
             style={{
-              fontSize: '0.78rem', color: '#c0392b', background: 'none',
-              border: '1px solid rgba(192,57,43,0.35)', padding: '0.28rem 0.7rem',
+              fontSize: '0.78rem', color: 'var(--ink2)', background: 'none',
+              border: '1px solid var(--border)', padding: '0.28rem 0.7rem',
               borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 400,
+              transition: 'all 0.15s',
             }}
           >
             {t(lang, 'logout')}

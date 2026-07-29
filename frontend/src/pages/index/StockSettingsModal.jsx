@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import Toast, { useToast } from '../../components/Toast'
+import ConfirmModal from '../../components/ConfirmModal'
 import { t } from './i18n'
 
 import { apiFetch } from '../../api'
@@ -234,6 +235,9 @@ function StockDetailPanel({ g, s, onUpdate, cashBalance }) {
   const [sellPrice, setSellPrice] = useState('')
   const [editRec,   setEditRec]   = useState(null)
   const { toast, showToast } = useToast()
+  const [confirmState, setConfirmState] = useState({ open: false, msg: '', onOk: null })
+  const openConfirm = (msg, onOk) => setConfirmState({ open: true, msg, onOk })
+  const closeConfirm = () => setConfirmState({ open: false, msg: '', onOk: null })
   const sym  = g.currency === 'USD' ? '$' : '₩'
   const fmtA = v => g.currency === 'USD' ? Number(v).toFixed(2) : Math.round(v).toLocaleString('ko-KR')
   const { holdQty } = stockSummary(s)
@@ -257,13 +261,17 @@ function StockDetailPanel({ g, s, onUpdate, cashBalance }) {
       else showToast('⚠ 시세 조회 실패', 'err')
     }
     const cost = qty * (price || 0)
+    const doBuy = () => {
+      onUpdate(g.id, s.id, 'addPurchase', { id: genId(), date: buyDate || new Date().toISOString().split('T')[0], qty, price: price || 0 })
+      setBuyDate(''); setBuyQty(''); setBuyPrice('')
+      showToast('✓ 매입 내역 등록', 'ok')
+    }
     if (cashBalance !== undefined && cost > 0 && cashBalance < cost) {
       const msg = `⚠ CASH 잔고 부족!\n필요: ${sym}${fmtA(cost)}\n잔고: ${sym}${fmtA(Math.max(0, cashBalance))}\n계속 등록하시겠습니까?`
-      if (!window.confirm(msg)) return
+      openConfirm(msg, () => { closeConfirm(); doBuy() })
+    } else {
+      doBuy()
     }
-    onUpdate(g.id, s.id, 'addPurchase', { id: genId(), date: buyDate || new Date().toISOString().split('T')[0], qty, price: price || 0 })
-    setBuyDate(''); setBuyQty(''); setBuyPrice('')
-    showToast('✓ 매입 내역 등록', 'ok')
   }
   async function submitSell() {
     const qty = parseFloat(sellQty) || 0
@@ -288,9 +296,11 @@ function StockDetailPanel({ g, s, onUpdate, cashBalance }) {
     showToast('✓ 내역 수정 완료', 'ok')
   }
   function deleteRecord(type, id) {
-    if (!window.confirm('이 내역을 삭제하시겠습니까?')) return
-    onUpdate(g.id, s.id, 'deleteRecord', { type, id })
-    showToast('✓ 내역 삭제 완료', 'ok')
+    openConfirm('이 내역을 삭제하시겠습니까?', () => {
+      closeConfirm()
+      onUpdate(g.id, s.id, 'deleteRecord', { type, id })
+      showToast('✓ 내역 삭제 완료', 'ok')
+    })
   }
 
   const inpS = { padding: '0.35rem 0.5rem', fontSize: '0.83rem', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit', boxSizing: 'border-box', width: '100%' }
@@ -364,6 +374,12 @@ function StockDetailPanel({ g, s, onUpdate, cashBalance }) {
         </div>
       </div>
       <Toast toast={toast} />
+      <ConfirmModal
+        open={confirmState.open}
+        message={confirmState.msg}
+        onConfirm={() => confirmState.onOk?.()}
+        onCancel={closeConfirm}
+      />
     </div>
   )
 }
@@ -373,11 +389,14 @@ function StockDetailPanel({ g, s, onUpdate, cashBalance }) {
 // embedded=false (기본): 전체화면 오버레이 모달
 export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embedded = false }) {
   const { toast, showToast } = useToast()
-  const [groups,      setGroups]      = useState([])
-  const [expanded,    setExpanded]    = useState(new Set())
-  const [deleteModal, setDeleteModal] = useState(null)
-  const [newsOpen,    setNewsOpen]    = useState(null) // stock id
-  const [newsDraft,   setNewsDraft]   = useState({})   // { source, query, lang }
+  const [groups,        setGroups]      = useState([])
+  const [expanded,      setExpanded]    = useState(new Set())
+  const [deleteModal,   setDeleteModal] = useState(null)
+  const [newsOpen,      setNewsOpen]    = useState(null)
+  const [newsDraft,     setNewsDraft]   = useState({})
+  const [confirmState,  setConfirmState] = useState({ open: false, msg: '', onOk: null })
+  const openConfirm = (msg, onOk) => setConfirmState({ open: true, msg, onOk })
+  const closeConfirm = () => setConfirmState({ open: false, msg: '', onOk: null })
 
   useEffect(() => {
     if (embedded || isOpen) loadGroups()
@@ -427,9 +446,11 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
     })
   }
   function delGroup(gid) {
-    if (!window.confirm('그룹과 모든 종목을 삭제하시겠습니까?')) return
-    saveGroupsToDB(groups.filter(g => g.id !== gid))
-    showToast('삭제되었습니다', 'ok')
+    openConfirm('그룹과 모든 종목을 삭제하시겠습니까?', () => {
+      closeConfirm()
+      saveGroupsToDB(groups.filter(g => g.id !== gid))
+      showToast('삭제되었습니다', 'ok')
+    })
   }
   function updateGroup(gid, field, value) {
     saveGroupsToDB(groups.map(g => g.id === gid ? { ...g, [field]: value } : g))
@@ -655,18 +676,24 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '3rem 1rem 1rem', overflowY: 'auto' }}
+      style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(15,23,42,0.50)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '3rem 1rem 1rem', overflowY: 'auto' }}
       onClick={onClose}
     >
       <div
-        style={{ background: 'var(--bg)', borderRadius: 14, padding: '1.5rem 1.8rem', width: '100%', maxWidth: 680, boxShadow: '0 8px 40px rgba(0,0,0,0.22)', maxHeight: '80vh', overflowY: 'auto', position: 'relative' }}
+        style={{ background: '#FFFFFF', borderRadius: 16, padding: '1.5rem 1.8rem', width: '100%', maxWidth: 680, boxShadow: '0 20px 60px rgba(15,23,42,0.18)', maxHeight: '80vh', overflowY: 'auto', position: 'relative' }}
         onClick={e => e.stopPropagation()}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
-          <span style={{ fontWeight: 700, fontSize: '1rem' }}>📈 {t(lang, 'admin.stockMgmt')}</span>
+          <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--ink)' }}>📈 {t(lang, 'admin.stockMgmt')}</span>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: 'var(--ink3)', lineHeight: 1 }}>✕</button>
         </div>
         {content}
+        <ConfirmModal
+          open={confirmState.open}
+          message={confirmState.msg}
+          onConfirm={() => confirmState.onOk?.()}
+          onCancel={closeConfirm}
+        />
       </div>
     </div>
   )

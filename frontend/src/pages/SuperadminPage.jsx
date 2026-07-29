@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import Toast, { useToast } from '../components/Toast'
+import ConfirmModal from '../components/ConfirmModal'
 import { t } from '../i18n'
 
 const PAGE_SIZE = 25
@@ -42,6 +43,9 @@ export default function SuperadminPage() {
   const [modalExpires, setModalExpires] = useState('')
   const [modalMemo, setModalMemo] = useState('')
   const [pwResult, setPwResult] = useState('')
+  const [confirmState, setConfirmState] = useState({ open: false, msg: '', onOk: null })
+  const openConfirm = (msg, onOk) => setConfirmState({ open: true, msg, onOk })
+  const closeConfirm = () => setConfirmState({ open: false, msg: '', onOk: null })
 
   const [changelog, setChangelog] = useState([])
   const [clLoading, setClLoading] = useState(false)
@@ -167,32 +171,39 @@ export default function SuperadminPage() {
     } else showToast(t(lang, 'superadmin.toastSaveErr'), 'err')
   }
 
-  async function deleteUser() {
+  function deleteUser() {
     if (!modal) return
-    if (!window.confirm(`'${modal.email}' 계정을 삭제합니다.\n모든 데이터(지출/예산/포트폴리오 등)가 함께 삭제되며 복구할 수 없습니다.\n계속하시겠습니까?`)) return
-    const res = await fetch(`/api/admin/users/${modal.id}`, { method: 'DELETE', credentials: 'include' })
-    if (res.ok) {
-      showToast('계정이 삭제되었습니다.', 'ok')
-      setModal(null)
-      loadUsers()
-    } else {
-      const err = await res.json().catch(() => ({}))
-      showToast(err.detail || '삭제 중 오류가 발생했습니다.', 'err')
-    }
+    openConfirm(
+      `'${modal.email}' 계정을 삭제합니다.\n모든 데이터(지출/예산/포트폴리오 등)가 함께 삭제되며 복구할 수 없습니다.\n계속하시겠습니까?`,
+      async () => {
+        closeConfirm()
+        const res = await fetch(`/api/admin/users/${modal.id}`, { method: 'DELETE', credentials: 'include' })
+        if (res.ok) {
+          showToast('계정이 삭제되었습니다.', 'ok')
+          setModal(null)
+          loadUsers()
+        } else {
+          const err = await res.json().catch(() => ({}))
+          showToast(err.detail || '삭제 중 오류가 발생했습니다.', 'err')
+        }
+      }
+    )
   }
 
-  async function resetPassword() {
+  function resetPassword() {
     if (!modal) return
-    if (!window.confirm(t(lang, 'superadmin.confirmResetPw'))) return
-    const res = await fetch(`/api/admin/users/${modal.id}/reset-password`, { method: 'POST', credentials: 'include' })
-    if (res.ok) {
-      const data = await res.json()
-      setPwResult(data.new_password)
-      showToast(t(lang, 'superadmin.toastPwIssued'), 'ok')
-    } else {
-      const err = await res.json().catch(() => ({}))
-      showToast(err.detail || t(lang, 'superadmin.toastPwErr'), 'err')
-    }
+    openConfirm(t(lang, 'superadmin.confirmResetPw'), async () => {
+      closeConfirm()
+      const res = await fetch(`/api/admin/users/${modal.id}/reset-password`, { method: 'POST', credentials: 'include' })
+      if (res.ok) {
+        const data = await res.json()
+        setPwResult(data.new_password)
+        showToast(t(lang, 'superadmin.toastPwIssued'), 'ok')
+      } else {
+        const err = await res.json().catch(() => ({}))
+        showToast(err.detail || t(lang, 'superadmin.toastPwErr'), 'err')
+      }
+    })
   }
 
   async function saveMemo() {
@@ -630,6 +641,13 @@ export default function SuperadminPage() {
         .badge-role-free    { background: #e8e4dc; color: #6b5e4a; }
         .badge-role-guest   { background: #f0eeec; color: #9a9080; }
       `}</style>
+      <ConfirmModal
+        open={confirmState.open}
+        message={confirmState.msg}
+        onConfirm={() => confirmState.onOk?.()}
+        onCancel={closeConfirm}
+        lang={lang}
+      />
     </div>
   )
 }

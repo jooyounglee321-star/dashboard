@@ -5,6 +5,8 @@ import { t } from './i18n'
 import { fmtKRW, fmtUSD, fmtKRWShort, fmtUSDShort, fmtShort } from '../../utils/format'
 import { apiFetch } from '../../api'
 import PeriodSelector from '../../components/PeriodSelector'
+import Toast, { useToast } from '../../components/Toast'
+import ConfirmModal from '../../components/ConfirmModal'
 import {
   calcCutoff, cleanStr, computePeriodStats,
   computeUnits, computeReturnRates, computeConcentration,
@@ -133,6 +135,11 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   const pieChartRef = useRef(null)
 
   // ── 상태 ──
+  const { toast, showToast } = useToast()
+  const [confirmState, setConfirmState] = useState({ open: false, msg: '', onOk: null })
+  const openConfirm = (msg, onOk) => setConfirmState({ open: true, msg, onOk })
+  const closeConfirm = () => setConfirmState({ open: false, msg: '', onOk: null })
+
   const [overviewGroup, setOverviewGroup] = useState('')
   const [overviewCurrency, setOverviewCurrency] = useState(() => {
     const gs = stockData?.groups ?? []
@@ -1600,17 +1607,20 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             <div className="stats-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
               <span>일별 결산</span>
               <button
-                onClick={async () => {
-                  if (!window.confirm('기존 히스토리를 모두 삭제하고 최초 매입일부터 재계산합니다.\n※ 최대 10년(3,650일)까지 계산 가능합니다.\n계속하시겠습니까?')) return
-                  try {
-                    const res = await apiFetch('/api/portfolio/backfill-full', { method: 'POST' })
-                    alert(`재계산 완료: ${res.backfilled}일 생성\n최초 매입일: ${res.earliest_purchase_date || '없음'}`)
-                    setHistData([])
-                    setHistPage(0)
-                    const d = await apiFetch('/api/portfolio/history?days=3650')
-                    setHistData(Array.isArray(d) ? d : [])
-                  } catch { alert('재계산 실패') }
-                }}
+                onClick={() => openConfirm(
+                  '기존 히스토리를 모두 삭제하고 최초 매입일부터 재계산합니다.\n※ 최대 10년(3,650일)까지 계산 가능합니다.\n계속하시겠습니까?',
+                  async () => {
+                    closeConfirm()
+                    try {
+                      const res = await apiFetch('/api/portfolio/backfill-full', { method: 'POST' })
+                      showToast(`재계산 완료: ${res.backfilled}일 생성 / 최초 매입일: ${res.earliest_purchase_date || '없음'}`, 'ok')
+                      setHistData([])
+                      setHistPage(0)
+                      const d = await apiFetch('/api/portfolio/history?days=3650')
+                      setHistData(Array.isArray(d) ? d : [])
+                    } catch { showToast('재계산 실패', 'err') }
+                  }
+                )}
                 style={{ ...periodBtn(false), background: 'var(--accent)', color: '#fff', fontSize: '0.72rem' }}
               >전체 재계산</button>
             </div>
@@ -1653,6 +1663,14 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         )}
       </div>
 
+      <Toast toast={toast} />
+      <ConfirmModal
+        open={confirmState.open}
+        message={confirmState.msg}
+        onConfirm={() => confirmState.onOk?.()}
+        onCancel={closeConfirm}
+        lang={lang}
+      />
     </div>
   )
 }
