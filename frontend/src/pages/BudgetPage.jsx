@@ -8,6 +8,7 @@ import { INCOME_CATEGORIES, getSubcategories } from '../data/incomeCategories'
 import { CURRENCY_CODES as CURRENCIES, CURRENCY_SYMBOLS as SYM } from '../data/currencies'
 import { useToast } from '../components/Toast'
 import Toast from '../components/Toast'
+import ConfirmModal from '../components/ConfirmModal'
 import { pad2, todayStr, ML } from '../utils/date'
 import SharedCalendar from '../components/SharedCalendar'
 import './BudgetPage.css'
@@ -176,6 +177,9 @@ function DailyTab({ lang, currency, toDisplay }) {
   const [newForm, setNewForm] = useState(INIT_NEW_FORM)
   const [submitting, setSubmitting] = useState(false)
   const { toast, showToast } = useToast()
+  const [confirmState, setConfirmState] = useState({ open: false, msg: '', onOk: null })
+  const openConfirm = (msg, onOk) => setConfirmState({ open: true, msg, onOk })
+  const closeConfirm = () => setConfirmState({ open: false, msg: '', onOk: null })
 
   // 달력 뷰 상태
   const [calYear, setCalYear]     = useState(_now.getFullYear())
@@ -300,7 +304,7 @@ function DailyTab({ lang, currency, toDisplay }) {
       load()
     } catch (err) {
       console.error('[addExpense] 저장 실패:', err)
-      alert(t(lang, 'budget.saveError'))
+      showToast(t(lang, 'budget.saveError'), 'err')
     } finally {
       setSubmitting(false)
     }
@@ -342,13 +346,14 @@ function DailyTab({ lang, currency, toDisplay }) {
     }
   }
 
-  async function delItem(e, id) {
+  function delItem(e, id) {
     if (e && e.preventDefault) e.preventDefault()
-    if (!window.confirm(t(lang, 'budgetConfirmDel'))) return
-    // 즉시 클라이언트 상태에서 제거 (optimistic update)
-    setItems(prev => prev.filter(it => it.id !== id))
-    await apiReq('DELETE', `/api/expense/${id}`).catch(() => { load() })
-    showToast(t(lang, 'common.deleteSuccess'), 'ok')
+    openConfirm(t(lang, 'budgetConfirmDel'), async () => {
+      closeConfirm()
+      setItems(prev => prev.filter(it => it.id !== id))
+      await apiReq('DELETE', `/api/expense/${id}`).catch(() => { load() })
+      showToast(t(lang, 'common.deleteSuccess'), 'ok')
+    })
   }
 
   async function registerRecurring(item) {
@@ -463,7 +468,7 @@ function DailyTab({ lang, currency, toDisplay }) {
       {dayModalOpen && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 1000,
-          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+          background: 'rgba(15,23,42,0.50)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           padding: '1rem',
         }}
@@ -695,6 +700,13 @@ function DailyTab({ lang, currency, toDisplay }) {
         </div>
       )}
 
+      <ConfirmModal
+        open={confirmState.open}
+        message={confirmState.msg}
+        onConfirm={() => confirmState.onOk?.()}
+        onCancel={closeConfirm}
+        lang={lang}
+      />
     </section>
   )
 }
@@ -1017,7 +1029,7 @@ function MonthlyTab({ lang, currency, toDisplay }) {
       {drillModal && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 1100,
-          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+          background: 'rgba(15,23,42,0.50)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
         }}
           onClick={e => { if (e.target === e.currentTarget) closeDrillModal() }}
@@ -1361,7 +1373,7 @@ function YearlyTab({ lang, currency, toDisplay }) {
       {yearlyDrillModal && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 1100,
-          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+          background: 'rgba(15,23,42,0.50)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
         }}
           onClick={e => { if (e.target === e.currentTarget) closeYearlyDrillModal() }}
@@ -1737,6 +1749,9 @@ function SettingTab({ lang, currency, toDisplay }) {
   const [editId2, setEditId2]   = useState(null)
   const [editName2, setEditName2] = useState('')
   const { toast, showToast } = useToast()
+  const [confirmState, setConfirmState] = useState({ open: false, msg: '', onOk: null })
+  const openConfirm = (msg, onOk) => setConfirmState({ open: true, msg, onOk })
+  const closeConfirm = () => setConfirmState({ open: false, msg: '', onOk: null })
 
   const loadBudgets = useCallback(() => {
     setLoadingB(true)
@@ -1772,12 +1787,14 @@ function SettingTab({ lang, currency, toDisplay }) {
     loadBudgets()
   }
 
-  async function delBudget(e, id) {
+  function delBudget(e, id) {
     if (e && e.preventDefault) e.preventDefault()
-    if (!window.confirm(t(lang, 'budgetConfirmDel'))) return
-    setBudgets(prev => prev.filter(b => b.id !== id))
-    await apiReq('DELETE', `/api/expense/budget/${id}`).catch(() => { loadBudgets() })
-    showToast(t(lang, 'common.deleteSuccess'), 'ok')
+    openConfirm(t(lang, 'budgetConfirmDel'), async () => {
+      closeConfirm()
+      setBudgets(prev => prev.filter(b => b.id !== id))
+      await apiReq('DELETE', `/api/expense/budget/${id}`).catch(() => { loadBudgets() })
+      showToast(t(lang, 'common.deleteSuccess'), 'ok')
+    })
   }
 
   async function addParentCat() {
@@ -1805,15 +1822,17 @@ function SettingTab({ lang, currency, toDisplay }) {
     loadCats()
   }
 
-  async function delCat(e, id) {
+  function delCat(e, id) {
     if (e && e.preventDefault) e.preventDefault()
-    if (!window.confirm(t(lang, 'budgetConfirmDel'))) return
-    setCats(prev => prev.filter(c => c.id !== id).map(c => ({
-      ...c,
-      subs: c.subs ? c.subs.filter(s => s.id !== id) : c.subs,
-    })))
-    await apiReq('DELETE', `/api/expense/categories/${id}`).catch(() => { loadCats() })
-    showToast(t(lang, 'common.deleteSuccess'), 'ok')
+    openConfirm(t(lang, 'budgetConfirmDel'), async () => {
+      closeConfirm()
+      setCats(prev => prev.filter(c => c.id !== id).map(c => ({
+        ...c,
+        subs: c.subs ? c.subs.filter(s => s.id !== id) : c.subs,
+      })))
+      await apiReq('DELETE', `/api/expense/categories/${id}`).catch(() => { loadCats() })
+      showToast(t(lang, 'common.deleteSuccess'), 'ok')
+    })
   }
 
   const defaultCats = cats.filter(c => c.is_default)
@@ -2016,6 +2035,13 @@ function SettingTab({ lang, currency, toDisplay }) {
           })()}
         </>
       )}
+      <ConfirmModal
+        open={confirmState.open}
+        message={confirmState.msg}
+        onConfirm={() => confirmState.onOk?.()}
+        onCancel={closeConfirm}
+        lang={lang}
+      />
     </section>
   )
 }

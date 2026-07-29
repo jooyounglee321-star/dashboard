@@ -452,14 +452,15 @@ export default function ProfilePage() {
       {withdrawModal && (
         <div
           style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+            position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.50)',
+            backdropFilter: 'blur(4px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
           }}
           onClick={e => { if (e.target === e.currentTarget) setWithdrawModal(false) }}
         >
           <div style={{
-            background: 'var(--card)', borderRadius: 16, padding: '2rem',
-            width: '100%', maxWidth: 360, boxShadow: '0 8px 40px rgba(0,0,0,0.18)',
+            background: '#FFFFFF', borderRadius: 16, padding: '2rem',
+            width: '100%', maxWidth: 360, boxShadow: '0 20px 60px rgba(15,23,42,0.18)',
           }}>
             <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#c0392b', marginBottom: '0.8rem' }}>
               {t(lang, 'profile.withdrawConfirmTitle')}

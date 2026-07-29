@@ -433,10 +433,10 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
       ══════════════════════════════════════════════ */}
       {calOpen && (
         <div
-          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15,23,42,0.50)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
           onClick={e => { if (e.target === e.currentTarget) closeCalendar() }}
         >
-          <div style={{ background: 'var(--card)', borderRadius: '1.25rem', border: '1px solid var(--border)', width: '100%', maxWidth: '780px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 8px 40px rgba(0,0,0,0.15)' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: 16, border: 'none', width: '100%', maxWidth: '780px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 20px 60px rgba(15,23,42,0.15)' }}>
             <div style={{ padding: '0.9rem 1.25rem 0.7rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
               <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--ink)' }}>
                 📅 {t(lang, 'memoCalTitle')}

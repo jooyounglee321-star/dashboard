@@ -924,7 +924,8 @@
 /* overlay/modal */
 .rp-overlay {
   position: fixed; inset: 0;
-  background: rgba(0,0,0,0.45);
+  background: rgba(15,23,42,0.50);
+  backdrop-filter: blur(4px);
   display: flex; align-items: flex-start; justify-content: center;
   z-index: 200;
   overflow-y: auto;
@@ -932,9 +933,10 @@
 }
 
 .rp-modal {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
+  background: #FFFFFF;
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(15,23,42,0.15);
   padding: 1.4rem 1.6rem;
   width: 100%;
   max-width: 420px;
@@ -945,9 +947,10 @@
 }
 
 .rp-modal-full {
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: #FFFFFF;
+  border: none;
   border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(15,23,42,0.15);
   width: 100%;
   max-width: 560px;
   display: flex;
