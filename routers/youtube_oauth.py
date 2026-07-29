@@ -80,7 +80,10 @@ def youtube_callback(
     error: str | None = None,
     db: Session = Depends(get_db),
 ):
+    logger.info("%s callback 수신 — error=%s code_exists=%s state_exists=%s",
+                LOG, error, bool(code), bool(state))
     if error or not code or not state:
+        logger.warning("%s OAuth 오류 또는 파라미터 누락 — error=%s", LOG, error)
         return RedirectResponse("/auth/youtube-callback?status=error")
 
     result = verify_state(state, expected_service=SERVICE)
