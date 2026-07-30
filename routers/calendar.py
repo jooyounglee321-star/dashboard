@@ -22,10 +22,12 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import GoogleServiceToken
 from routers._google_oauth import (
     GOOGLE_AUTH_URL,
+    delete_service_token,
+    exchange_code,
     get_google_email,
+    get_service_status,
     get_valid_token,
     refresh_access_token,
     sign_state,
@@ -88,33 +90,18 @@ def calendar_callback(
         return RedirectResponse("/auth/calendar-callback?status=error")
     user_id, _ = result
 
-    try:
-        token_res = httpx.post("https://oauth2.googleapis.com/token", data={
-            "code": code,
-            "client_id": GOOGLE_CLIENT_ID,
-            "client_secret": GOOGLE_CLIENT_SECRET,
-            "redirect_uri": GCAL_REDIRECT_URI,
-            "grant_type": "authorization_code",
-        }, timeout=10)
-    except Exception as e:
-        logger.error("%s 토큰 교환 실패: %s", LOG, e)
+    data = exchange_code(code, GCAL_REDIRECT_URI)
+    if not data:
         return RedirectResponse("/auth/calendar-callback?status=error")
 
-    if token_res.status_code != 200:
-        logger.error("%s 토큰 교환 응답 오류 %s: %s", LOG, token_res.status_code, token_res.text)
-        return RedirectResponse("/auth/calendar-callback?status=error")
-
-    data = token_res.json()
     from datetime import timedelta
-    expires_at = datetime.now(timezone.utc) + timedelta(seconds=data.get("expires_in", 3600))
-
     upsert_token(
         db=db,
         user_id=user_id,
         service_type=SERVICE,
         access_token=data["access_token"],
         refresh_token=data.get("refresh_token"),
-        expires_at=expires_at,
+        expires_at=datetime.now(timezone.utc) + timedelta(seconds=data.get("expires_in", 3600)),
         google_email=get_google_email(data["access_token"]),
     )
     logger.info("%s user_id=%s 캘린더 연동 완료", LOG, user_id)
@@ -128,18 +115,7 @@ def calendar_status(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    token = db.query(GoogleServiceToken).filter(
-        GoogleServiceToken.user_id == current_user.id,
-        GoogleServiceToken.service_type == SERVICE,
-    ).first()
-    if not token:
-        return {"connected": False}
-    if not token.google_email:
-        email = get_google_email(token.access_token)
-        if email:
-            token.google_email = email
-            db.commit()
-    return {"connected": True, "google_email": token.google_email}
+    return get_service_status(current_user.id, SERVICE, db)
 
 
 # ── GET /api/calendar/today ───────────────────────────────────────────────────
@@ -212,11 +188,5 @@ def calendar_disconnect(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    token = db.query(GoogleServiceToken).filter(
-        GoogleServiceToken.user_id == current_user.id,
-        GoogleServiceToken.service_type == SERVICE,
-    ).first()
-    if token:
-        db.delete(token)
-        db.commit()
+    delete_service_token(current_user.id, SERVICE, db)
     return {"message": "Google Calendar 연동이 해제됐습니다."}
