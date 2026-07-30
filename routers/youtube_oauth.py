@@ -125,58 +125,67 @@ def youtube_subscriptions(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """연동된 YouTube 계정의 구독 채널 목록을 최대 50개 반환."""
+    """연동된 YouTube 계정의 구독 채널 목록을 전체 반환 (nextPageToken으로 페이지 순회)."""
     token = get_valid_token(current_user.id, SERVICE, db, LOG)
     if not token:
         raise HTTPException(status_code=401, detail="YouTube가 연동되지 않았습니다.")
 
-    try:
-        res = httpx.get(
-            f"{YOUTUBE_API}/subscriptions",
-            headers={"Authorization": f"Bearer {token.access_token}"},
-            params={
-                "part": "snippet",
-                "mine": "true",
-                "maxResults": 50,
-                "order": "alphabetical",
-            },
-            timeout=15,
-        )
-    except Exception as e:
-        logger.error("%s 구독 채널 조회 실패: %s", LOG, e)
-        raise HTTPException(status_code=503, detail="YouTube 구독 채널 조회에 실패했습니다.")
-
-    if res.status_code == 401:
-        if refresh_access_token(token, db, LOG):
-            return youtube_subscriptions(current_user=current_user, db=db)
-        raise HTTPException(status_code=401, detail="인증이 만료됐습니다. 다시 연동해 주세요.")
-
-    if res.status_code != 200:
-        logger.error("%s YouTube API 오류 %s: %s", LOG, res.status_code, res.text)
-        raise HTTPException(status_code=502, detail="YouTube API 오류가 발생했습니다.")
-
-    raw = res.json()
-    items = raw.get("items", [])
-    logger.warning("%s subscriptions raw: totalResults=%s items=%d nextPageToken=%s",
-                   LOG, raw.get("pageInfo", {}).get("totalResults"), len(items), bool(raw.get("nextPageToken")))
+    headers = {"Authorization": f"Bearer {token.access_token}"}
     channels = []
-    for item in items:
-        snippet = item.get("snippet", {})
-        resource_id = snippet.get("resourceId", {})
-        channel_id = resource_id.get("channelId", "")
-        thumbnails = snippet.get("thumbnails", {})
-        thumb = (
-            thumbnails.get("default", {}).get("url")
-            or thumbnails.get("medium", {}).get("url")
-            or ""
-        )
-        channels.append({
-            "channel_id": channel_id,
-            "title": snippet.get("title", ""),
-            "description": snippet.get("description", "")[:100],
-            "thumbnail": thumb,
-            "url": f"https://www.youtube.com/channel/{channel_id}" if channel_id else "",
-        })
+    page_token = None
+    page = 0
+
+    while True:
+        params = {
+            "part": "snippet",
+            "mine": "true",
+            "maxResults": 50,
+            "order": "alphabetical",
+        }
+        if page_token:
+            params["pageToken"] = page_token
+
+        try:
+            res = httpx.get(f"{YOUTUBE_API}/subscriptions", headers=headers, params=params, timeout=15)
+        except Exception as e:
+            logger.error("%s 구독 채널 조회 실패 (page=%d): %s", LOG, page, e)
+            raise HTTPException(status_code=503, detail="YouTube 구독 채널 조회에 실패했습니다.")
+
+        if res.status_code == 401:
+            if page == 0 and refresh_access_token(token, db, LOG):
+                headers = {"Authorization": f"Bearer {token.access_token}"}
+                continue
+            raise HTTPException(status_code=401, detail="인증이 만료됐습니다. 다시 연동해 주세요.")
+
+        if res.status_code != 200:
+            logger.error("%s YouTube API 오류 %s: %s", LOG, res.status_code, res.text)
+            raise HTTPException(status_code=502, detail="YouTube API 오류가 발생했습니다.")
+
+        raw = res.json()
+        for item in raw.get("items", []):
+            snippet = item.get("snippet", {})
+            resource_id = snippet.get("resourceId", {})
+            channel_id = resource_id.get("channelId", "")
+            thumbnails = snippet.get("thumbnails", {})
+            thumb = (
+                thumbnails.get("default", {}).get("url")
+                or thumbnails.get("medium", {}).get("url")
+                or ""
+            )
+            channels.append({
+                "channel_id": channel_id,
+                "title": snippet.get("title", ""),
+                "description": snippet.get("description", "")[:100],
+                "thumbnail": thumb,
+                "url": f"https://www.youtube.com/channel/{channel_id}" if channel_id else "",
+            })
+
+        page_token = raw.get("nextPageToken")
+        page += 1
+        logger.warning("%s subscriptions page=%d items=%d nextPage=%s total_so_far=%d",
+                       LOG, page, len(raw.get("items", [])), bool(page_token), len(channels))
+        if not page_token:
+            break
 
     return {"channels": channels, "total": len(channels)}
 
