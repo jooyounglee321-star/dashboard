@@ -122,14 +122,12 @@ export default function YoutubeCard({ isMobile = false, maxCount = 20, lang = 'k
                     <img
                       src={item.thumbnail}
                       alt={item.title}
-                      style={{ width: isMobile ? 28 : 32, height: isMobile ? 28 : 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                      style={{ width: isMobile ? 30 : 34, height: isMobile ? 30 : 34, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
                     />
                   ) : (
                     <div className={isMobile ? 'm-yt-ico' : 'yt-ico'}>▶</div>
                   )}
-                  <div>
-                    <div className={isMobile ? 'm-yt-name' : 'yt-name'}>{item.title || ''}</div>
-                  </div>
+                  <div className={isMobile ? 'm-yt-name' : 'yt-name'}>{item.title || ''}</div>
                 </a>
               </li>
             ))}
