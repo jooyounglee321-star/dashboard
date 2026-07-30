@@ -104,7 +104,7 @@ export default function YoutubeCard({ isMobile = false, maxCount = 20, lang = 'k
           justifyContent: 'space-between',
           gap: '0.5rem',
         }}>
-          <span>{t(lang, 'youtubeConnectedLabel')}{googleEmail ? `: ${googleEmail}` : ''}</span>
+          <span>{googleEmail || t(lang, 'youtubeConnectedLabel')}</span>
           <button
             onClick={disconnectYouTube}
             style={{
