@@ -61,7 +61,7 @@ def calendar_connect(current_user=Depends(get_current_user)):
     params = {
         "client_id": GOOGLE_CLIENT_ID,
         "response_type": "code",
-        "scope": "https://www.googleapis.com/auth/calendar.readonly",
+        "scope": "https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/userinfo.email",
         "redirect_uri": GCAL_REDIRECT_URI,
         "access_type": "offline",
         "prompt": "consent",
@@ -134,6 +134,11 @@ def calendar_status(
     ).first()
     if not token:
         return {"connected": False}
+    if not token.google_email:
+        email = get_google_email(token.access_token)
+        if email:
+            token.google_email = email
+            db.commit()
     return {"connected": True, "google_email": token.google_email}
 
 
