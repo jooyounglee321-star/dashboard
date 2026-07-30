@@ -122,7 +122,7 @@ export default function YoutubeCard({ isMobile = false, lang = 'ko' }) {
                     <img
                       src={item.thumbnail}
                       alt={item.title}
-                      style={{ width: isMobile ? 30 : 34, height: isMobile ? 30 : 34, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                      style={{ width: 22, height: 22, borderRadius: 4, objectFit: 'cover', flexShrink: 0 }}
                     />
                   ) : (
                     <div className={isMobile ? 'm-yt-ico' : 'yt-ico'}>▶</div>
