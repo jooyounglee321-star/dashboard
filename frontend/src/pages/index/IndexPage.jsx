@@ -406,7 +406,7 @@ export default function IndexPage() {
     switch (item.id) {
       case 'hero':     return <HeroSection zones={zones} clockCount={widgetCfg?.hero?.clock_count ?? 3} tempUnit={widgetCfg?.hero?.temp_unit ?? 'C'} lang={lang} />
       case 'schedule': return <ScheduleCard lang={lang} />
-      case 'youtube':  return <YoutubeCard maxCount={widgetCfg?.youtube?.max_count ?? 10} lang={lang} />
+      case 'youtube':  return <YoutubeCard lang={lang} />
       case 'stock':    return <StockCard groups={stockGroups} priceMap={priceMap} fxRate={fxRate} loading={stockLoading} onOpenStats={() => setStatsOpenPersist(true)} onOpenSettings={() => setStockSettingsOpen(true)} currencyDisplay={widgetCfg?.stock?.currency_display} onCurrencyChange={saveCurrencyDisplay} lang={lang} />
       case 'expense':  return <ExpenseCard lang={lang} />
       case 'diet':     return <DietCard mealConfig={widgetCfg?.diet?.meals} lang={lang} />
@@ -596,7 +596,7 @@ export default function IndexPage() {
         {/* 미디어: 뉴스+유튜브 */}
         <div className={`mob-section${mobileTab === 'media' ? ' active' : ''}`}>
           {w('news') && <NewsCard isMobile defaultTab={widgetCfg?.news?.default_tab ?? 'kr'} lang={lang} />}
-          {w('youtube') && <YoutubeCard isMobile maxCount={widgetCfg?.youtube?.max_count ?? 10} lang={lang} />}
+          {w('youtube') && <YoutubeCard isMobile lang={lang} />}
         </div>
 
       </div>
