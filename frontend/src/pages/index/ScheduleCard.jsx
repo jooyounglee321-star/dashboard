@@ -1,80 +1,32 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useGoogleOAuth } from '../../hooks/useGoogleOAuth'
 import { t } from './i18n'
 import { todayStr } from '../../utils/date'
 import TodoList from './TodoList'
 
-export default function ScheduleCard({ isMobile = false, lang = 'ko', date }) {
-  const [connected, setConnected] = useState(false)
-  const [googleEmail, setGoogleEmail] = useState(null)
-  const [events, setEvents] = useState([])
-  const [statusLoading, setStatusLoading] = useState(true)
-  const [eventsLoading, setEventsLoading] = useState(false)
-  const [eventsError, setEventsError] = useState(false)
+const parseEvents = (res) => res.events || []
 
+export default function ScheduleCard({ isMobile = false, lang = 'ko', date }) {
   const selectedDate = date || todayStr()
 
-  const loadEvents = useCallback(() => {
-    setEventsLoading(true)
-    setEventsError(false)
-    fetch('/api/calendar/today', { credentials: 'include' })
-      .then(r => r.ok ? r.json() : Promise.reject(r.status))
-      .then(data => setEvents(data.events || []))
-      .catch(() => setEventsError(true))
-      .finally(() => setEventsLoading(false))
-  }, [])
-
-  const checkStatus = useCallback(() => {
-    fetch('/api/calendar/status', { credentials: 'include' })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data?.connected) {
-          setConnected(true)
-          setGoogleEmail(data.google_email || null)
-          loadEvents()
-        } else {
-          setConnected(false)
-        }
-      })
-      .catch(() => setConnected(false))
-      .finally(() => setStatusLoading(false))
-  }, [loadEvents])
-
-  useEffect(() => {
-    checkStatus()
-  }, [checkStatus])
-
-  // 팝업에서 연동 완료 신호 수신
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.data === 'gcal_connected') {
-        setStatusLoading(true)
-        checkStatus()
-      }
-    }
-    window.addEventListener('message', handler)
-    return () => window.removeEventListener('message', handler)
-  }, [checkStatus])
-
-  function connectGCal() {
-    const popup = window.open(
-      '/api/calendar/connect',
-      'gcal_connect',
-      'width=520,height=640,scrollbars=yes,resizable=yes'
-    )
-    if (!popup) {
-      alert(t(lang, 'scheduleGcalPopupBlocked'))
-    }
-  }
-
-  function disconnectGCal() {
-    fetch('/api/calendar/disconnect', { method: 'DELETE', credentials: 'include' })
-      .then(() => {
-        setConnected(false)
-        setGoogleEmail(null)
-        setEvents([])
-      })
-      .catch(() => {})
-  }
+  const {
+    connected,
+    googleEmail,
+    statusLoading,
+    data: events,
+    dataLoading: eventsLoading,
+    dataError: eventsError,
+    connect: connectGCal,
+    disconnect: disconnectGCal,
+    reload: loadEvents,
+  } = useGoogleOAuth({
+    connectUrl:    '/api/calendar/connect',
+    statusUrl:     '/api/calendar/status',
+    disconnectUrl: '/api/calendar/disconnect',
+    dataUrl:       '/api/calendar/today',
+    parseData:     parseEvents,
+    messageKey:    'gcal_connected',
+    popupName:     'gcal_connect',
+  })
 
   const hdr     = isMobile ? 'm-card-header' : 'card-header'
   const title   = isMobile ? 'm-card-title'  : 'card-title'
@@ -95,7 +47,7 @@ export default function ScheduleCard({ isMobile = false, lang = 'ko', date }) {
           </div>
           <button
             className="gcal-btn"
-            onClick={connectGCal}
+            onClick={() => connectGCal(() => alert(t(lang, 'scheduleGcalPopupBlocked')))}
             style={isMobile ? { fontSize: '0.82rem', padding: '0.4rem 1rem' } : {}}
           >
             {t(lang, 'scheduleGcalBtn')}

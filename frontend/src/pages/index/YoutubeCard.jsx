@@ -1,68 +1,28 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useGoogleOAuth } from '../../hooks/useGoogleOAuth'
 import { t } from './i18n'
 
+const parseChannels = (res) => res.channels || []
+
 export default function YoutubeCard({ isMobile = false, maxCount = 20, lang = 'ko' }) {
-  const [connected, setConnected] = useState(false)
-  const [googleEmail, setGoogleEmail] = useState(null)
-  const [statusLoading, setStatusLoading] = useState(true)
-  const [data, setData] = useState([])
-  const [dataLoading, setDataLoading] = useState(false)
-  const [dataError, setDataError] = useState(false)
-
-  const loadData = useCallback(() => {
-    setDataLoading(true)
-    setDataError(false)
-    fetch('/api/youtube/subscriptions', { credentials: 'include' })
-      .then(r => r.ok ? r.json() : Promise.reject(r.status))
-      .then(res => setData(res.channels || []))
-      .catch(() => setDataError(true))
-      .finally(() => setDataLoading(false))
-  }, [])
-
-  const checkStatus = useCallback(() => {
-    fetch('/api/youtube/status', { credentials: 'include' })
-      .then(r => r.ok ? r.json() : null)
-      .then(res => {
-        if (res?.connected) {
-          setConnected(true)
-          setGoogleEmail(res.google_email || null)
-          loadData()
-        } else {
-          setConnected(false)
-        }
-      })
-      .catch(() => setConnected(false))
-      .finally(() => setStatusLoading(false))
-  }, [loadData])
-
-  useEffect(() => { checkStatus() }, [checkStatus])
-
-  // 팝업에서 YouTube 연동 완료 신호 수신
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.data === 'youtube_connected') {
-        setStatusLoading(true)
-        checkStatus()
-      }
-    }
-    window.addEventListener('message', handler)
-    return () => window.removeEventListener('message', handler)
-  }, [checkStatus])
-
-  function connectYouTube() {
-    const popup = window.open(
-      '/api/youtube/connect',
-      'yt_connect',
-      'width=520,height=640,scrollbars=yes,resizable=yes'
-    )
-    if (!popup) alert(t(lang, 'youtubePopupBlocked'))
-  }
-
-  function disconnectYouTube() {
-    fetch('/api/youtube/disconnect', { method: 'DELETE', credentials: 'include' })
-      .then(() => { setConnected(false); setGoogleEmail(null); setData([]) })
-      .catch(() => {})
-  }
+  const {
+    connected,
+    googleEmail,
+    statusLoading,
+    data,
+    dataLoading,
+    dataError,
+    connect,
+    disconnect,
+    reload,
+  } = useGoogleOAuth({
+    connectUrl:    '/api/youtube/connect',
+    statusUrl:     '/api/youtube/status',
+    disconnectUrl: '/api/youtube/disconnect',
+    dataUrl:       '/api/youtube/subscriptions',
+    parseData:     parseChannels,
+    messageKey:    'youtube_connected',
+    popupName:     'yt_connect',
+  })
 
   const hdr     = isMobile ? 'm-card-header' : 'card-header'
   const title   = isMobile ? 'm-card-title'  : 'card-title'
@@ -83,7 +43,7 @@ export default function YoutubeCard({ isMobile = false, maxCount = 20, lang = 'k
           </div>
           <button
             className="gcal-btn"
-            onClick={connectYouTube}
+            onClick={() => connect(() => alert(t(lang, 'youtubePopupBlocked')))}
             style={isMobile ? { fontSize: '0.82rem', padding: '0.4rem 1rem' } : {}}
           >
             {t(lang, 'youtubeConnectBtn')}
@@ -94,7 +54,7 @@ export default function YoutubeCard({ isMobile = false, maxCount = 20, lang = 'k
 
     return (
       <>
-        {/* 연동 계정 + 해제 버튼 — googleEmail 여부와 무관하게 항상 표시 */}
+        {/* 연동 계정 + 해제 버튼 */}
         <div style={{
           fontSize: '0.75rem',
           color: 'var(--text-secondary)',
@@ -106,7 +66,7 @@ export default function YoutubeCard({ isMobile = false, maxCount = 20, lang = 'k
         }}>
           <span>{googleEmail || t(lang, 'youtubeConnectedLabel')}</span>
           <button
-            onClick={disconnectYouTube}
+            onClick={disconnect}
             style={{
               background: 'none', border: 'none', color: 'var(--text-secondary)',
               cursor: 'pointer', fontSize: '0.72rem', padding: '0 0.2rem',
@@ -120,7 +80,7 @@ export default function YoutubeCard({ isMobile = false, maxCount = 20, lang = 'k
         {/* 새로고침 버튼 */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.4rem' }}>
           <button
-            onClick={() => loadData()}
+            onClick={reload}
             disabled={dataLoading}
             style={{
               fontSize: isMobile ? '0.73rem' : '0.78rem', background: 'none',
@@ -140,7 +100,7 @@ export default function YoutubeCard({ isMobile = false, maxCount = 20, lang = 'k
           <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
             {t(lang, 'youtubeDataError')}{' '}
             <button
-              onClick={() => loadData()}
+              onClick={reload}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', fontSize: '0.85rem', textDecoration: 'underline' }}
             >
               {t(lang, 'youtubeRetry')}
@@ -155,33 +115,24 @@ export default function YoutubeCard({ isMobile = false, maxCount = 20, lang = 'k
           </div>
         ) : (
           <ul className={isMobile ? 'm-yt-list' : 'yt-list'}>
-            {data.slice(0, maxCount).map(item => {
-              const href = item.url || '#'
-              const name = item.title || ''
-              const thumb = item.thumbnail || ''
-              const sub = ''
-              return (
-                <li key={item.channel_id || item.playlist_id} className={isMobile ? 'm-yt-item' : 'yt-item'}>
-                  <a href={href} target="_blank" rel="noreferrer">
-                    {thumb ? (
-                      <img
-                        src={thumb}
-                        alt={name}
-                        style={{ width: isMobile ? 28 : 32, height: isMobile ? 28 : 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-                      />
-                    ) : (
-                      <div className={isMobile ? 'm-yt-ico' : 'yt-ico'}>▶</div>
-                    )}
-                    <div>
-                      <div className={isMobile ? 'm-yt-name' : 'yt-name'}>{name}</div>
-                      {!isMobile && sub && (
-                        <div className="yt-url">{sub}</div>
-                      )}
-                    </div>
-                  </a>
-                </li>
-              )
-            })}
+            {data.slice(0, maxCount).map(item => (
+              <li key={item.channel_id} className={isMobile ? 'm-yt-item' : 'yt-item'}>
+                <a href={item.url || '#'} target="_blank" rel="noreferrer">
+                  {item.thumbnail ? (
+                    <img
+                      src={item.thumbnail}
+                      alt={item.title}
+                      style={{ width: isMobile ? 28 : 32, height: isMobile ? 28 : 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                    />
+                  ) : (
+                    <div className={isMobile ? 'm-yt-ico' : 'yt-ico'}>▶</div>
+                  )}
+                  <div>
+                    <div className={isMobile ? 'm-yt-name' : 'yt-name'}>{item.title || ''}</div>
+                  </div>
+                </a>
+              </li>
+            ))}
           </ul>
         )}
       </>

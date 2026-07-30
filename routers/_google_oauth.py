@@ -169,3 +169,68 @@ def get_google_email(access_token: str) -> str | None:
     except Exception:
         pass
     return None
+
+
+# ── 공통 OAuth 흐름 헬퍼 ──────────────────────────────────────────────────────
+
+def exchange_code(code: str, redirect_uri: str) -> dict | None:
+    """구글 인증 코드 → access_token/refresh_token 교환.
+
+    성공 시 Google 토큰 응답 dict 반환, 실패 시 None.
+    calendar.py, youtube_oauth.py 콜백에서 공통으로 사용.
+    """
+    try:
+        res = httpx.post(GOOGLE_TOKEN_URL, data={
+            "code": code,
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "redirect_uri": redirect_uri,
+            "grant_type": "authorization_code",
+        }, timeout=10)
+    except Exception as e:
+        logger.error("[GTOKEN] 토큰 교환 요청 실패: %s", e)
+        return None
+
+    if res.status_code != 200:
+        logger.error("[GTOKEN] 토큰 교환 실패 %s: %s", res.status_code, res.text)
+        return None
+
+    return res.json()
+
+
+def get_service_status(
+    user_id: int,
+    service_type: str,
+    db: Session,
+) -> dict:
+    """연동 상태 반환. google_email 이 없으면 즉시 fetch 후 DB 저장.
+
+    반환 형식: {"connected": bool, "google_email": str | None}
+    """
+    token = db.query(GoogleServiceToken).filter(
+        GoogleServiceToken.user_id == user_id,
+        GoogleServiceToken.service_type == service_type,
+    ).first()
+    if not token:
+        return {"connected": False}
+    if not token.google_email:
+        email = get_google_email(token.access_token)
+        if email:
+            token.google_email = email
+            db.commit()
+    return {"connected": True, "google_email": token.google_email}
+
+
+def delete_service_token(
+    user_id: int,
+    service_type: str,
+    db: Session,
+) -> None:
+    """연동 해제 — DB에서 토큰 삭제."""
+    token = db.query(GoogleServiceToken).filter(
+        GoogleServiceToken.user_id == user_id,
+        GoogleServiceToken.service_type == service_type,
+    ).first()
+    if token:
+        db.delete(token)
+        db.commit()
