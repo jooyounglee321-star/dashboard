@@ -3,7 +3,7 @@ import { t } from './i18n'
 
 const parseChannels = (res) => res.channels || []
 
-export default function YoutubeCard({ isMobile = false, maxCount = 20, lang = 'ko' }) {
+export default function YoutubeCard({ isMobile = false, lang = 'ko' }) {
   const {
     connected,
     googleEmail,
@@ -115,7 +115,7 @@ export default function YoutubeCard({ isMobile = false, maxCount = 20, lang = 'k
           </div>
         ) : (
           <ul className={isMobile ? 'm-yt-list' : 'yt-list'}>
-            {data.slice(0, maxCount).map(item => (
+            {data.map(item => (
               <li key={item.channel_id} className={isMobile ? 'm-yt-item' : 'yt-item'}>
                 <a href={item.url || '#'} target="_blank" rel="noreferrer">
                   {item.thumbnail ? (
