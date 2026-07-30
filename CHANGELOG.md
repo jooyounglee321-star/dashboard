@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-07-29 (4)
+
+### fix — /api/youtube/connect 500 에러 (GOOGLE_CLIENT_ID import 누락)
+
+- `youtube_oauth.py` 리팩터링 시 `GOOGLE_CLIENT_ID = os.getenv(...)` 로컬 정의를 삭제했으나 import 누락 → NameError → 500
+- `from routers._google_oauth import GOOGLE_CLIENT_ID` 추가로 수정
+- DB 마이그레이션(`google_service_tokens` 테이블, `service_type` 컬럼) 서버 시작 시 자동 실행 확인
+
+---
+
 ## 2026-07-29 (3)
 
 ### fix — YouTube·캘린더 연동 해제 버튼 항상 표시 / 구독 비공개 안내 / 재생목록 탭 제거
