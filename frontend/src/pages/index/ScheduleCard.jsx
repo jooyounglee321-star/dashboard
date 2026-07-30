@@ -112,7 +112,7 @@ export default function ScheduleCard({ isMobile = false, lang = 'ko', date }) {
             justifyContent: 'space-between',
             gap: '0.5rem',
           }}>
-            <span>{t(lang, 'scheduleGcalConnectedLabel')}{googleEmail ? `: ${googleEmail}` : ''}</span>
+            <span>{googleEmail || t(lang, 'scheduleGcalConnectedLabel')}</span>
             <button
               onClick={disconnectGCal}
               style={{
