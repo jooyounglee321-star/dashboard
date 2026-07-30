@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from routers._google_oauth import (
     GOOGLE_AUTH_URL,
+    GOOGLE_CLIENT_ID,
     delete_service_token,
     exchange_code,
     get_google_email,
