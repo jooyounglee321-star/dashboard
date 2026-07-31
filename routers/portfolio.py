@@ -96,12 +96,15 @@ def backfill_portfolio_snapshots(user_id: int, db: Session, force_start_date=Non
     """
     today_kst = datetime.now(ZoneInfo("Asia/Seoul")).date()
 
-    # ① 스냅샷 존재 여부 확인 (snapshot_date IS NULL 행 제외 — NULL DESC는 FIRST라 오염 방지)
+    # ① 스냅샷 존재 여부 확인 — 유효 데이터(total_krw_equiv > 0)가 있는 마지막 날짜만 참조.
+    # null/0 값 레코드를 "최신"으로 잡으면 그 이전 날짜가 재계산 대상에서 영원히 빠지는 버그 방지.
     latest = (
         db.query(DailyPortfolioSnapshot.snapshot_date)
         .filter(
             DailyPortfolioSnapshot.user_id == user_id,
             DailyPortfolioSnapshot.snapshot_date.isnot(None),
+            DailyPortfolioSnapshot.total_krw_equiv.isnot(None),
+            DailyPortfolioSnapshot.total_krw_equiv > 0,
         )
         .order_by(DailyPortfolioSnapshot.snapshot_date.desc())
         .first()
@@ -447,9 +450,14 @@ def backfill_portfolio_snapshots(user_id: int, db: Session, force_start_date=Non
                 "group_names": {gid: g["name"] for gid, g in groups.items()},
             }, ensure_ascii=False)
 
-            # 평가액이 None(환율 미조회)인 경우는 저장, 실제 0원인 경우만 건너뜀
+            # 유효성 검사: 실제 0원이면 건너뜀 (포트폴리오 없는 날)
             if total_krw_equiv is not None and total_krw_equiv == 0:
                 logger.info("[BACKFILL] user=%d %s total_krw_equiv=0, 저장 건너뜀", user_id, target_date)
+                continue
+            # USD 보유 종목이 있는데 환율이 없으면 null 레코드가 생성되어 '—' 버그 발생.
+            # 이 경우 저장을 보류하고 다음 backfill 때 환율이 복구되면 정상 저장.
+            if total_krw_equiv is None and total_usd > 0:
+                logger.warning("[BACKFILL] user=%d %s 환율 미조회(USD 보유), 저장 보류", user_id, target_date)
                 continue
 
             # UPSERT
@@ -558,6 +566,50 @@ def run_full_backfill(
     result["deleted"] = deleted
     result["earliest_purchase_date"] = str(earliest_purchase_date) if earliest_purchase_date else None
     logger.info("[FULL BACKFILL] user=%d 완료: %s", user_id, result)
+    return result
+
+
+# ── POST /api/portfolio/repair ──────────────────────────────────────────────
+@router.post("/repair")
+def repair_bad_snapshots(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """null/0 값으로 저장된 불량 스냅샷을 찾아 재계산.
+    전체 삭제 없이 불량 레코드만 덮어씀. 주말·공휴일은 직전 거래일 종가 사용.
+    """
+    user_id = current_user.id
+
+    # 불량 스냅샷(total_krw_equiv가 null 또는 0)의 가장 이른 날짜 탐색
+    bad_rows = (
+        db.query(DailyPortfolioSnapshot.snapshot_date)
+        .filter(
+            DailyPortfolioSnapshot.user_id == user_id,
+            DailyPortfolioSnapshot.snapshot_date.isnot(None),
+            (
+                DailyPortfolioSnapshot.total_krw_equiv.is_(None) |
+                (DailyPortfolioSnapshot.total_krw_equiv == 0)
+            ),
+        )
+        .order_by(DailyPortfolioSnapshot.snapshot_date.asc())
+        .all()
+    )
+
+    if not bad_rows:
+        return {"repaired": 0, "message": "불량 스냅샷 없음"}
+
+    earliest_bad = bad_rows[0].snapshot_date
+    logger.info("[REPAIR] user=%d 불량 스냅샷 %d건, 최초=%s", user_id, len(bad_rows), earliest_bad)
+
+    # 최초 불량 날짜부터 날짜 제한 없이 재계산 (UPSERT이므로 기존 데이터 안전)
+    result = backfill_portfolio_snapshots(
+        user_id, db,
+        force_start_date=earliest_bad,
+        override_max_days=0,
+    )
+    result["bad_count"] = len(bad_rows)
+    result["earliest_bad"] = str(earliest_bad)
+    logger.info("[REPAIR] user=%d 완료: %s", user_id, result)
     return result
 
 
