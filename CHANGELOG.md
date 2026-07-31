@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-07-30
+
+### fix — 일별 결산 주말(토요일) 값 '—' 표시 버그 근본 수정
+
+**문제 원인**
+- `backfill_portfolio_snapshots`의 `latest` 쿼리가 `total_krw_equiv = null / 0`인 불량 레코드도 "최신 날짜"로 인식
+- 7/25(토)에 null 값 레코드가 있으면 `start_date = 7/26`이 되어 7/25가 재계산 대상에서 영원히 제외됨
+- `fmtByCurrency(null, ...)` → `'—'` 출력
+
+**수정 내용 (routers/portfolio.py)**
+1. `latest` 쿼리에 `total_krw_equiv IS NOT NULL AND > 0` 조건 추가  
+   → null/0 레코드를 무시하고 마지막 유효 날짜를 기준으로 재계산 범위 결정
+2. USD 보유인데 환율 미조회 시 null 레코드 저장 보류  
+   → 다음 backfill 때 환율 복구 후 정상 저장 (기존: null 저장 → '—' 버그 반복)
+3. 불량 스냅샷 수리 API `POST /api/portfolio/repair` 추가  
+   → null/0 레코드만 골라 전체 삭제 없이 UPSERT로 재계산
+4. 주말·공휴일은 직전 거래일 종가 사용 로직 기존 구현 확인 (`_get_historical_prices_batch`)
+
+**추가 파일**
+- `scripts/repair_bad_snapshots.py` — 모든 유저의 불량 스냅샷 일괄 수리 스크립트
+- `tests/test_backfill_weekend.py` — 주말/공휴일 처리 + latest 쿼리 수정 검증 (11개 테스트 통과)
+
+---
+
 ## 2026-07-29 (5)
 
 ### feat — 유튜브 구독 채널 목록 그리드 UI 개선
