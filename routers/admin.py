@@ -30,6 +30,15 @@ ALL_PERMS     = [
 ]
 
 
+@router.get("/env-check")
+def check_env_keys(_: User = Depends(_require_admin)):
+    """민감한 값은 절대 반환하지 않고, 환경변수 설정 여부(boolean)만 확인."""
+    return {
+        "anthropic_api_key_configured": bool(os.getenv("ANTHROPIC_API_KEY")),
+        "openai_api_key_configured": bool(os.getenv("OPENAI_API_KEY")),
+    }
+
+
 @router.get("/users", response_model=list[UserAdminOut])
 def list_admin_users(
     search: Optional[str] = Query(None),
