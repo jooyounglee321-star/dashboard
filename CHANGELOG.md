@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-08-23
+
+### 추가 — 환경변수(API 키) 설정 여부 확인 엔드포인트 (`routers/admin.py`)
+
+- **`GET /api/admin/env-check`** 추가 (admin 권한 필요, `require_admin` 재사용)
+  - `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` 등록 여부를 boolean으로만 반환 (값 자체는 절대 노출 안 함)
+  - Railway Variables에 키를 등록한 뒤, 실제로 서버가 인식했는지 안전하게 확인하는 용도
+  - 주식 매매내역 캡처 → AI(Claude Vision) 자동 인식 기능 개발 전 사전 점검 단계
+
+---
+
 ## 2026-07-30
 
 ### fix — 일별 결산 주말(토요일) 값 '—' 표시 버그 근본 수정
