@@ -14,8 +14,10 @@ const MAX_LOG = 50
  * - 비-2xx 응답은 { status, message } 포함한 Error로 throw
  */
 export async function apiFetch(url, options = {}) {
+  // FormData 전송 시 Content-Type 지정 금지 (browser가 multipart boundary 자동 설정)
+  const isFormData = options.body instanceof FormData
   const headers = {
-    ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+    ...(options.body !== undefined && !isFormData ? { 'Content-Type': 'application/json' } : {}),
     ...options.headers,
   }
 

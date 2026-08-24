@@ -452,6 +452,7 @@ export default function IndexPage() {
         onClose={() => { setStockSettingsOpen(false); loadStocks() }}
         onCurrencyChange={saveCurrencyDisplay}
         lang={lang}
+        userRole={userRole}
       />
 
       {/* 헤더 */}

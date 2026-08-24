@@ -29,6 +29,13 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
     return current_user
 
 
+def require_premium_or_admin(current_user: User = Depends(get_current_user)) -> User:
+    """premium 또는 admin role 검사 — AI 캡처 등 유료 기능 Depends."""
+    if current_user.role in ("admin", "premium"):
+        return current_user
+    raise HTTPException(status_code=403, detail="프리미엄 이상 멤버만 사용 가능합니다.")
+
+
 def resolve_yf_ticker(ticker: str, category: str | None) -> str:
     """카테고리에 따라 Yahoo Finance 조회용 티커를 반환합니다.
 

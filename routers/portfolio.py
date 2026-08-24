@@ -8,13 +8,16 @@ from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import yfinance as yf
-from fastapi import APIRouter, Depends, HTTPException, Query
+import base64
+import os
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from database import get_db
 from models import DailyPortfolioSnapshot, DividendHistory, ExchangeRate, PortfolioGroups, Stock, User
 from routers.auth import get_current_user
-from routers._shared import resolve_yf_ticker as _backfill_resolve_ticker
+from routers._shared import require_premium_or_admin, resolve_yf_ticker as _backfill_resolve_ticker
 from schemas import PortfolioSnapshotCreate, PortfolioSnapshotOut
 
 logger = logging.getLogger(__name__)
@@ -976,6 +979,154 @@ def get_history_by_date(
     if not row:
         raise HTTPException(status_code=404, detail=f"{snapshot_date} 스냅샷 없음")
     return row
+
+
+# ── POST /api/portfolio/parse-transactions ───────────────────────────────────
+@router.post("/parse-transactions")
+async def parse_transactions_from_images(
+    group_id: str = Form(...),
+    images: list[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_premium_or_admin),
+):
+    """AI(Claude Vision)로 매매 캡처 이미지를 파싱해 신규 거래 내역만 반환.
+
+    중복 판정: ticker + date + type + qty + price 5개 필드 전부 일치 시 중복으로 간주.
+    신규 종목(그룹에 없는 ticker)은 별도 플래그 new_stock=True로 표시.
+    """
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY가 설정되지 않았습니다.")
+
+    # 현재 유저의 포트폴리오 로드
+    pg_row = db.query(PortfolioGroups).filter(PortfolioGroups.user_id == current_user.id).first()
+    pg_data: list = []
+    if pg_row and pg_row.data:
+        try:
+            pg_data = json.loads(pg_row.data)
+        except Exception:
+            pg_data = []
+
+    # 대상 그룹 찾기
+    target_group = next((g for g in pg_data if g.get("id") == group_id), None)
+    if target_group is None:
+        raise HTTPException(status_code=404, detail="그룹을 찾을 수 없습니다.")
+
+    # 기존 거래 내역을 중복 체크용 집합으로 변환
+    # key: (ticker_upper, date_str, type_str, qty_float, price_float)
+    existing_keys: set[tuple] = set()
+    existing_tickers: set[str] = set()
+    for st in target_group.get("stocks", []):
+        if st.get("is_deleted"):
+            continue
+        ticker_up = (st.get("ticker") or "").upper()
+        existing_tickers.add(ticker_up)
+        for p in st.get("purchases") or []:
+            existing_keys.add((
+                ticker_up, str(p.get("date") or ""), "buy",
+                float(p.get("qty") or 0), float(p.get("price") or 0),
+            ))
+        for s in st.get("sells") or []:
+            existing_keys.add((
+                ticker_up, str(s.get("date") or ""), "sell",
+                float(s.get("qty") or 0), float(s.get("price") or 0),
+            ))
+
+    PROMPT = (
+        "이 이미지는 주식 매매 내역 캡처입니다. 모든 매매 내역을 JSON 배열로만 출력해주세요.\n"
+        "각 항목 형식: {\"ticker\": \"종목코드\", \"name\": \"종목명\", \"type\": \"buy\" 또는 \"sell\", "
+        "\"date\": \"YYYY-MM-DD\", \"qty\": 숫자, \"price\": 숫자}\n"
+        "규칙:\n"
+        "- ticker: 티커 심볼 대문자. 한국 주식이면 6자리숫자.KS 형태(예: 005930.KS)\n"
+        "- date: YYYY-MM-DD 형식. 알 수 없으면 null\n"
+        "- qty: 수량(소수 가능). 알 수 없으면 null\n"
+        "- price: 단가(소수 가능). 알 수 없으면 null\n"
+        "- type: 매입/매수이면 \"buy\", 매도이면 \"sell\"\n"
+        "JSON 배열만 출력. 다른 텍스트, 마크다운 코드블록 금지."
+    )
+
+    import anthropic as _anthropic
+    client = _anthropic.Anthropic(api_key=api_key)
+
+    all_parsed: list[dict] = []
+    parse_errors: list[str] = []
+
+    ALLOWED_MEDIA = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+
+    for img in images:
+        media_type = img.content_type or "image/jpeg"
+        if media_type not in ALLOWED_MEDIA:
+            parse_errors.append(f"{img.filename}: 지원하지 않는 형식 ({media_type})")
+            continue
+        try:
+            raw = await img.read()
+            b64 = base64.standard_b64encode(raw).decode("utf-8")
+            response = client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=2048,
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": b64}},
+                        {"type": "text", "text": PROMPT},
+                    ],
+                }],
+            )
+            text = response.content[0].text.strip()
+            # JSON 배열 추출 (코드블록 래핑 방어)
+            if text.startswith("```"):
+                text = text.split("```")[1]
+                if text.startswith("json"):
+                    text = text[4:]
+                text = text.strip()
+            parsed = json.loads(text)
+            if isinstance(parsed, list):
+                all_parsed.extend(parsed)
+        except json.JSONDecodeError:
+            parse_errors.append(f"{img.filename}: AI 응답 파싱 실패")
+        except Exception as exc:
+            parse_errors.append(f"{img.filename}: {str(exc)[:120]}")
+
+    # 중복 제거 + 신규 종목 플래그
+    new_transactions: list[dict] = []
+    skipped = 0
+    seen_in_batch: set[tuple] = set()  # 이번 업로드 내 중복 방지
+
+    for tx in all_parsed:
+        ticker = (tx.get("ticker") or "").upper().strip()
+        if not ticker:
+            continue
+        tx_type = (tx.get("type") or "buy").lower()
+        date_str = str(tx.get("date") or "")
+        qty = float(tx.get("qty") or 0)
+        price = float(tx.get("price") or 0)
+
+        key = (ticker, date_str, tx_type, qty, price)
+        if key in existing_keys or key in seen_in_batch:
+            skipped += 1
+            continue
+
+        seen_in_batch.add(key)
+        new_transactions.append({
+            "ticker": ticker,
+            "name": tx.get("name") or "",
+            "type": tx_type,
+            "date": date_str or None,
+            "qty": qty,
+            "price": price,
+            "new_stock": ticker not in existing_tickers,
+        })
+
+    logger.info(
+        "[PARSE-TX] user=%d group=%s 이미지=%d건, 신규=%d건, 중복=%d건, 오류=%d건",
+        current_user.id, group_id, len(images), len(new_transactions), skipped, len(parse_errors),
+    )
+
+    return {
+        "new_transactions": new_transactions,
+        "skipped_count": skipped,
+        "parse_errors": parse_errors,
+    }
 
 
 # ── GET /api/portfolio/dividends ─────────────────────────────────────────────

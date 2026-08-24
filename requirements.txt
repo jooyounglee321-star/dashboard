@@ -14,3 +14,5 @@ slowapi
 pytz
 authlib
 httpx
+anthropic
+python-multipart
