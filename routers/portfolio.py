@@ -1065,18 +1065,30 @@ async def parse_transactions_from_images(
             ))
 
     PROMPT = (
-        "이 이미지는 주식 매매 내역 캡처입니다. 모든 매매 내역을 JSON 배열로만 출력해주세요.\n"
-        "각 항목 형식: {\"ticker\": \"종목코드\", \"name\": \"종목명\", \"type\": \"buy\" 또는 \"sell\", "
-        "\"date\": \"YYYY-MM-DD\", \"qty\": 숫자, \"price\": 숫자}\n"
-        "규칙:\n"
+        "이 이미지는 증권 거래 내역 표(Transaction History)입니다.\n"
+        "표에서 Buy(매수) 또는 Sell(매도) 타입의 행만 추출해 JSON 배열로 출력해주세요.\n\n"
+        "=== 반드시 지켜야 할 규칙 ===\n"
+        "1. 행(row) 하나당 JSON 객체 하나. "
+        "같은 종목이 여러 행에 걸쳐 나와도 절대 합치거나 요약하지 말 것. "
+        "표에 NVDY Buy 행이 3개면 JSON 객체도 3개.\n"
+        "2. 추출 대상: Buy, Sell 행만. "
+        "Dividend, Reinvestment, Sweep In, Sweep Out, Interest, Fee, Transfer 등 "
+        "주식 매수·매도가 아닌 행은 완전히 무시하고 결과에서 제외.\n"
+        "3. 표에 보이는 Buy/Sell 행 개수를 먼저 세고, "
+        "최종 JSON 배열 원소 개수가 그 개수와 정확히 일치하도록 빠짐없이 출력.\n\n"
+        "=== 출력 형식 ===\n"
+        "각 항목: {\"ticker\": \"종목코드\", \"name\": \"종목명\", "
+        "\"type\": \"buy\" 또는 \"sell\", "
+        "\"date\": \"YYYY-MM-DD\", \"qty\": 숫자, \"price\": 숫자}\n\n"
+        "=== 필드별 규칙 ===\n"
         "- ticker: 티커 심볼 대문자. 한국 주식이면 6자리숫자.KS 형태(예: 005930.KS)\n"
         "- date: 반드시 YYYY-MM-DD 형식으로 변환해서 출력. "
         "이미지에 MM/DD/YYYY, MM-DD-YYYY, YYYY.MM.DD 등 다른 형식으로 표기돼 있어도 "
         "YYYY-MM-DD로 변환할 것. 날짜를 알 수 없으면 null\n"
         "- qty: 수량(소수 가능). 알 수 없으면 null\n"
         "- price: 단가(소수 가능). 알 수 없으면 null\n"
-        "- type: 매입/매수이면 \"buy\", 매도이면 \"sell\"\n"
-        "JSON 배열만 출력. 다른 텍스트, 마크다운 코드블록 금지."
+        "- type: Buy/매수이면 \"buy\", Sell/매도이면 \"sell\"\n\n"
+        "JSON 배열만 출력. 설명 텍스트, 마크다운 코드블록(```) 금지."
     )
 
     import anthropic as _anthropic
@@ -1097,7 +1109,7 @@ async def parse_transactions_from_images(
             b64 = base64.standard_b64encode(raw).decode("utf-8")
             response = client.messages.create(
                 model="claude-sonnet-4-6",
-                max_tokens=2048,
+                max_tokens=4096,
                 messages=[{
                     "role": "user",
                     "content": [
