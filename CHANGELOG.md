@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-08-23 (3)
+
+### fix — AI 캡처 업로드 결과 날짜 공란 표시 버그 수정 (`routers/portfolio.py`)
+
+**문제**: `POST /api/portfolio/parse-transactions` 결과를 `<input type="date">`에 렌더링할 때, 값이 있어도 화면엔 공란으로 보임.
+
+**원인**: HTML `<input type="date">`는 값이 정확히 `YYYY-MM-DD` 형식이 아니면 값이 있어도 브라우저가 그냥 빈칸으로 표시함. Claude Vision이 이미지 속 날짜(예: 미국 브로커리지의 `MM/DD/YYYY` 표기)를 프롬프트 지시와 다르게 변환 없이 원본 형식 그대로 반환하는 경우 발생.
+
+**수정**:
+- `_normalize_date_str()` 헬퍼 추가 — `YYYY-MM-DD`, `YYYY/MM/DD`, `YYYY.MM.DD`, `MM/DD/YYYY`, `MM-DD-YYYY`, `MM.DD.YYYY` 등 흔한 표기를 모두 인식해 엄격한 `YYYY-MM-DD`로 변환, 유효하지 않은 날짜(13월 등)나 인식 불가 시 `None` 반환
+- AI 파싱 결과의 `date` 필드에 항상 이 정규화를 거치도록 적용 (백엔드에서 형식 강제, AI 응답 형식에 의존하지 않음)
+- 프롬프트에도 "다른 형식이어도 YYYY-MM-DD로 변환" 문구 추가로 보강
+- 단위 테스트로 5개 포맷 + 3개 실패 케이스 정상 동작 확인
+
+---
+
 ## 2026-08-23 (2)
 
 ### 추가 — AI 캡처 업로드로 주식 매매 내역 자동 인식 (premium/admin 전용)
