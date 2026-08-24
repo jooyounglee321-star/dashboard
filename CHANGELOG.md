@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-08-23 (3)
+
+### 수정 — AI 캡처 날짜 공란 버그 (`routers/portfolio.py`)
+
+- `_normalize_date_str(raw)` 헬퍼 추가
+  - 지원 형식: `YYYY-MM-DD`, `YYYY/MM/DD`, `YYYY.MM.DD`, `MM/DD/YYYY`, `MM-DD-YYYY`, `MM.DD.YYYY`
+  - `datetime.date(y, mo, d)` 유효성 검증 (13월·32일 등 → `None`)
+  - 인식 불가 / None / 빈 문자열 → `None` 반환
+- `parse_transactions_from_images`: `date_str`을 `_normalize_date_str` 거쳐 항상 정규화
+- Claude Vision 프롬프트 강화: 이미지 날짜 형식과 무관하게 YYYY-MM-DD 변환 지시
+- 단위 테스트 11케이스 전부 통과 확인
+
+---
+
 ## 2026-08-23 (2)
 
 ### 추가 — AI 캡처 업로드로 주식 매매 내역 자동 인식 (premium/admin 전용)
