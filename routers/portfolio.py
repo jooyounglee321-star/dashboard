@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import random
+import re
 import string
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -23,6 +24,37 @@ from schemas import PortfolioSnapshotCreate, PortfolioSnapshotOut
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
+
+
+def _normalize_date_str(raw) -> str | None:
+    """날짜 문자열을 항상 YYYY-MM-DD로 정규화.
+
+    지원 형식:
+      YYYY-MM-DD / YYYY/MM/DD / YYYY.MM.DD  (연도 앞)
+      MM/DD/YYYY / MM-DD-YYYY / MM.DD.YYYY  (미국식, 연도 뒤)
+    유효하지 않으면 None 반환.
+    """
+    if not raw:
+        return None
+    s = str(raw).strip()
+
+    # 연도-월-일 (앞자리가 4자리 연도)
+    m = re.fullmatch(r"(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})", s)
+    if m:
+        y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    else:
+        # 월/일/연도 (미국식, 뒷자리가 4자리 연도)
+        m = re.fullmatch(r"(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})", s)
+        if m:
+            mo, d, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        else:
+            return None
+
+    try:
+        return date(y, mo, d).isoformat()
+    except ValueError:
+        return None
+
 
 # 카테고리 → (그룹명, 통화)
 _CAT_META: dict[str, tuple[str, str]] = {
@@ -1038,7 +1070,9 @@ async def parse_transactions_from_images(
         "\"date\": \"YYYY-MM-DD\", \"qty\": 숫자, \"price\": 숫자}\n"
         "규칙:\n"
         "- ticker: 티커 심볼 대문자. 한국 주식이면 6자리숫자.KS 형태(예: 005930.KS)\n"
-        "- date: YYYY-MM-DD 형식. 알 수 없으면 null\n"
+        "- date: 반드시 YYYY-MM-DD 형식으로 변환해서 출력. "
+        "이미지에 MM/DD/YYYY, MM-DD-YYYY, YYYY.MM.DD 등 다른 형식으로 표기돼 있어도 "
+        "YYYY-MM-DD로 변환할 것. 날짜를 알 수 없으면 null\n"
         "- qty: 수량(소수 가능). 알 수 없으면 null\n"
         "- price: 단가(소수 가능). 알 수 없으면 null\n"
         "- type: 매입/매수이면 \"buy\", 매도이면 \"sell\"\n"
@@ -1097,7 +1131,7 @@ async def parse_transactions_from_images(
         if not ticker:
             continue
         tx_type = (tx.get("type") or "buy").lower()
-        date_str = str(tx.get("date") or "")
+        date_str = _normalize_date_str(tx.get("date")) or ""
         qty = float(tx.get("qty") or 0)
         price = float(tx.get("price") or 0)
 
