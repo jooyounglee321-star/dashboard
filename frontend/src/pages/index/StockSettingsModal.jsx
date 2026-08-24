@@ -384,10 +384,196 @@ function StockDetailPanel({ g, s, onUpdate, cashBalance }) {
   )
 }
 
+/* ── AI 캡처 업로드 패널 ── */
+function CaptureUploadPanel({ g, lang, onSave, onClose }) {
+  const [files,    setFiles]    = useState([])
+  const [loading,  setLoading]  = useState(false)
+  const [results,  setResults]  = useState(null)  // {new_transactions, skipped_count, parse_errors}
+  const [rows,     setRows]     = useState([])    // 수정 가능한 결과 행
+  const [saving,   setSaving]   = useState(false)
+  const { toast, showToast }    = useToast()
+  const fileRef = useRef(null)
+
+  const sym  = g.currency === 'USD' ? '$' : '₩'
+  const fmtP = v => g.currency === 'USD' ? Number(v).toFixed(2) : Math.round(v).toLocaleString('ko-KR')
+
+  async function startParse() {
+    if (!files.length) { showToast('이미지를 선택해주세요', 'err'); return }
+    setLoading(true)
+    setResults(null)
+    setRows([])
+    try {
+      const fd = new FormData()
+      fd.append('group_id', g.id)
+      for (const f of files) fd.append('images', f)
+      const res = await apiFetch('/api/portfolio/parse-transactions', { method: 'POST', body: fd })
+      setResults(res)
+      setRows((res.new_transactions || []).map((tx, i) => ({ ...tx, _key: i, _checked: true })))
+    } catch (e) {
+      showToast('AI 인식 실패: ' + (e?.message || '알 수 없는 오류'), 'err')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function updateRow(key, field, value) {
+    setRows(prev => prev.map(r => r._key === key ? { ...r, [field]: value } : r))
+  }
+
+  async function saveSelected() {
+    const selected = rows.filter(r => r._checked)
+    if (!selected.length) { showToast('저장할 항목을 선택해주세요', 'err'); return }
+    setSaving(true)
+    try {
+      onSave(g.id, selected)
+      showToast(`✓ ${selected.length}건 저장 완료`, 'ok')
+      setTimeout(onClose, 800)
+    } catch {
+      showToast('저장 실패', 'err')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const inp = { padding: '0.28rem 0.4rem', fontSize: '0.78rem', border: '1px solid var(--border)', borderRadius: 5, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 11000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '3rem 1rem 1rem', overflowY: 'auto' }}
+      onClick={onClose}>
+      <div style={{ background: 'var(--card)', borderRadius: 14, padding: '1.4rem 1.6rem', width: '100%', maxWidth: 700, boxShadow: '0 12px 48px rgba(0,0,0,0.28)' }}
+        onClick={e => e.stopPropagation()}>
+
+        {/* 헤더 */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <div style={{ fontWeight: 700, fontSize: '0.97rem', color: 'var(--ink)' }}>
+            🤖 {t(lang, 'admin.captureUpload')} — <span style={{ fontWeight: 400, fontSize: '0.85rem', color: 'var(--ink2)' }}>{g.name}</span>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.1rem', cursor: 'pointer', color: 'var(--ink3)' }}>✕</button>
+        </div>
+
+        {/* 파일 선택 + 인식 */}
+        {!results && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--ink3)', lineHeight: 1.6, padding: '0.6rem 0.8rem', background: 'var(--card2)', borderRadius: 8 }}>
+              💡 매매 내역이 담긴 캡처 이미지를 업로드하면 AI가 자동으로 인식합니다.<br />
+              여러 장 동시 업로드 가능 · 한 장에 여러 건 인식 가능 · 중복 자동 제외
+            </div>
+            <div>
+              <input ref={fileRef} type="file" accept="image/*" multiple onChange={e => setFiles(Array.from(e.target.files))} style={{ display: 'none' }} />
+              <button onClick={() => fileRef.current?.click()}
+                style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', border: '2px dashed var(--border)', borderRadius: 8, background: 'var(--card2)', color: 'var(--ink)', cursor: 'pointer', width: '100%', textAlign: 'center' }}>
+                {files.length ? `📁 ${files.length}장 선택됨 (클릭해서 변경)` : `📁 ${t(lang, 'admin.captureSelectFiles')}`}
+              </button>
+            </div>
+            {files.length > 0 && (
+              <div style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>
+                {files.map((f, i) => <div key={i}>· {f.name}</div>)}
+              </div>
+            )}
+            <button onClick={startParse} disabled={loading || !files.length}
+              style={{ padding: '0.55rem 1.2rem', fontSize: '0.88rem', fontWeight: 600, border: 'none', borderRadius: 8, background: files.length ? 'var(--accent)' : 'var(--border)', color: files.length ? '#fff' : 'var(--ink3)', cursor: files.length ? 'pointer' : 'default', transition: 'all 0.15s' }}>
+              {loading ? t(lang, 'admin.captureParsing') : t(lang, 'admin.captureStartParse')}
+            </button>
+          </div>
+        )}
+
+        {/* 인식 결과 */}
+        {results && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {/* 요약 */}
+            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', fontSize: '0.78rem' }}>
+              <span style={{ padding: '0.22rem 0.65rem', borderRadius: 20, background: '#dcfce7', color: '#15803d', fontWeight: 600 }}>신규 {rows.length}건</span>
+              {results.skipped_count > 0 && <span style={{ padding: '0.22rem 0.65rem', borderRadius: 20, background: '#fef9c3', color: '#92400e', fontWeight: 500 }}>{t(lang, 'admin.captureSkipped')}: {results.skipped_count}건</span>}
+              {results.parse_errors?.length > 0 && <span style={{ padding: '0.22rem 0.65rem', borderRadius: 20, background: '#fee2e2', color: '#b91c1c', fontWeight: 500 }}>{t(lang, 'admin.captureParseError')}: {results.parse_errors.length}건</span>}
+            </div>
+
+            {/* 오류 목록 */}
+            {results.parse_errors?.length > 0 && (
+              <div style={{ fontSize: '0.72rem', color: '#b91c1c', background: '#fff1f2', borderRadius: 6, padding: '0.4rem 0.6rem' }}>
+                {results.parse_errors.map((e, i) => <div key={i}>· {e}</div>)}
+              </div>
+            )}
+
+            {/* 결과 없음 */}
+            {!rows.length && (
+              <div style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--ink3)', padding: '1.5rem 0' }}>
+                {t(lang, 'admin.captureNoNew')}
+              </div>
+            )}
+
+            {/* 결과 테이블 */}
+            {rows.length > 0 && (
+              <>
+                <div style={{ fontSize: '0.75rem', color: 'var(--ink2)', marginBottom: '0.2rem' }}>{t(lang, 'admin.captureResultTitle')}</div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                    <thead>
+                      <tr style={{ background: 'var(--card2)', color: 'var(--ink2)' }}>
+                        <th style={{ padding: '0.35rem 0.4rem', textAlign: 'center', fontWeight: 500, borderBottom: '1px solid var(--border)', width: 28 }}>✓</th>
+                        <th style={{ padding: '0.35rem 0.5rem', textAlign: 'left', fontWeight: 500, borderBottom: '1px solid var(--border)' }}>구분</th>
+                        <th style={{ padding: '0.35rem 0.5rem', textAlign: 'left', fontWeight: 500, borderBottom: '1px solid var(--border)' }}>티커</th>
+                        <th style={{ padding: '0.35rem 0.5rem', textAlign: 'left', fontWeight: 500, borderBottom: '1px solid var(--border)' }}>종목명</th>
+                        <th style={{ padding: '0.35rem 0.5rem', textAlign: 'left', fontWeight: 500, borderBottom: '1px solid var(--border)' }}>날짜</th>
+                        <th style={{ padding: '0.35rem 0.5rem', textAlign: 'right', fontWeight: 500, borderBottom: '1px solid var(--border)' }}>수량</th>
+                        <th style={{ padding: '0.35rem 0.5rem', textAlign: 'right', fontWeight: 500, borderBottom: '1px solid var(--border)' }}>단가</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map(r => (
+                        <tr key={r._key} style={{ borderBottom: '1px solid var(--border)', background: r._checked ? '' : 'rgba(0,0,0,0.03)', opacity: r._checked ? 1 : 0.5 }}>
+                          <td style={{ textAlign: 'center', padding: '0.3rem 0.4rem' }}>
+                            <input type="checkbox" checked={r._checked} onChange={e => updateRow(r._key, '_checked', e.target.checked)} />
+                          </td>
+                          <td style={{ padding: '0.3rem 0.5rem' }}>
+                            <span style={{ fontSize: '0.68rem', padding: '0.1rem 0.4rem', borderRadius: 4, fontWeight: 600, background: r.type === 'buy' ? '#dbeafe' : '#fee2e2', color: r.type === 'buy' ? '#1d4ed8' : '#b91c1c' }}>
+                              {r.type === 'buy' ? '매입' : '매도'}
+                            </span>
+                            {r.new_stock && <span style={{ fontSize: '0.63rem', marginLeft: 4, padding: '0.08rem 0.3rem', borderRadius: 3, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>{t(lang, 'admin.captureNewStock')}</span>}
+                          </td>
+                          <td style={{ padding: '0.3rem 0.5rem', fontWeight: 600, color: 'var(--ink)' }}>
+                            <input value={r.ticker} onChange={e => updateRow(r._key, 'ticker', e.target.value.toUpperCase())} style={{ ...inp, width: 90 }} />
+                          </td>
+                          <td style={{ padding: '0.3rem 0.5rem', color: 'var(--ink2)' }}>
+                            <input value={r.name} onChange={e => updateRow(r._key, 'name', e.target.value)} style={{ ...inp, minWidth: 80 }} />
+                          </td>
+                          <td style={{ padding: '0.3rem 0.5rem' }}>
+                            <input type="date" value={r.date || ''} onChange={e => updateRow(r._key, 'date', e.target.value)} style={{ ...inp, width: 120 }} />
+                          </td>
+                          <td style={{ padding: '0.3rem 0.5rem', textAlign: 'right' }}>
+                            <input type="number" value={r.qty} onChange={e => updateRow(r._key, 'qty', parseFloat(e.target.value) || 0)} min="0" step="any" style={{ ...inp, width: 70, textAlign: 'right' }} />
+                          </td>
+                          <td style={{ padding: '0.3rem 0.5rem', textAlign: 'right' }}>
+                            <input type="number" value={r.price} onChange={e => updateRow(r._key, 'price', parseFloat(e.target.value) || 0)} min="0" step="any" style={{ ...inp, width: 90, textAlign: 'right' }} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '0.3rem' }}>
+                  <button onClick={() => { setResults(null); setFiles([]) }}
+                    style={{ padding: '0.4rem 0.9rem', fontSize: '0.83rem', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--card2)', color: 'var(--ink)', cursor: 'pointer' }}>
+                    다시 업로드
+                  </button>
+                  <button onClick={saveSelected} disabled={saving || !rows.some(r => r._checked)}
+                    style={{ padding: '0.4rem 1.1rem', fontSize: '0.83rem', fontWeight: 600, border: 'none', borderRadius: 7, background: 'var(--accent)', color: '#fff', cursor: 'pointer' }}>
+                    {saving ? '저장 중…' : `${t(lang, 'admin.captureSaveAll')} (${rows.filter(r => r._checked).length}건)`}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+        <Toast toast={toast} />
+      </div>
+    </div>
+  )
+}
+
 /* ── 메인 컴포넌트 ── */
 // embedded=true: 모달 오버레이 없이 내용만 렌더 (AdminPage 재사용용)
 // embedded=false (기본): 전체화면 오버레이 모달
-export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embedded = false }) {
+export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embedded = false, userRole = '' }) {
   const { toast, showToast } = useToast()
   const [groups,        setGroups]      = useState([])
   const [expanded,      setExpanded]    = useState(new Set())
@@ -395,6 +581,8 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
   const [newsOpen,      setNewsOpen]    = useState(null)
   const [newsDraft,     setNewsDraft]   = useState({})
   const [confirmState,  setConfirmState] = useState({ open: false, msg: '', onOk: null })
+  const [captureGid,    setCaptureGid]  = useState(null)
+  const isPremium = userRole === 'admin' || userRole === 'premium'
   const openConfirm = (msg, onOk) => setConfirmState({ open: true, msg, onOk })
   const closeConfirm = () => setConfirmState({ open: false, msg: '', onOk: null })
 
@@ -513,6 +701,33 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
     showToast('✓ 뉴스 설정 저장', 'ok')
   }
 
+  function handleCaptureSuccess(gid, transactions) {
+    setGroups(prev => {
+      const next = prev.map(g => {
+        if (g.id !== gid) return g
+        let stocks = [...(g.stocks || [])]
+        for (const tx of transactions) {
+          const ticker = tx.ticker.toUpperCase()
+          let stockIdx = stocks.findIndex(s => !s.is_deleted && s.ticker.toUpperCase() === ticker)
+          if (stockIdx === -1) {
+            // 신규 종목 자동 추가
+            stocks.push({ id: genId(), ticker, name: tx.name || '', purchases: [], sells: [] })
+            stockIdx = stocks.length - 1
+          }
+          const record = { id: genId(), date: tx.date || null, qty: tx.qty, price: tx.price }
+          if (tx.type === 'buy') {
+            stocks[stockIdx] = { ...stocks[stockIdx], purchases: [...(stocks[stockIdx].purchases || []), record] }
+          } else {
+            stocks[stockIdx] = { ...stocks[stockIdx], sells: [...(stocks[stockIdx].sells || []), record] }
+          }
+        }
+        return { ...g, stocks }
+      })
+      apiFetch('/api/portfolio/groups', { method: 'POST', body: JSON.stringify({ data: next }) }).catch(() => {})
+      return next
+    })
+  }
+
   function confirmDelStock(gid, sid) { setDeleteModal({ gid, sid }) }
   function doDelStock() {
     if (!deleteModal) return
@@ -530,9 +745,21 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
   const itemRow  = { display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.45rem 0.8rem', borderBottom: '1px solid var(--border)' }
   const itemInfo = { flex: 1, minWidth: 0 }
 
+  const captureGroup = captureGid ? groups.find(g => g.id === captureGid) : null
+
   const content = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       <Toast toast={toast} />
+
+      {/* AI 캡처 업로드 패널 */}
+      {captureGroup && (
+        <CaptureUploadPanel
+          g={captureGroup}
+          lang={lang}
+          onSave={(gid, txs) => { handleCaptureSuccess(gid, txs); setCaptureGid(null) }}
+          onClose={() => setCaptureGid(null)}
+        />
+      )}
 
       <p style={{ fontSize: '0.78rem', color: 'var(--ink3)', margin: 0 }}>{t(lang, 'admin.stockHint')}</p>
 
@@ -553,6 +780,12 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
                     onChange={e => updateGroup(g.id, 'name', e.target.value)}
                     style={{ ...inpGrp, flex: 1 }} />
                   <span style={{ fontSize: '0.72rem', color: col.tx, opacity: 0.7 }}>{g.stocks.length}/10</span>
+                  {isPremium && (
+                    <button onClick={() => setCaptureGid(g.id)}
+                      style={{ padding: '0.28rem 0.65rem', fontSize: '0.78rem', cursor: 'pointer', background: 'rgba(255,255,255,0.7)', color: '#1d4ed8', border: '1px solid #93c5fd', borderRadius: 6, fontFamily: 'inherit', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                      🤖 {t(lang, 'admin.captureUpload')}
+                    </button>
+                  )}
                   <button onClick={() => delGroup(g.id)} style={{ padding: '0.28rem 0.65rem', fontSize: '0.78rem', cursor: 'pointer', background: 'transparent', color: '#c0392b', border: '1px solid #c0392b', borderRadius: 6, fontFamily: 'inherit', transition: 'all 0.15s' }}>{t(lang, 'admin.delGroup')}</button>
                 </div>
                 <div style={{ background: 'var(--card2)' }}>
