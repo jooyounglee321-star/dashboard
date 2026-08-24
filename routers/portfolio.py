@@ -10,7 +10,6 @@ from zoneinfo import ZoneInfo
 import yfinance as yf
 import base64
 import os
-import re as _re
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
@@ -982,35 +981,6 @@ def get_history_by_date(
     return row
 
 
-# AI가 반환한 다양한 날짜 표기를 <input type="date">가 요구하는 엄격한 YYYY-MM-DD로 정규화.
-# 이 형식이 아니면 값이 있어도 브라우저가 빈칸으로 표시하므로, 파싱 실패를 막기 위한 안전장치.
-_DATE_FORMATS = [
-    (r"^(\d{4})-(\d{1,2})-(\d{1,2})$", (1, 2, 3)),   # YYYY-MM-DD
-    (r"^(\d{4})/(\d{1,2})/(\d{1,2})$", (1, 2, 3)),   # YYYY/MM/DD
-    (r"^(\d{4})\.(\d{1,2})\.(\d{1,2})$", (1, 2, 3)), # YYYY.MM.DD
-    (r"^(\d{1,2})/(\d{1,2})/(\d{4})$", (3, 1, 2)),   # MM/DD/YYYY (미국식)
-    (r"^(\d{1,2})-(\d{1,2})-(\d{4})$", (3, 1, 2)),   # MM-DD-YYYY
-    (r"^(\d{1,2})\.(\d{1,2})\.(\d{4})$", (3, 1, 2)), # MM.DD.YYYY
-]
-
-
-def _normalize_date_str(raw) -> str | None:
-    if not raw:
-        return None
-    s = str(raw).strip()
-    for pattern, (yi, mi, di) in _DATE_FORMATS:
-        m = _re.match(pattern, s)
-        if not m:
-            continue
-        try:
-            y, mo, d = int(m.group(yi)), int(m.group(mi)), int(m.group(di))
-            date(y, mo, d)  # 유효성 검증 (예: 13월, 32일 방지)
-        except ValueError:
-            continue
-        return f"{y:04d}-{mo:02d}-{d:02d}"
-    return None
-
-
 # ── POST /api/portfolio/parse-transactions ───────────────────────────────────
 @router.post("/parse-transactions")
 async def parse_transactions_from_images(
@@ -1068,8 +1038,7 @@ async def parse_transactions_from_images(
         "\"date\": \"YYYY-MM-DD\", \"qty\": 숫자, \"price\": 숫자}\n"
         "규칙:\n"
         "- ticker: 티커 심볼 대문자. 한국 주식이면 6자리숫자.KS 형태(예: 005930.KS)\n"
-        "- date: 반드시 YYYY-MM-DD 형식. 이미지에 MM/DD/YYYY, YYYY.MM.DD 등 다른 형식으로 표기되어 있어도 "
-        "YYYY-MM-DD로 변환해서 출력. 알 수 없으면 null\n"
+        "- date: YYYY-MM-DD 형식. 알 수 없으면 null\n"
         "- qty: 수량(소수 가능). 알 수 없으면 null\n"
         "- price: 단가(소수 가능). 알 수 없으면 null\n"
         "- type: 매입/매수이면 \"buy\", 매도이면 \"sell\"\n"
@@ -1128,7 +1097,7 @@ async def parse_transactions_from_images(
         if not ticker:
             continue
         tx_type = (tx.get("type") or "buy").lower()
-        date_str = _normalize_date_str(tx.get("date")) or ""
+        date_str = str(tx.get("date") or "")
         qty = float(tx.get("qty") or 0)
         price = float(tx.get("price") or 0)
 
