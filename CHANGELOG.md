@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-08-23 (4)
+
+### 수정 — AI 캡처 개별 거래행 누락(요약) 버그 (`routers/portfolio.py`)
+
+- PROMPT 강화
+  - "행 하나 = JSON 객체 하나, 같은 종목 여러 행도 절대 합치거나 요약 금지" 명시
+  - "Buy/Sell 행 개수를 먼저 세어 배열 길이와 일치하도록 빠짐없이 출력" 지시 추가
+  - Dividend, Reinvestment, Sweep In/Out, Interest, Fee, Transfer 등 비매매 행 완전 제외 명시
+- `max_tokens` 2048 → 4096 (20건 이상 거래 내역 토큰 잘림 방지)
+
+---
+
 ## 2026-08-23 (3)
 
 ### 수정 — AI 캡처 날짜 공란 버그 (`routers/portfolio.py`)
