@@ -4,6 +4,33 @@
 
 ---
 
+## 2026-08-23 (2)
+
+### 추가 — AI 캡처 업로드로 주식 매매 내역 자동 인식 (premium/admin 전용)
+
+#### 백엔드
+- `POST /api/portfolio/parse-transactions`: multipart 이미지 → Claude Vision 파싱
+  - `require_premium_or_admin` 권한 게이트 (role: admin|premium)
+  - 이미지당 독립 파싱, 한 장에 여러 건 인식 가능, 여러 장 동시 처리
+  - 중복 판정: ticker+date+type+qty+price 5개 전부 일치 시 자동 제외
+  - 신규 종목(그룹에 없는 ticker) `new_stock: true` 플래그 반환
+- `routers/_shared.py`: `require_premium_or_admin` Depends 함수 추가
+- `requirements.txt`: `anthropic`, `python-multipart` 추가
+
+#### 프론트엔드
+- `StockSettingsModal.jsx`: 그룹별 "🤖 AI 캡처" 버튼 (premium/admin만 노출)
+  - `CaptureUploadPanel` 컴포넌트: 파일선택 → AI인식 → 결과확인테이블(수정가능) → 저장
+  - 저장 시 기존 `saveGroupsToDB` 파이프라인 재사용, 신규 종목 자동 추가
+- `IndexPage.jsx`: `userRole` prop 전달
+- `api.js`: FormData 전송 시 `Content-Type` 자동 지정 건너뜀 (multipart boundary 보호)
+
+#### i18n
+- `admin.captureUpload`, `captureStartParse`, `captureParsing`, `captureResultTitle`,
+  `captureSkipped`, `captureNoNew`, `captureSaveAll`, `capturePremiumOnly`,
+  `captureNewStock`, `captureSelectFiles`, `captureParseError` (ko/en 모두 추가)
+
+---
+
 ## 2026-08-23
 
 ### 추가 — 환경변수(API 키) 설정 여부 확인 엔드포인트 (`routers/admin.py`)
