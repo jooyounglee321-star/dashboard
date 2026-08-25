@@ -10,15 +10,13 @@ import base64
 import json
 import logging
 import os
-import re
-from datetime import date as Date
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from database import get_db
 from models import Expense, ExpenseCategory, User
-from routers._shared import require_premium_or_admin
+from routers._shared import normalize_date_str as _normalize_date, require_premium_or_admin
 
 logger = logging.getLogger(__name__)
 
@@ -26,26 +24,6 @@ capture_router = APIRouter(tags=["expense"])
 
 
 # ── 내부 유틸 ────────────────────────────────────────────────────────────────
-
-def _normalize_date(raw) -> str | None:
-    """날짜 문자열을 YYYY-MM-DD로 정규화. 지원: YYYY-MM-DD, MM/DD/YYYY 등."""
-    if not raw:
-        return None
-    s = str(raw).strip()
-    m = re.fullmatch(r"(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})", s)
-    if m:
-        y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
-    else:
-        m = re.fullmatch(r"(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})", s)
-        if m:
-            mo, d, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
-        else:
-            return None
-    try:
-        return Date(y, mo, d).isoformat()
-    except ValueError:
-        return None
-
 
 def _match_name(target: str | None, rows: list[dict], *keys: str) -> int | None:
     """이름 느슨한 매칭(strip+lower) — 여러 키 중 하나라도 일치하면 id 반환."""

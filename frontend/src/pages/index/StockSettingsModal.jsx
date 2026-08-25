@@ -425,11 +425,11 @@ function CaptureUploadPanel({ g, lang, onSave, onClose }) {
     if (!selected.length) { showToast('저장할 항목을 선택해주세요', 'err'); return }
     setSaving(true)
     try {
-      onSave(g.id, selected)
+      await onSave(g.id, selected)
       showToast(`✓ ${selected.length}건 저장 완료`, 'ok')
       setTimeout(onClose, 800)
     } catch {
-      showToast('저장 실패', 'err')
+      showToast('저장 실패 — 다시 시도해주세요', 'err')
     } finally {
       setSaving(false)
     }
@@ -701,31 +701,28 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
     showToast('✓ 뉴스 설정 저장', 'ok')
   }
 
-  function handleCaptureSuccess(gid, transactions) {
-    setGroups(prev => {
-      const next = prev.map(g => {
-        if (g.id !== gid) return g
-        let stocks = [...(g.stocks || [])]
-        for (const tx of transactions) {
-          const ticker = tx.ticker.toUpperCase()
-          let stockIdx = stocks.findIndex(s => !s.is_deleted && s.ticker.toUpperCase() === ticker)
-          if (stockIdx === -1) {
-            // 신규 종목 자동 추가
-            stocks.push({ id: genId(), ticker, name: tx.name || '', purchases: [], sells: [] })
-            stockIdx = stocks.length - 1
-          }
-          const record = { id: genId(), date: tx.date || null, qty: tx.qty, price: tx.price }
-          if (tx.type === 'buy') {
-            stocks[stockIdx] = { ...stocks[stockIdx], purchases: [...(stocks[stockIdx].purchases || []), record] }
-          } else {
-            stocks[stockIdx] = { ...stocks[stockIdx], sells: [...(stocks[stockIdx].sells || []), record] }
-          }
+  async function handleCaptureSuccess(gid, transactions) {
+    const next = groups.map(g => {
+      if (g.id !== gid) return g
+      let stocks = [...(g.stocks || [])]
+      for (const tx of transactions) {
+        const ticker = tx.ticker.toUpperCase()
+        let stockIdx = stocks.findIndex(s => !s.is_deleted && s.ticker.toUpperCase() === ticker)
+        if (stockIdx === -1) {
+          stocks.push({ id: genId(), ticker, name: tx.name || '', purchases: [], sells: [] })
+          stockIdx = stocks.length - 1
         }
-        return { ...g, stocks }
-      })
-      apiFetch('/api/portfolio/groups', { method: 'POST', body: JSON.stringify({ data: next }) }).catch(() => {})
-      return next
+        const record = { id: genId(), date: tx.date || null, qty: tx.qty, price: tx.price }
+        if (tx.type === 'buy') {
+          stocks[stockIdx] = { ...stocks[stockIdx], purchases: [...(stocks[stockIdx].purchases || []), record] }
+        } else {
+          stocks[stockIdx] = { ...stocks[stockIdx], sells: [...(stocks[stockIdx].sells || []), record] }
+        }
+      }
+      return { ...g, stocks }
     })
+    setGroups(next)
+    await apiFetch('/api/portfolio/groups', { method: 'POST', body: JSON.stringify({ data: next }) })
   }
 
   function confirmDelStock(gid, sid) { setDeleteModal({ gid, sid }) }
@@ -756,7 +753,7 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
         <CaptureUploadPanel
           g={captureGroup}
           lang={lang}
-          onSave={(gid, txs) => { handleCaptureSuccess(gid, txs); setCaptureGid(null) }}
+          onSave={async (gid, txs) => { await handleCaptureSuccess(gid, txs); setCaptureGid(null) }}
           onClose={() => setCaptureGid(null)}
         />
       )}

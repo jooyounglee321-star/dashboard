@@ -4,6 +4,40 @@
 
 ---
 
+## 2026-08-24 (3)
+
+### 버그 수정 및 리팩토링 — AI 캡처 코드 품질 개선
+
+#### Issue 1 — `StockSettingsModal.jsx` 저장 실패 무시 버그 수정
+- `handleCaptureSuccess`: `setGroups` 업데이터 내부에서 `.catch(()=>{})` 로 API 에러를 삼키던 패턴 제거
+  - `next` 배열을 업데이터 바깥에서 계산 후 `setGroups(next)` 호출
+  - `await apiFetch(...)` 로 에러 전파 (실패 시 throw)
+- `CaptureUploadPanel.saveSelected`: `onSave(...)` 미await 버그 수정 → `await onSave(...)`
+  - API 실패 시 `catch` 블록에서 에러 토스트 표시, 모달 유지
+  - 성공 시만 "저장 완료" 토스트 + 자동 닫힘
+- `onSave` 와이어업: `async (gid, txs) => { await handleCaptureSuccess(...); setCaptureGid(null) }` — 실패 시 `setCaptureGid(null)` 미실행
+
+#### Issue 2 — `routers/portfolio.py` JSON 추출 로직 수정
+- 기존: 코드블록(```) 감지 방식 → `json.loads` 직접 시도 (AI 앞뒤 설명 텍스트 있으면 실패)
+- 수정: `text.find('[') ~ text.rfind(']')` 방식으로 교체 (expense_capture.py와 동일)
+- AI가 설명 텍스트나 코드블록 래핑을 추가해도 안정적으로 JSON 배열 추출
+
+#### Issue 3 — 날짜 정규화 함수 통합 (`routers/_shared.py`)
+- 기존: `_normalize_date_str` (portfolio.py), `_normalize_date` (expense_capture.py) 중복 존재
+- 수정: `normalize_date_str` 함수를 `routers/_shared.py` 로 통합
+- `portfolio.py` / `expense_capture.py` 모두 `_shared` 에서 import (DRY 원칙)
+
+#### Issue 4 — AI 캡처 유틸 단위 테스트 추가 (`tests/test_ai_capture_utils.py`)
+- `normalize_date_str` 10개 테스트: ISO, 슬래시/점 구분자, 미국식, None/빈값, 유효하지 않은 날짜
+- `_match_name` 7개 테스트: 한글/영문, 대소문자 무시, 공백 trim, 미일치, None/빈 목록
+
+#### 테스트 결과
+- `pytest -v`: **50 passed** (기존 19 + 신규 17 + 기존 10 + 기존 4 합산)
+- `npm run test`: **57 passed** (vitest)
+- `npm run build`: 빌드 성공 (경고 없음)
+
+---
+
 ## 2026-08-24 (2)
 
 ### 개선 — 가계부 AI 캡처 영수증 지원 (`routers/expense_capture.py`)

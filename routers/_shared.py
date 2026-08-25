@@ -1,6 +1,9 @@
 from __future__ import annotations
 """라우터 공통 유틸 — expense.py / income.py / admin.py 등 공유."""
 
+import re
+from datetime import date as _Date
+
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -34,6 +37,26 @@ def require_premium_or_admin(current_user: User = Depends(get_current_user)) -> 
     if current_user.role in ("admin", "premium"):
         return current_user
     raise HTTPException(status_code=403, detail="프리미엄 이상 멤버만 사용 가능합니다.")
+
+
+def normalize_date_str(raw) -> str | None:
+    """날짜 문자열을 YYYY-MM-DD로 정규화. 지원: YYYY-MM-DD, MM/DD/YYYY 등."""
+    if not raw:
+        return None
+    s = str(raw).strip()
+    m = re.fullmatch(r"(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})", s)
+    if m:
+        y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    else:
+        m = re.fullmatch(r"(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})", s)
+        if m:
+            mo, d, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        else:
+            return None
+    try:
+        return _Date(y, mo, d).isoformat()
+    except ValueError:
+        return None
 
 
 def resolve_yf_ticker(ticker: str, category: str | None) -> str:

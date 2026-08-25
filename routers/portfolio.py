@@ -18,42 +18,13 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import DailyPortfolioSnapshot, DividendHistory, ExchangeRate, PortfolioGroups, Stock, User
 from routers.auth import get_current_user
-from routers._shared import require_premium_or_admin, resolve_yf_ticker as _backfill_resolve_ticker
+from routers._shared import normalize_date_str as _normalize_date_str, require_premium_or_admin, resolve_yf_ticker as _backfill_resolve_ticker
 from schemas import PortfolioSnapshotCreate, PortfolioSnapshotOut
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
 
-
-def _normalize_date_str(raw) -> str | None:
-    """날짜 문자열을 항상 YYYY-MM-DD로 정규화.
-
-    지원 형식:
-      YYYY-MM-DD / YYYY/MM/DD / YYYY.MM.DD  (연도 앞)
-      MM/DD/YYYY / MM-DD-YYYY / MM.DD.YYYY  (미국식, 연도 뒤)
-    유효하지 않으면 None 반환.
-    """
-    if not raw:
-        return None
-    s = str(raw).strip()
-
-    # 연도-월-일 (앞자리가 4자리 연도)
-    m = re.fullmatch(r"(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})", s)
-    if m:
-        y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
-    else:
-        # 월/일/연도 (미국식, 뒷자리가 4자리 연도)
-        m = re.fullmatch(r"(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})", s)
-        if m:
-            mo, d, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
-        else:
-            return None
-
-    try:
-        return date(y, mo, d).isoformat()
-    except ValueError:
-        return None
 
 
 # 카테고리 → (그룹명, 통화)
@@ -1119,15 +1090,15 @@ async def parse_transactions_from_images(
                 }],
             )
             text = response.content[0].text.strip()
-            # JSON 배열 추출 (코드블록 래핑 방어)
-            if text.startswith("```"):
-                text = text.split("```")[1]
-                if text.startswith("json"):
-                    text = text[4:]
-                text = text.strip()
-            parsed = json.loads(text)
-            if isinstance(parsed, list):
-                all_parsed.extend(parsed)
+            # JSON 추출: 첫 [ 부터 마지막 ] 까지 — 코드블록·앞뒤 설명 텍스트 무관
+            start = text.find("[")
+            end   = text.rfind("]")
+            if start != -1 and end != -1 and end > start:
+                parsed = json.loads(text[start:end + 1])
+                if isinstance(parsed, list):
+                    all_parsed.extend(parsed)
+            else:
+                parse_errors.append(f"{img.filename}: JSON 배열을 찾지 못했습니다")
         except json.JSONDecodeError:
             parse_errors.append(f"{img.filename}: AI 응답 파싱 실패")
         except Exception as exc:
