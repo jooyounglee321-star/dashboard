@@ -649,7 +649,12 @@
     "drilldownItems": "지출 내역",
     "drilldownCount": "건",
     "noSubcategory": "소분류 없음",
-    "clickForDetail": "클릭하면 소분류 내역을 볼 수 있습니다"
+    "clickForDetail": "클릭하면 소분류 내역을 볼 수 있습니다",
+    "categoryMonthlyMatrix": "카테고리 × 월별 매트릭스",
+    "grandTotal": "지출 합계",
+    "incomeRow": "수입 합계",
+    "exportMatrixCSV": "매트릭스 CSV",
+    "annual": "연간"
   },
   "category": {
     "utilities": "공과금",

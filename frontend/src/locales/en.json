@@ -649,7 +649,12 @@
     "drilldownItems": "Expense Items",
     "drilldownCount": "items",
     "noSubcategory": "No Subcategory",
-    "clickForDetail": "Click to view subcategory details"
+    "clickForDetail": "Click to view subcategory details",
+    "categoryMonthlyMatrix": "Category × Monthly Matrix",
+    "grandTotal": "Total Expenses",
+    "incomeRow": "Total Income",
+    "exportMatrixCSV": "Matrix CSV",
+    "annual": "Annual"
   },
   "category": {
     "utilities": "Utilities",

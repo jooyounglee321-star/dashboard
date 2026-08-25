@@ -4,6 +4,36 @@
 
 ---
 
+## 2026-08-25
+
+### 신규 기능 — 가계부 연도별 탭: 카테고리 × 월별 매트릭스 표
+
+#### 백엔드
+- `routers/expense_stats.py`: `GET /api/expense/summary/yearly-matrix?year=YYYY&lang=ko|en` 신규 추가
+  - 대분류(category_id) × 월별(1~12) 합계 집계
+  - 소분류(subcategory_id) × 월별 합계 집계
+  - 응답: `categories[]` (monthly[12], subcategories[]), `grand_total_monthly[12]`, `income_monthly[12]`
+  - category_id 없는 지출 → "기타" 그룹
+
+#### 프론트엔드 (`frontend/src/pages/BudgetPage.jsx`)
+- `YearlyTab`: `matrixData`, `matrixLoading`, `expandedCats` 상태 추가
+- `loadMatrix()`: yearly-matrix 엔드포인트 호출, year/lang 변경 시 자동 재로드
+- `toggleCat()`: 대분류 클릭 시 소분류 아코디언 인라인 펼침/접힘
+- `doExportMatrix()`: 매트릭스 CSV 내보내기 (`matrix-YYYY.csv`)
+- 표 레이아웃: `overflow-x: auto` wrapper + 첫 번째 열 sticky
+- 0 금액 셀은 `-` 표시 (가독성)
+- 맨 아래 지출 합계 행 + 수입 합계 행 추가
+
+#### i18n
+- `ko.json` / `en.json` `budget.*` 네임스페이스에 5개 키 추가:
+  `categoryMonthlyMatrix`, `grandTotal`, `incomeRow`, `exportMatrixCSV`, `annual`
+
+#### 테스트 결과
+- `pytest`: 50개 통과
+- `npm run build`: 성공
+
+---
+
 ## 2026-08-24 (5)
 
 ### 버그 수정 — AI 식단 분석 버튼 405 에러

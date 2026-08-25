@@ -1192,6 +1192,10 @@ function YearlyTab({ lang, currency, toDisplay }) {
   const [data, setData]   = useState(null)
   const [loading, setLoading] = useState(false)
 
+  const [matrixData, setMatrixData]       = useState(null)
+  const [matrixLoading, setMatrixLoading] = useState(false)
+  const [expandedCats, setExpandedCats]   = useState({})
+
   const [yearlyDrillModal, setYearlyDrillModal]   = useState(null)
   const [yearlyDrillData, setYearlyDrillData]     = useState(null)
   const [yearlyDrillLoading, setYearlyDrillLoading] = useState(false)
@@ -1212,6 +1216,52 @@ function YearlyTab({ lang, currency, toDisplay }) {
   }, [year, lang])
 
   useEffect(() => { load() }, [load])
+
+  const loadMatrix = useCallback(() => {
+    setMatrixLoading(true)
+    setExpandedCats({})
+    apiGet(`/api/expense/summary/yearly-matrix?year=${year}&lang=${lang}`)
+      .then(d => setMatrixData(d)).catch(() => {})
+      .finally(() => setMatrixLoading(false))
+  }, [year, lang])
+
+  useEffect(() => { loadMatrix() }, [loadMatrix])
+
+  function toggleCat(catKey) {
+    setExpandedCats(prev => ({ ...prev, [catKey]: !prev[catKey] }))
+  }
+
+  function doExportMatrix() {
+    if (!matrixData) return
+    const mLabels = ML[lang] || ML.en
+    const header = [t(lang, 'budget.category'), ...mLabels, t(lang, 'budget.annual')]
+    const csvRows = [header]
+    for (const cat of matrixData.categories) {
+      csvRows.push([
+        cat.category_name,
+        ...cat.monthly.map(v => v ? fmtAmt(toDisplay(v), currency) : '-'),
+        fmtAmt(toDisplay(cat.total_usd), currency),
+      ])
+      for (const sub of cat.subcategories || []) {
+        csvRows.push([
+          `  ${sub.subcategory_name}`,
+          ...sub.monthly.map(v => v ? fmtAmt(toDisplay(v), currency) : '-'),
+          fmtAmt(toDisplay(sub.total_usd), currency),
+        ])
+      }
+    }
+    csvRows.push([
+      t(lang, 'budget.grandTotal'),
+      ...matrixData.grand_total_monthly.map(v => v ? fmtAmt(toDisplay(v), currency) : '-'),
+      fmtAmt(toDisplay(matrixData.grand_total_usd), currency),
+    ])
+    csvRows.push([
+      t(lang, 'budget.incomeRow'),
+      ...matrixData.income_monthly.map(v => v ? fmtAmt(toDisplay(v), currency) : '-'),
+      fmtAmt(toDisplay(matrixData.income_total_usd), currency),
+    ])
+    csvDownload(csvRows, `matrix-${year}.csv`)
+  }
 
   function openYearlyDrillModal(cat) {
     setYearlyDrillModal({ category_id: cat.category_id, category_name: cat.category_name, category_icon: cat.category_icon })
@@ -1398,6 +1448,84 @@ function YearlyTab({ lang, currency, toDisplay }) {
               </table>
             </div>
           )}
+
+          {/* ── 카테고리 × 월별 매트릭스 ── */}
+          <div className="bp-table-wrap" style={{ marginTop: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 0.9rem 0.5rem' }}>
+              <h3 className="bp-section-h3" style={{ margin: 0 }}>{t(lang, 'budget.categoryMonthlyMatrix')}</h3>
+              <button className="bp-btn-sm" onClick={doExportMatrix}>📥 {t(lang, 'budget.exportMatrixCSV')}</button>
+            </div>
+            {matrixLoading ? (
+              <p className="bp-info">{t(lang, 'common.loading')}</p>
+            ) : matrixData && (
+              <div style={{ overflowX: 'auto' }}>
+                <table className="bp-table" style={{ minWidth: '900px' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ position: 'sticky', left: 0, background: 'var(--card)', zIndex: 2, minWidth: '140px' }}>
+                        {t(lang, 'budget.category')}
+                      </th>
+                      {(ML[lang] || ML.en).map((m, i) => (
+                        <th key={i} style={{ textAlign: 'right', minWidth: '72px' }}>{m}</th>
+                      ))}
+                      <th style={{ textAlign: 'right', minWidth: '80px' }}>{t(lang, 'budget.annual')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {matrixData.categories.map((cat, ci) => {
+                      const catKey = cat.category_id ?? '__other__'
+                      const expanded = !!expandedCats[catKey]
+                      return [
+                        <tr key={`cat-${ci}`} onClick={() => toggleCat(catKey)} style={{ cursor: 'pointer', fontWeight: 600 }} className="bp-row-drillable">
+                          <td style={{ position: 'sticky', left: 0, background: 'var(--card)', zIndex: 1 }}>
+                            <span style={{ marginRight: '0.25rem', fontSize: '0.75rem', color: 'var(--ink3)' }}>{expanded ? '▼' : '▶'}</span>
+                            {cat.category_icon && <span className="bp-cat-icon">{cat.category_icon}</span>}
+                            {cat.category_name}
+                          </td>
+                          {cat.monthly.map((v, mi) => (
+                            <td key={mi} style={{ textAlign: 'right' }}>{v ? fmtAmt(toDisplay(v), currency) : <span style={{ color: 'var(--ink3)' }}>-</span>}</td>
+                          ))}
+                          <td style={{ textAlign: 'right' }}><strong>{fmtAmt(toDisplay(cat.total_usd), currency)}</strong></td>
+                        </tr>,
+                        ...(expanded ? (cat.subcategories || []).map((sub, si) => (
+                          <tr key={`sub-${ci}-${si}`} style={{ fontSize: '0.88rem', opacity: 0.85 }}>
+                            <td style={{ position: 'sticky', left: 0, background: 'var(--card)', zIndex: 1, paddingLeft: '1.8rem' }}>
+                              {sub.subcategory_icon && <span style={{ marginRight: '0.25rem' }}>{sub.subcategory_icon}</span>}
+                              {sub.subcategory_name}
+                            </td>
+                            {sub.monthly.map((v, mi) => (
+                              <td key={mi} style={{ textAlign: 'right' }}>{v ? fmtAmt(toDisplay(v), currency) : <span style={{ color: 'var(--ink3)' }}>-</span>}</td>
+                            ))}
+                            <td style={{ textAlign: 'right' }}>{fmtAmt(toDisplay(sub.total_usd), currency)}</td>
+                          </tr>
+                        )) : []),
+                      ]
+                    })}
+                    {/* 지출 합계 행 */}
+                    <tr className="bp-total-row">
+                      <td style={{ position: 'sticky', left: 0, background: 'var(--card)', zIndex: 1 }}>
+                        <strong>{t(lang, 'budget.grandTotal')}</strong>
+                      </td>
+                      {matrixData.grand_total_monthly.map((v, i) => (
+                        <td key={i} style={{ textAlign: 'right' }}><strong>{v ? fmtAmt(toDisplay(v), currency) : <span style={{ color: 'var(--ink3)' }}>-</span>}</strong></td>
+                      ))}
+                      <td style={{ textAlign: 'right' }}><strong>{fmtAmt(toDisplay(matrixData.grand_total_usd), currency)}</strong></td>
+                    </tr>
+                    {/* 수입 합계 행 */}
+                    <tr>
+                      <td style={{ position: 'sticky', left: 0, background: 'var(--card)', zIndex: 1, color: 'var(--green, #4ac56e)' }}>
+                        <strong>{t(lang, 'budget.incomeRow')}</strong>
+                      </td>
+                      {matrixData.income_monthly.map((v, i) => (
+                        <td key={i} style={{ textAlign: 'right', color: 'var(--green, #4ac56e)' }}>{v ? fmtAmt(toDisplay(v), currency) : <span style={{ color: 'var(--ink3)' }}>-</span>}</td>
+                      ))}
+                      <td style={{ textAlign: 'right', color: 'var(--green, #4ac56e)' }}><strong>{fmtAmt(toDisplay(matrixData.income_total_usd), currency)}</strong></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </>
       )}
 

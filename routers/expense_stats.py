@@ -12,7 +12,7 @@ from sqlalchemy import func as sqlfunc
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Expense, ExpenseBudget, User
+from models import Expense, ExpenseBudget, ExpenseCategory, User
 from routers._shared import get_rate as _get_rate
 from routers.auth import get_current_user
 from routers.expense_shared import (
@@ -178,6 +178,117 @@ def summary_yearly(
         "monthly":             _monthly_totals(rows),
         "prev_monthly":        _monthly_totals(prev_rows),
         "by_category":         _group_by_category(rows, db, lang, expense_type="expense", cat_map=_build_cat_map(rows, db)),
+    }
+
+
+@stats_router.get("/summary/yearly-matrix")
+def summary_yearly_matrix(
+    year: int = Query(...),
+    lang: str  = Query("ko", pattern="^(ko|en)$"),
+    db:   Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """카테고리 × 월별 매트릭스 — 대분류(소계) + 소분류 드릴다운용."""
+    rows = (
+        db.query(Expense)
+        .filter(
+            Expense.user_id == current_user.id,
+            sqlfunc.extract("year", Expense.date) == year,
+        )
+        .all()
+    )
+
+    # 카테고리 맵 (id → ExpenseCategory)
+    cat_ids = {e.category_id for e in rows if e.category_id} | \
+              {e.subcategory_id for e in rows if e.subcategory_id}
+    cat_map: dict[int, ExpenseCategory] = {}
+    if cat_ids:
+        cat_map = {c.id: c for c in db.query(ExpenseCategory).filter(ExpenseCategory.id.in_(cat_ids)).all()}
+
+    # 대분류 집계: { cat_id → { month → usd } }
+    # 소분류 집계: { cat_id → { sub_id → { month → usd } } }
+    def _name(c: ExpenseCategory) -> str:
+        return c.name_ko if lang == "ko" else c.name_en
+
+    OTHER_KEY = "__other__"
+    cat_monthly: dict = {}        # cat_key → [0.0]*12
+    sub_monthly: dict = {}        # cat_key → { sub_key → [0.0]*12 }
+    cat_meta: dict = {}           # cat_key → {name, icon}
+    sub_meta: dict = {}           # (cat_key, sub_key) → {name, icon}
+    income_monthly = [0.0] * 12
+
+    for e in rows:
+        usd = float(e.converted_amount) if e.converted_amount is not None else float(e.amount)
+        m   = e.date.month - 1  # 0-indexed
+        if getattr(e, "type", "expense") == "income":
+            income_monthly[m] = round(income_monthly[m] + usd, 2)
+            continue
+        cat = cat_map.get(e.category_id) if e.category_id else None
+        sub = cat_map.get(e.subcategory_id) if e.subcategory_id else None
+        cat_key = e.category_id if cat else OTHER_KEY
+        sub_key = e.subcategory_id if sub else None
+
+        if cat_key not in cat_monthly:
+            cat_monthly[cat_key] = [0.0] * 12
+            sub_monthly[cat_key] = {}
+            if cat:
+                cat_meta[cat_key] = {"category_name": _name(cat), "category_icon": cat.icon or "📦"}
+            else:
+                cat_meta[cat_key] = {"category_name": "기타" if lang == "ko" else "Other", "category_icon": "📦"}
+
+        cat_monthly[cat_key][m] = round(cat_monthly[cat_key][m] + usd, 2)
+
+        if sub_key is not None:
+            if sub_key not in sub_monthly[cat_key]:
+                sub_monthly[cat_key][sub_key] = [0.0] * 12
+                sub_meta[(cat_key, sub_key)] = {"subcategory_name": _name(sub), "subcategory_icon": sub.icon or ""}
+            sub_monthly[cat_key][sub_key][m] = round(sub_monthly[cat_key][sub_key][m] + usd, 2)
+        else:
+            # 소분류 없는 항목은 "기타소분류" 버킷
+            none_key = None
+            if none_key not in sub_monthly[cat_key]:
+                sub_monthly[cat_key][none_key] = [0.0] * 12
+                sub_meta[(cat_key, none_key)] = {
+                    "subcategory_name": "기타" if lang == "ko" else "Other",
+                    "subcategory_icon": "",
+                }
+            sub_monthly[cat_key][none_key][m] = round(sub_monthly[cat_key][none_key][m] + usd, 2)
+
+    # 지출 총합
+    grand_monthly = [0.0] * 12
+    for monthly in cat_monthly.values():
+        for i in range(12):
+            grand_monthly[i] = round(grand_monthly[i] + monthly[i], 2)
+
+    categories = []
+    for cat_key, monthly in sorted(cat_monthly.items(), key=lambda x: -sum(x[1])):
+        subs = []
+        for sub_key, s_monthly in sorted(sub_monthly[cat_key].items(), key=lambda x: -sum(x[1])):
+            meta = sub_meta.get((cat_key, sub_key), {})
+            subs.append({
+                "subcategory_id":   sub_key,
+                "subcategory_name": meta.get("subcategory_name", ""),
+                "subcategory_icon": meta.get("subcategory_icon", ""),
+                "monthly":          s_monthly,
+                "total_usd":        round(sum(s_monthly), 2),
+            })
+        meta = cat_meta.get(cat_key, {})
+        categories.append({
+            "category_id":   cat_key if cat_key != OTHER_KEY else None,
+            "category_name": meta.get("category_name", ""),
+            "category_icon": meta.get("category_icon", "📦"),
+            "monthly":       monthly,
+            "total_usd":     round(sum(monthly), 2),
+            "subcategories": subs,
+        })
+
+    return {
+        "year":                year,
+        "categories":          categories,
+        "grand_total_monthly": grand_monthly,
+        "grand_total_usd":     round(sum(grand_monthly), 2),
+        "income_monthly":      income_monthly,
+        "income_total_usd":    round(sum(income_monthly), 2),
     }
 
 
