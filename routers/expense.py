@@ -32,6 +32,7 @@ from routers.expense_categories import category_router
 from routers.expense_stats import stats_router
 from routers.expense_budget import budget_router
 from routers.expense_recurring import recurring_router
+from routers.expense_capture import capture_router
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,7 @@ expense_router.include_router(category_router)
 expense_router.include_router(stats_router)
 expense_router.include_router(budget_router)
 expense_router.include_router(recurring_router)
+expense_router.include_router(capture_router)
 
 
 # ════════════════════════════════════════════════════════════════════════════
