@@ -449,7 +449,8 @@
     "noAnalysis": "No Analysis",
     "viewStats": "📈 View Diet Stats",
     "mealsOfDay": "Meals",
-    "analysisOfDay": "Analysis Result"
+    "analysisOfDay": "Analysis Result",
+    "analyzeError": "An error occurred during analysis. Please try again."
   },
   "dietTitle": "Today's Diet",
   "dietEmpty": "Log your meals",

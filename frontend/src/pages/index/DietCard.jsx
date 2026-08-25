@@ -15,6 +15,7 @@ const MORD = ['아침', '점심', '저녁', '간식']
 const MEAL_EMOJI = { '아침': '🌅', '점심': '☀️', '저녁': '🌙', '간식': '🍎' }
 
 export default function DietCard({ isMobile = false, mealConfig = null, lang = 'ko' }) {
+  const navigate = useNavigate()
   const visibleMeals = mealConfig ? MORD.filter(m => mealConfig[m] !== false) : MORD
   const mealLabel = key => (T[lang]?.dietMeals ?? T.ko.dietMeals)[key] ?? key
 
@@ -131,26 +132,33 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
     }
   }
 
-  // AI 식단 분석 (API 연동 전 더미 데이터 2초 딜레이)
+  // AI 식단 분석 — 실제 Claude API 호출
   async function runAnalysis() {
     if (showAnalysis && analysisResult && !isSavedResult) { setShowAnalysis(false); return }
     setShowAnalysis(true)
     setIsAnalyzing(true)
     setAnalysisResult(null)
     setIsSavedResult(false)
-    await new Promise(r => setTimeout(r, 2000))
-    setAnalysisResult({
-      nutrition: lang === 'en'
-        ? 'Based on today\'s meals, your protein intake looks good.'
-        : '오늘 식단을 분석한 결과, 단백질 섭취가 양호합니다.',
-      recommendations: lang === 'en'
-        ? ['Consider adding a handful of nuts as a snack', 'Try to increase vegetable intake at dinner']
-        : ['견과류 간식 추가 권장', '저녁에 채소 섭취 늘리기'],
-      caution: lang === 'en'
-        ? 'Sodium intake is slightly high. Try to reduce soup and broth dishes.'
-        : '나트륨 섭취가 다소 높습니다. 국물 음식을 줄여보세요.',
-    })
-    setIsAnalyzing(false)
+    try {
+      const res = await fetch('/api/diets/analyze?date=' + date, { credentials: 'include' })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        showToast(err.detail || t(lang, 'diet.analyzeError'), 'err')
+        setShowAnalysis(false)
+        return
+      }
+      const data = await res.json()
+      setAnalysisResult({
+        nutrition:       data.nutrition_analysis,
+        recommendations: Array.isArray(data.recommendations) ? data.recommendations : [data.recommendations],
+        caution:         data.warnings,
+      })
+    } catch {
+      showToast(t(lang, 'diet.analyzeError'), 'err')
+      setShowAnalysis(false)
+    } finally {
+      setIsAnalyzing(false)
+    }
   }
 
   // 분석 결과 저장

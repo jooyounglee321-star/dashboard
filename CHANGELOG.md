@@ -4,6 +4,35 @@
 
 ---
 
+## 2026-08-24 (4)
+
+### 기능 — AI 식단 분석 실제 Claude API 연동
+
+#### 백엔드 (`routers/diets.py`)
+- `POST /api/diets/analyze` 엔드포인트 신규 추가
+  - 해당 날짜 `diets` 조회 → 없으면 HTTP 400 "분석할 식단이 없습니다."
+  - `users` 테이블에서 `birth_year / gender / height_cm / weight_kg` 읽기 (null → "정보 없음", 일반 성인 기준 분석)
+  - Claude API 텍스트 호출 (Vision 아님) — 프롬프트에 신체 정보 + 끼니별 식단 주입
+  - JSON 추출: `text.find('{') ~ text.rfind('}')` 방식 (코드블록·앞뒤 텍스트 무관)
+  - `{nutrition_analysis, recommendations, warnings}` 반환 (DB 저장 없음 — 저장은 기존 `POST /api/diets/analysis`)
+  - 인증된 모든 회원 대상 (premium 제한 없음)
+
+#### 프론트 (`frontend/src/pages/index/DietCard.jsx`)
+- `runAnalysis()`: 더미 2초 딜레이 + 하드코딩 문장 → `POST /api/diets/analyze` 실제 호출로 교체
+  - 실패 시 에러 토스트 + 분석 패널 닫기 (무조건 성공 처리 없음)
+  - 응답 필드 매핑: `nutrition_analysis→nutrition`, `recommendations→recommendations`, `warnings→caution`
+- `const navigate = useNavigate()` 추가 — 프로필 배너 onClick 버그 수정 (선언 없이 사용하던 기존 버그)
+
+#### i18n (`ko.json` / `en.json`)
+- `diet.analyzeError` 키 추가: 분석 실패 에러 토스트 메시지
+
+#### 테스트 결과
+- `pytest -v`: 50 passed
+- `npm run test`: 57 passed
+- `npm run build`: 빌드 성공
+
+---
+
 ## 2026-08-24 (3)
 
 ### 버그 수정 및 리팩토링 — AI 캡처 코드 품질 개선

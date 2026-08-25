@@ -449,7 +449,8 @@
     "noAnalysis": "분석 없음",
     "viewStats": "📈 식단 통계 보기",
     "mealsOfDay": "식단 기록",
-    "analysisOfDay": "분석 결과"
+    "analysisOfDay": "분석 결과",
+    "analyzeError": "분석 중 오류가 발생했습니다. 다시 시도해주세요."
   },
   "dietTitle": "오늘의 식단",
   "dietEmpty": "식단을 입력해보세요",
