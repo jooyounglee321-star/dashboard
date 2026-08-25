@@ -4,6 +4,51 @@
 
 ---
 
+## 2026-08-24
+
+### 신규 — 가계부 AI 캡처 기능 (`routers/expense_capture.py`, `BudgetPage.jsx`)
+
+- 백엔드 `POST /api/expense/parse-transactions` 엔드포인트 추가
+  - `require_premium_or_admin` 인증 (premium/admin 전용)
+  - DB에서 지출/수입 카테고리 전체 목록 조회 후 Claude Vision 프롬프트에 주입 → AI가 실제 DB 카테고리에서만 선택
+  - JSON 추출: `find('[')~rfind(']')` 방식 — 코드블록·앞뒤 텍스트 무관하게 항상 안전하게 파싱 (주식 캡처 버그 #2 처음부터 회피)
+  - 카테고리 이름→id 느슨한 매칭(strip+lower), 실패 시 null (지어내지 않음)
+  - 중복 판정: date + amount + currency + description + type 전부 일치 시 자동 제외
+- 프론트엔드 `BudgetCapturePanel` 컴포넌트 추가 (BudgetPage.jsx 하단)
+  - 이미지 다중 업로드 + 개인정보 안내 문구
+  - 인식 결과 테이블: 타입/날짜/금액/통화/적요/대분류/소분류 모두 수정 가능, 카테고리 드롭다운
+  - 저장: `async/await`로 건별 저장 완전 대기, 성공/실패 건수 정확히 표시 (주식 캡처 버그 #1 처음부터 회피)
+  - 실패한 항목은 패널에 남겨두어 재시도 가능
+- AI 캡처 버튼 2곳 추가: 달력 헤더(CSV 버튼 옆), 날짜 모달 추가 폼 내
+- `userRole` 상태를 BudgetPage에서 `/api/auth/me`로 조회, DailyTab으로 전달
+- i18n: `budget.aiCapture/captureTitle/captureHint/capturePrivacy/captureSelectFiles/captureStartParse/captureParsing/captureResultTitle/captureSkipped/captureNoNew/captureSave/captureSaving/capturePremiumOnly/captureParseError/captureSaveOk/captureSaveFail` ko/en 양쪽 추가
+
+## 2026-08-23 (4)
+
+### 수정 — AI 캡처 개별 거래행 누락(요약) 버그 (`routers/portfolio.py`)
+
+- PROMPT 강화
+  - "행 하나 = JSON 객체 하나, 같은 종목 여러 행도 절대 합치거나 요약 금지" 명시
+  - "Buy/Sell 행 개수를 먼저 세어 배열 길이와 일치하도록 빠짐없이 출력" 지시 추가
+  - Dividend, Reinvestment, Sweep In/Out, Interest, Fee, Transfer 등 비매매 행 완전 제외 명시
+- `max_tokens` 2048 → 4096 (20건 이상 거래 내역 토큰 잘림 방지)
+
+---
+
+## 2026-08-23 (3)
+
+### 수정 — AI 캡처 날짜 공란 버그 (`routers/portfolio.py`)
+
+- `_normalize_date_str(raw)` 헬퍼 추가
+  - 지원 형식: `YYYY-MM-DD`, `YYYY/MM/DD`, `YYYY.MM.DD`, `MM/DD/YYYY`, `MM-DD-YYYY`, `MM.DD.YYYY`
+  - `datetime.date(y, mo, d)` 유효성 검증 (13월·32일 등 → `None`)
+  - 인식 불가 / None / 빈 문자열 → `None` 반환
+- `parse_transactions_from_images`: `date_str`을 `_normalize_date_str` 거쳐 항상 정규화
+- Claude Vision 프롬프트 강화: 이미지 날짜 형식과 무관하게 YYYY-MM-DD 변환 지시
+- 단위 테스트 11케이스 전부 통과 확인
+
+---
+
 ## 2026-08-23 (2)
 
 ### 추가 — AI 캡처 업로드로 주식 매매 내역 자동 인식 (premium/admin 전용)
