@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-08-24 (5)
+
+### 버그 수정 — AI 식단 분석 버튼 405 에러
+
+#### 원인
+- `DietCard.jsx` `runAnalysis()` 에서 `fetch('/api/diets/analyze', ...)` 호출 시 `method: 'POST'` 누락
+- `fetch()` 기본값은 GET이지만 백엔드는 `@router.post("/analyze")`로 POST만 허용 → 405 Method Not Allowed
+
+#### 수정 (`frontend/src/pages/index/DietCard.jsx` L143)
+- `{ credentials: 'include' }` → `{ method: 'POST', credentials: 'include' }`
+
+#### 테스트 결과
+- `npm run build`: 성공
+
+---
+
 ## 2026-08-24 (4)
 
 ### 기능 — AI 식단 분석 실제 Claude API 연동

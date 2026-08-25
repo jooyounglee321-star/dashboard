@@ -140,7 +140,7 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
     setAnalysisResult(null)
     setIsSavedResult(false)
     try {
-      const res = await fetch('/api/diets/analyze?date=' + date, { credentials: 'include' })
+      const res = await fetch('/api/diets/analyze?date=' + date, { method: 'POST', credentials: 'include' })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
         showToast(err.detail || t(lang, 'diet.analyzeError'), 'err')
