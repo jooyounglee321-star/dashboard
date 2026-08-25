@@ -103,22 +103,22 @@ export default function AdminPage() {
   function saveYTAccount() {
     const acc = { name: ytAccName.trim(), email: ytAccEmail.trim() }
     sv('yt_account', acc); setYtAccount(acc)
-    showToast('✓ YouTube 계정이 저장되었습니다', 'ok')
+    showToast(t(lang, 'admin.toastYtAccountSaved'), 'ok')
   }
   async function addYT() {
-    if (!ytName || !ytUrl) { showToast('이름과 URL을 모두 입력해주세요', 'err'); return }
+    if (!ytName || !ytUrl) { showToast(t(lang, 'admin.toastYtNameRequired'), 'err'); return }
     try {
       const r = await fetch('/api/youtube-channels', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ channel_name: ytName, channel_url: ytUrl }) })
       if (!r.ok) throw new Error('HTTP ' + r.status)
-      setYtName(''); setYtUrl(''); await loadYTChannels(); showToast('✓ 채널이 추가되었습니다', 'ok')
-    } catch { showToast('저장 실패 - 서버 연결을 확인해주세요', 'err') }
+      setYtName(''); setYtUrl(''); await loadYTChannels(); showToast(t(lang, 'admin.toastYtChannelAdded'), 'ok')
+    } catch { showToast(t(lang, 'admin.toastSaveError'), 'err') }
   }
   async function delYT(id) {
     try {
       const r = await fetch('/api/youtube-channels/' + id, { method: 'DELETE', credentials: 'include' })
       if (!r.ok) throw new Error('HTTP ' + r.status)
-      await loadYTChannels(); showToast('삭제되었습니다', 'ok')
-    } catch { showToast('삭제 실패 - 서버 연결을 확인해주세요', 'err') }
+      await loadYTChannels(); showToast(t(lang, 'common.deleteSuccess'), 'ok')
+    } catch { showToast(t(lang, 'admin.toastDeleteError'), 'err') }
   }
 
   /* ── 시간대 ── */
@@ -131,8 +131,8 @@ export default function AdminPage() {
   async function saveTZ() {
     try {
       await fetch('/api/timezone', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ zones: tzData }) })
-      showToast('✓ 시간대가 저장되었습니다', 'ok')
-    } catch { showToast('저장 실패 - 서버 연결을 확인해주세요', 'err') }
+      showToast(t(lang, 'admin.toastTzSaved'), 'ok')
+    } catch { showToast(t(lang, 'admin.toastSaveError'), 'err') }
   }
   function updateTz(i, field, value) {
     setTzData(prev => prev.map((z, idx) => idx === i ? { ...z, [field]: value } : z))
@@ -153,9 +153,9 @@ export default function AdminPage() {
         credentials: 'include',
         body: JSON.stringify({ config: widgetCfg }),
       })
-      if (r.ok) showToast('✓ 위젯 설정이 저장되었습니다', 'ok')
-      else showToast('저장 실패', 'err')
-    } catch { showToast('저장 실패 - 서버 연결을 확인해주세요', 'err') }
+      if (r.ok) showToast(t(lang, 'admin.toastWidgetSaved'), 'ok')
+      else showToast(t(lang, 'admin.toastSaveFail'), 'err')
+    } catch { showToast(t(lang, 'admin.toastSaveError'), 'err') }
   }
   function setWidget(key, field, value) {
     setWidgetCfg(prev => ({ ...prev, [key]: { ...prev[key], [field]: value } }))
@@ -165,7 +165,7 @@ export default function AdminPage() {
   async function saveAll() {
     await Promise.all([saveTZ(), saveWidgetCfg()])
     sv('yt_account', ytAccount)
-    showToast('✅ 저장 완료! 이동합니다...', 'ok')
+    showToast(t(lang, 'admin.toastSaveAll'), 'ok')
     setTimeout(() => navigate('/'), 1000)
   }
 
@@ -196,7 +196,7 @@ export default function AdminPage() {
           </div>
           <div style={{ ...secBdStyle, gap: '0' }}>
             <p style={{ fontSize: '0.78rem', color: 'var(--ink3)', marginBottom: '0.9rem' }}>
-              대시보드에 표시할 위젯을 선택하세요. 설정은 이 계정에만 적용됩니다.
+              {t(lang, 'admin.widgetDesc')}
             </p>
 
             {Object.entries(WIDGET_ICONS).map(([key, icon]) => (
@@ -316,64 +316,64 @@ export default function AdminPage() {
         {/* ② Google Calendar */}
         <div style={secStyle}>
           <div style={secHdStyle}>
-            <span style={secTitle}>📅 Google Calendar 연동</span>
-            <span style={{ fontSize: '0.72rem', color: 'var(--ink3)', background: 'var(--card2)', padding: '0.2rem 0.6rem', borderRadius: 10, border: '1px solid var(--border)' }}>Spring Boot 필요</span>
+            <span style={secTitle}>{t(lang, 'admin.gcalTitle')}</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--ink3)', background: 'var(--card2)', padding: '0.2rem 0.6rem', borderRadius: 10, border: '1px solid var(--border)' }}>{t(lang, 'admin.gcalBadge')}</span>
           </div>
           <div style={secBdStyle}>
             <div style={{ background: 'var(--card2)', borderRadius: 10, padding: '0.8rem 1rem', borderLeft: '3px solid var(--accent)' }}>
               <p style={{ fontSize: '0.82rem', color: 'var(--ink2)', lineHeight: 1.7 }}>
-                <strong style={{ color: 'var(--ink)', fontWeight: 500 }}>연동 방법 (나중에 Spring Boot 구성 후):</strong><br />
-                1. Google Cloud Console → OAuth 2.0 클라이언트 ID 발급<br />
-                2. Spring Boot에 spring-security-oauth2-client 추가<br />
-                3. 발급받은 Client ID · Secret을 아래에 입력
+                <strong style={{ color: 'var(--ink)', fontWeight: 500 }}>{t(lang, 'admin.gcalHowToLabel')}</strong><br />
+                1. Google Cloud Console → OAuth 2.0 {t(lang, 'admin.gcalStep1')}<br />
+                2. Spring Boot {t(lang, 'admin.gcalStep2')}<br />
+                3. {t(lang, 'admin.gcalStep3')}
               </p>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <div style={{ ...formGrp, flex: 2 }}>
                 <label style={lbl}>Google Client ID</label>
-                <input type="text" placeholder="추후 입력 (Spring Boot 구성 후)" style={inp} />
+                <input type="text" placeholder={t(lang, 'admin.gcalClientIdPh')} style={inp} />
               </div>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <div style={{ ...formGrp, flex: 2 }}>
                 <label style={lbl}>Google Client Secret</label>
-                <input type="password" placeholder="추후 입력" style={inp} />
+                <input type="password" placeholder={t(lang, 'admin.gcalSecretPh')} style={inp} />
               </div>
-              <button onClick={() => showToast('✓ Google Calendar 설정이 저장되었습니다 (Spring Boot 구성 후 활성화)', 'ok')}
-                style={{ padding: '0.48rem 1.1rem', fontSize: '0.85rem', fontWeight: 500, cursor: 'pointer', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, fontFamily: 'inherit', alignSelf: 'flex-end' }}>저장</button>
+              <button onClick={() => showToast(t(lang, 'admin.gcalToastSaved'), 'ok')}
+                style={{ padding: '0.48rem 1.1rem', fontSize: '0.85rem', fontWeight: 500, cursor: 'pointer', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, fontFamily: 'inherit', alignSelf: 'flex-end' }}>{t(lang, 'admin.save')}</button>
             </div>
           </div>
         </div>
 
         {/* ③ 유튜브 */}
         <div style={secStyle}>
-          <div style={secHdStyle}><span style={secTitle}>▶ 유튜브 설정</span></div>
+          <div style={secHdStyle}><span style={secTitle}>{t(lang, 'admin.ytSectionTitle')}</span></div>
           <div style={secBdStyle}>
-            <p style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>프리미엄 계정 정보를 저장하면 대시보드에서 해당 계정으로 연결됩니다.</p>
+            <p style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>{t(lang, 'admin.ytAccountDesc')}</p>
             <div style={{ background: 'var(--card2)', borderRadius: 10, border: '1px solid var(--border)', padding: '0.9rem 1rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
               <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#ff0000', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '1.2rem', flexShrink: 0 }}>▶</div>
-              <div><div style={{ fontSize: '0.88rem', color: 'var(--ink)', fontWeight: 400 }}>{ytAccount.email || '계정이 설정되지 않았습니다'}</div><div style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>YouTube Premium 계정</div></div>
+              <div><div style={{ fontSize: '0.88rem', color: 'var(--ink)', fontWeight: 400 }}>{ytAccount.email || t(lang, 'admin.ytNoAccount')}</div><div style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>{t(lang, 'admin.ytPremiumLabel')}</div></div>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              <div style={formGrp}><label style={lbl}>이름 (닉네임)</label><input type="text" value={ytAccName} onChange={e => setYtAccName(e.target.value)} placeholder="예: 홍길동" style={inp} /></div>
-              <div style={{ ...formGrp, flex: 2 }}><label style={lbl}>Google 이메일</label><input type="email" value={ytAccEmail} onChange={e => setYtAccEmail(e.target.value)} placeholder="예: example@gmail.com" style={inp} /></div>
-              <button onClick={saveYTAccount} style={{ padding: '0.48rem 1.1rem', fontSize: '0.85rem', fontWeight: 500, cursor: 'pointer', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, fontFamily: 'inherit', alignSelf: 'flex-end' }}>계정 저장</button>
+              <div style={formGrp}><label style={lbl}>{t(lang, 'admin.ytNameLabel')}</label><input type="text" value={ytAccName} onChange={e => setYtAccName(e.target.value)} placeholder={t(lang, 'admin.ytNamePh')} style={inp} /></div>
+              <div style={{ ...formGrp, flex: 2 }}><label style={lbl}>{t(lang, 'admin.ytEmailLabel')}</label><input type="email" value={ytAccEmail} onChange={e => setYtAccEmail(e.target.value)} placeholder="example@gmail.com" style={inp} /></div>
+              <button onClick={saveYTAccount} style={{ padding: '0.48rem 1.1rem', fontSize: '0.85rem', fontWeight: 500, cursor: 'pointer', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, fontFamily: 'inherit', alignSelf: 'flex-end' }}>{t(lang, 'admin.ytSaveAccountBtn')}</button>
             </div>
             <div style={{ height: '0.5px', background: 'var(--border)' }} />
-            <p style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>즐겨 듣는 유튜브 채널을 추가하세요.</p>
+            <p style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>{t(lang, 'admin.ytChannelDesc')}</p>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              <div style={formGrp}><label style={lbl}>채널 이름</label><input type="text" value={ytName} onChange={e => setYtName(e.target.value)} placeholder="예: 뉴스공장" style={inp} /></div>
-              <div style={{ ...formGrp, flex: 2 }}><label style={lbl}>유튜브 URL</label><input type="url" value={ytUrl} onChange={e => setYtUrl(e.target.value)} placeholder="예: https://www.youtube.com/@newsfactory" style={inp} /></div>
-              <button onClick={addYT} style={{ padding: '0.48rem 1.1rem', fontSize: '0.85rem', fontWeight: 500, cursor: 'pointer', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, fontFamily: 'inherit', alignSelf: 'flex-end' }}>+ 추가</button>
+              <div style={formGrp}><label style={lbl}>{t(lang, 'admin.ytChannelNameLabel')}</label><input type="text" value={ytName} onChange={e => setYtName(e.target.value)} placeholder={t(lang, 'admin.ytChannelNamePh')} style={inp} /></div>
+              <div style={{ ...formGrp, flex: 2 }}><label style={lbl}>{t(lang, 'admin.ytUrlLabel')}</label><input type="url" value={ytUrl} onChange={e => setYtUrl(e.target.value)} placeholder="https://www.youtube.com/@channel" style={inp} /></div>
+              <button onClick={addYT} style={{ padding: '0.48rem 1.1rem', fontSize: '0.85rem', fontWeight: 500, cursor: 'pointer', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, fontFamily: 'inherit', alignSelf: 'flex-end' }}>{t(lang, 'admin.ytAddBtn')}</button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
               {!ytChannels.length
-                ? <div style={{ fontSize: '0.82rem', color: 'var(--ink3)', fontStyle: 'italic', textAlign: 'center', padding: '0.5rem' }}>추가된 채널이 없습니다</div>
+                ? <div style={{ fontSize: '0.82rem', color: 'var(--ink3)', fontStyle: 'italic', textAlign: 'center', padding: '0.5rem' }}>{t(lang, 'admin.ytNoChannels')}</div>
                 : ytChannels.map(c => (
                   <div key={c.id} style={itemRow}>
                     <div style={{ width: 32, height: 22, background: '#ff0000', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '0.7rem', flexShrink: 0 }}>▶</div>
                     <div style={itemInfo}><div style={{ fontSize: '0.85rem', color: 'var(--ink)' }}>{c.channel_name}</div><div style={{ fontSize: '0.72rem', color: 'var(--ink3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.channel_url || ''}</div></div>
-                    <button className="btn-danger" onClick={() => delYT(c.id)}>삭제</button>
+                    <button className="btn-danger" onClick={() => delYT(c.id)}>{t(lang, 'admin.delStock')}</button>
                   </div>
                 ))}
             </div>
