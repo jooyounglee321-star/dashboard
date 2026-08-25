@@ -82,10 +82,12 @@ export default function BudgetPage() {
   const [currency, setCurrency] = useState('USD')
   const [rateMap, setRateMap] = useState({})
   const [showRecurring, setShowRecurring] = useState(false)
+  const [userRole, setUserRole] = useState('')
 
   useEffect(() => {
     const onChange = () => setLang(localStorage.getItem('dashboard_lang') || 'ko')
     window.addEventListener('languageChanged', onChange)
+    apiGet('/api/auth/me').then(u => setUserRole(u?.role || '')).catch(() => {})
     apiGet('/api/exchange-rates')
       .then(list => {
         const map = {}
@@ -138,7 +140,7 @@ export default function BudgetPage() {
       </nav>
 
       <div className="bp-body">
-        {tab === 0 && <DailyTab   lang={lang} currency={currency} toDisplay={toDisplay} />}
+        {tab === 0 && <DailyTab   lang={lang} currency={currency} toDisplay={toDisplay} userRole={userRole} />}
         {tab === 1 && <MonthlyTab lang={lang} currency={currency} toDisplay={toDisplay} />}
         {tab === 2 && <YearlyTab  lang={lang} currency={currency} toDisplay={toDisplay} />}
         {tab === 3 && <SummaryTab lang={lang} currency={currency} toDisplay={toDisplay} />}
@@ -166,7 +168,7 @@ const INIT_NEW_FORM = {
   amount: '', currency: 'USD', description: '', type: 'expense',
 }
 
-function DailyTab({ lang, currency, toDisplay }) {
+function DailyTab({ lang, currency, toDisplay, userRole = '' }) {
   const _now = new Date()
   const [date, setDate]     = useState(todayStr)
   const [items, setItems]   = useState([])
@@ -180,6 +182,8 @@ function DailyTab({ lang, currency, toDisplay }) {
   const [confirmState, setConfirmState] = useState({ open: false, msg: '', onOk: null })
   const openConfirm = (msg, onOk) => setConfirmState({ open: true, msg, onOk })
   const closeConfirm = () => setConfirmState({ open: false, msg: '', onOk: null })
+  const [captureOpen, setCaptureOpen] = useState(false)
+  const isPremium = userRole === 'admin' || userRole === 'premium'
 
   // 달력 뷰 상태
   const [calYear, setCalYear]     = useState(_now.getFullYear())
@@ -425,7 +429,15 @@ function DailyTab({ lang, currency, toDisplay }) {
           onDayClick={openDayModal}
           minWidth="560px"
           rightSlot={
-            <button className="bp-btn-sm" onClick={doExport}>📥 {t(lang, 'budget.exportCSV')}</button>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <button className="bp-btn-sm" onClick={doExport}>📥 {t(lang, 'budget.exportCSV')}</button>
+              {isPremium && (
+                <button className="bp-btn-sm" onClick={() => setCaptureOpen(true)}
+                  style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', border: 'none' }}>
+                  🤖 {t(lang, 'budget.aiCapture')}
+                </button>
+              )}
+            </div>
           }
           renderCell={(dateStr, _day, _meta) => {
             const day  = parseInt(dateStr.slice(8), 10)
@@ -570,6 +582,12 @@ function DailyTab({ lang, currency, toDisplay }) {
             disabled={submitting || !newForm.amount || Number(newForm.amount) <= 0}>
             {t(lang, 'common.add')}
           </button>
+          {isPremium && (
+            <button onClick={() => { setDayModalOpen(false); setCaptureOpen(true) }}
+              style={{ padding: '0.4rem 0.7rem', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', border: 'none', borderRadius: 8, fontSize: '0.82rem', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
+              🤖 {t(lang, 'budget.aiCapture')}
+            </button>
+          )}
         </div>
               </div>
             </div>
@@ -707,6 +725,20 @@ function DailyTab({ lang, currency, toDisplay }) {
         onCancel={closeConfirm}
         lang={lang}
       />
+      {captureOpen && (
+        <BudgetCapturePanel
+          lang={lang}
+          cats={cats}
+          onClose={() => setCaptureOpen(false)}
+          onSaved={() => {
+            load()
+            apiGet(`/api/expense/daily-compare?year=${calYear}&month=${calMonth}`)
+              .then(d => setMonthData(Array.isArray(d) ? d : []))
+              .catch(() => {})
+          }}
+          showToast={showToast}
+        />
+      )}
     </section>
   )
 }
@@ -2043,5 +2075,291 @@ function SettingTab({ lang, currency, toDisplay }) {
         lang={lang}
       />
     </section>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BudgetCapturePanel — AI 가계부 캡처
+// ══════════════════════════════════════════════════════════════════════════════
+function BudgetCapturePanel({ lang, cats, onClose, onSaved, showToast }) {
+  const [files,   setFiles]   = useState([])
+  const [loading, setLoading] = useState(false)
+  const [results, setResults] = useState(null)
+  const [rows,    setRows]    = useState([])
+  const [saving,  setSaving]  = useState(false)
+  const [incCats, setIncCats] = useState([])
+  const fileRef = useRef(null)
+
+  useEffect(() => {
+    apiGet(`/api/income/categories?lang=${lang}`)
+      .then(d => setIncCats(Array.isArray(d) ? d : []))
+      .catch(() => {})
+  }, [lang])
+
+  async function startParse() {
+    if (!files.length) { showToast(t(lang, 'budget.captureSelectFiles'), 'err'); return }
+    setLoading(true)
+    setResults(null)
+    setRows([])
+    try {
+      const fd = new FormData()
+      for (const f of files) fd.append('images', f)
+      const res = await fetch('/api/expense/parse-transactions', {
+        method: 'POST', credentials: 'include', body: fd,
+      }).then(r => {
+        if (r.status === 401) { window.location.href = '/login'; throw new Error('401') }
+        if (r.status === 403) throw new Error('403')
+        if (!r.ok) throw new Error(r.status)
+        return r.json()
+      })
+      setResults(res)
+      setRows((res.transactions || []).map((tx, i) => ({ ...tx, _key: i, _checked: true })))
+    } catch (e) {
+      if (e?.message === '403') showToast(t(lang, 'budget.capturePremiumOnly'), 'err')
+      else showToast((lang === 'ko' ? 'AI 인식 실패: ' : 'AI parse failed: ') + (e?.message || ''), 'err')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function updateRow(key, field, value) {
+    setRows(prev => prev.map(r => r._key === key ? { ...r, [field]: value } : r))
+  }
+  function updateRowType(key, newType) {
+    setRows(prev => prev.map(r => r._key === key
+      ? { ...r, type: newType, category_id: null, subcategory_id: null }
+      : r))
+  }
+  function updateRowCat(key, catId, mainCats) {
+    const found = mainCats.find(c => c.id === Number(catId))
+    setRows(prev => prev.map(r => r._key === key
+      ? { ...r, category_id: catId ? Number(catId) : null, subcategory_id: null,
+          category_name: found ? (found.name_ko || found.name) : null }
+      : r))
+  }
+  function updateRowSub(key, subId, subCats) {
+    const found = subCats.find(c => c.id === Number(subId))
+    setRows(prev => prev.map(r => r._key === key
+      ? { ...r, subcategory_id: subId ? Number(subId) : null,
+          subcategory_name: found ? (found.name_ko || found.name) : null }
+      : r))
+  }
+
+  async function saveSelected() {
+    const selected = rows.filter(r => r._checked && !r._saved)
+    if (!selected.length) {
+      showToast(lang === 'ko' ? '저장할 항목을 선택해주세요' : 'Select items to save', 'err')
+      return
+    }
+    setSaving(true)
+    let ok = 0, fail = 0
+    for (const row of selected) {
+      try {
+        await fetch('/api/expense', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            date:           row.date || todayStr(),
+            amount:         parseFloat(row.amount) || 0,
+            currency:       row.currency || 'KRW',
+            category_id:    row.category_id    ? Number(row.category_id)    : null,
+            subcategory_id: row.subcategory_id ? Number(row.subcategory_id) : null,
+            description:    row.description || null,
+            type:           row.type || 'expense',
+            lang,
+          }),
+        }).then(r => {
+          if (!r.ok) throw new Error(r.status)
+          return r.json().catch(() => null)
+        })
+        ok++
+        setRows(prev => prev.map(r => r._key === row._key ? { ...r, _saved: true } : r))
+      } catch {
+        fail++
+      }
+    }
+    setSaving(false)
+    onSaved()
+    if (fail === 0) {
+      showToast(t(lang, 'budget.captureSaveOk').replace('{ok}', ok), 'ok')
+      setTimeout(onClose, 900)
+    } else {
+      showToast(t(lang, 'budget.captureSaveFail').replace('{ok}', ok).replace('{fail}', fail), 'warn')
+    }
+  }
+
+  const expSubsOf = catId => cats.find(c => c.id === Number(catId))?.subs || []
+  const incSubsOf = catId => incCats.find(c => c.id === Number(catId))?.subs || []
+
+  const ST = {
+    overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 11000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '2rem 1rem 1rem', overflowY: 'auto' },
+    modal:   { background: 'var(--card)', borderRadius: 14, padding: '1.4rem 1.6rem', width: '100%', maxWidth: 820, boxShadow: '0 12px 48px rgba(0,0,0,0.28)' },
+    field:   { padding: '0.28rem 0.4rem', fontSize: '0.78rem', border: '1px solid var(--border)', borderRadius: 5, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' },
+  }
+
+  return (
+    <div style={ST.overlay} onClick={onClose}>
+      <div style={ST.modal} onClick={e => e.stopPropagation()}>
+
+        {/* 헤더 */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <div style={{ fontWeight: 700, fontSize: '0.97rem' }}>🤖 {t(lang, 'budget.captureTitle')}</div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.1rem', cursor: 'pointer', color: 'var(--ink3)' }}>✕</button>
+        </div>
+
+        {/* 업로드 단계 */}
+        {!results && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div style={{ fontSize: '0.82rem', color: 'var(--ink3)', lineHeight: 1.6, padding: '0.6rem 0.8rem', background: 'var(--card2)', borderRadius: 8 }}>
+              💡 {t(lang, 'budget.captureHint')}
+            </div>
+            <div style={{ fontSize: '0.82rem', color: '#ea580c', padding: '0.5rem 0.8rem', background: 'rgba(234,88,12,0.08)', borderRadius: 8, border: '1px solid rgba(234,88,12,0.25)' }}>
+              {t(lang, 'budget.capturePrivacy')}
+            </div>
+            <div>
+              <input ref={fileRef} type="file" accept="image/*" multiple
+                onChange={e => setFiles(Array.from(e.target.files))} style={{ display: 'none' }} />
+              <button onClick={() => fileRef.current?.click()}
+                style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', border: '2px dashed var(--border)', borderRadius: 8, background: 'var(--card2)', color: 'var(--ink)', cursor: 'pointer', width: '100%', textAlign: 'center' }}>
+                {files.length
+                  ? `📁 ${files.length}${lang === 'ko' ? '장 선택됨 · 클릭해서 변경' : ' file(s) selected · Click to change'}`
+                  : `📁 ${t(lang, 'budget.captureSelectFiles')}`}
+              </button>
+            </div>
+            <button onClick={startParse} disabled={loading || !files.length}
+              style={{ padding: '0.6rem', background: (loading || !files.length) ? 'var(--border)' : 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: '0.9rem', cursor: (loading || !files.length) ? 'not-allowed' : 'pointer' }}>
+              {loading ? t(lang, 'budget.captureParsing') : t(lang, 'budget.captureStartParse')}
+            </button>
+          </div>
+        )}
+
+        {/* 결과 확인 단계 */}
+        {results && (
+          <>
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{t(lang, 'budget.captureResultTitle')}</span>
+              {results.skipped_count > 0 && (
+                <span style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>
+                  ({t(lang, 'budget.captureSkipped')}: {results.skipped_count}{lang === 'ko' ? '건' : ''})
+                </span>
+              )}
+              {results.parse_errors?.length > 0 && (
+                <span style={{ fontSize: '0.78rem', color: '#ef4444' }}>
+                  ⚠ {t(lang, 'budget.captureParseError')}: {results.parse_errors.join(' | ')}
+                </span>
+              )}
+              <button onClick={() => { setResults(null); setRows([]); setFiles([]) }}
+                style={{ marginLeft: 'auto', fontSize: '0.78rem', color: 'var(--ink3)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
+                {lang === 'ko' ? '다시 업로드' : 'Re-upload'}
+              </button>
+            </div>
+
+            {rows.length === 0 ? (
+              <p style={{ color: 'var(--ink3)', fontSize: '0.88rem', textAlign: 'center', padding: '1.5rem 0' }}>
+                {t(lang, 'budget.captureNoNew')}
+              </p>
+            ) : (
+              <>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.79rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid var(--border)', color: 'var(--ink3)' }}>
+                        <th style={{ padding: '0.3rem 0.3rem', width: 28, textAlign: 'center' }}>
+                          <input type="checkbox"
+                            checked={rows.filter(r => !r._saved).every(r => r._checked)}
+                            onChange={e => setRows(prev => prev.map(r => r._saved ? r : { ...r, _checked: e.target.checked }))} />
+                        </th>
+                        <th style={{ padding: '0.3rem 0.3rem', width: 65, textAlign: 'left' }}>{lang === 'ko' ? '타입' : 'Type'}</th>
+                        <th style={{ padding: '0.3rem 0.3rem', width: 100, textAlign: 'left' }}>{t(lang, 'budget.date')}</th>
+                        <th style={{ padding: '0.3rem 0.3rem', width: 85, textAlign: 'left' }}>{t(lang, 'budget.amount')}</th>
+                        <th style={{ padding: '0.3rem 0.3rem', width: 55, textAlign: 'left' }}>{lang === 'ko' ? '통화' : 'Cur'}</th>
+                        <th style={{ padding: '0.3rem 0.3rem', textAlign: 'left' }}>{t(lang, 'budget.description')}</th>
+                        <th style={{ padding: '0.3rem 0.3rem', width: 115, textAlign: 'left' }}>{t(lang, 'budget.category')}</th>
+                        <th style={{ padding: '0.3rem 0.3rem', width: 115, textAlign: 'left' }}>{t(lang, 'budget.subcategory')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map(row => {
+                        const isIncome = row.type === 'income'
+                        const mainCats = isIncome ? incCats : cats
+                        const subCats  = isIncome ? incSubsOf(row.category_id) : expSubsOf(row.category_id)
+                        return (
+                          <tr key={row._key} style={{ borderBottom: '1px solid var(--border)', opacity: row._saved ? 0.4 : 1, background: row._saved ? 'var(--card2)' : undefined }}>
+                            <td style={{ padding: '0.25rem 0.3rem', textAlign: 'center' }}>
+                              <input type="checkbox" checked={!!row._checked} disabled={!!row._saved}
+                                onChange={e => updateRow(row._key, '_checked', e.target.checked)} />
+                            </td>
+                            <td style={{ padding: '0.25rem 0.3rem' }}>
+                              <select style={ST.field} value={row.type || 'expense'}
+                                onChange={e => updateRowType(row._key, e.target.value)}>
+                                <option value="expense">{lang === 'ko' ? '지출' : 'Expense'}</option>
+                                <option value="income">{lang === 'ko' ? '수입' : 'Income'}</option>
+                              </select>
+                            </td>
+                            <td style={{ padding: '0.25rem 0.3rem' }}>
+                              <input type="date" style={ST.field} value={row.date || ''}
+                                onChange={e => updateRow(row._key, 'date', e.target.value)} />
+                            </td>
+                            <td style={{ padding: '0.25rem 0.3rem' }}>
+                              <input type="number" style={ST.field} value={row.amount || ''}
+                                onChange={e => updateRow(row._key, 'amount', e.target.value)} />
+                            </td>
+                            <td style={{ padding: '0.25rem 0.3rem' }}>
+                              <select style={ST.field} value={row.currency || 'KRW'}
+                                onChange={e => updateRow(row._key, 'currency', e.target.value)}>
+                                {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+                              </select>
+                            </td>
+                            <td style={{ padding: '0.25rem 0.3rem' }}>
+                              <input type="text" style={ST.field} value={row.description || ''}
+                                onChange={e => updateRow(row._key, 'description', e.target.value)} />
+                            </td>
+                            <td style={{ padding: '0.25rem 0.3rem' }}>
+                              <select style={ST.field} value={row.category_id || ''}
+                                onChange={e => updateRowCat(row._key, e.target.value, mainCats)}>
+                                <option value="">{t(lang, 'expenseCatPh')}</option>
+                                {mainCats.map(c => (
+                                  <option key={c.id} value={c.id}>
+                                    {c.icon} {lang === 'ko' ? (c.name_ko || c.name) : (c.name_en || c.name)}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td style={{ padding: '0.25rem 0.3rem' }}>
+                              <select style={ST.field} value={row.subcategory_id || ''} disabled={!subCats.length}
+                                onChange={e => updateRowSub(row._key, e.target.value, subCats)}>
+                                <option value="">{t(lang, 'expenseSubcatPh')}</option>
+                                {subCats.map(c => (
+                                  <option key={c.id} value={c.id}>
+                                    {c.icon} {lang === 'ko' ? (c.name_ko || c.name) : (c.name_en || c.name)}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div style={{ marginTop: '0.9rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                  <button onClick={onClose}
+                    style={{ padding: '0.5rem 1rem', border: '1px solid var(--border)', borderRadius: 8, background: 'none', cursor: 'pointer', fontSize: '0.85rem', fontFamily: 'inherit' }}>
+                    {t(lang, 'common.cancel')}
+                  </button>
+                  <button onClick={saveSelected} disabled={saving || !rows.some(r => r._checked && !r._saved)}
+                    style={{ padding: '0.5rem 1.2rem', background: (saving || !rows.some(r => r._checked && !r._saved)) ? 'var(--border)' : 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: '0.9rem', cursor: (saving || !rows.some(r => r._checked && !r._saved)) ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                    {saving
+                      ? t(lang, 'budget.captureSaving')
+                      : `${t(lang, 'budget.captureSave')} (${rows.filter(r => r._checked && !r._saved).length}${lang === 'ko' ? '건' : ''})`}
+                  </button>
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </div>
   )
 }
