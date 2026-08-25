@@ -1,6 +1,8 @@
-export const PERIOD_OPTIONS = [
+import { t } from '../i18n'
+
+const PERIOD_BASE = [
   ['1m', '1M'], ['3m', '3M'], ['6m', '6M'],
-  ['ytd', 'YTD'], ['1y', '1Y'], ['3y', '3Y'], ['all', '전체'], ['custom', '직접'],
+  ['ytd', 'YTD'], ['1y', '1Y'], ['3y', '3Y'],
 ]
 
 const inpStyle = {
@@ -14,17 +16,14 @@ const inpStyle = {
   cursor: 'pointer',
 }
 
-/**
- * 기간 선택 버튼 컴포넌트
- * @param {string}   value          - 현재 선택된 기간 키 ('1m'|'3m'|...|'custom')
- * @param {function} onChange       - (key: string) => void
- * @param {string}   [customFrom]   - 직접 설정 시작일 (YYYY-MM-DD)
- * @param {string}   [customTo]     - 직접 설정 종료일 (YYYY-MM-DD)
- * @param {function} [onCustomChange] - (from: string, to: string) => void
- * @param {object}   [style]        - 컨테이너 추가 스타일
- */
-export default function PeriodSelector({ value, onChange, customFrom = '', customTo = '', onCustomChange, style }) {
+export default function PeriodSelector({ value, onChange, customFrom = '', customTo = '', onCustomChange, style, lang = 'ko' }) {
   const today = new Date().toISOString().slice(0, 10)
+
+  const options = [
+    ...PERIOD_BASE,
+    ['all', t(lang, 'common.periodAll')],
+    ['custom', t(lang, 'common.periodCustom')],
+  ]
 
   const btn = (active) => ({
     padding: '0.26rem 0.65rem',
@@ -42,7 +41,7 @@ export default function PeriodSelector({ value, onChange, customFrom = '', custo
 
   return (
     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center', ...style }}>
-      {PERIOD_OPTIONS.map(([key, label]) => (
+      {options.map(([key, label]) => (
         <button key={key} onClick={() => onChange(key)} style={btn(value === key)}>
           {label}
         </button>

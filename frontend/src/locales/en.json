@@ -11,6 +11,8 @@
     "success": "Success",
     "processing": "Processing…",
     "deleteSuccess": "Deleted successfully",
+    "periodAll": "All",
+    "periodCustom": "Custom",
     "days": [
       "Sun",
       "Mon",

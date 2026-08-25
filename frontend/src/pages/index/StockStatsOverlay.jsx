@@ -1225,6 +1225,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                 customFrom={customFrom}
                 customTo={customTo}
                 onCustomChange={(f, t2) => { setCustomFrom(f); setCustomTo(t2) }}
+                lang={lang}
               />
             </div>
 

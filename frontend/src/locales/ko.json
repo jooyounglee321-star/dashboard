@@ -11,6 +11,8 @@
     "success": "성공",
     "processing": "처리 중…",
     "deleteSuccess": "삭제되었습니다",
+    "periodAll": "전체",
+    "periodCustom": "직접",
     "days": [
       "일",
       "월",
