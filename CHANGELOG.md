@@ -4,18 +4,6 @@
 
 ---
 
-## 2026-08-24 (2)
-
-### 개선 — 가계부 AI 캡처 영수증 지원 (`routers/expense_capture.py`)
-
-- Claude Vision 프롬프트에 이미지 타입 자동 판단 로직 추가
-  - **명세서형(Transaction History)**: 여러 날짜 거래 표 → 기존대로 행 하나당 JSON 객체 하나
-  - **영수증형(Receipt)**: 마트·코스트코 등 상품 목록 → JSON 객체 딱 1개 (총액 1건)
-    - amount: 영수증 하단 최종 합계(Total/합계/결제금액)만 사용, 상품 개별 합산 금지
-    - description: 매장명
-    - category: 영수증 전체 대표 카테고리 1개 (애매하면 null)
-- 이름→id 매칭, 중복 판정 등 기존 로직 그대로 영수증 케이스에도 동일 적용
-
 ## 2026-08-24
 
 ### 신규 — 가계부 AI 캡처 기능 (`routers/expense_capture.py`, `BudgetPage.jsx`)
