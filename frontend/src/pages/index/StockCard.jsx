@@ -328,7 +328,7 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
     )
     mTotalBar = (
       <div className="m-total-bar">
-        <span style={{ fontSize: '0.72rem', color: 'var(--text-faint)' }}>{t(lang, 'stockTotalLabel')}{/* fxNote */}</span>
+        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{t(lang, 'stockTotalLabel')}{/* fxNote */}</span>
         <span style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--accent)' }}>₩{fmtKRW(tot)}</span>
       </div>
     )

@@ -9,9 +9,10 @@
 .stats-section{background:var(--card);border-radius:14px;border:1px solid var(--border);box-shadow:var(--shadow);padding:1.1rem 1.2rem;margin-bottom:1rem;}
 .stats-section-title{font-size:0.72rem;font-weight:500;letter-spacing:0.1em;color:var(--ink3);text-transform:uppercase;margin-bottom:0.9rem;}
 .stats-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0.7rem;}
-.stats-summary-card{background:var(--card2);border-radius:10px;border:1px solid var(--border);padding:0.75rem 1rem;}
-.stats-summary-label{font-size:0.68rem;color:var(--ink3);margin-bottom:0.3rem;}
-.stats-summary-value{font-size:1.05rem;font-weight:600;color:var(--ink);}
+.stats-summary-card{background:var(--card2);border-radius:10px;border:1px solid var(--border);padding:0.75rem 1rem;transition:box-shadow 0.15s ease;}
+.stats-summary-card:hover{box-shadow:var(--shadow-md);}
+.stats-summary-label{font-size:0.68rem;color:var(--ink3);margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.07em;}
+.stats-summary-value{font-size:1.2rem;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;}
 .stats-chart-wrap{position:relative;width:100%;}
 .stats-chart-wrap.pie-wrap{max-width:340px;margin:0 auto;}
 .stock-card-clickable{cursor:pointer;}
@@ -107,7 +108,7 @@
 .stock-cat{margin-bottom:0.8rem;}
 .stock-cat-header{display:flex;justify-content:space-between;align-items:center;padding:0.35rem 0.6rem;border-radius:6px;margin-bottom:0.35rem;}
 .stock-cat-name{font-size:0.72rem;font-weight:500;letter-spacing:0.05em;}
-.stock-cat-sum{font-size:0.78rem;font-weight:700;}
+.stock-cat-sum{font-size:0.78rem;font-weight:700;font-variant-numeric:tabular-nums;}
 .stock-list{list-style:none;display:flex;flex-direction:column;}
 .stock-item{display:flex;align-items:center;justify-content:space-between;padding:0.4rem 0.4rem;border-bottom:1px solid var(--border);font-size:0.82rem;}
 .stock-item:last-child{border-bottom:none;}
@@ -117,8 +118,8 @@
 .stock-price{font-weight:500;color:var(--ink);}
 .stock-val{font-size:0.68rem;color:var(--ink3);}
 .stock-total-bar{margin-top:0.8rem;padding:0.6rem 0.8rem;background:var(--ink);border-radius:10px;display:flex;justify-content:space-between;align-items:center;}
-.stock-total-label{font-size:0.75rem;color:var(--text-faint);}
-.stock-total-value{font-size:1.05rem;font-weight:700;color:var(--accent);}
+.stock-total-label{font-size:0.75rem;color:var(--text-muted);}
+.stock-total-value{font-size:1.2rem;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;}
 .stock-divider{height:0.5px;background:var(--border);margin:0.6rem 0;}
 
 /* ── 카드 공통 헤더/바디 (데스크톱) ── */
@@ -131,7 +132,7 @@
 .card-expense{grid-column:span 3;}
 .exp-today{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:0.85rem;}
 .exp-label{font-size:0.78rem;color:var(--ink3);}
-.exp-amount{font-size:1.5rem;font-weight:700;line-height:1.2;}
+.exp-amount{font-size:1.5rem;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums;}
 .exp-db-badge{font-size:0.68rem;color:var(--green);border:1px solid var(--green);padding:0.1rem 0.5rem;border-radius:10px;}
 /* 예산 바 */
 .exp-budget-block{flex:1;min-width:110px;padding-top:0.25rem;}
@@ -262,7 +263,7 @@
 
 /* ── MOBILE NAV ── */
 .mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(--ink);border-top:1px solid rgba(255,255,255,0.1);height:var(--nav-h);align-items:stretch;}
-.mnav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:2px;background:none;border:none;color:var(--text-faint);cursor:pointer;font-family:inherit;font-size:0.58rem;padding:0.3rem 0;text-decoration:none;}
+.mnav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:2px;background:none;border:none;color:var(--text-muted);cursor:pointer;font-family:inherit;font-size:0.58rem;padding:0.3rem 0;text-decoration:none;}
 .mnav-item.active,.mnav-item:hover{color:var(--accent);}
 .mnav-icon{font-size:1.3rem;line-height:1;}
 .mobile-view{display:none;}
@@ -361,7 +362,7 @@
 .m-sched-item{display:flex;align-items:center;gap:0.6rem;background:var(--card2);border-radius:8px;padding:0.6rem 0.8rem;}
 .m-sched-time{font-size:0.8rem;color:var(--accent);font-weight:500;min-width:42px;}
 .m-sched-text{font-size:0.88rem;color:var(--ink2);flex:1;}
-.m-exp-total{font-size:2rem;font-weight:700;margin-bottom:0.9rem;}
+.m-exp-total{font-size:2rem;font-weight:700;margin-bottom:0.9rem;font-variant-numeric:tabular-nums;}
 .m-exp-lbl{font-size:0.75rem;color:var(--ink3);display:block;margin-bottom:0.15rem;}
 .m-exp-list{list-style:none;}
 .m-exp-item{display:flex;justify-content:space-between;align-items:center;padding:0.55rem 0;border-bottom:1px solid var(--border);font-size:0.9rem;}

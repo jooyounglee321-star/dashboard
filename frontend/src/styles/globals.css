@@ -43,6 +43,20 @@
   --text-xs: 0.72rem;
 
   --nav-h: 62px;
+
+  /* ── 8px 기반 spacing 스케일 (MUI 호환) ── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* ── 미정의 변수 alias ── */
+  --text-faint: var(--text-muted);
 }
 
 body {
@@ -100,6 +114,10 @@ body {
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
   overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+.card:hover {
+  box-shadow: var(--shadow-md);
 }
 .card-top {
   display: flex;
@@ -295,7 +313,7 @@ tbody tr:hover td { background: rgba(196, 102, 42, 0.04); }
   text-transform: uppercase;
   margin-bottom: 0.25rem;
 }
-.chip-value { font-size: 1.4rem; font-weight: 700; color: var(--ink); }
+.chip-value { font-size: 1.4rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
 .chip-value.accent { color: var(--accent); }
 .chip-value.green { color: var(--green); }
 .chip-value.blue { color: var(--blue); }

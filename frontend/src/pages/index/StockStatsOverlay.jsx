@@ -971,15 +971,15 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ color: 'var(--ink3)', borderBottom: '1.5px solid var(--border)' }}>
-                  <th style={{ textAlign: 'left', padding: '0.3rem 0.4rem', fontWeight: 500 }}>종목</th>
-                  <th style={{ textAlign: 'left', padding: '0.3rem 0.4rem', fontWeight: 500 }}>그룹</th>
-                  <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>{t(lang, 'statsRealizedSellDate')}</th>
-                  <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>{t(lang, 'statsRealizedQty')}</th>
-                  <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>{t(lang, 'statsRealizedSellPrice')}</th>
-                  <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>{t(lang, 'statsRealizedAvgCost')}</th>
-                  <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>{t(lang, 'statsRealizedPL')}</th>
-                  <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>{t(lang, 'statsRealizedPLPct')}</th>
+                <tr style={{ background: 'var(--card2)', borderBottom: '1.5px solid var(--border)' }}>
+                  <th style={{ textAlign: 'left', padding: '0.4rem 0.5rem', fontWeight: 600, color: 'var(--ink3)', textTransform: 'uppercase', letterSpacing: '0.07em', fontSize: '0.67rem' }}>종목</th>
+                  <th style={{ textAlign: 'left', padding: '0.4rem 0.5rem', fontWeight: 600, color: 'var(--ink3)', textTransform: 'uppercase', letterSpacing: '0.07em', fontSize: '0.67rem' }}>그룹</th>
+                  <th style={{ textAlign: 'right', padding: '0.4rem 0.5rem', fontWeight: 600, color: 'var(--ink3)', textTransform: 'uppercase', letterSpacing: '0.07em', fontSize: '0.67rem' }}>{t(lang, 'statsRealizedSellDate')}</th>
+                  <th style={{ textAlign: 'right', padding: '0.4rem 0.5rem', fontWeight: 600, color: 'var(--ink3)', textTransform: 'uppercase', letterSpacing: '0.07em', fontSize: '0.67rem' }}>{t(lang, 'statsRealizedQty')}</th>
+                  <th style={{ textAlign: 'right', padding: '0.4rem 0.5rem', fontWeight: 600, color: 'var(--ink3)', textTransform: 'uppercase', letterSpacing: '0.07em', fontSize: '0.67rem' }}>{t(lang, 'statsRealizedSellPrice')}</th>
+                  <th style={{ textAlign: 'right', padding: '0.4rem 0.5rem', fontWeight: 600, color: 'var(--ink3)', textTransform: 'uppercase', letterSpacing: '0.07em', fontSize: '0.67rem' }}>{t(lang, 'statsRealizedAvgCost')}</th>
+                  <th style={{ textAlign: 'right', padding: '0.4rem 0.5rem', fontWeight: 600, color: 'var(--ink3)', textTransform: 'uppercase', letterSpacing: '0.07em', fontSize: '0.67rem' }}>{t(lang, 'statsRealizedPL')}</th>
+                  <th style={{ textAlign: 'right', padding: '0.4rem 0.5rem', fontWeight: 600, color: 'var(--ink3)', textTransform: 'uppercase', letterSpacing: '0.07em', fontSize: '0.67rem' }}>{t(lang, 'statsRealizedPLPct')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -988,15 +988,18 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                   const fmt = v => isKRW ? '₩' + fmtKRW(v) : '$' + fmtUSD(v)
                   const pos = item.pl >= 0
                   return (
-                    <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td style={{ padding: '0.3rem 0.4rem', color: 'var(--ink)', fontWeight: 600 }}>{item.ticker}</td>
-                      <td style={{ padding: '0.3rem 0.4rem', color: 'var(--ink3)' }}>{item.group}</td>
-                      <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{item.date}</td>
-                      <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{item.qty % 1 === 0 ? item.qty : item.qty.toFixed(3)}</td>
-                      <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink)' }}>{fmt(item.sell_price)}</td>
-                      <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{fmt(item.avg_cost)}</td>
-                      <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? 'var(--green)' : 'var(--red)', fontWeight: 600 }}>{pos ? '+' : ''}{fmt(Math.abs(item.pl))}</td>
-                      <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? 'var(--green)' : 'var(--red)' }}>{pos ? '+' : ''}{item.pl_pct.toFixed(1)}%</td>
+                    <tr key={i} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.1s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(196,149,106,0.04)'}
+                      onMouseLeave={e => e.currentTarget.style.background = ''}
+                    >
+                      <td style={{ padding: '0.4rem 0.5rem', color: 'var(--ink)', fontWeight: 600 }}>{item.ticker}</td>
+                      <td style={{ padding: '0.4rem 0.5rem', color: 'var(--ink3)' }}>{item.group}</td>
+                      <td style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: 'var(--ink3)', fontVariantNumeric: 'tabular-nums' }}>{item.date}</td>
+                      <td style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: 'var(--ink3)', fontVariantNumeric: 'tabular-nums' }}>{item.qty % 1 === 0 ? item.qty : item.qty.toFixed(3)}</td>
+                      <td style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: 'var(--ink)', fontVariantNumeric: 'tabular-nums' }}>{fmt(item.sell_price)}</td>
+                      <td style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: 'var(--ink3)', fontVariantNumeric: 'tabular-nums' }}>{fmt(item.avg_cost)}</td>
+                      <td style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: pos ? 'var(--green)' : 'var(--red)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{pos ? '+' : ''}{fmt(Math.abs(item.pl))}</td>
+                      <td style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: pos ? 'var(--green)' : 'var(--red)', fontVariantNumeric: 'tabular-nums' }}>{pos ? '+' : ''}{item.pl_pct.toFixed(1)}%</td>
                     </tr>
                   )
                 })}
@@ -1181,10 +1184,10 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                         return (
                           <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
                             <thead>
-                              <tr style={{ color: 'var(--ink3)', borderBottom: '1px solid var(--border)' }}>
-                                <th style={{ textAlign: 'left', padding: '0.3rem 0.4rem', fontWeight: 500 }}>항목</th>
-                                <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>평가금액</th>
-                                <th style={{ textAlign: 'right', padding: '0.3rem 0.4rem', fontWeight: 500 }}>비중</th>
+                              <tr style={{ background: 'var(--card2)', borderBottom: '1px solid var(--border)' }}>
+                                <th style={{ textAlign: 'left', padding: '0.4rem 0.5rem', fontWeight: 600, color: 'var(--ink3)', textTransform: 'uppercase', letterSpacing: '0.07em', fontSize: '0.67rem' }}>항목</th>
+                                <th style={{ textAlign: 'right', padding: '0.4rem 0.5rem', fontWeight: 600, color: 'var(--ink3)', textTransform: 'uppercase', letterSpacing: '0.07em', fontSize: '0.67rem' }}>평가금액</th>
+                                <th style={{ textAlign: 'right', padding: '0.4rem 0.5rem', fontWeight: 600, color: 'var(--ink3)', textTransform: 'uppercase', letterSpacing: '0.07em', fontSize: '0.67rem' }}>비중</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -1192,17 +1195,20 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                                 const name = !item.isKRW && item.ticker && item.ticker !== 'undefined' ? item.ticker : (item.name ?? item.ticker ?? '')
                                 const pct = total > 0 ? (item.evalAmt / total * 100).toFixed(1) : '0.0'
                                 return (
-                                  <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-                                    <td style={{ padding: '0.3rem 0.4rem', color: 'var(--ink)', fontWeight: 500 }}>{name}</td>
-                                    <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink)' }}>{fmt(item.evalAmt)}</td>
-                                    <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{pct}%</td>
+                                  <tr key={i} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.1s' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(196,149,106,0.04)'}
+                                    onMouseLeave={e => e.currentTarget.style.background = ''}
+                                  >
+                                    <td style={{ padding: '0.4rem 0.5rem', color: 'var(--ink)', fontWeight: 500 }}>{name}</td>
+                                    <td style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: 'var(--ink)', fontVariantNumeric: 'tabular-nums' }}>{fmt(item.evalAmt)}</td>
+                                    <td style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: 'var(--ink3)', fontVariantNumeric: 'tabular-nums' }}>{pct}%</td>
                                   </tr>
                                 )
                               })}
                               <tr style={{ borderTop: '1.5px solid var(--border)', fontWeight: 700 }}>
-                                <td style={{ padding: '0.3rem 0.4rem', color: 'var(--ink)' }}>합계</td>
-                                <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink)' }}>{fmt(total)}</td>
-                                <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>100%</td>
+                                <td style={{ padding: '0.4rem 0.5rem', color: 'var(--ink)' }}>합계</td>
+                                <td style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: 'var(--ink)', fontVariantNumeric: 'tabular-nums' }}>{fmt(total)}</td>
+                                <td style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: 'var(--ink3)', fontVariantNumeric: 'tabular-nums' }}>100%</td>
                               </tr>
                             </tbody>
                           </table>

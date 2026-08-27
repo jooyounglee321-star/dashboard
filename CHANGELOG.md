@@ -4,6 +4,42 @@
 
 ---
 
+## 2026-08-27 (4차)
+
+### MUI Dashboard 디자인 패턴 적용 (디자인 토큰 시스템 확장)
+
+#### 변경 내용 요약
+MUI 공식 Dashboard 템플릿의 핵심 5개 시각 패턴을 순수 CSS/토큰 방식으로 반영. MUI 패키지 미사용.
+
+#### 패턴 1 — 8px 기반 spacing 스케일 (globals.css)
+- `--space-1` (4px) ~ `--space-12` (48px) 토큰 추가
+- 향후 여백/패딩 점진적 통일 기반 마련
+
+#### 패턴 2 — 카드 hover elevation (globals.css)
+- `.card { transition: box-shadow 0.2s ease }` + `.card:hover { box-shadow: var(--shadow-md) }` 추가
+- 모든 위젯 카드 hover 시 살짝 떠 보이는 MUI 카드 느낌
+
+#### 패턴 3 — Stat Card 수치 타이포 개선 (index.css)
+- `.stats-summary-value`: `1.05rem` → `1.2rem`, `font-weight: 600` → `700`
+- `.stock-total-value`: `1.05rem` → `1.2rem`
+- `.stats-summary-label`: `text-transform: uppercase` + `letter-spacing` 추가
+- `.stats-summary-card` hover 효과 추가
+- `font-variant-numeric: tabular-nums` 추가 대상: chip-value, stock-total-value, stock-cat-sum, exp-amount, m-exp-total, stats-summary-value
+
+#### 패턴 4 — 테이블 스타일 통일 (StockStatsOverlay.jsx)
+- 실현손익 테이블 + 파이차트 범례 테이블: thead tr `background: var(--card2)` 추가
+- `<th>`: uppercase + letter-spacing + color: var(--ink3) 통일
+- 숫자 `<td>`: `fontVariantNumeric: 'tabular-nums'` 추가
+- tbody tr hover 효과 (accent 0.04 배경) 추가
+
+#### 버그 수정
+- `var(--text-faint)` 미정의 변수 3군데 수정:
+  - `globals.css`: `--text-faint: var(--text-muted)` alias 추가 (하위호환)
+  - `index.css` `.stock-total-label`, `.mnav-item`: `var(--text-faint)` → `var(--text-muted)`
+  - `StockCard.jsx` 인라인 스타일: `'var(--text-faint)'` → `'var(--text-muted)'`
+
+---
+
 ## 2026-08-27 (3차)
 
 ### 디자인 토큰 적용 — 잔여 하드코딩 색상 정리
