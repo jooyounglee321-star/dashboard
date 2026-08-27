@@ -18,6 +18,9 @@
 - `StockStatsOverlay.jsx` — 집중도 바 경고색 (`#f59e0b`→`var(--warning)`)
 - `ExpenseCard.jsx` — 음수 지출 색상 (`#e8a060`→`var(--accent)`)
 
+#### 2차 추가 (SitesSettingsModal)
+- 모달 컨테이너: `var(--card-bg, #fff)` → `var(--surface)`, `borderRadius: 16` → `var(--radius-lg)`, 그림자 → `var(--shadow-md)`
+
 #### 적용 규칙 요약
 - 빨강: `#ef4444`, `#dc2626`, `#b91c1c`, `#c0392b`, `#e53935`, `#f87171` → `var(--red)`
 - 초록: `#16a34a`, `#15803d`, `#059669` → `var(--green)`
