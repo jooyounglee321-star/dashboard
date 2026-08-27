@@ -103,8 +103,8 @@
 }
 
 .bp-section-h2 {
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: var(--text-lg);
+  font-weight: 700;
   color: var(--ink);
   margin: 0 0 1rem;
   padding-bottom: 0.5rem;
@@ -161,13 +161,14 @@
   gap: 0.75rem;
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
   padding: 0.85rem 1.2rem;
   margin-bottom: 1rem;
   flex-wrap: wrap;
 }
 
-.bp-total-label { font-size: 0.8rem; color: var(--ink3); }
+.bp-total-label { font-size: var(--text-xs); color: var(--text-muted); }
 .bp-total-num   { font-size: 1.3rem; font-weight: 700; color: var(--accent); }
 
 /* ── 수입/지출/순수지 요약 카드 행 ────────────────────────────────────────── */
@@ -182,16 +183,17 @@
   flex-direction: column;
   gap: 0.3rem;
   padding: 0.9rem 1.1rem;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: var(--card);
+  box-shadow: var(--shadow-sm);
 }
 .bp-cashflow-card.income  { border-color: rgba(5,150,105,0.25);  background: rgba(5,150,105,0.06); }
 .bp-cashflow-card.expense { border-color: rgba(220,38,38,0.20);  background: rgba(220,38,38,0.05); }
 .bp-cashflow-card.net.positive { border-color: rgba(74,197,110,0.25); background: rgba(74,197,110,0.05); }
 .bp-cashflow-card.net.negative { border-color: rgba(220,50,50,0.25);  background: rgba(220,50,50,0.05); }
 
-.bp-cf-label { font-size: 0.75rem; color: var(--ink3); font-weight: 500; }
+.bp-cf-label { font-size: var(--text-xs); color: var(--text-muted); font-weight: 500; }
 .bp-cashflow-card.income  .bp-cf-num { color: var(--green); font-size: 1.2rem; font-weight: 700; }
 .bp-cashflow-card.expense .bp-cf-num { color: var(--red);   font-size: 1.2rem; font-weight: 700; }
 .bp-cashflow-card.net.positive .bp-cf-num { color: var(--green); font-size: 1.2rem; font-weight: 700; }
@@ -207,14 +209,15 @@
   border-radius: 5px;
   font-weight: 500;
 }
-.bp-yoy.up { color: #e86060; background: rgba(220,60,60,0.10); }
-.bp-yoy.dn { color: #3a9a5a; background: rgba(74,197,110,0.12); }
+.bp-yoy.up { color: var(--red); background: rgba(220,38,38,0.10); }
+.bp-yoy.dn { color: var(--green); background: rgba(5,150,105,0.12); }
 
 /* ── Daily top summary ───────────────────────────────────────────────────── */
 .bp-daily-top {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
   padding: 0.9rem 1.2rem;
   margin-bottom: 1rem;
 }
@@ -233,15 +236,16 @@
   background: var(--accent-soft);
   border: 1px solid var(--border);
   color: var(--accent);
-  border-radius: 20px;
+  border-radius: 999px;
   padding: 0.18rem 0.6rem;
   font-size: 0.77rem;
+  white-space: nowrap;
 }
 
 /* ── Info / Empty ────────────────────────────────────────────────────────── */
 .bp-info   { text-align: center; color: var(--ink2); padding: 2rem 0; font-size: 0.9rem; }
 .bp-empty  { color: var(--ink2); }
-.bp-all-good { color: #3a9a5a; font-size: 0.88rem; padding: 0.5rem 0; }
+.bp-all-good { color: var(--green); font-size: var(--text-sm); padding: 0.5rem 0; }
 
 /* ── Expense List — 반응형 그리드 ──────────────────────────────────────── */
 /*  모바일: 1열 / 태블릿(640px+): 2열 / 데스크톱(1024px+): 3열          */
@@ -264,7 +268,7 @@
 .bp-item {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   padding: 1.1rem 1.25rem;
   display: flex;
   flex-direction: column;
@@ -333,13 +337,13 @@
   line-height: 1;
 }
 .bp-icon-btn:hover      { opacity: 1; }
-.bp-icon-btn.del:hover  { color: #e86060; }
+.bp-icon-btn.del:hover  { color: var(--red); }
 
 .bp-btn-primary {
   background: var(--accent);
   border: none;
   color: #fff;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 0.35rem 0.8rem;
   font-size: 0.82rem;
   font-weight: 600;
@@ -351,9 +355,9 @@
 
 .bp-btn-ghost {
   background: var(--card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   color: var(--ink2);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 0.35rem 0.8rem;
   font-size: 0.82rem;
   cursor: pointer;
@@ -369,13 +373,19 @@
 /* ── Inputs / Selects ────────────────────────────────────────────────────── */
 .bp-sel, .bp-inp, .bp-inp-sm, .bp-inp-icon, .bp-sel-sm, .bp-sel-xs {
   background: var(--card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   color: var(--ink);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 0.33rem 0.55rem;
-  font-size: 0.83rem;
+  font-size: var(--text-sm);
   font-family: inherit;
   min-width: 0;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.bp-sel:focus, .bp-inp:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 .bp-inp      { flex: 1; min-width: 80px; }
 .bp-inp-sm   { width: 80px; }
@@ -387,7 +397,7 @@
 /* ── Table ───────────────────────────────────────────────────────────────── */
 .bp-table-wrap {
   overflow-x: auto;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
 }
 .bp-table {
@@ -413,8 +423,14 @@
 .bp-table tr.over td  { background: rgba(220,50,50,0.05); }
 .bp-table tr.bp-total-row td { background: var(--card2); color: var(--ink); }
 
-.txt-red   { color: #e86060 !important; }
-.txt-green { color: #3a9a5a !important; }
+.txt-red   { color: var(--red)   !important; }
+.txt-green { color: var(--green) !important; }
+
+/* ── 숫자 컬럼 (text-align right + tabular-nums) ─────────────────────────── */
+.bp-table th.num, .bp-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
 
 /* ── Charts ──────────────────────────────────────────────────────────────── */
 .bp-charts {
@@ -426,7 +442,8 @@
 .bp-chart-box {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
   padding: 1rem;
 }
 .bp-chart-full { grid-column: 1 / -1; }
@@ -445,7 +462,7 @@
   margin-bottom: 1.25rem;
 }
 .bp-summary-card {
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 1rem 1.2rem;
   display: flex;
   flex-direction: column;
@@ -478,9 +495,9 @@
   color: var(--accent);
 }
 .bp-summary-net-neg {
-  background: rgba(220,50,50,0.07);
-  border-color: rgba(220,50,50,0.18);
-  color: #c0392b;
+  background: rgba(220,38,38,0.07);
+  border-color: rgba(220,38,38,0.18);
+  color: var(--red);
 }
 
 /* ── Summary Grid ────────────────────────────────────────────────────────── */
@@ -492,7 +509,8 @@
 .bp-sum-card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
   padding: 1rem 1.2rem;
 }
 .bp-sum-card-title {
@@ -577,8 +595,8 @@
   align-items: center;
 }
 .bp-form-label {
-  font-size: 0.79rem;
-  color: var(--ink3);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
   margin: 0.75rem 0 0.3rem;
 }
 
@@ -592,12 +610,13 @@
   background: var(--card);
   border: 1px solid var(--border);
   color: var(--ink3);
-  border-radius: 20px;
+  border-radius: 999px;
   padding: 0.28rem 0.8rem;
   font-size: 0.8rem;
   cursor: pointer;
   font-family: inherit;
   transition: all 0.15s;
+  white-space: nowrap;
 }
 .bp-sub-tab.active {
   background: var(--accent-soft);
@@ -764,19 +783,20 @@
 .bp-sub-chip {
   background: var(--card2);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 999px;
   padding: 0.13rem 0.48rem;
   font-size: 0.74rem;
   color: var(--ink2);
   display: inline-flex;
   align-items: center;
   gap: 0.2rem;
+  white-space: nowrap;
 }
 .bp-sub-chip.editable:hover { border-color: rgba(220,60,60,0.3); }
 .bp-sub-del {
   background: none;
   border: none;
-  color: #e86060;
+  color: var(--red);
   cursor: pointer;
   padding: 0;
   font-size: 0.82rem;
@@ -915,7 +935,7 @@
 }
 .rp-btn:hover { background: rgba(0,0,0,0.05); }
 .rp-btn.edit   { border-color: var(--border-strong); color: var(--text-muted); }
-.rp-btn.del    { border-color: #e86060; color: #e86060; }
+.rp-btn.del    { border-color: var(--red); color: var(--red); }
 .rp-btn.save   { background: var(--accent); color: #fff; border-color: transparent; font-weight: 600; }
 .rp-btn.save:hover { background: var(--accent-h); }
 .rp-btn.cancel { color: var(--ink3); }
@@ -933,9 +953,9 @@
 }
 
 .rp-modal {
-  background: #FFFFFF;
-  border: none;
-  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   padding: 1.4rem 1.6rem;
   width: 100%;
@@ -947,9 +967,9 @@
 }
 
 .rp-modal-full {
-  background: #FFFFFF;
-  border: none;
-  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   width: 100%;
   max-width: 560px;

@@ -6,6 +6,44 @@
 
 ## 2026-08-26
 
+### 디자인 토큰 적용 — Budget/Recurring 5탭 전체
+
+#### 토큰 정의 (globals.css :root 추가)
+- `--surface`, `--accent-soft`, `--border-strong`
+- `--shadow-sm`, `--shadow-md` (기존 --shadow 유지, sm/md 추가)
+- `--radius-sm`(8px), `--radius-md`(12px), `--radius-lg`(16px)
+- `--success`(=--green), `--danger`(=--red), `--warning`(=--gold)
+- `--text-lg`(1rem), `--text-sm`(0.82rem), `--text-xs`(0.72rem), `--text-muted`(=--ink3)
+
+#### BudgetPage.css 변경
+- 하드코딩 색상 → 토큰: `#e86060`→`var(--red)`, `#3a9a5a`→`var(--green)`, `#c0392b`→`var(--red)` (5곳)
+- 카드/패널 border-radius: `12px`→`var(--radius-md)`, `16px`→`var(--radius-lg)` (stat-box, cashflow-card, daily-top, item, chart-box, summary-card, sum-card)
+- `box-shadow: var(--shadow-sm)` 카드에 추가 (stat-box, cashflow-card, daily-top, chart-box, sum-card)
+- 버튼 border-radius: `8px`→`var(--radius-sm)` (bp-btn-primary, bp-btn-ghost)
+- bp-btn-ghost secondary 버튼: `border-color`→`var(--border-strong)`
+- 입력 필드: `border`→`var(--border-strong)`, focus 시 `box-shadow: 0 0 0 3px var(--accent-soft)` 추가
+- 배지/태그 border-radius: `20px`/`12px`→`999px` (bp-chip, bp-sub-tab, bp-sub-chip) + `white-space: nowrap` 추가
+- 라벨 폰트: `var(--text-xs)` + `color: var(--text-muted)` (bp-total-label, bp-cf-label, bp-form-label)
+- 제목: bp-section-h2 `font-weight: 700` + `var(--text-lg)`
+- 테이블 `.bp-num` 클래스 추가 (text-align: right + tabular-nums)
+- RecurringPage 모달: `#FFFFFF`→`var(--surface)`, border-radius→`var(--radius-lg)`, border 추가
+- `bp-table-wrap` border-radius: `10px`→`var(--radius-md)`
+
+#### BudgetPage.jsx 변경 (인라인 스타일 색상)
+- 캘린더 셀: `#ef4444`→`var(--red)`, `#f97316`→`var(--accent)`, `#16a34a`→`var(--green)`
+- 모달 내 income 배지: `#60c080`→`var(--green)`, 배경 rgba→`rgba(5,150,105,0.10)`, borderRadius→`999px`
+- 모달 내 금액: `'#60c080'`→`'var(--green)'`, `'#e8a060'`→`'var(--accent)'`
+- 편집 중 항목 배경: `rgba(232,160,96,0.06)`→`var(--accent-soft)`, border→`var(--border-strong)`
+- 연간 탭 테이블: `#4ac56e`→`var(--green)`, `#e8a060`→`var(--accent)`
+- 요약 탭 테이블: `#4ade80`→`var(--green)`, `#f87171`→`var(--red)`, `#60a5fa`→`var(--blue)`
+- AI 캡처 경고 박스: `#ea580c`→`var(--warning)`, 배경 rgba 색상 일치
+- 에러 텍스트: `#ef4444`→`var(--red)`
+
+#### 미적용 (변경 범위 밖)
+- Chart.js dataset 색상: CSS 변수 미지원으로 유지 (backgroundColor, borderColor in datasets)
+
+---
+
 ### 데드코드 및 방치 파일 정리
 
 #### 삭제된 파일

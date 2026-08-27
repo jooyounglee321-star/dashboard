@@ -446,12 +446,12 @@ function DailyTab({ lang, currency, toDisplay, userRole = '' }) {
             const isOver = data.expense > monthAvgExpense && monthAvgExpense > 0
             const lines = []
             if (data.expense > 0) lines.push(
-              <span key="exp" style={{ fontSize: '0.7rem', fontWeight: 600, lineHeight: 1.2, color: isOver ? '#ef4444' : '#f97316', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span key="exp" style={{ fontSize: '0.7rem', fontWeight: 600, lineHeight: 1.2, color: isOver ? 'var(--red)' : 'var(--accent)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {fmtAmt(toDisplay(data.expense), currency)}
               </span>
             )
             if (data.income > 0) lines.push(
-              <span key="inc" style={{ fontSize: '0.7rem', fontWeight: 500, lineHeight: 1.2, color: '#16a34a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span key="inc" style={{ fontSize: '0.7rem', fontWeight: 500, lineHeight: 1.2, color: 'var(--green)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 +{fmtAmt(toDisplay(data.income), currency)}
               </span>
             )
@@ -602,15 +602,15 @@ function DailyTab({ lang, currency, toDisplay, userRole = '' }) {
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                   {displayItems.map(it => (
                     <li key={it.id} style={editId === it.id ? {
-                      background: 'rgba(232,160,96,0.06)',
-                      border: '1px solid rgba(232,160,96,0.25)',
-                      borderRadius: '0.75rem',
+                      background: 'var(--accent-soft)',
+                      border: '1px solid var(--border-strong)',
+                      borderRadius: 'var(--radius-md)',
                       padding: '0.9rem 1rem',
                       display: 'flex', flexDirection: 'column', gap: '0.5rem',
                     } : {
                       background: 'var(--card2)',
                       border: '1px solid var(--border)',
-                      borderRadius: '0.75rem',
+                      borderRadius: 'var(--radius-md)',
                       padding: '0.9rem 1rem',
                       display: 'flex', flexDirection: 'column', gap: '0.5rem',
                     }}>
@@ -683,7 +683,7 @@ function DailyTab({ lang, currency, toDisplay, userRole = '' }) {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             {(it.type || 'expense') === 'income' && (
-                              <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#60c080', background: 'rgba(96,192,128,0.12)', borderRadius: '4px', padding: '0.1rem 0.4rem', display: 'inline-block', marginBottom: '0.2rem' }}>
+                              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--green)', background: 'rgba(5,150,105,0.10)', borderRadius: '999px', padding: '0.1rem 0.4rem', display: 'inline-block', marginBottom: '0.2rem', whiteSpace: 'nowrap' }}>
                                 💰 {t(lang, 'budget.income')}
                               </span>
                             )}
@@ -695,7 +695,7 @@ function DailyTab({ lang, currency, toDisplay, userRole = '' }) {
                             {it.description && <div style={{ fontSize: '0.78rem', color: 'var(--ink3)' }}>{it.description.replace(/\[R#\d+\]\s*/g, '').trim()}</div>}
                           </div>
                           <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                            <div style={{ fontSize: '1rem', fontWeight: 700, color: (it.type || 'expense') === 'income' ? '#60c080' : '#e8a060' }}>
+                            <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: (it.type || 'expense') === 'income' ? 'var(--green)' : 'var(--accent)' }}>
                               {(it.type || 'expense') === 'income' ? '+' : ''}{fmtAmt(it.amount, it.currency)}
                             </div>
                             {it.currency !== currency && (
@@ -1393,8 +1393,8 @@ function YearlyTab({ lang, currency, toDisplay }) {
               <thead>
                 <tr>
                   <th>{t(lang, 'budgetMonth')}</th>
-                  <th style={{ color: '#4ac56e' }}>{t(lang, 'budget.totalIncome')}</th>
-                  <th style={{ color: '#e8a060' }}>{t(lang, 'budget.totalExpense')}</th>
+                  <th style={{ color: 'var(--green)' }}>{t(lang, 'budget.totalIncome')}</th>
+                  <th style={{ color: 'var(--accent)' }}>{t(lang, 'budget.totalExpense')}</th>
                   <th>{t(lang, 'budget.net')}</th>
                 </tr>
               </thead>
@@ -1793,8 +1793,8 @@ function SummaryTab({ lang, currency, toDisplay }) {
               <thead>
                 <tr>
                   <th>{t(lang, 'budgetMonth')}</th>
-                  <th style={{ color: '#4ade80' }}>{t(lang, 'budget.totalIncome')}</th>
-                  <th style={{ color: '#f87171' }}>{t(lang, 'budget.totalExpense')}</th>
+                  <th style={{ color: 'var(--green)' }}>{t(lang, 'budget.totalIncome')}</th>
+                  <th style={{ color: 'var(--red)' }}>{t(lang, 'budget.totalExpense')}</th>
                   <th>{t(lang, 'budget.net')}</th>
                 </tr>
               </thead>
@@ -1802,9 +1802,9 @@ function SummaryTab({ lang, currency, toDisplay }) {
                 {history.map((h, i) => (
                   <tr key={i}>
                     <td>{h.y}-{pad2(h.m)}</td>
-                    <td style={{ color: '#4ade80' }}>{fmtAmt(toDisplay(h.total_income), currency)}</td>
-                    <td style={{ color: '#f87171' }}>{fmtAmt(toDisplay(h.total_expense), currency)}</td>
-                    <td style={{ color: h.net >= 0 ? '#60a5fa' : '#f87171' }}>
+                    <td style={{ color: 'var(--green)' }}>{fmtAmt(toDisplay(h.total_income), currency)}</td>
+                    <td style={{ color: 'var(--red)' }}>{fmtAmt(toDisplay(h.total_expense), currency)}</td>
+                    <td style={{ color: h.net >= 0 ? 'var(--blue)' : 'var(--red)' }}>
                       {fmtAmt(toDisplay(h.net), currency)}
                     </td>
                   </tr>
@@ -2342,7 +2342,7 @@ function BudgetCapturePanel({ lang, cats, onClose, onSaved, showToast }) {
             <div style={{ fontSize: '0.82rem', color: 'var(--ink3)', lineHeight: 1.6, padding: '0.6rem 0.8rem', background: 'var(--card2)', borderRadius: 8 }}>
               💡 {t(lang, 'budget.captureHint')}
             </div>
-            <div style={{ fontSize: '0.82rem', color: '#ea580c', padding: '0.5rem 0.8rem', background: 'rgba(234,88,12,0.08)', borderRadius: 8, border: '1px solid rgba(234,88,12,0.25)' }}>
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--warning)', padding: '0.5rem 0.8rem', background: 'rgba(217,119,6,0.08)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(217,119,6,0.25)' }}>
               {t(lang, 'budget.capturePrivacy')}
             </div>
             <div>
@@ -2373,7 +2373,7 @@ function BudgetCapturePanel({ lang, cats, onClose, onSaved, showToast }) {
                 </span>
               )}
               {results.parse_errors?.length > 0 && (
-                <span style={{ fontSize: '0.78rem', color: '#ef4444' }}>
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--red)' }}>
                   ⚠ {t(lang, 'budget.captureParseError')}: {results.parse_errors.join(' | ')}
                 </span>
               )}
