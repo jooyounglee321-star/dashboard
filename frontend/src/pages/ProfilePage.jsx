@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { t } from '../i18n'
 
 function togglePw(setFn) {
@@ -201,11 +201,14 @@ export default function ProfilePage() {
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
-      <div className="page-topbar">
-        <span style={{ fontFamily: "'Playfair Display', serif", fontSize: '0.95rem', color: 'var(--accent)', fontWeight: 700 }}>
+      <header className="header">
+        <span style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.2rem', color: 'var(--accent)' }}>
           {t(lang, 'profile.myDay')}
         </span>
-      </div>
+        <div className="header-right">
+          <Link to="/" className="admin-link">{t(lang, 'profile.backToDashboard')}</Link>
+        </div>
+      </header>
 
       {/* Content */}
       <div style={{ flex: 1, display: 'flex', justifyContent: 'center', padding: '2rem 1rem 3rem' }}>

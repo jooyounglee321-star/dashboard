@@ -18,20 +18,7 @@
 .stock-card-clickable{cursor:pointer;}
 .stock-card-clickable .card-header:hover{background:var(--bg);}
 
-/* ── 페이지 탑바 (사이드바 모드에서 헤더 대체) ── */
-.page-topbar{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0.65rem 1.2rem;
-  background:var(--surface);
-  border-bottom:1px solid var(--border);
-  position:sticky;top:0;z-index:100;
-  box-shadow:0 1px 4px rgba(15,23,42,0.04);
-  gap:0.75rem;
-  min-height:52px;
-}
-.page-topbar-date{font-size:0.78rem;color:var(--ink3);}
-
-/* ── INDEX HEADER (레거시 — 모바일에서만 남음) ── */
+/* ── INDEX HEADER ── */
 .header-right{display:flex;align-items:center;gap:0.6rem;}
 .header-date{font-size:0.78rem;color:var(--ink3);}
 .admin-link{font-size:0.78rem;color:var(--ink2);text-decoration:none;border:1px solid var(--border);padding:0.28rem 0.7rem;border-radius:20px;transition:all 0.15s;}
@@ -46,7 +33,7 @@
 .layout-edit-btn:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
 
 /* ── 레이아웃 편집 툴바 ── */
-.layout-toolbar{background:var(--surface);color:var(--ink);padding:0.65rem 1.4rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;border-bottom:1px solid var(--border);position:sticky;top:52px;z-index:100;box-shadow:0 2px 8px rgba(15,23,42,0.06);}
+.layout-toolbar{background:var(--surface);color:var(--ink);padding:0.65rem 1.4rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;border-bottom:1px solid var(--border);position:sticky;top:60px;z-index:100;box-shadow:0 2px 8px rgba(15,23,42,0.06);}
 .layout-toolbar-tip{font-size:0.78rem;color:var(--ink3);letter-spacing:0.01em;}
 .layout-toolbar-actions{display:flex;gap:0.5rem;}
 .layout-btn-save{padding:0.32rem 1.1rem;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:inherit;}

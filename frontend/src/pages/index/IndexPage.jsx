@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { calcStock } from '../../utils/calcStock'
 import { apiFetch } from '../../api'
 import './index.css'
@@ -55,6 +55,8 @@ function getHeaderDate(lang = 'ko') {
 }
 
 export default function IndexPage() {
+  const navigate = useNavigate()
+
   // Mobile tab state
   const [mobileTab, setMobileTab] = useState('home')
 
@@ -134,16 +136,31 @@ export default function IndexPage() {
     return () => clearInterval(id)
   }, [])
 
-  // role (StockSettingsModal에서 사용)
+  // 로그아웃
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  async function handleLogout() {
+    setShowLogoutConfirm(false)
+    try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {}) } catch {}
+    try { localStorage.removeItem('dashboard_logged_in'); localStorage.removeItem('user') } catch {}
+    try { sessionStorage.clear() } catch {}
+    navigate('/login', { replace: true })
+  }
+
+  // 헤더 닉네임 + role
+  const [userName, setUserName] = useState('')
   const [userRole, setUserRole] = useState('')
+  const [avatarSrc, setAvatarSrc] = useState(null)
 
   // auth/me + timezone + widget-config 병렬 로드
   useEffect(() => {
     // 로컬 캐시 우선 표시
     try {
       const cached = JSON.parse(getLsItem('user') || '{}')
+      if (cached.name) setUserName(cached.name)
       if (cached.role) setUserRole(cached.role)
     } catch {}
+    const av = getLsItem('avatar_data')
+    if (av) setAvatarSrc(av)
 
     const ctrl = new AbortController()
     const sig = { signal: ctrl.signal, credentials: 'include' }
@@ -160,6 +177,7 @@ export default function IndexPage() {
       wcCache ? Promise.resolve(wcCache)
         : fetch('/api/auth/widget-config', sig).then(r => r.ok ? r.json() : null).catch(() => null).then(d => { if (d) ssSet('cache_widget_config', d); return d }),
     ]).then(([me, tz, wc]) => {
+      if (me?.name) setUserName(me.name)
       if (me?.role) setUserRole(me.role)
       if (tz?.zones?.length === 3) setZones(tz.zones)
       if (wc?.config) {
@@ -436,15 +454,56 @@ export default function IndexPage() {
         userRole={userRole}
       />
 
-      {/* ── 페이지 탑바 (날짜 + 레이아웃 편집) ── */}
-      <div className="page-topbar">
-        <span className="page-topbar-date">{headerDate}</span>
-        {!editMode && (
-          <button className="layout-edit-btn" onClick={enterEditMode} title="레이아웃 편집">
-            ⊞ {lang === 'ko' ? '레이아웃 편집' : 'Edit Layout'}
+      {/* 헤더 */}
+      <header className="header">
+        <span className="header-title" style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.25rem', color: 'var(--accent2)' }}>
+          ✦ {userName ? `${userName}${t(lang, 'ofDay')}` : t(lang, 'myDay')}
+        </span>
+        <div className="header-right">
+          <span className="header-date">{headerDate}</span>
+          <Link to="/admin" className="admin-link">{t(lang, 'adminLink')}</Link>
+          {userRole === 'admin' && (
+            <Link to="/superadmin" style={{
+              fontSize: '0.78rem', color: '#6B4A28', textDecoration: 'none',
+              border: '1px solid rgba(196,149,106,0.4)', padding: '0.28rem 0.7rem',
+              borderRadius: 20, fontFamily: 'inherit', fontWeight: 500,
+            }}>{t(lang, 'superadminBtn')}</Link>
+          )}
+          <button
+            onClick={() => setShowLogoutConfirm(true)}
+            title={t(lang, 'logout')}
+            style={{
+              fontSize: '0.78rem', color: '#6B4A28', background: 'none',
+              border: '1px solid rgba(196,149,106,0.4)', padding: '0.28rem 0.7rem',
+              borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 400,
+              transition: 'all 0.15s',
+            }}
+          >
+            {t(lang, 'logout')}
           </button>
-        )}
-      </div>
+          <Link
+            to="/profile"
+            title="내 프로필"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 30, height: 30, borderRadius: '50%',
+              background: 'rgba(232,160,96,0.15)', border: '1px solid rgba(232,160,96,0.35)',
+              color: 'var(--accent2)', textDecoration: 'none', fontSize: '1rem',
+              overflow: 'hidden', flexShrink: 0,
+            }}
+          >
+            {avatarSrc
+              ? <img src={avatarSrc} alt="프로필" style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: '50%' }} />
+              : '👤'}
+          </Link>
+          {/* ── 레이아웃 편집 버튼 (모바일 숨김) ── */}
+          {!editMode && (
+            <button className="layout-edit-btn" onClick={enterEditMode} title="레이아웃 편집">
+              ⊞ {lang === 'ko' ? '레이아웃 편집' : 'Edit Layout'}
+            </button>
+          )}
+        </div>
+      </header>
 
       {/* ── 편집모드 툴바 (sticky) ── */}
       {editMode && (
@@ -569,6 +628,27 @@ export default function IndexPage() {
         </Link>
       </nav>
 
+      {/* 로그아웃 확인 모달 */}
+      {showLogoutConfirm && (
+        <div className="modal-overlay open" onClick={e => { if (e.target === e.currentTarget) setShowLogoutConfirm(false) }}>
+          <div className="modal" style={{ maxWidth: 360 }}>
+            <div className="modal-header">
+              <span className="modal-title">{t(lang, 'logoutConfirmTitle')}</span>
+              <button className="modal-close" onClick={() => setShowLogoutConfirm(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                <button className="btn btn-gray btn-sm" onClick={() => setShowLogoutConfirm(false)}>
+                  {t(lang, 'common.cancel')}
+                </button>
+                <button className="btn btn-red btn-sm" onClick={handleLogout}>
+                  {t(lang, 'logout')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -4,35 +4,6 @@
 
 ---
 
-## 2026-08-27 (5차)
-
-### MUI Dashboard 사이드바 레이아웃 전체 재구성
-
-#### 신규 파일
-- `src/components/Sidebar.jsx` — 다크 사이드바 (접기/펼치기, 활성 하이라이트, 유저 영역 + 로그아웃)
-- `src/components/DashboardLayout.jsx` — 사이드바 + 컨텐츠 영역 래퍼 (App.jsx 라우터에 적용)
-
-#### App.jsx
-- 인증 필요 모든 페이지(IndexPage, ProfilePage, AdminPage, SuperadminPage, BudgetPage, RecurringPage, DietStatsPage)를 `<DashboardLayout>`으로 래핑
-
-#### globals.css (사이드바 CSS 추가)
-- `--sidebar-w: 220px`, `--sidebar-mini: 60px` 토큰 추가
-- `.dashboard-root` flex 레이아웃, `.dashboard-content` margin-left 트랜지션
-- `.sidebar` 다크 배경(var(--ink)) 고정 사이드바 전체 스타일
-- `.sidebar-logo`, `.sidebar-nav`, `.sidebar-item`, `.sidebar-user`, `.sidebar-toggle` 세부 스타일
-- 모바일(<768px): 사이드바 숨김, margin-left 0 (기존 bottom nav 유지)
-
-#### 페이지별 헤더 제거 + page-topbar로 교체
-- `IndexPage.jsx` — 상단 header 제거, 날짜+레이아웃편집 버튼만 남긴 `.page-topbar`로 교체. 로그아웃/유저 정보는 Sidebar로 이전
-- `AdminPage.jsx` — header 제거, page-topbar로 교체
-- `ProfilePage.jsx` — header 제거, page-topbar로 교체
-- `BudgetPage.jsx` — bp-header 제거, 통화 선택기 + 정기지출 버튼을 page-topbar에 통합
-- `RecurringPage.jsx` — standalone 시 header 제거(modal 모드는 유지), page-topbar로 교체
-- `SuperadminPage.jsx` — header + nav 제거, page-topbar로 교체
-- `DietStatsPage.jsx` — 인라인 스타일 sticky header 제거, page-topbar로 교체
-
----
-
 ## 2026-08-27 (4차)
 
 ### MUI Dashboard 디자인 패턴 적용 (디자인 토큰 시스템 확장)

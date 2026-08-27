@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import Toast, { useToast } from '../components/Toast'
 import { t, T } from './index/i18n'
 
@@ -181,9 +181,10 @@ export default function AdminPage() {
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', color: 'var(--ink)', fontFamily: "'Noto Sans KR', sans-serif", fontWeight: 300 }}>
-      <div className="page-topbar">
-        <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)' }}>⚙ {t(lang, 'admin.title')}</span>
-      </div>
+      <header className="header">
+        <span className="header-title">⚙ {t(lang, 'admin.title')}</span>
+        <Link to="/" className="nav-link">← {t(lang, 'admin.toDashboard')}</Link>
+      </header>
 
       <main style={{ maxWidth: 860, margin: '0 auto', padding: '1.5rem 1.2rem 4rem', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
 

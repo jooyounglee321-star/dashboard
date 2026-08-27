@@ -11,7 +11,6 @@ import DietStatsPage from './pages/DietStatsPage'
 import RecurringPage from './pages/RecurringPage'
 import WithdrawalPendingPage from './pages/WithdrawalPendingPage'
 import DebugPanel from './DebugPanel'
-import DashboardLayout from './components/DashboardLayout'
 
 // HttpOnly Cookie는 JS에서 읽을 수 없으므로, "로그인 여부" 힌트만 localStorage에 보관.
 // 실제 인증은 Cookie로 하며, 이 플래그는 UI 라우팅용 힌트일 뿐이다.
@@ -151,14 +150,14 @@ export default function App() {
       <Routes>
         <Route path="/login"    element={<LoginGuard><LoginPage /></LoginGuard>} />
         <Route path="/register" element={<LoginGuard><RegisterPage /></LoginGuard>} />
-        <Route path="/"           element={<AuthGuard><DashboardLayout><IndexPage /></DashboardLayout></AuthGuard>} />
-        <Route path="/profile"    element={<AuthGuard><DashboardLayout><ProfilePage /></DashboardLayout></AuthGuard>} />
-        <Route path="/admin"      element={<AdminRoleGuard><DashboardLayout><AdminPage /></DashboardLayout></AdminRoleGuard>} />
+        <Route path="/"           element={<AuthGuard><IndexPage /></AuthGuard>} />
+        <Route path="/profile"    element={<AuthGuard><ProfilePage /></AuthGuard>} />
+        <Route path="/admin"      element={<AdminRoleGuard><AdminPage /></AdminRoleGuard>} />
         <Route path="/admin_users" element={<Navigate to="/superadmin" replace />} />
-        <Route path="/superadmin"  element={<AdminRoleGuard><DashboardLayout><SuperadminPage /></DashboardLayout></AdminRoleGuard>} />
-        <Route path="/budget"      element={<AuthGuard><DashboardLayout><BudgetPage /></DashboardLayout></AuthGuard>} />
-        <Route path="/recurring"   element={<AuthGuard><DashboardLayout><RecurringPage /></DashboardLayout></AuthGuard>} />
-        <Route path="/diet-stats"  element={<AuthGuard><DashboardLayout><DietStatsPage /></DashboardLayout></AuthGuard>} />
+        <Route path="/superadmin"  element={<AdminRoleGuard><SuperadminPage /></AdminRoleGuard>} />
+        <Route path="/budget"      element={<AuthGuard><BudgetPage /></AuthGuard>} />
+        <Route path="/recurring"   element={<AuthGuard><RecurringPage /></AuthGuard>} />
+        <Route path="/diet-stats"  element={<AuthGuard><DietStatsPage /></AuthGuard>} />
         <Route path="/auth/social-callback" element={<SocialCallbackPage />} />
         <Route path="/auth/calendar-callback" element={<CalendarCallbackPage />} />
         <Route path="/auth/youtube-callback" element={<YoutubeCallbackPage />} />

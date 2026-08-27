@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { t } from '../i18n'
 import { CURRENCY_LIST } from '../data/currencies'
 import { useToast } from '../components/Toast'
@@ -191,20 +192,19 @@ export default function RecurringPage({ onClose }) {
 
   return (
     <div className="bp-wrap">
-      {onClose ? (
-        <div className="bp-header">
+      <header className="bp-header">
+        {onClose ? (
           <button className="rp-btn cancel" onClick={onClose}>{t(lang, 'common.cancel')}</button>
-          <h1 className="bp-title">{t(lang, 'recurring.title')}</h1>
-          <div className="bp-header-r">
-            <button className="rp-add-btn" onClick={openAdd}>+ {t(lang, 'recurring.add')}</button>
-          </div>
+        ) : (
+          <Link to="/budget" className="bp-back">← {t(lang, 'budgetBack')}</Link>
+        )}
+        <h1 className="bp-title">{t(lang, 'recurring.title')}</h1>
+        <div className="bp-header-r">
+          <button className="rp-add-btn" onClick={openAdd}>
+            + {t(lang, 'recurring.add')}
+          </button>
         </div>
-      ) : (
-        <div className="page-topbar">
-          <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)' }}>🔄 {t(lang, 'recurring.title')}</span>
-          <button className="rp-add-btn" onClick={openAdd}>+ {t(lang, 'recurring.add')}</button>
-        </div>
-      )}
+      </header>
 
       <div className="rp-body">
         {loading ? (
