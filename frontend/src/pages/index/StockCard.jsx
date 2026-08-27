@@ -41,10 +41,10 @@ function StockNewsRow({ newsConfig, lang, onOpenSettings }) {
   // news_config 없음 → 설정 유도
   if (!newsConfig || !query) {
     return (
-      <button style={{ ...base, color: '#f59e0b', cursor: 'pointer' }}
+      <button style={{ ...base, color: 'var(--warning)', cursor: 'pointer' }}
         onClick={e => { e.stopPropagation(); onOpenSettings?.() }}
-        onMouseEnter={e => e.currentTarget.style.color = '#d97706'}
-        onMouseLeave={e => e.currentTarget.style.color = '#f59e0b'}
+        onMouseEnter={e => e.currentTarget.style.color = 'var(--warning)'}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--warning)'}
       >
         📰 {t(lang, 'stockNewsSetup')}
       </button>
@@ -342,7 +342,7 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
     )
     mTotalBar = (
       <div className="m-total-bar">
-        <span style={{ fontSize: '0.72rem', color: '#a89880' }}>{t(lang, 'stockTotalLabel')}{/* fxNote */}</span>
+        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{t(lang, 'stockTotalLabel')}{/* fxNote */}</span>
         <span style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--accent2)' }}>${fmtUSD(tot)}</span>
       </div>
     )

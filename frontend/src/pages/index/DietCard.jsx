@@ -344,7 +344,7 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
               style={{
                 width: '100%', padding: '0.55rem 1rem',
                 fontSize: isMobile ? '0.85rem' : '0.82rem', fontWeight: 600,
-                background: isAnalyzing ? '#7c3aed99' : '#7c3aed',
+                background: isAnalyzing ? 'rgba(124,58,237,0.6)' : '#7c3aed',
                 color: '#fff', border: 'none', borderRadius: 9,
                 cursor: isAnalyzing ? 'not-allowed' : 'pointer',
                 fontFamily: 'inherit', transition: 'background 0.15s',
@@ -441,13 +441,13 @@ export default function DietCard({ isMobile = false, mealConfig = null, lang = '
                           alignSelf: 'flex-end',
                           padding: '0.4rem 0.9rem',
                           fontSize: '0.78rem', fontWeight: 600,
-                          background: isSaving ? '#16a34a99' : '#16a34a',
+                          background: isSaving ? 'rgba(5,150,105,0.6)' : 'var(--green)',
                           color: '#fff', border: 'none', borderRadius: 8,
                           cursor: isSaving ? 'not-allowed' : 'pointer',
                           fontFamily: 'inherit', transition: 'background 0.15s',
                         }}
-                        onMouseEnter={e => { if (!isSaving) e.currentTarget.style.background = '#15803d' }}
-                        onMouseLeave={e => { if (!isSaving) e.currentTarget.style.background = '#16a34a' }}
+                        onMouseEnter={e => { if (!isSaving) e.currentTarget.style.background = 'var(--green)' }}
+                        onMouseLeave={e => { if (!isSaving) e.currentTarget.style.background = 'var(--green)' }}
                       >
                         {isSaving ? t(lang, 'common.processing') : `✅ ${t(lang, 'diet.saveAnalysis')}`}
                       </button>

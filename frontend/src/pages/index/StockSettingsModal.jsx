@@ -176,7 +176,7 @@ function CashSection({ g, onUpdate, sym, fmtA }) {
         <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--ink2)', letterSpacing: '0.08em' }}>CASH</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
           {contributed > 0 ? (
-            <span style={{ fontSize: '0.76rem', fontWeight: 600, color: balance >= 0 ? '#16a34a' : '#dc2626' }}>
+            <span style={{ fontSize: '0.76rem', fontWeight: 600, color: balance >= 0 ? 'var(--green)' : 'var(--red)' }}>
               잔고 {sym}{fmtA(Math.abs(balance))}{balance < 0 ? ' ⚠ 초과' : ''}
             </span>
           ) : (
@@ -191,8 +191,8 @@ function CashSection({ g, onUpdate, sym, fmtA }) {
           {/* 잔고 요약 */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.3rem', fontSize: '0.72rem', color: 'var(--ink3)', background: 'var(--card2)', borderRadius: 6, padding: '0.4rem 0.6rem' }}>
             <div>납입금<br /><span style={{ color: 'var(--ink)', fontWeight: 600 }}>{sym}{fmtA(contributed)}</span></div>
-            <div>매수<br /><span style={{ color: '#dc2626', fontWeight: 600 }}>−{sym}{fmtA(totalBuy)}</span></div>
-            <div>매도<br /><span style={{ color: '#16a34a', fontWeight: 600 }}>+{sym}{fmtA(totalSell)}</span></div>
+            <div>매수<br /><span style={{ color: 'var(--red)', fontWeight: 600 }}>−{sym}{fmtA(totalBuy)}</span></div>
+            <div>매도<br /><span style={{ color: 'var(--green)', fontWeight: 600 }}>+{sym}{fmtA(totalSell)}</span></div>
           </div>
 
           {/* 납입 내역 목록 */}
@@ -202,7 +202,7 @@ function CashSection({ g, onUpdate, sym, fmtA }) {
                 <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.22rem 0.5rem', fontSize: '0.72rem', borderBottom: '1px solid var(--border)' }}>
                   <span style={{ color: 'var(--ink3)' }}>{c.date}</span>
                   <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{sym}{fmtA(c.amount)}</span>
-                  <button onClick={() => onUpdate(g.id, 'deleteContribution', c.id)} style={{ background: 'none', border: 'none', color: '#c0392b', cursor: 'pointer', fontSize: '0.75rem', padding: '0 0.2rem' }}>✕</button>
+                  <button onClick={() => onUpdate(g.id, 'deleteContribution', c.id)} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: '0.75rem', padding: '0 0.2rem' }}>✕</button>
                 </div>
               ))}
             </div>
@@ -315,20 +315,20 @@ function StockDetailPanel({ g, s, onUpdate, cashBalance }) {
       <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '0.6rem 0.75rem' }}>
         <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#1d4ed8', marginBottom: '0.5rem' }}>📈 매입</div>
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div style={{ flex: 1, minWidth: 100 }}><div style={{ fontSize: '0.7rem', color: '#475569', marginBottom: '0.18rem' }}>매입일</div><input type="date" value={buyDate} onChange={e => setBuyDate(e.target.value)} style={inpS} /></div>
-          <div style={{ flex: 1, minWidth: 70 }}><div style={{ fontSize: '0.7rem', color: '#475569', marginBottom: '0.18rem' }}>수량 *</div><input type="number" value={buyQty} onChange={e => setBuyQty(e.target.value)} placeholder="수량" min="0.0001" step="any" style={inpS} /></div>
-          <div style={{ flex: 1, minWidth: 90 }}><div style={{ fontSize: '0.7rem', color: '#475569', marginBottom: '0.18rem' }}>매입가 (선택)</div><input type="number" value={buyPrice} onChange={e => setBuyPrice(e.target.value)} placeholder={`${sym} 단가`} min="0" step="any" style={inpS} /></div>
-          <button onClick={submitBuy} style={{ padding: '0.36rem 0.9rem', fontSize: '0.82rem', border: 'none', borderRadius: 7, background: '#C4956A', color: '#3D2009', cursor: 'pointer', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>매입</button>
+          <div style={{ flex: 1, minWidth: 100 }}><div style={{ fontSize: '0.7rem', color: 'var(--ink2)', marginBottom: '0.18rem' }}>매입일</div><input type="date" value={buyDate} onChange={e => setBuyDate(e.target.value)} style={inpS} /></div>
+          <div style={{ flex: 1, minWidth: 70 }}><div style={{ fontSize: '0.7rem', color: 'var(--ink2)', marginBottom: '0.18rem' }}>수량 *</div><input type="number" value={buyQty} onChange={e => setBuyQty(e.target.value)} placeholder="수량" min="0.0001" step="any" style={inpS} /></div>
+          <div style={{ flex: 1, minWidth: 90 }}><div style={{ fontSize: '0.7rem', color: 'var(--ink2)', marginBottom: '0.18rem' }}>매입가 (선택)</div><input type="number" value={buyPrice} onChange={e => setBuyPrice(e.target.value)} placeholder={`${sym} 단가`} min="0" step="any" style={inpS} /></div>
+          <button onClick={submitBuy} style={{ padding: '0.36rem 0.9rem', fontSize: '0.82rem', border: 'none', borderRadius: 7, background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>매입</button>
         </div>
       </div>
       {/* 매도 폼 */}
       <div style={{ background: '#fff1f2', border: '1px solid #fecaca', borderRadius: 8, padding: '0.6rem 0.75rem' }}>
-        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#b91c1c', marginBottom: '0.5rem' }}>📉 매도 <span style={{ fontWeight: 400, fontSize: '0.7rem', color: '#64748b' }}>(현재 보유 {holdQty.toLocaleString()}주)</span></div>
+        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--red)', marginBottom: '0.5rem' }}>📉 매도 <span style={{ fontWeight: 400, fontSize: '0.7rem', color: 'var(--ink2)' }}>(현재 보유 {holdQty.toLocaleString()}주)</span></div>
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div style={{ flex: 1, minWidth: 100 }}><div style={{ fontSize: '0.7rem', color: '#475569', marginBottom: '0.18rem' }}>매도일</div><input type="date" value={sellDate} onChange={e => setSellDate(e.target.value)} style={inpS} /></div>
-          <div style={{ flex: 1, minWidth: 70 }}><div style={{ fontSize: '0.7rem', color: '#475569', marginBottom: '0.18rem' }}>수량 * (최대 {holdQty})</div><input type="number" value={sellQty} onChange={e => setSellQty(e.target.value)} placeholder="수량" min="0.0001" max={holdQty} step="any" style={inpS} /></div>
-          <div style={{ flex: 1, minWidth: 90 }}><div style={{ fontSize: '0.7rem', color: '#475569', marginBottom: '0.18rem' }}>매도가 (선택)</div><input type="number" value={sellPrice} onChange={e => setSellPrice(e.target.value)} placeholder={`${sym} 단가`} min="0" step="any" style={inpS} /></div>
-          <button onClick={submitSell} style={{ padding: '0.36rem 0.9rem', fontSize: '0.82rem', border: 'none', borderRadius: 7, background: '#dc2626', color: '#fff', cursor: 'pointer', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>매도</button>
+          <div style={{ flex: 1, minWidth: 100 }}><div style={{ fontSize: '0.7rem', color: 'var(--ink2)', marginBottom: '0.18rem' }}>매도일</div><input type="date" value={sellDate} onChange={e => setSellDate(e.target.value)} style={inpS} /></div>
+          <div style={{ flex: 1, minWidth: 70 }}><div style={{ fontSize: '0.7rem', color: 'var(--ink2)', marginBottom: '0.18rem' }}>수량 * (최대 {holdQty})</div><input type="number" value={sellQty} onChange={e => setSellQty(e.target.value)} placeholder="수량" min="0.0001" max={holdQty} step="any" style={inpS} /></div>
+          <div style={{ flex: 1, minWidth: 90 }}><div style={{ fontSize: '0.7rem', color: 'var(--ink2)', marginBottom: '0.18rem' }}>매도가 (선택)</div><input type="number" value={sellPrice} onChange={e => setSellPrice(e.target.value)} placeholder={`${sym} 단가`} min="0" step="any" style={inpS} /></div>
+          <button onClick={submitSell} style={{ padding: '0.36rem 0.9rem', fontSize: '0.82rem', border: 'none', borderRadius: 7, background: 'var(--red)', color: '#fff', cursor: 'pointer', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>매도</button>
         </div>
       </div>
       {/* 거래 내역 */}
@@ -346,11 +346,11 @@ function StockDetailPanel({ g, s, onUpdate, cashBalance }) {
                 return (
                   <div key={r.id} style={{ background: bg, border: `1px solid ${borderC}`, borderRadius: 7, padding: '0.45rem 0.6rem' }}>
                     <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                      <div style={{ flex: 1, minWidth: 95 }}><div style={{ fontSize: '0.67rem', color: '#64748b', marginBottom: '0.12rem' }}>날짜</div><input type="date" value={editRec.date || ''} onChange={e => setEditRec(r => ({ ...r, date: e.target.value }))} style={{ ...inpS, fontSize: '0.8rem' }} /></div>
-                      <div style={{ flex: 1, minWidth: 65 }}><div style={{ fontSize: '0.67rem', color: '#64748b', marginBottom: '0.12rem' }}>수량</div><input type="number" value={editRec.qty || ''} onChange={e => setEditRec(r => ({ ...r, qty: e.target.value }))} min="0.0001" step="any" style={{ ...inpS, fontSize: '0.8rem' }} /></div>
-                      <div style={{ flex: 1, minWidth: 85 }}><div style={{ fontSize: '0.67rem', color: '#64748b', marginBottom: '0.12rem' }}>단가</div><input type="number" value={editRec.price || ''} onChange={e => setEditRec(r => ({ ...r, price: e.target.value }))} min="0" step="any" placeholder={sym} style={{ ...inpS, fontSize: '0.8rem' }} /></div>
+                      <div style={{ flex: 1, minWidth: 95 }}><div style={{ fontSize: '0.67rem', color: 'var(--ink2)', marginBottom: '0.12rem' }}>날짜</div><input type="date" value={editRec.date || ''} onChange={e => setEditRec(r => ({ ...r, date: e.target.value }))} style={{ ...inpS, fontSize: '0.8rem' }} /></div>
+                      <div style={{ flex: 1, minWidth: 65 }}><div style={{ fontSize: '0.67rem', color: 'var(--ink2)', marginBottom: '0.12rem' }}>수량</div><input type="number" value={editRec.qty || ''} onChange={e => setEditRec(r => ({ ...r, qty: e.target.value }))} min="0.0001" step="any" style={{ ...inpS, fontSize: '0.8rem' }} /></div>
+                      <div style={{ flex: 1, minWidth: 85 }}><div style={{ fontSize: '0.67rem', color: 'var(--ink2)', marginBottom: '0.12rem' }}>단가</div><input type="number" value={editRec.price || ''} onChange={e => setEditRec(r => ({ ...r, price: e.target.value }))} min="0" step="any" placeholder={sym} style={{ ...inpS, fontSize: '0.8rem' }} /></div>
                       <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
-                        <button onClick={saveEdit} style={{ padding: '0.3rem 0.65rem', fontSize: '0.78rem', border: 'none', borderRadius: 6, background: '#C4956A', color: '#3D2009', cursor: 'pointer', fontWeight: 500 }}>저장</button>
+                        <button onClick={saveEdit} style={{ padding: '0.3rem 0.65rem', fontSize: '0.78rem', border: 'none', borderRadius: 6, background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontWeight: 500 }}>저장</button>
                         <button onClick={() => setEditRec(null)} style={{ padding: '0.3rem 0.55rem', fontSize: '0.78rem', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--card2)', color: 'var(--ink)', cursor: 'pointer' }}>취소</button>
                       </div>
                     </div>
@@ -365,7 +365,7 @@ function StockDetailPanel({ g, s, onUpdate, cashBalance }) {
                   <span style={{ fontSize: '0.78rem', color: 'var(--ink2)', flex: 1 }}>{r.price ? sym + fmtA(r.price) : '단가 없음'}</span>
                   <div style={{ display: 'flex', gap: '0.22rem', flexShrink: 0 }}>
                     <button onClick={() => setEditRec({ ...r })} style={{ padding: '0.22rem 0.5rem', fontSize: '0.72rem', border: `1px solid ${isBuy ? '#93c5fd' : '#fca5a5'}`, borderRadius: 5, background: 'transparent', color: isBuy ? '#1d4ed8' : '#b91c1c', cursor: 'pointer' }}>수정</button>
-                    <button onClick={() => deleteRecord(r.type, r.id)} style={{ padding: '0.22rem 0.5rem', fontSize: '0.72rem', border: '1px solid #fca5a5', borderRadius: 5, background: 'transparent', color: '#b91c1c', cursor: 'pointer' }}>삭제</button>
+                    <button onClick={() => deleteRecord(r.type, r.id)} style={{ padding: '0.22rem 0.5rem', fontSize: '0.72rem', border: '1px solid var(--red)', borderRadius: 5, background: 'transparent', color: 'var(--red)', cursor: 'pointer' }}>삭제</button>
                   </div>
                 </div>
               )
@@ -538,7 +538,7 @@ function CaptureUploadPanel({ g, lang, onSave, onClose }) {
                           <td style={{ padding: '0.45rem 0.6rem' }}>
                             <input type="date" value={r.date || ''} onChange={e => updateRow(r._key, 'date', e.target.value)}
                               style={{ ...inp, width: 130, ...(r.date ? {} : { borderColor: '#f0b445', background: '#fff4e5' }) }} />
-                            {!r.date && <div style={{ fontSize: '0.65rem', color: '#d97706', marginTop: 2, fontWeight: 500 }}>날짜 확인 필요</div>}
+                            {!r.date && <div style={{ fontSize: '0.65rem', color: 'var(--warning)', marginTop: 2, fontWeight: 500 }}>날짜 확인 필요</div>}
                           </td>
                           <td style={{ padding: '0.45rem 0.6rem', textAlign: 'right' }}>
                             <input type="number" value={r.qty} onChange={e => updateRow(r._key, 'qty', parseFloat(e.target.value) || 0)} min="0" step="any" style={{ ...inp, width: 72, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }} />
@@ -799,7 +799,7 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
                       🤖 {t(lang, 'admin.captureUpload')}
                     </button>
                   )}
-                  <button onClick={() => delGroup(g.id)} style={{ padding: '0.28rem 0.65rem', fontSize: '0.78rem', cursor: 'pointer', background: 'transparent', color: '#c0392b', border: '1px solid #c0392b', borderRadius: 6, fontFamily: 'inherit', transition: 'all 0.15s' }}>{t(lang, 'admin.delGroup')}</button>
+                  <button onClick={() => delGroup(g.id)} style={{ padding: '0.28rem 0.65rem', fontSize: '0.78rem', cursor: 'pointer', background: 'transparent', color: 'var(--red)', border: '1px solid var(--red)', borderRadius: 6, fontFamily: 'inherit', transition: 'all 0.15s' }}>{t(lang, 'admin.delGroup')}</button>
                 </div>
                 <div style={{ background: 'var(--card2)' }}>
                   {!activeStocks.length
@@ -821,10 +821,10 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
                               </div>
                             </div>
                             <button onClick={() => openNewsSettings(s)} style={{ padding: '0.16rem 0.48rem', fontSize: '0.72rem', cursor: 'pointer', border: '1px solid var(--border)', borderRadius: 5, background: 'transparent', color: 'var(--ink2)', fontFamily: 'inherit', transition: 'all 0.12s' }}>📰 {t(lang, 'stock.newsSettings')}</button>
-                            <button onClick={() => confirmDelStock(g.id, s.id)} style={{ padding: '0.16rem 0.48rem', fontSize: '0.72rem', cursor: 'pointer', border: '1px solid #c0392b', borderRadius: 5, background: 'transparent', color: '#c0392b', fontFamily: 'inherit', transition: 'all 0.12s' }}>{t(lang, 'admin.delStock')}</button>
+                            <button onClick={() => confirmDelStock(g.id, s.id)} style={{ padding: '0.16rem 0.48rem', fontSize: '0.72rem', cursor: 'pointer', border: '1px solid var(--red)', borderRadius: 5, background: 'transparent', color: 'var(--red)', fontFamily: 'inherit', transition: 'all 0.12s' }}>{t(lang, 'admin.delStock')}</button>
                           </div>
                           {newsOpen === s.id && (
-                            <div style={{ borderTop: '1px solid var(--border)', background: '#f8faff', padding: '0.7rem 0.9rem', display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+                            <div style={{ borderTop: '1px solid var(--border)', background: 'var(--card2)', padding: '0.7rem 0.9rem', display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
                               {/* 뉴스 소스 */}
                               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                                 <span style={{ fontSize: '0.75rem', color: 'var(--ink2)', minWidth: 60 }}>{t(lang, 'stock.newsSource')}</span>
@@ -901,12 +901,12 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
                   <strong>매도 처리 후 삭제를 권장합니다.</strong>
                 </div>
               )}
-              <div style={{ fontSize: '0.87rem', color: 'var(--ink)', lineHeight: 1.7, marginBottom: '1.1rem', padding: '0.65rem 0.8rem', background: 'var(--card2)', borderRadius: 8, borderLeft: '3px solid #dc2626' }}>
+              <div style={{ fontSize: '0.87rem', color: 'var(--ink)', lineHeight: 1.7, marginBottom: '1.1rem', padding: '0.65rem 0.8rem', background: 'var(--card2)', borderRadius: 8, borderLeft: '3px solid var(--red)' }}>
                 이 종목의 모든 거래내역이 삭제됩니다.<br />정말 삭제하시겠습니까?
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                 <button onClick={() => setDeleteModal(null)} style={{ padding: '0.42rem 1rem', fontSize: '0.85rem', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--card2)', color: 'var(--ink)', cursor: 'pointer' }}>취소</button>
-                <button onClick={doDelStock} style={{ padding: '0.42rem 1.1rem', fontSize: '0.85rem', border: 'none', borderRadius: 7, background: '#dc2626', color: '#fff', cursor: 'pointer', fontWeight: 500 }}>삭제</button>
+                <button onClick={doDelStock} style={{ padding: '0.42rem 1.1rem', fontSize: '0.85rem', border: 'none', borderRadius: 7, background: 'var(--red)', color: '#fff', cursor: 'pointer', fontWeight: 500 }}>삭제</button>
               </div>
             </div>
           </div>
@@ -926,7 +926,7 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
       onClick={onClose}
     >
       <div
-        style={{ background: '#FFFFFF', borderRadius: 16, padding: '1.5rem 1.8rem', width: '100%', maxWidth: 680, boxShadow: '0 20px 60px rgba(15,23,42,0.18)', maxHeight: '80vh', overflowY: 'auto', position: 'relative' }}
+        style={{ background: 'var(--surface)', borderRadius: 'var(--radius-lg)', padding: '1.5rem 1.8rem', width: '100%', maxWidth: 680, boxShadow: 'var(--shadow-md)', maxHeight: '80vh', overflowY: 'auto', position: 'relative' }}
         onClick={e => e.stopPropagation()}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>

@@ -4,6 +4,33 @@
 
 ---
 
+## 2026-08-27
+
+### 디자인 토큰 적용 — IndexPage 위젯 전체
+
+#### 수정된 파일
+- `StockSettingsModal.jsx` — 잔고 색상, 매입/매도 버튼, 삭제 버튼, 레이블, 모달 컨테이너 등 15곳
+- `StockCard.jsx` — 뉴스 설정 유도 버튼, 보조 텍스트 색상 (`#a89880`→`var(--text-muted)`)
+- `DietCard.jsx` — 저장 버튼 green (#16a34a→`var(--green)`), alpha 표현 정규화
+- `MemoCard.jsx` — 글자수 경고색, 이모지 탭 선택색, 삭제 버튼, 빈 목록 텍스트, 달력 모달 컨테이너
+- `TodoList.jsx` — 날짜 오류 border/텍스트, 저장 확인 메시지 배경 (모두 토큰화)
+- `SitesSettingsModal.jsx` — 삭제 버튼 (#ef4444→`var(--red)`)
+- `StockStatsOverlay.jsx` — 집중도 바 경고색 (`#f59e0b`→`var(--warning)`)
+- `ExpenseCard.jsx` — 음수 지출 색상 (`#e8a060`→`var(--accent)`)
+
+#### 적용 규칙 요약
+- 빨강: `#ef4444`, `#dc2626`, `#b91c1c`, `#c0392b`, `#e53935`, `#f87171` → `var(--red)`
+- 초록: `#16a34a`, `#15803d`, `#059669` → `var(--green)`
+- 경고(amber): `#f59e0b`, `#d97706` → `var(--warning)`
+- 보조 텍스트: `#a89880`, `#9aacbf` → `var(--text-muted)` / `var(--ink3)`
+- 파랑: `#60a5fa` → `var(--blue)` (이모지 탭 선택 표시)
+- 모달 배경: `#FFFFFF` → `var(--surface)`, `borderRadius: 16` → `var(--radius-lg)`
+- 모달 그림자: `0 20px 60px rgba(...)` → `var(--shadow-md)`
+- DietCard AI 버튼 보라색(#7c3aed)은 기능별 색상 유지 (토큰 없음)
+- Chart.js 배열 팔레트 색상 (`bmColors`, `groupColors`, `GRP_COLORS`)은 데이터 표현용으로 유지
+
+---
+
 ## 2026-08-26
 
 ### 디자인 토큰 적용 — Budget/Recurring 5탭 전체

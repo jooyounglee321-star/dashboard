@@ -207,7 +207,7 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
                 type="date"
                 value={newStart}
                 onChange={e => handleStartChange(e.target.value)}
-                style={{ width: '100%', fontSize: fs.sub, padding: '0.3rem 0.45rem', border: `1px solid ${dateErr ? '#e53935' : 'var(--border)'}`, borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit' }}
+                style={{ width: '100%', fontSize: fs.sub, padding: '0.3rem 0.45rem', border: `1px solid ${dateErr ? 'var(--red)' : 'var(--border)'}`, borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit' }}
               />
             </div>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
@@ -216,13 +216,13 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
                 type="date"
                 value={newDue}
                 onChange={e => handleDueChange(e.target.value)}
-                style={{ width: '100%', fontSize: fs.sub, padding: '0.3rem 0.45rem', border: `1px solid ${dateErr ? '#e53935' : 'var(--border)'}`, borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit' }}
+                style={{ width: '100%', fontSize: fs.sub, padding: '0.3rem 0.45rem', border: `1px solid ${dateErr ? 'var(--red)' : 'var(--border)'}`, borderRadius: 6, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit' }}
               />
             </div>
           </div>
 
           {dateErr && (
-            <span style={{ fontSize: '0.72rem', color: '#e53935' }}>{t(lang, 'todoDateError')}</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--red)' }}>{t(lang, 'todoDateError')}</span>
           )}
 
           <div style={{ display: 'flex', gap: '0.4rem' }}>
@@ -241,7 +241,7 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
 
       {/* 저장 확인 메시지 */}
       {savedMsg && (
-        <div style={{ fontSize: '0.75rem', color: '#16a34a', padding: '0.3rem 0.5rem', background: '#f0fdf4', borderRadius: 6, marginBottom: '0.4rem', border: '1px solid #bbf7d0' }}>
+        <div style={{ fontSize: '0.75rem', color: 'var(--green)', padding: '0.3rem 0.5rem', background: 'rgba(5,150,105,0.06)', borderRadius: 6, marginBottom: '0.4rem', border: '1px solid rgba(5,150,105,0.2)' }}>
           {savedMsg}
         </div>
       )}
@@ -282,7 +282,7 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
                     {disp.label}
                   </span>
                 ) : (
-                  <span style={{ fontSize: '0.72rem', whiteSpace: 'nowrap', fontWeight: (overdue || todayDue) ? 600 : 400, color: (overdue || todayDue) ? '#e53935' : 'var(--ink3)', flexShrink: 0 }}>
+                  <span style={{ fontSize: '0.72rem', whiteSpace: 'nowrap', fontWeight: (overdue || todayDue) ? 600 : 400, color: (overdue || todayDue) ? 'var(--red)' : 'var(--ink3)', flexShrink: 0 }}>
                     {disp.label}
                   </span>
                 )

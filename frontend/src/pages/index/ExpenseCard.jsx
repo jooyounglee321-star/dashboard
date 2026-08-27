@@ -278,7 +278,7 @@ function TodayHeader({ compact, todayUSD, budgetPct, overBudget, lang }) {
         <span className={compact ? 'm-exp-lbl' : 'exp-label'}>{t(lang, 'expenseTodayTotal')}</span>
         <div
           className={compact ? 'm-exp-total' : 'exp-amount'}
-          style={{ color: todayUSD >= 0 ? undefined : '#e8a060' }}
+          style={{ color: todayUSD >= 0 ? undefined : 'var(--accent)' }}
         >
           {todayUSD < 0 ? '-' : ''}${Math.abs(todayUSD).toLocaleString(undefined, { maximumFractionDigits: 0 })}
         </div>

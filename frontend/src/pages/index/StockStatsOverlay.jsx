@@ -932,7 +932,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
           {concentration.map((c, i) => {
             const isWarn = c.pct >= 30 && c.pct < 50
             const isAlert = c.pct >= 50
-            const barColor = isAlert ? 'var(--red)' : isWarn ? '#f59e0b' : 'var(--accent)'
+            const barColor = isAlert ? 'var(--red)' : isWarn ? 'var(--warning)' : 'var(--accent)'
             return (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <div style={{ width: 90, fontSize: '0.78rem', color: 'var(--ink)', fontWeight: 500, flexShrink: 0, textAlign: 'right' }}>{c.name}</div>

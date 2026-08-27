@@ -132,7 +132,7 @@ export default function SitesSettingsModal({ isOpen, onClose, onChanged, lang = 
                         <div style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</div>
                         <div style={{ fontSize: '0.7rem', color: 'var(--ink3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.url}</div>
                       </div>
-                      <button onClick={() => del(s.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '0.8rem', padding: '0.2rem 0.4rem', borderRadius: 4, flexShrink: 0 }}>삭제</button>
+                      <button onClick={() => del(s.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--red)', fontSize: '0.8rem', padding: '0.2rem 0.4rem', borderRadius: 4, flexShrink: 0 }}>삭제</button>
                     </div>
                   )
                 })

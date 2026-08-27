@@ -101,7 +101,7 @@ function MemoForm({ lang, initMood = '', initText = '', onSave, onCancel, isMobi
     })
   }
 
-  const charColor = text.length >= MAX_CHARS ? '#ef4444' : text.length >= WARN_CHARS ? '#f97316' : 'var(--ink3)'
+  const charColor = text.length >= MAX_CHARS ? 'var(--red)' : text.length >= WARN_CHARS ? 'var(--warning)' : 'var(--ink3)'
 
   const emojiCatLabels = lang === 'ko'
     ? ['표정', '음식', '활동', '날씨', '기타']
@@ -195,8 +195,8 @@ function MemoForm({ lang, initMood = '', initText = '', onSave, onCancel, isMobi
                   flex: '0 0 auto', background: 'none', border: 'none', cursor: 'pointer',
                   padding: '0.45rem 0.6rem', fontSize: '0.68rem',
                   fontWeight: emojiCatIdx === ci ? 700 : 400,
-                  color: emojiCatIdx === ci ? '#60a5fa' : '#9aacbf',
-                  borderBottom: emojiCatIdx === ci ? '2px solid #60a5fa' : '2px solid transparent',
+                  color: emojiCatIdx === ci ? 'var(--blue)' : 'var(--ink3)',
+                  borderBottom: emojiCatIdx === ci ? '2px solid var(--blue)' : '2px solid transparent',
                   whiteSpace: 'nowrap', lineHeight: 1, transition: 'color 0.12s',
                 }}
               >{label}</button>
@@ -247,7 +247,7 @@ function MemoItem({ memo, lang, isMobile, onEdit, onDelete }) {
         </button>
         <button
           className={isMobile ? 'm-btn' : 'btn-sm'}
-          style={{ color: '#f87171' }}
+          style={{ color: 'var(--red)' }}
           onClick={() => onDelete(memo.id)}
         >
           {t(lang, 'memoDelBtn')}
@@ -358,7 +358,7 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
 
         {/* ── 저장된 메모 목록 ── */}
         {memoList.length === 0 && !addingNew && (
-          <div style={{ color: '#a89880', fontStyle: 'italic', fontSize: isMobile ? undefined : '0.82rem', marginBottom: '0.5rem' }}>
+          <div style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: isMobile ? undefined : '0.82rem', marginBottom: '0.5rem' }}>
             {t(lang, 'memoPlaceholder')}
           </div>
         )}
@@ -434,7 +434,7 @@ export default function MemoCard({ isMobile = false, lang = 'ko' }) {
           style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15,23,42,0.50)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
           onClick={e => { if (e.target === e.currentTarget) closeCalendar() }}
         >
-          <div style={{ background: '#FFFFFF', borderRadius: 16, border: 'none', width: '100%', maxWidth: '780px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 20px 60px rgba(15,23,42,0.15)' }}>
+          <div style={{ background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: 'none', width: '100%', maxWidth: '780px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: 'var(--shadow-md)' }}>
             <div style={{ padding: '0.9rem 1.25rem 0.7rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
               <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--ink)' }}>
                 📅 {t(lang, 'memoCalTitle')}
