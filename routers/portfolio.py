@@ -968,6 +968,112 @@ def get_realized_pl(
     return {"total": round(total_pl, 4), "items": items}
 
 
+@router.get("/diagnose-gap")
+def diagnose_snapshot_gap(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """실시간 vs 백필 스냅샷 차이 진단. 종목별 qty·price 상세 비교."""
+    from routers.stocks import _fetch_price as _rt_fetch_price
+
+    # 1. 최근 백필 스냅샷 (오늘 제외 마지막)
+    today_kst = datetime.now(ZoneInfo("Asia/Seoul")).date()
+    snap = (
+        db.query(DailyPortfolioSnapshot)
+        .filter(
+            DailyPortfolioSnapshot.user_id == current_user.id,
+            DailyPortfolioSnapshot.snapshot_date < today_kst,
+            DailyPortfolioSnapshot.total_krw_equiv.isnot(None),
+            DailyPortfolioSnapshot.total_krw_equiv > 0,
+        )
+        .order_by(DailyPortfolioSnapshot.snapshot_date.desc())
+        .first()
+    )
+
+    # 2. portfolio_groups.data 로드
+    pg_row = db.query(PortfolioGroups).filter(PortfolioGroups.user_id == current_user.id).first()
+    pg_data = json.loads(pg_row.data) if pg_row and pg_row.data else []
+
+    # 3. 종목별 순보유수량 + 가중평균 단가 계산
+    holdings = []
+    for grp in pg_data:
+        grp_name = grp.get("name", "")
+        currency = grp.get("currency", "USD")
+        cat_by_currency = "us" if currency == "USD" else "kor-stock"
+        _name_to_cat = {v[0]: k for k, v in _CAT_META.items()}
+        cat = _name_to_cat.get(grp_name, cat_by_currency)
+        group_sell_proceeds = 0.0
+        group_buy_after_first_sell = 0.0
+        first_sell_date = None
+        for st in grp.get("stocks", []):
+            if st.get("is_deleted"):
+                continue
+            ticker = st.get("ticker", "")
+            if not ticker:
+                continue
+            pp = st.get("purchases") or []
+            sl = st.get("sells") or []
+            buy_qty = sum(float(p.get("qty", 0)) for p in pp)
+            sell_qty = sum(float(s.get("qty", 0)) for s in sl)
+            net_qty = round(max(0.0, buy_qty - sell_qty), 8)
+            valid_pp = [p for p in pp if (p.get("price") or 0) > 0 and (p.get("qty") or 0) > 0]
+            ws  = sum(float(p["price"]) * float(p.get("qty", 0)) for p in valid_pp)
+            vqt = sum(float(p.get("qty", 0)) for p in valid_pp)
+            avg_cost = round(ws / vqt, 4) if vqt > 0 else 0.0
+            # 실시간 가격 시도
+            try:
+                rt_result = _rt_fetch_price(ticker, cat)
+                rt_price = rt_result.get("current_price")
+            except Exception:
+                rt_price = None
+            # 매도 누적 (현금 잔고 계산용)
+            for sv in sl:
+                d = sv.get("date")
+                if first_sell_date is None or (d and d < first_sell_date):
+                    first_sell_date = d
+                group_sell_proceeds += float(sv.get("price", 0)) * float(sv.get("qty", 0))
+            # 첫매도일 이후 매수비용
+            if first_sell_date:
+                group_buy_after_first_sell += sum(
+                    float(p.get("price", 0)) * float(p.get("qty", 0))
+                    for p in pp
+                    if p.get("date") and p["date"] >= first_sell_date
+                )
+            holdings.append({
+                "group": grp_name,
+                "ticker": ticker,
+                "buy_qty": round(buy_qty, 8),
+                "sell_qty": round(sell_qty, 8),
+                "net_qty": net_qty,
+                "avg_cost": avg_cost,
+                "rt_price": rt_price,
+                "rt_val": round(rt_price * net_qty, 2) if rt_price and net_qty > 0 else None,
+                "avg_val": round(avg_cost * net_qty, 2) if avg_cost and net_qty > 0 else None,
+                "purchases_count": len(pp),
+                "sells_count": len(sl),
+            })
+        # 그룹 현금 잔고 (납입금 없는 경우)
+        contribs = grp.get("contributions") or []
+        cash_balance = None
+        if not contribs and first_sell_date and group_sell_proceeds > 0:
+            cash_balance = round(group_sell_proceeds - group_buy_after_first_sell, 2)
+
+    snap_data = None
+    if snap and snap.data:
+        try:
+            snap_data = json.loads(snap.data)
+        except Exception:
+            snap_data = None
+
+    return {
+        "latest_snapshot_date": str(snap.snapshot_date) if snap else None,
+        "snapshot_total_usd":   float(snap.total_usd) if snap and snap.total_usd else None,
+        "snapshot_data":        snap_data,
+        "holdings_from_pg":     holdings,
+        "cash_balance_estimate": cash_balance,
+    }
+
+
 @router.get("/history/{snapshot_date}", response_model=PortfolioSnapshotOut)
 def get_history_by_date(
     snapshot_date: date,
