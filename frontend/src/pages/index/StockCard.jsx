@@ -358,10 +358,10 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
     )
     mTotalBar = (
       <div className="m-total-bar" style={{ flexDirection: 'column', gap: '0.25rem', alignItems: 'stretch' }}>
-        <div style={rowS}><span style={{ fontSize: '0.72rem', color: '#a89880' }}>{t(lang, 'stockUSDSum')}</span><span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--accent2)' }}>${fmtUSD(grandUSD)}</span></div>
-        <div style={rowS}><span style={{ fontSize: '0.72rem', color: '#a89880' }}>{t(lang, 'stockKRWSum')}</span><span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--accent2)' }}>₩{fmtKRW(grandKRW)}</span></div>
+        <div style={rowS}><span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{t(lang, 'stockUSDSum')}</span><span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--accent2)' }}>${fmtUSD(grandUSD)}</span></div>
+        <div style={rowS}><span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{t(lang, 'stockKRWSum')}</span><span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--accent2)' }}>₩{fmtKRW(grandKRW)}</span></div>
         <div style={divS} />
-        <div style={rowS}><span style={{ fontSize: '0.72rem', color: '#a89880' }}>{t(lang, 'stockKRWEquivShort')}{/* fxNote */}</span><span style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--accent2)' }}>₩{fmtKRW(totKRW)}</span></div>
+        <div style={rowS}><span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{t(lang, 'stockKRWEquivShort')}{/* fxNote */}</span><span style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--accent2)' }}>₩{fmtKRW(totKRW)}</span></div>
       </div>
     )
   }

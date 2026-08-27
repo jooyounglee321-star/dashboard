@@ -195,7 +195,7 @@ export default function ProfilePage() {
 
   const planLabel = plan === 'premium' ? 'Premium' : 'Free'
   const planStyle = plan === 'premium'
-    ? { background: '#fff8e6', color: '#b07800', border: '1px solid #f5d67a' }
+    ? { background: 'rgba(217,119,6,0.08)', color: 'var(--warning)', border: '1px solid rgba(217,119,6,0.2)' }
     : { background: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }
 
   return (

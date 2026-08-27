@@ -278,7 +278,7 @@ export default function TodoList({ date, lang = 'ko', isMobile = false }) {
               </span>
               {disp && (
                 disp.oneDay ? (
-                  <span style={{ fontSize: '0.7rem', whiteSpace: 'nowrap', fontWeight: 600, color: '#fff', background: '#f57c00', padding: '0.1em 0.45em', borderRadius: 4, flexShrink: 0 }}>
+                  <span style={{ fontSize: '0.7rem', whiteSpace: 'nowrap', fontWeight: 600, color: '#fff', background: 'var(--warning)', padding: '0.1em 0.45em', borderRadius: 4, flexShrink: 0 }}>
                     {disp.label}
                   </span>
                 ) : (

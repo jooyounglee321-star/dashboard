@@ -4,6 +4,32 @@
 
 ---
 
+## 2026-08-27 (3차)
+
+### 디자인 토큰 적용 — 잔여 하드코딩 색상 정리
+
+#### 수정된 파일
+
+**ProfilePage.jsx**
+- 프리미엄 플랜 배지: `#fff8e6`/`#b07800`/`#f5d67a` → `rgba(217,119,6,0.08)`/`var(--warning)`/`rgba(217,119,6,0.2)`
+
+**StockCard.jsx**
+- 총합 바 레이블(USD합/KRW합/환산합): `#a89880` × 3 → `var(--text-muted)`
+
+**TodoList.jsx**
+- D-day 임박 배지 배경: `#f57c00` → `var(--warning)`
+
+#### 유지된 항목 (의도적 예외)
+- AdminPage YouTube 브랜드 배지 `#ff0000` — YouTube 공식 브랜드 컬러
+- BudgetPage COLORS 배열 — Chart.js 파이차트 데이터 팔레트
+- BudgetPage Chart.js `#ccc`/`#999` — Chart.js가 CSS var 미지원
+- LoginPage/RegisterPage SVG 소셜 로그인 — 브랜드 SVG 색상
+- HeroSection 아날로그 시계침 `#e05c3a` — 아트 에셋
+- SuperadminPage TYPE_BADGE / badge-* — 커밋 타입·역할 시맨틱 컬러
+- StockCard GRP_COLORS / 마켓배지 — 데이터 팔레트·상태 표시
+
+---
+
 ## 2026-08-27 (2차)
 
 ### 디자인 토큰 적용 — 전체 나머지 화면 및 공통 컴포넌트
