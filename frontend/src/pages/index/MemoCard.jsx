@@ -1,4 +1,4 @@
-import { ML } from '../../utils/date'
+import { ML, pad2 } from '../../utils/date'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { t } from './i18n'
 import { apiFetch } from '../../api'
@@ -24,8 +24,6 @@ const EMOJI_CATS = [
   { key: 'nature',   emojis: ['☀️','🌧️','❄️','🌸','🌙','⭐','🌈','🌊','🍃','🔥'] },
   { key: 'etc',      emojis: ['❤️','💛','💙','👍','✅','⚡','🎉','💡','📌','🙏','💰','🏆','⏰','💊','🔑'] },
 ]
-
-const pad2 = n => String(n).padStart(2, '0')
 
 const todayKey = () => {
   const d = new Date()

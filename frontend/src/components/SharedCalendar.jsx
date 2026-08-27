@@ -1,9 +1,9 @@
+import { pad2 } from '../utils/date'
+
 const WEEKDAY_KO = ['일', '월', '화', '수', '목', '금', '토']
 const WEEKDAY_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTH_KO   = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
 const MONTH_EN   = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-
-function pad2(n) { return String(n).padStart(2, '0') }
 
 export function monthLabel(year, month, lang) {
   return lang === 'ko'

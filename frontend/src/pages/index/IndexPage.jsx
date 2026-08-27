@@ -122,7 +122,7 @@ export default function IndexPage() {
   useEffect(() => {
     const ctrl = new AbortController()
     apiFetch('/api/portfolio/backfill', { method: 'POST', signal: ctrl.signal })
-      .then(d => { if (d.backfilled > 0) console.log('[BACKFILL] 포트폴리오 백필 완료:', d) })
+      .then(() => {})
       .catch(err => { if (err?.name !== 'AbortError') console.warn('[BACKFILL] 백필 실패:', err) })
     return () => ctrl.abort()
   }, [])
@@ -338,7 +338,6 @@ export default function IndexPage() {
             body: JSON.stringify(payload),
           })
           lastSnapshotDate = today
-          console.log('[SNAPSHOT] 저장 완료 →', today)
         } catch (e) {
           console.warn('[SNAPSHOT] 오류:', e.message)
         }

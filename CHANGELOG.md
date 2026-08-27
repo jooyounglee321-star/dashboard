@@ -6,6 +6,26 @@
 
 ## 2026-08-26
 
+### 데드코드 및 방치 파일 정리
+
+#### 삭제된 파일
+- `frontend/src/utils/api.js` — 어디서도 import되지 않는 미사용 파일 삭제
+- `backup_portfolio_groups_user3_20260709_225109.json` — 프로젝트 실행과 무관한 백업 파일 삭제
+- `ANALYSIS_REPORT.md` — 어디서도 참조되지 않는 분석 리포트 파일 삭제
+
+#### 수정된 파일
+- `main.py` — `from routers import` 에서 `expenses` 제거 (include_router가 주석처리된 채로 import만 남아있던 데드코드)
+- `frontend/src/pages/index/MemoCard.jsx` — 로컬 `pad2` 함수 제거, `utils/date.js`에서 import로 교체
+- `frontend/src/components/SharedCalendar.jsx` — 로컬 `pad2` 함수 제거, `utils/date.js`에서 import로 교체 (MemoCard와 동일한 중복 발견)
+- `frontend/src/pages/index/IndexPage.jsx` — 디버그용 `console.log` 2개 제거 (`[BACKFILL]`, `[SNAPSHOT]`)
+- `.gitignore` — `backup_*.json` 패턴 추가
+
+#### 비고
+- `pad2`는 `utils/date.js`에 이미 export되어 있었음. MemoCard.jsx, SharedCalendar.jsx 2곳에서 동일 함수 로컬 재정의 중이었음.
+- 빌드 확인: `npm run build` 성공 (390 modules, 0 errors)
+
+---
+
 ### 디자인 토큰 적용 — 나머지 모든 페이지 및 컴포넌트
 
 #### 수정 파일

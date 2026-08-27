@@ -44,7 +44,7 @@ from models import (  # noqa: F401  (import side-effect 목적)
 
 from routers import auth as auth_router
 from routers.auth import kakao_router, naver_router
-from routers import bookmarks, diets, expenses, memos, pinned_memos, stocks, timezone, todos, youtube
+from routers import bookmarks, diets, memos, pinned_memos, stocks, timezone, todos, youtube
 from routers import portfolio as portfolio_router
 from routers import admin as admin_router
 from routers import calendar as calendar_router
