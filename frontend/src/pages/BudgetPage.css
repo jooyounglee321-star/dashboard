@@ -15,7 +15,7 @@
   gap: 0.75rem;
   padding: 0.85rem 1.5rem;
   border-bottom: 1px solid var(--border);
-  background: rgba(245,240,232,0.88);
+  background: rgba(255,255,255,0.88);
   position: sticky;
   top: 0;
   z-index: 20;
@@ -23,7 +23,7 @@
 }
 
 .bp-back {
-  color: var(--accent2);
+  color: var(--accent);
   text-decoration: none;
   font-size: 0.82rem;
   white-space: nowrap;
@@ -34,7 +34,7 @@
 .bp-title {
   font-size: 1.15rem;
   font-weight: 600;
-  color: var(--accent2);
+  color: var(--accent);
   margin: 0;
   flex: 1;
   letter-spacing: -0.01em;
@@ -92,7 +92,7 @@
   transition: color 0.15s, border-color 0.15s;
 }
 .bp-tab:hover { color: var(--ink2); }
-.bp-tab.active { color: var(--accent2); border-bottom-color: var(--accent2); }
+.bp-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
 /* ── Body / Section ──────────────────────────────────────────────────────── */
 .bp-body { padding: 1.5rem; }
@@ -168,7 +168,7 @@
 }
 
 .bp-total-label { font-size: 0.8rem; color: var(--ink3); }
-.bp-total-num   { font-size: 1.3rem; font-weight: 700; color: var(--accent2); }
+.bp-total-num   { font-size: 1.3rem; font-weight: 700; color: var(--accent); }
 
 /* ── 수입/지출/순수지 요약 카드 행 ────────────────────────────────────────── */
 .bp-cashflow-row {
@@ -186,16 +186,16 @@
   border: 1px solid var(--border);
   background: var(--card);
 }
-.bp-cashflow-card.income  { border-color: rgba(74,197,110,0.3);  background: rgba(74,197,110,0.07); }
-.bp-cashflow-card.expense { border-color: rgba(200,97,26,0.25);  background: rgba(200,97,26,0.06); }
+.bp-cashflow-card.income  { border-color: rgba(5,150,105,0.25);  background: rgba(5,150,105,0.06); }
+.bp-cashflow-card.expense { border-color: rgba(220,38,38,0.20);  background: rgba(220,38,38,0.05); }
 .bp-cashflow-card.net.positive { border-color: rgba(74,197,110,0.25); background: rgba(74,197,110,0.05); }
 .bp-cashflow-card.net.negative { border-color: rgba(220,50,50,0.25);  background: rgba(220,50,50,0.05); }
 
 .bp-cf-label { font-size: 0.75rem; color: var(--ink3); font-weight: 500; }
-.bp-cashflow-card.income  .bp-cf-num { color: #4ac56e; font-size: 1.2rem; font-weight: 700; }
-.bp-cashflow-card.expense .bp-cf-num { color: var(--accent2); font-size: 1.2rem; font-weight: 700; }
-.bp-cashflow-card.net.positive .bp-cf-num { color: #4ac56e; font-size: 1.2rem; font-weight: 700; }
-.bp-cashflow-card.net.negative .bp-cf-num { color: #e85050; font-size: 1.2rem; font-weight: 700; }
+.bp-cashflow-card.income  .bp-cf-num { color: var(--green); font-size: 1.2rem; font-weight: 700; }
+.bp-cashflow-card.expense .bp-cf-num { color: var(--red);   font-size: 1.2rem; font-weight: 700; }
+.bp-cashflow-card.net.positive .bp-cf-num { color: var(--green); font-size: 1.2rem; font-weight: 700; }
+.bp-cashflow-card.net.negative .bp-cf-num { color: var(--red);   font-size: 1.2rem; font-weight: 700; }
 
 @media (max-width: 600px) {
   .bp-cashflow-row { grid-template-columns: 1fr; }
@@ -230,8 +230,8 @@
   gap: 0.35rem;
 }
 .bp-chip {
-  background: rgba(200,97,26,0.08);
-  border: 1px solid rgba(200,97,26,0.2);
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
   color: var(--accent);
   border-radius: 20px;
   padding: 0.18rem 0.6rem;
@@ -275,11 +275,11 @@
 }
 .bp-item:hover {
   background: var(--card2);
-  box-shadow: 0 4px 16px rgba(100,70,30,0.12);
+  box-shadow: 0 4px 16px rgba(20,23,31,0.10);
 }
 .bp-item.editing {
-  background: rgba(200,97,26,0.05);
-  border-color: rgba(200,97,26,0.25);
+  background: var(--accent-soft);
+  border-color: var(--border-strong);
   flex-direction: column;
   align-items: stretch;
   padding: 1.1rem 1.25rem;
@@ -316,7 +316,7 @@
   gap: 0.4rem;
 }
 .bp-amt-wrap  { display: flex; flex-direction: column; gap: 0.08rem; }
-.bp-item-orig { font-size: 1.02rem; font-weight: 700; color: var(--accent2); letter-spacing: -0.01em; }
+.bp-item-orig { font-size: 1.02rem; font-weight: 700; color: var(--accent); letter-spacing: -0.01em; }
 .bp-item-conv { font-size: 0.76rem; color: var(--ink3); }
 .bp-btn-wrap  { display: flex; gap: 0.25rem; flex-shrink: 0; }
 .bp-cat-icon  { margin-right: 0.25rem; font-size: 1rem; }
@@ -338,7 +338,7 @@
 .bp-btn-primary {
   background: var(--accent);
   border: none;
-  color: #3D2009;
+  color: #fff;
   border-radius: 8px;
   padding: 0.35rem 0.8rem;
   font-size: 0.82rem;
@@ -463,19 +463,19 @@
   font-weight: 700;
 }
 .bp-summary-income {
-  background: rgba(22,163,74,0.08);
-  border-color: rgba(22,163,74,0.2);
-  color: #1a7a40;
+  background: rgba(5,150,105,0.07);
+  border-color: rgba(5,150,105,0.22);
+  color: var(--green);
 }
 .bp-summary-expense {
-  background: rgba(200,97,26,0.08);
-  border-color: rgba(200,97,26,0.2);
-  color: var(--accent);
+  background: rgba(220,38,38,0.06);
+  border-color: rgba(220,38,38,0.18);
+  color: var(--red);
 }
 .bp-summary-net-pos {
-  background: rgba(58,107,138,0.08);
-  border-color: rgba(58,107,138,0.2);
-  color: var(--blue);
+  background: var(--accent-soft);
+  border-color: rgba(47,111,237,0.2);
+  color: var(--accent);
 }
 .bp-summary-net-neg {
   background: rgba(220,50,50,0.07);
@@ -509,16 +509,16 @@
 .bp-top5-rank {
   width: 20px; height: 20px;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(200,97,26,0.1);
+  background: var(--accent-soft);
   border-radius: 50%;
   font-size: 0.72rem;
   font-weight: 700;
-  color: var(--accent2);
+  color: var(--accent);
   flex-shrink: 0;
 }
 .bp-top5-name { flex: 1; color: var(--ink); }
 .bp-top5-pct  { color: var(--ink3); font-size: 0.77rem; }
-.bp-top5-amt  { color: var(--accent2); font-weight: 600; }
+.bp-top5-amt  { color: var(--accent); font-weight: 600; }
 
 .bp-over-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
 .bp-over-item {
@@ -553,8 +553,8 @@
   font-weight: 400;
 }
 .bp-type-btn:hover { color: var(--ink2); background: var(--card2); }
-.bp-type-btn.active.expense { background: #c4662a; color: #fff; font-weight: 600; }
-.bp-type-btn.active.income  { background: #3a7a50; color: #fff; font-weight: 600; }
+.bp-type-btn.active.expense { background: var(--red);   color: #fff; font-weight: 600; }
+.bp-type-btn.active.income  { background: var(--green); color: #fff; font-weight: 600; }
 
 /* ── Daily Add Form ──────────────────────────────────────────────────────── */
 .bp-add-form {
@@ -600,9 +600,9 @@
   transition: all 0.15s;
 }
 .bp-sub-tab.active {
-  background: rgba(200,97,26,0.1);
-  border-color: rgba(200,97,26,0.3);
-  color: var(--accent2);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -631,8 +631,8 @@
   padding: 0;
 }
 .ep-trigger:hover {
-  border-color: rgba(200,97,26,0.45);
-  background: rgba(200,97,26,0.07);
+  border-color: var(--border-strong);
+  background: var(--accent-soft);
 }
 
 /* 팝업 컨테이너 */
@@ -644,7 +644,7 @@
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 14px;
-  box-shadow: 0 8px 32px rgba(100,70,30,0.15);
+  box-shadow: var(--shadow-md);
   width: 292px;
   overflow: hidden;
   animation: ep-appear 0.13s ease;
@@ -686,7 +686,7 @@
 .ep-tab.active {
   opacity: 1;
   background: rgba(0,0,0,0.06);
-  box-shadow: inset 0 -2px 0 var(--accent2);
+  box-shadow: inset 0 -2px 0 var(--accent);
 }
 
 /* 탭 이름 레이블 */
@@ -706,7 +706,7 @@
   max-height: 208px;
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: rgba(100,80,50,0.2) transparent;
+  scrollbar-color: var(--border) transparent;
 }
 
 .ep-emoji {
@@ -728,8 +728,8 @@
   transform: scale(1.18);
 }
 .ep-emoji.selected {
-  background: rgba(200,97,26,0.12);
-  outline: 1.5px solid rgba(200,97,26,0.45);
+  background: var(--accent-soft);
+  outline: 1.5px solid var(--accent);
 }
 
 @media (max-width: 600px) {
@@ -845,7 +845,7 @@
 .rp-add-btn {
   padding: 0.38rem 0.85rem;
   background: var(--accent);
-  color: #3D2009;
+  color: #fff;
   border: none;
   border-radius: 6px;
   font-size: 0.82rem;
@@ -914,9 +914,9 @@
   color: var(--ink2);
 }
 .rp-btn:hover { background: rgba(0,0,0,0.05); }
-.rp-btn.edit   { border-color: rgba(196,149,106,0.6); color: #6B4A28; }
+.rp-btn.edit   { border-color: var(--border-strong); color: var(--text-muted); }
 .rp-btn.del    { border-color: #e86060; color: #e86060; }
-.rp-btn.save   { background: var(--accent); color: #3D2009; border-color: transparent; font-weight: 600; }
+.rp-btn.save   { background: var(--accent); color: #fff; border-color: transparent; font-weight: 600; }
 .rp-btn.save:hover { background: var(--accent-h); }
 .rp-btn.cancel { color: var(--ink3); }
 .rp-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -936,7 +936,7 @@
   background: #FFFFFF;
   border: none;
   border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(15,23,42,0.15);
+  box-shadow: var(--shadow-md);
   padding: 1.4rem 1.6rem;
   width: 100%;
   max-width: 420px;
@@ -950,7 +950,7 @@
   background: #FFFFFF;
   border: none;
   border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(15,23,42,0.15);
+  box-shadow: var(--shadow-md);
   width: 100%;
   max-width: 560px;
   display: flex;
@@ -1019,7 +1019,7 @@
   display: inline-flex;
   align-items: center;
 }
-.bp-recurring-btn:hover { background: rgba(58,107,138,0.08); }
+.bp-recurring-btn:hover { background: var(--accent-soft); }
 
 /* ── 드릴다운/연간 모달 내부 테이블 열 너비 ─────────────────────────────── */
 .bp-cat-drilldown-arrow {

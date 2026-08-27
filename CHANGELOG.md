@@ -6,6 +6,41 @@
 
 ## 2026-08-26
 
+### 디자인 토큰 적용 — Budget 페이지 5탭 전체
+
+#### 수정 파일
+- `frontend/src/pages/BudgetPage.css`
+- `frontend/src/pages/BudgetPage.jsx`
+
+#### BudgetPage.css 변경 내용
+- `var(--accent2)` → `var(--accent)` 전체 치환 (탭 active, 제목, 금액 표시 등)
+- 헤더 배경 `rgba(245,240,232,0.88)` (웜 크림) → `rgba(255,255,255,0.88)` (뉴트럴 글라스)
+- 수입/지출 cashflow 카드 테두리·배경: 브라운 rgba → `--green`/`--red` 계열 rgba로 교체
+- cashflow 숫자 색상: `#4ac56e`/`var(--accent2)`/`#e85050` → `var(--green)`/`var(--red)` 토큰 통일
+- `.bp-btn-primary` 텍스트 색: `#3D2009` → `#fff`
+- `.bp-item.editing` 배경·테두리: 브라운 rgba → `var(--accent-soft)` / `var(--border-strong)`
+- `.bp-item:hover` 그림자: `rgba(100,70,30,0.12)` → `rgba(20,23,31,0.10)`
+- `.bp-chip` 배경·테두리: 브라운 rgba → `var(--accent-soft)` / `var(--border)`
+- 지출/수입 토글 버튼 active 색: `#c4662a`/`#3a7a50` → `var(--red)`/`var(--green)`
+- `.bp-summary-expense` 배경·테두리·색: 브라운 → `var(--red)` 계열
+- `.bp-summary-income` → `var(--green)` 계열, `.bp-summary-net-pos` → `var(--accent-soft)` / `var(--accent)`
+- `.bp-top5-rank` 배지 배경: 브라운 → `var(--accent-soft)`
+- `.bp-sub-tab.active` 배경·테두리: 브라운 → `var(--accent-soft)` / `var(--accent)`
+- 이모지 피커 `.ep-trigger:hover` 테두리·배경: 브라운 → `var(--border-strong)` / `var(--accent-soft)`
+- 이모지 피커 `.ep-popup` 그림자: 브라운 shadow → `var(--shadow-md)`
+- 이모지 피커 `.ep-grid` scrollbar-color: 브라운 → `var(--border)`
+- 이모지 피커 `.ep-emoji.selected` 배경·외곽선: 브라운 → `var(--accent-soft)` / `var(--accent)`
+- `.rp-add-btn` / `.rp-btn.save` 텍스트 색: `#3D2009` → `#fff`
+- `.rp-btn.edit` 테두리·색: 구 브라운 → `var(--border-strong)` / `var(--text-muted)`
+- `.rp-modal` / `.rp-modal-full` 그림자: 직접값 → `var(--shadow-md)`
+- `.bp-recurring-btn:hover` 배경: 특정 파란 rgba → `var(--accent-soft)`
+
+#### BudgetPage.jsx 변경 내용
+- AI 캡처 트리거·파싱·저장 버튼 배경: `linear-gradient(135deg,#6366f1,#8b5cf6)` (퍼플 그라디언트) → `var(--accent)` (3곳)
+- 모달 배경 `var(--card, #fffef9)` 웜화이트 fallback 제거 → `var(--card)` (3곳)
+
+---
+
 ### UI 개선 — AI 캡처 확인 모달 (CaptureUploadPanel)
 
 #### 변경 파일: `frontend/src/pages/index/StockSettingsModal.jsx`

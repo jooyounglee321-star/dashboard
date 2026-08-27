@@ -433,7 +433,7 @@ function DailyTab({ lang, currency, toDisplay, userRole = '' }) {
               <button className="bp-btn-sm" onClick={doExport}>📥 {t(lang, 'budget.exportCSV')}</button>
               {isPremium && (
                 <button className="bp-btn-sm" onClick={() => setCaptureOpen(true)}
-                  style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', border: 'none' }}>
+                  style={{ background: 'var(--accent)', color: '#fff', border: 'none' }}>
                   🤖 {t(lang, 'budget.aiCapture')}
                 </button>
               )}
@@ -487,7 +487,7 @@ function DailyTab({ lang, currency, toDisplay, userRole = '' }) {
           onClick={e => { if (e.target === e.currentTarget) setDayModalOpen(false) }}
         >
           <div style={{
-            background: 'var(--card, #fffef9)', borderRadius: '1.25rem',
+            background: 'var(--card)', borderRadius: '1.25rem',
             border: '1px solid var(--border)',
             width: '100%', maxWidth: '720px', maxHeight: '88vh',
             display: 'flex', flexDirection: 'column', overflow: 'hidden',
@@ -584,7 +584,7 @@ function DailyTab({ lang, currency, toDisplay, userRole = '' }) {
           </button>
           {isPremium && (
             <button onClick={() => { setDayModalOpen(false); setCaptureOpen(true) }}
-              style={{ padding: '0.4rem 0.7rem', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', border: 'none', borderRadius: 8, fontSize: '0.82rem', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
+              style={{ padding: '0.4rem 0.7rem', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, fontSize: '0.82rem', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
               🤖 {t(lang, 'budget.aiCapture')}
             </button>
           )}
@@ -1067,7 +1067,7 @@ function MonthlyTab({ lang, currency, toDisplay }) {
           onClick={e => { if (e.target === e.currentTarget) closeDrillModal() }}
         >
           <div style={{
-            background: 'var(--card, #fffef9)', borderRadius: '1.25rem',
+            background: 'var(--card)', borderRadius: '1.25rem',
             border: '1px solid var(--border)',
             width: '100%', maxWidth: '680px', maxHeight: '88vh',
             display: 'flex', flexDirection: 'column', overflow: 'hidden',
@@ -1539,7 +1539,7 @@ function YearlyTab({ lang, currency, toDisplay }) {
           onClick={e => { if (e.target === e.currentTarget) closeYearlyDrillModal() }}
         >
           <div style={{
-            background: 'var(--card, #fffef9)', borderRadius: '1.25rem',
+            background: 'var(--card)', borderRadius: '1.25rem',
             border: '1px solid var(--border)',
             width: '100%', maxWidth: '680px', maxHeight: '88vh',
             display: 'flex', flexDirection: 'column', overflow: 'hidden',
@@ -2356,7 +2356,7 @@ function BudgetCapturePanel({ lang, cats, onClose, onSaved, showToast }) {
               </button>
             </div>
             <button onClick={startParse} disabled={loading || !files.length}
-              style={{ padding: '0.6rem', background: (loading || !files.length) ? 'var(--border)' : 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: '0.9rem', cursor: (loading || !files.length) ? 'not-allowed' : 'pointer' }}>
+              style={{ padding: '0.6rem', background: (loading || !files.length) ? 'var(--border)' : 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: '0.9rem', cursor: (loading || !files.length) ? 'not-allowed' : 'pointer' }}>
               {loading ? t(lang, 'budget.captureParsing') : t(lang, 'budget.captureStartParse')}
             </button>
           </div>
@@ -2477,7 +2477,7 @@ function BudgetCapturePanel({ lang, cats, onClose, onSaved, showToast }) {
                     {t(lang, 'common.cancel')}
                   </button>
                   <button onClick={saveSelected} disabled={saving || !rows.some(r => r._checked && !r._saved)}
-                    style={{ padding: '0.5rem 1.2rem', background: (saving || !rows.some(r => r._checked && !r._saved)) ? 'var(--border)' : 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: '0.9rem', cursor: (saving || !rows.some(r => r._checked && !r._saved)) ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                    style={{ padding: '0.5rem 1.2rem', background: (saving || !rows.some(r => r._checked && !r._saved)) ? 'var(--border)' : 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: '0.9rem', cursor: (saving || !rows.some(r => r._checked && !r._saved)) ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
                     {saving
                       ? t(lang, 'budget.captureSaving')
                       : `${t(lang, 'budget.captureSave')} (${rows.filter(r => r._checked && !r._saved).length}${lang === 'ko' ? '건' : ''})`}
