@@ -313,7 +313,7 @@ function StockDetailPanel({ g, s, onUpdate, cashBalance }) {
     <div style={{ borderTop: '1px solid var(--border)', background: 'rgba(255,255,255,0.35)', padding: '0.7rem 0.9rem', display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
       {/* 매입 폼 */}
       <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '0.6rem 0.75rem' }}>
-        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#1d4ed8', marginBottom: '0.5rem' }}>📈 매입</div>
+        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--blue)', marginBottom: '0.5rem' }}>📈 매입</div>
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <div style={{ flex: 1, minWidth: 100 }}><div style={{ fontSize: '0.7rem', color: 'var(--ink2)', marginBottom: '0.18rem' }}>매입일</div><input type="date" value={buyDate} onChange={e => setBuyDate(e.target.value)} style={inpS} /></div>
           <div style={{ flex: 1, minWidth: 70 }}><div style={{ fontSize: '0.7rem', color: 'var(--ink2)', marginBottom: '0.18rem' }}>수량 *</div><input type="number" value={buyQty} onChange={e => setBuyQty(e.target.value)} placeholder="수량" min="0.0001" step="any" style={inpS} /></div>
@@ -341,7 +341,7 @@ function StockDetailPanel({ g, s, onUpdate, cashBalance }) {
               const isBuy = r.type === 'buy'
               const bg = isBuy ? '#eff6ff' : '#fff1f2'
               const borderC = isBuy ? '#bfdbfe' : '#fecaca'
-              const badgeStyle = { fontSize: '0.65rem', padding: '0.08rem 0.38rem', borderRadius: 4, background: isBuy ? '#dbeafe' : '#fee2e2', color: isBuy ? '#1d4ed8' : '#b91c1c', fontWeight: 600 }
+              const badgeStyle = { fontSize: '0.65rem', padding: '0.08rem 0.38rem', borderRadius: 4, background: isBuy ? '#dbeafe' : '#fee2e2', color: isBuy ? 'var(--blue)' : 'var(--red)', fontWeight: 600 }
               if (editRec !== null && editRec.id !== undefined && editRec.id === r.id) {
                 return (
                   <div key={r.id} style={{ background: bg, border: `1px solid ${borderC}`, borderRadius: 7, padding: '0.45rem 0.6rem' }}>
@@ -364,7 +364,7 @@ function StockDetailPanel({ g, s, onUpdate, cashBalance }) {
                   <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--ink)' }}>{(r.qty || 0).toLocaleString()}주</span>
                   <span style={{ fontSize: '0.78rem', color: 'var(--ink2)', flex: 1 }}>{r.price ? sym + fmtA(r.price) : '단가 없음'}</span>
                   <div style={{ display: 'flex', gap: '0.22rem', flexShrink: 0 }}>
-                    <button onClick={() => setEditRec({ ...r })} style={{ padding: '0.22rem 0.5rem', fontSize: '0.72rem', border: `1px solid ${isBuy ? '#93c5fd' : '#fca5a5'}`, borderRadius: 5, background: 'transparent', color: isBuy ? '#1d4ed8' : '#b91c1c', cursor: 'pointer' }}>수정</button>
+                    <button onClick={() => setEditRec({ ...r })} style={{ padding: '0.22rem 0.5rem', fontSize: '0.72rem', border: `1px solid ${isBuy ? '#93c5fd' : 'var(--red)'}`, borderRadius: 5, background: 'transparent', color: isBuy ? 'var(--blue)' : 'var(--red)', cursor: 'pointer' }}>수정</button>
                     <button onClick={() => deleteRecord(r.type, r.id)} style={{ padding: '0.22rem 0.5rem', fontSize: '0.72rem', border: '1px solid var(--red)', borderRadius: 5, background: 'transparent', color: 'var(--red)', cursor: 'pointer' }}>삭제</button>
                   </div>
                 </div>
@@ -485,14 +485,14 @@ function CaptureUploadPanel({ g, lang, onSave, onClose }) {
               <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', fontSize: '0.78rem', alignItems: 'center' }}>
                 <span style={{ padding: '0.22rem 0.65rem', borderRadius: 20, background: '#eaf1ff', color: '#2f6fed', fontWeight: 600 }}>✓ 신규 {rows.length}건 인식됨</span>
                 {results.skipped_count > 0 && <span style={{ padding: '0.22rem 0.65rem', borderRadius: 20, background: '#fef9c3', color: '#92400e', fontWeight: 500 }}>{t(lang, 'admin.captureSkipped')}: {results.skipped_count}건</span>}
-                {results.parse_errors?.length > 0 && <span style={{ padding: '0.22rem 0.65rem', borderRadius: 20, background: '#fee2e2', color: '#b91c1c', fontWeight: 500 }}>{t(lang, 'admin.captureParseError')}: {results.parse_errors.length}건</span>}
+                {results.parse_errors?.length > 0 && <span style={{ padding: '0.22rem 0.65rem', borderRadius: 20, background: '#fee2e2', color: 'var(--red)', fontWeight: 500 }}>{t(lang, 'admin.captureParseError')}: {results.parse_errors.length}건</span>}
               </div>
               <span style={{ fontSize: '0.73rem', color: 'var(--ink3)' }}>저장 전 자유롭게 수정할 수 있어요</span>
             </div>
 
             {/* 오류 목록 */}
             {results.parse_errors?.length > 0 && (
-              <div style={{ fontSize: '0.72rem', color: '#b91c1c', background: '#fff1f2', borderRadius: 6, padding: '0.4rem 0.6rem' }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--red)', background: '#fff1f2', borderRadius: 6, padding: '0.4rem 0.6rem' }}>
                 {results.parse_errors.map((e, i) => <div key={i}>· {e}</div>)}
               </div>
             )}
@@ -795,7 +795,7 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
                   <span style={{ fontSize: '0.72rem', color: col.tx, opacity: 0.7 }}>{g.stocks.length}/10</span>
                   {isPremium && (
                     <button onClick={() => setCaptureGid(g.id)}
-                      style={{ padding: '0.28rem 0.65rem', fontSize: '0.78rem', cursor: 'pointer', background: 'rgba(255,255,255,0.7)', color: '#1d4ed8', border: '1px solid #93c5fd', borderRadius: 6, fontFamily: 'inherit', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                      style={{ padding: '0.28rem 0.65rem', fontSize: '0.78rem', cursor: 'pointer', background: 'rgba(255,255,255,0.7)', color: 'var(--blue)', border: '1px solid rgba(59,130,246,0.4)', borderRadius: 6, fontFamily: 'inherit', fontWeight: 500, whiteSpace: 'nowrap' }}>
                       🤖 {t(lang, 'admin.captureUpload')}
                     </button>
                   )}

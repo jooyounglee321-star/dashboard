@@ -42,10 +42,10 @@ export default function DebugPanel() {
   const lsSnap = getLocalStorageSnapshot()
 
   const statusColor = (s) => {
-    if (s === 0) return '#9ca3af'
-    if (s < 300) return '#16a34a'
-    if (s < 400) return '#d97706'
-    return '#dc2626'
+    if (s === 0) return 'var(--ink3)'
+    if (s < 300) return 'var(--green)'
+    if (s < 400) return 'var(--warning)'
+    return 'var(--red)'
   }
 
   return (

@@ -298,7 +298,7 @@ export default function AdminPage() {
                     />
                     <span style={{
                       position: 'absolute', inset: 0, borderRadius: 22,
-                      background: widgetCfg[key]?.enabled !== false ? 'var(--accent)' : '#ccc',
+                      background: widgetCfg[key]?.enabled !== false ? 'var(--accent)' : 'var(--ink3)',
                       transition: 'background 0.2s',
                     }} />
                     <span style={{

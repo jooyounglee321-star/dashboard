@@ -56,7 +56,7 @@ body {
 
 /* ── 공통 Header ── */
 .header {
-  background: #FFFFFF;
+  background: var(--surface);
   color: var(--ink);
   padding: 0 1.5rem;
   height: 60px;
@@ -140,7 +140,7 @@ body {
 .btn-red:hover { background: #B91C1C; }
 .btn-blue { background: var(--blue); color: #fff; }
 .btn-blue:hover { background: #2c5470; }
-.btn-gray { background: #E2E8F0; color: var(--ink2); }
+.btn-gray { background: var(--card2); color: var(--ink2); }
 .btn-gray:hover { background: #CBD5E1; }
 .btn-outline {
   background: transparent;
@@ -195,15 +195,15 @@ body {
   display: none;
 }
 .msg.success {
-  background: #e8f5ec;
+  background: rgba(5, 150, 105, 0.06);
   color: var(--green);
-  border: 1px solid #a8d5b5;
+  border: 1px solid rgba(5, 150, 105, 0.2);
   display: block;
 }
 .msg.error {
-  background: #fdecea;
+  background: rgba(220, 38, 38, 0.06);
   color: var(--red);
-  border: 1px solid #f0b0aa;
+  border: 1px solid rgba(220, 38, 38, 0.2);
   display: block;
 }
 
@@ -338,10 +338,10 @@ tbody tr:hover td { background: rgba(196, 102, 42, 0.04); }
 }
 .modal-overlay.open { display: flex; }
 .modal {
-  background: #FFFFFF;
-  border-radius: 16px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
   border: none;
-  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18);
+  box-shadow: var(--shadow-md);
   width: 100%;
   max-width: 640px;
   max-height: 90vh;
@@ -353,7 +353,7 @@ tbody tr:hover td { background: rgba(196, 102, 42, 0.04); }
   justify-content: space-between;
   padding: 1.1rem 1.4rem;
   border-bottom: 1px solid var(--border);
-  background: #FFFFFF;
+  background: var(--surface);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -389,8 +389,8 @@ tbody tr:hover td { background: rgba(196, 102, 42, 0.04); }
   pointer-events: none;
 }
 .toast.show { transform: translateY(0); opacity: 1; }
-.toast.ok { background: #4a7c59; color: #fff; }
-.toast.err { background: #c0392b; color: #fff; }
+.toast.ok { background: var(--green); color: #fff; }
+.toast.err { background: var(--red); color: #fff; }
 .toast.info { background: var(--ink); color: #fff; }
 
 /* ── 로그인/회원가입 공통 ── */
@@ -402,8 +402,8 @@ tbody tr:hover td { background: rgba(196, 102, 42, 0.04); }
   padding: 2.5rem 1rem;
 }
 .auth-card {
-  background: #FFFFFF;
-  border-radius: 20px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   box-shadow: 0 4px 32px rgba(15, 23, 42, 0.10);
   padding: 2.4rem 2.2rem;
@@ -507,7 +507,7 @@ tbody tr:hover td { background: rgba(196, 102, 42, 0.04); }
 .footer-link a:hover { text-decoration: underline; }
 
 /* ── up/down 색상 ── */
-.up { color: #e03030; }
+.up { color: var(--red); }
 .down { color: var(--blue); }
 
 /* ══════════════════════════════════════════════════════════════════════════

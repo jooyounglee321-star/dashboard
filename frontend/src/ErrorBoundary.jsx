@@ -30,7 +30,7 @@ export default class ErrorBoundary extends Component {
         background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.3)',
         color: 'var(--ink2)', fontSize: '0.82rem',
       }}>
-        <div style={{ fontWeight: 600, color: '#dc2626', marginBottom: '0.3rem' }}>
+        <div style={{ fontWeight: 600, color: 'var(--red)', marginBottom: '0.3rem' }}>
           ⚠️ {this.props.label || '위젯'} 오류
         </div>
         {DEBUG && this.state.error && (

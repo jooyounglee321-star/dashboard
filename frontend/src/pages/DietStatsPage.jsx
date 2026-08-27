@@ -292,7 +292,7 @@ export default function DietStatsPage() {
                       {formatDateHeader(date, lang)}
                     </span>
                     {!analysis ? (
-                      <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#9ca3af', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 20, padding: '0.15rem 0.55rem' }}>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--ink3)', background: 'var(--card2)', border: '1px solid var(--border)', borderRadius: 20, padding: '0.15rem 0.55rem' }}>
                         {t(lang, 'diet.noAnalysis')}
                       </span>
                     ) : (

@@ -240,7 +240,7 @@ export default function SuperadminPage() {
   }
   function typeBadge(type) {
     const s = (type || 'feat').toLowerCase()
-    const { bg, color } = TYPE_BADGE[s] || { bg: '#f1f5f9', color: '#475569' }
+    const { bg, color } = TYPE_BADGE[s] || { bg: 'var(--card2)', color: 'var(--ink2)' }
     return (
       <span style={{ fontSize: '0.68rem', fontWeight: 600, background: bg, color, padding: '0.1em 0.45em', borderRadius: 4, letterSpacing: '0.04em', whiteSpace: 'nowrap', flexShrink: 0 }}>
         {s}
@@ -499,10 +499,10 @@ export default function SuperadminPage() {
               display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
               padding: '0.28rem 0.75rem', borderRadius: 20, fontSize: '0.82rem', fontWeight: 600,
               background: debugMode ? 'rgba(22,163,74,0.12)' : 'rgba(156,163,175,0.15)',
-              color: debugMode ? '#16a34a' : '#9ca3af',
-              border: `1px solid ${debugMode ? 'rgba(22,163,74,0.3)' : 'rgba(156,163,175,0.3)'}`,
+              color: debugMode ? 'var(--green)' : 'var(--ink3)',
+              border: `1px solid ${debugMode ? 'rgba(5,150,105,0.3)' : 'rgba(148,163,184,0.3)'}`,
             }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: debugMode ? '#16a34a' : '#9ca3af', display: 'inline-block' }} />
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: debugMode ? 'var(--green)' : 'var(--ink3)', display: 'inline-block' }} />
               {debugMode ? 'ON' : 'OFF'}
             </span>
             <button
@@ -510,7 +510,7 @@ export default function SuperadminPage() {
               style={{
                 padding: '0.42rem 1.1rem', fontSize: '0.85rem', fontWeight: 500,
                 border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit',
-                background: debugMode ? '#dc2626' : '#16a34a',
+                background: debugMode ? 'var(--red)' : 'var(--green)',
                 color: '#fff', transition: 'background 0.15s',
               }}
             >

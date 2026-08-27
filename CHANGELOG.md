@@ -4,6 +4,60 @@
 
 ---
 
+## 2026-08-27 (2차)
+
+### 디자인 토큰 적용 — 전체 나머지 화면 및 공통 컴포넌트
+
+#### 수정된 파일
+
+**globals.css (공통 스타일)**
+- `.header` 배경: `#FFFFFF` → `var(--surface)`
+- `.modal` 배경/radius/shadow: `#FFFFFF` / `16px` / hardcoded → `var(--surface)` / `var(--radius-lg)` / `var(--shadow-md)`
+- `.modal-header` 배경: `#FFFFFF` → `var(--surface)`
+- `.btn-gray` 배경: `#E2E8F0` → `var(--card2)`
+- `.msg.success` bg/border: `#e8f5ec` / `#a8d5b5` → `rgba(5,150,105,0.06)` / `rgba(5,150,105,0.2)`
+- `.msg.error` bg/border: `#fdecea` / `#f0b0aa` → `rgba(220,38,38,0.06)` / `rgba(220,38,38,0.2)`
+- `.toast.ok` 배경: `#4a7c59` → `var(--green)`
+- `.toast.err` 배경: `#c0392b` → `var(--red)`
+- `.auth-card` 배경/radius: `#FFFFFF` / `20px` → `var(--surface)` / `var(--radius-lg)`
+- `.up` 색상: `#e03030` → `var(--red)` (한국 주식 상승=빨강 관례 유지)
+
+**SuperadminPage.jsx**
+- 디버그 모드 토글 상태 색상: `#16a34a`/`#9ca3af`/`#dc2626` → `var(--green)`/`var(--ink3)`/`var(--red)`
+- TYPE_BADGE 기본값: `#f1f5f9`/`#475569` → `var(--card2)`/`var(--ink2)`
+
+**AdminPage.jsx**
+- 위젯 토글 비활성 색상: `#ccc` → `var(--ink3)`
+
+**DietStatsPage.jsx**
+- 분석 없음 배지: `#9ca3af`/`#f3f4f6`/`#e5e7eb` → `var(--ink3)`/`var(--card2)`/`var(--border)`
+
+**ErrorBoundary.jsx**
+- 오류 제목 색상: `#dc2626` → `var(--red)`
+
+**DebugPanel.jsx**
+- `statusColor()` 함수: HTTP 상태별 색상 → `var(--ink3)`/`var(--green)`/`var(--warning)`/`var(--red)`
+
+**StockSettingsModal.jsx (추가)**
+- 매입 섹션 헤더/배지/버튼 텍스트: `#1d4ed8` → `var(--blue)`
+- 매도/에러 텍스트: `#b91c1c` → `var(--red)`
+- 프리미엄 버튼 border: `#93c5fd` → `rgba(59,130,246,0.4)`
+
+**RecurringPage.jsx**
+- income 타입 배지: `#60c080`/`rgba(96,192,128,0.12)` → `var(--green)`/`rgba(5,150,105,0.10)`
+- expense 타입 배지: `#e8a060`/rgba → `var(--accent)`/`var(--accent-soft)`
+
+#### 의도적으로 유지한 값
+- SuperadminPage TYPE_BADGE (feat/fix/design/refactor 등): 각 커밋 타입 고유 시멘틱 색상
+- SuperadminPage badge-* 인라인 스타일: 역할/상태 구분 시멘틱 배지 색상
+- PinnedMemoCard NOTE_COLORS: 사용자 선택 메모 색상 팔레트
+- DebugPanel 다크 패널 크롬 색상 (`#0f172a`, `#1e293b`, `#334155` 등): 개발자 도구 전용 다크 테마
+- globals.css 소셜 로그인 버튼 (`btn-facebook`, `btn-kakao`, `btn-naver`): 브랜드 공식 색상
+- `.btn-primary { color: #3D2009 }`, `.btn-submit { color: #3D2009 }`: accent 배경 위 다크 텍스트 (토큰 없음)
+- StockSettingsModal buy 섹션 배경 tint(`#eff6ff`, `#bfdbfe`): 거래 유형 시각 구분 맥락색
+
+---
+
 ## 2026-08-27
 
 ### 디자인 토큰 적용 — IndexPage 위젯 전체

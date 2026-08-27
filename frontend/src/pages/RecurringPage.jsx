@@ -221,8 +221,8 @@ export default function RecurringPage({ onClose }) {
                 <div className="rp-card-info">
                   <span style={{ fontSize: '0.68rem', fontWeight: 600, borderRadius: '4px', padding: '0.1rem 0.4rem', display: 'inline-block', marginBottom: '0.2rem', ...(
                     (item.type || 'expense') === 'income'
-                      ? { color: '#60c080', background: 'rgba(96,192,128,0.12)' }
-                      : { color: '#e8a060', background: 'rgba(232,160,96,0.12)' }
+                      ? { color: 'var(--green)', background: 'rgba(5,150,105,0.10)' }
+                      : { color: 'var(--accent)', background: 'var(--accent-soft)' }
                   ) }}>
                     {(item.type || 'expense') === 'income' ? `💰 ${t(lang, 'recurring.income')}` : `💸 ${t(lang, 'recurring.expense')}`}
                   </span>
