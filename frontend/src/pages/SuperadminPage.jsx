@@ -288,7 +288,7 @@ export default function SuperadminPage() {
       <header className="header">
         <div className="header-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           {t(lang, 'superadmin.title')}
-          <span style={{ fontSize: '0.65rem', background: '#c0392b', color: '#fff', padding: '0.15rem 0.5rem', borderRadius: 4, fontFamily: "'Noto Sans KR',sans-serif", fontWeight: 500, letterSpacing: '0.08em' }}>
+          <span style={{ fontSize: '0.65rem', background: 'var(--red)', color: '#fff', padding: '0.15rem 0.5rem', borderRadius: 4, fontFamily: "'Noto Sans KR',sans-serif", fontWeight: 500, letterSpacing: '0.08em' }}>
             SUPER ADMIN
           </span>
         </div>
@@ -615,7 +615,7 @@ export default function SuperadminPage() {
               <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '1rem 0' }} />
 
               {/* 계정 삭제 */}
-              <div style={{ fontSize: '0.7rem', fontWeight: 500, letterSpacing: '0.1em', color: '#c0392b', textTransform: 'uppercase', marginBottom: '0.75rem' }}>계정 삭제</div>
+              <div style={{ fontSize: '0.7rem', fontWeight: 500, letterSpacing: '0.1em', color: 'var(--red)', textTransform: 'uppercase', marginBottom: '0.75rem' }}>계정 삭제</div>
               <p style={{ fontSize: '0.8rem', color: 'var(--ink3)', marginBottom: '0.5rem' }}>모든 데이터가 영구 삭제됩니다. 복구 불가.</p>
               <button className="btn btn-red btn-sm" onClick={deleteUser}>계정 영구 삭제</button>
             </div>

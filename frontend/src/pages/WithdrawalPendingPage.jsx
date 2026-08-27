@@ -49,12 +49,12 @@ export default function WithdrawalPendingPage() {
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
       <div style={{
-        background: 'var(--card)', borderRadius: 18, border: '1.5px solid #f0b0aa',
-        boxShadow: '0 4px 24px rgba(192,57,43,0.10)', padding: '2.5rem 2.4rem',
+        background: 'var(--card)', borderRadius: 18, border: '1.5px solid rgba(229,72,77,0.25)',
+        boxShadow: 'var(--shadow-md)', padding: '2.5rem 2.4rem',
         width: '100%', maxWidth: 420, textAlign: 'center',
       }}>
         <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>⚠️</div>
-        <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#c0392b', marginBottom: '0.5rem' }}>
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--red)', marginBottom: '0.5rem' }}>
           {t(lang, 'withdrawal.title')}
         </h2>
         <p style={{ fontSize: '0.85rem', color: 'var(--ink2)', marginBottom: '1.6rem', lineHeight: 1.6 }}>
@@ -71,8 +71,8 @@ export default function WithdrawalPendingPage() {
             fontSize: '0.82rem', marginBottom: '1rem', padding: '0.6rem 0.9rem',
             borderRadius: 8, lineHeight: 1.5,
             ...(msg.type === 'success'
-              ? { background: '#e8f5ec', color: '#2e7d4f', border: '1px solid #a8d5b5' }
-              : { background: '#fdecea', color: '#c0392b', border: '1px solid #f0b0aa' }),
+              ? { background: 'rgba(22,163,74,0.08)', color: 'var(--green)', border: '1px solid rgba(22,163,74,0.25)' }
+              : { background: 'rgba(229,72,77,0.08)', color: 'var(--red)', border: '1px solid rgba(229,72,77,0.25)' }),
           }}>
             {msg.text}
           </div>

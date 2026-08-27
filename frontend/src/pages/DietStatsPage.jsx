@@ -48,11 +48,11 @@ function DayDetailModal({ date, dateMap, analysisMap, lang, onClose }) {
       onClick={onClose}
     >
       <div
-        style={{ background: 'var(--card-bg, #fff)', borderRadius: 16, width: '100%', maxWidth: 480, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 8px 40px rgba(0,0,0,0.22)' }}
+        style={{ background: 'var(--surface)', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: 480, maxHeight: '85vh', overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}
         onClick={e => e.stopPropagation()}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.2rem', borderBottom: '1px solid var(--border, #e5e7eb)', position: 'sticky', top: 0, background: 'var(--card-bg, #fff)', zIndex: 1 }}>
-          <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--ink, #111)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.2rem', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1 }}>
+          <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--ink)' }}>
             {formatDateHeader(date, lang)}
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -212,8 +212,8 @@ export default function DietStatsPage() {
             <button key={mode} type="button" onClick={() => setViewMode(mode)}
               style={{
                 padding: '0.28rem 0.65rem', fontSize: '0.78rem', cursor: 'pointer',
-                border: `1.5px solid ${viewMode === mode ? 'var(--accent, #2563eb)' : 'var(--border)'}`,
-                borderRadius: 7, background: viewMode === mode ? 'var(--accent, #2563eb)' : 'transparent',
+                border: `1.5px solid ${viewMode === mode ? 'var(--accent)' : 'var(--border)'}`,
+                borderRadius: 7, background: viewMode === mode ? 'var(--accent)' : 'transparent',
                 color: viewMode === mode ? '#fff' : 'var(--ink3)', fontFamily: 'inherit',
               }}>
               {icon}

@@ -78,7 +78,7 @@ export default function SharedCalendar({
           <div key={i} style={{
             textAlign: 'center', padding: '0.4rem 0',
             fontSize: '0.72rem', fontWeight: 700,
-            color: i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : 'var(--ink2)',
+            color: i === 0 ? 'var(--red)' : i === 6 ? 'var(--blue)' : 'var(--ink2)',
           }}>
             {wd}
           </div>
@@ -120,7 +120,7 @@ export default function SharedCalendar({
                 padding: '0.28rem 0.35rem 0.2rem',
                 background: 'var(--card)',
                 cursor: clickable ? 'pointer' : 'default',
-                outline: isToday ? '2px solid #3b82f6' : 'none',
+                outline: isToday ? '2px solid var(--accent)' : 'none',
                 outlineOffset: '-2px',
                 transition: 'background 0.1s',
                 overflow: 'hidden',
@@ -128,13 +128,13 @@ export default function SharedCalendar({
                 display: 'flex',
                 flexDirection: 'column',
               }}
-              onMouseEnter={e => { if (clickable) e.currentTarget.style.background = 'var(--bg2, #f0f4ff)' }}
+              onMouseEnter={e => { if (clickable) e.currentTarget.style.background = 'var(--accent-soft)' }}
               onMouseLeave={e => { e.currentTarget.style.background = 'var(--card)' }}
             >
               <span style={{
                 fontSize: '0.75rem',
                 fontWeight: isToday ? 700 : 500,
-                color: isSun ? '#ef4444' : isSat ? '#3b82f6' : 'var(--ink)',
+                color: isSun ? 'var(--red)' : isSat ? 'var(--blue)' : 'var(--ink)',
                 lineHeight: 1,
                 marginBottom: '0.15rem',
                 flexShrink: 0,

@@ -13,7 +13,7 @@ import {
 } from '../../utils/stockStats'
 Chart.register(...registerables)
 
-const CHART_COLORS = ['#2563eb','#16a34a','#f59e0b','#9333ea','#ef4444','#0891b2','#65a30d','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16','#06b6d4','#a855f7','#e11d48']
+const CHART_COLORS = ['var(--accent)','var(--green)','#f59e0b','#9333ea','#ef4444','#0891b2','#65a30d','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16','#06b6d4','#a855f7','#e11d48']
 function colorForKey(key) {
   let h = 0
   for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0
@@ -369,7 +369,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
           label: t(lang, 'statsReturnRate'),
           data: sorted.map(s => parseFloat(s.returnPct.toFixed(2))),
           backgroundColor: sorted.map(s => s.returnPct >= 0 ? 'rgba(74,124,89,0.75)' : 'rgba(220,38,38,0.75)'),
-          borderColor: sorted.map(s => s.returnPct >= 0 ? '#4a7c59' : '#dc2626'),
+          borderColor: sorted.map(s => s.returnPct >= 0 ? '#4a7c59' : 'var(--red)'),
           borderWidth: 1,
         }],
       },
@@ -431,7 +431,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         datasets.push({
           label: t(lang, 'statsBenchmarkPortfolio'),
           data: filtered.map((r, i) => ({ x: r.snapshot_date, y: normalized[i] })),
-          borderColor: '#2563eb',
+          borderColor: 'var(--accent)',
           backgroundColor: 'rgba(37,99,235,0.1)',
           fill: false,
           tension: 0.2,
@@ -518,7 +518,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
           type: 'bar',
           data: {
             labels: sorted.map(labelFn),
-            datasets: [{ label: '수익률', data: sorted.map(d => parseFloat((d[pctKey] ?? 0).toFixed(2))), backgroundColor: sorted.map(colorFn), borderColor: sorted.map(d => (d[pctKey] ?? 0) >= 0 ? '#4a7c59' : '#dc2626'), borderWidth: 1 }],
+            datasets: [{ label: '수익률', data: sorted.map(d => parseFloat((d[pctKey] ?? 0).toFixed(2))), backgroundColor: sorted.map(colorFn), borderColor: sorted.map(d => (d[pctKey] ?? 0) >= 0 ? '#4a7c59' : 'var(--red)'), borderWidth: 1 }],
           },
           options: {
             responsive: true,
@@ -557,7 +557,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
           label: t(lang, 'statsPeriodPlLabel'),
           data: sorted.map(d => parseFloat(d.pl.toFixed(2))),
           backgroundColor: sorted.map(d => d.pl >= 0 ? 'rgba(37,99,235,0.75)' : 'rgba(220,38,38,0.75)'),
-          borderColor: sorted.map(d => d.pl >= 0 ? '#2563eb' : '#dc2626'),
+          borderColor: sorted.map(d => d.pl >= 0 ? 'var(--accent)' : 'var(--red)'),
           borderWidth: 1,
         }],
       },
@@ -619,7 +619,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         datasets: [{
           label: yLabel,
           data: filtered.map(r => getValue(r)),
-          borderColor: '#2563eb',
+          borderColor: 'var(--accent)',
           backgroundColor: 'rgba(37,99,235,0.08)',
           fill: true,
           tension: 0.3,
@@ -691,7 +691,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     })
     const months  = Object.keys(monthMap).sort()
     const tickers = [...tickerSet]
-    const COLORS  = ['#4a7c59','#2563eb','#f59e0b','#dc2626','#7c3aed','#0891b2','#d97706','#059669','#9333ea','#e11d48','#0284c7','#16a34a']
+    const COLORS  = ['#4a7c59','var(--accent)','#f59e0b','var(--red)','#7c3aed','#0891b2','#d97706','#059669','#9333ea','#e11d48','#0284c7','var(--green)']
     const datasets = tickers.map((tk, i) => ({
       label: tk,
       data: months.map(m => monthMap[m][tk] || 0),
@@ -733,7 +733,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     const byTicker = {}
     filtered.forEach(d => { byTicker[d.ticker] = (byTicker[d.ticker] || 0) + d.amount })
     const sorted  = Object.entries(byTicker).sort((a, b) => b[1] - a[1])
-    const COLORS  = ['#4a7c59','#2563eb','#f59e0b','#dc2626','#7c3aed','#0891b2','#d97706','#059669','#9333ea','#e11d48','#0284c7','#16a34a']
+    const COLORS  = ['#4a7c59','var(--accent)','#f59e0b','var(--red)','#7c3aed','#0891b2','#d97706','#059669','#9333ea','#e11d48','#0284c7','var(--green)']
 
     divPieChartRef.current = new Chart(divPieRef.current, {
       type: 'doughnut',
@@ -761,7 +761,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     const cutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
 
     // 그룹별로 contributions 수집, 기간 필터 적용
-    const groupColors = ['#2563eb','#16a34a','#f59e0b','#9333ea','#ef4444','#0891b2']
+    const groupColors = ['var(--accent)','var(--green)','#f59e0b','#9333ea','#ef4444','#0891b2']
     const monthSet = new Set()
     const groupContribs = []
 
@@ -858,7 +858,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   if (!isOpen) return null
   if (!stockData?.groups?.length) return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
-      <div style={{ background: 'var(--card)', borderRadius: 16, padding: '2.5rem 3rem', textAlign: 'center', boxShadow: '0 8px 40px rgba(0,0,0,.3)' }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: 'var(--card)', borderRadius: 'var(--radius-lg)', padding: '2.5rem 3rem', textAlign: 'center', boxShadow: 'var(--shadow-md)' }} onClick={e => e.stopPropagation()}>
         <div style={{ fontSize: '2.5rem', marginBottom: '0.8rem' }}>📊</div>
         <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.4rem' }}>보유 종목이 없습니다</div>
         <div style={{ fontSize: '0.85rem', color: 'var(--ink3)', marginBottom: '1.5rem' }}>종목을 추가하면 통계를 확인할 수 있습니다</div>
@@ -905,7 +905,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
           : kpi.todayChgKRW !== 0 ? `${kpi.todayChgKRW >= 0 ? '+' : ''}₩${fmtKRW(kpi.todayChgKRW)}`
           : `${kpi.todayChgUSD >= 0 ? '+' : ''}$${fmtUSD(kpi.todayChgUSD)}`,
         sub: null,
-        color: kpi.todayChgKRWTotal >= 0 ? '#16a34a' : '#dc2626',
+        color: kpi.todayChgKRWTotal >= 0 ? 'var(--green)' : 'var(--red)',
       },
     ]
 
@@ -932,7 +932,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
           {concentration.map((c, i) => {
             const isWarn = c.pct >= 30 && c.pct < 50
             const isAlert = c.pct >= 50
-            const barColor = isAlert ? '#dc2626' : isWarn ? '#f59e0b' : '#2563eb'
+            const barColor = isAlert ? 'var(--red)' : isWarn ? '#f59e0b' : 'var(--accent)'
             return (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <div style={{ width: 90, fontSize: '0.78rem', color: 'var(--ink)', fontWeight: 500, flexShrink: 0, textAlign: 'right' }}>{c.name}</div>
@@ -965,7 +965,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)' }}>{t(lang, 'statsRealizedNone')}</div>
       ) : (
         <>
-          <div style={{ marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 700, color: realizedData.total >= 0 ? '#16a34a' : '#dc2626' }}>
+          <div style={{ marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 700, color: realizedData.total >= 0 ? 'var(--green)' : 'var(--red)' }}>
             합계: {realizedData.total >= 0 ? '+' : ''}{fmtShort(Math.abs(realizedData.total), 'USD')}
           </div>
           <div style={{ overflowX: 'auto' }}>
@@ -995,8 +995,8 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                       <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{item.qty % 1 === 0 ? item.qty : item.qty.toFixed(3)}</td>
                       <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink)' }}>{fmt(item.sell_price)}</td>
                       <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{fmt(item.avg_cost)}</td>
-                      <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{pos ? '+' : ''}{fmt(Math.abs(item.pl))}</td>
-                      <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? '#16a34a' : '#dc2626' }}>{pos ? '+' : ''}{item.pl_pct.toFixed(1)}%</td>
+                      <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? 'var(--green)' : 'var(--red)', fontWeight: 600 }}>{pos ? '+' : ''}{fmt(Math.abs(item.pl))}</td>
+                      <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? 'var(--green)' : 'var(--red)' }}>{pos ? '+' : ''}{item.pl_pct.toFixed(1)}%</td>
                     </tr>
                   )
                 })}
@@ -1270,8 +1270,8 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                                 <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{d.qty % 1 === 0 ? d.qty : d.qty.toFixed(3)}</td>
                                 <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{fmt(d.price_start)}</td>
                                 <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink)' }}>{fmt(d.price_now)}</td>
-                                <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{pos ? '+' : ''}{fmt(d.pl)}</td>
-                                <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? '#16a34a' : '#dc2626', fontWeight: 700 }}>{pos ? '+' : ''}{d.pl_pct.toFixed(1)}%</td>
+                                <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? 'var(--green)' : 'var(--red)', fontWeight: 600 }}>{pos ? '+' : ''}{fmt(d.pl)}</td>
+                                <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>{pos ? '+' : ''}{d.pl_pct.toFixed(1)}%</td>
                               </tr>
                             )
                           })}
@@ -1299,8 +1299,8 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                                 <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{s.totalHQ % 1 === 0 ? s.totalHQ : s.totalHQ.toFixed(3)}</td>
                                 <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{fmt(s.allAvg)}</td>
                                 <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink)' }}>{fmt(s.cur)}</td>
-                                <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{pos ? '+' : ''}{fmt(s.evalPL)}</td>
-                                <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? '#16a34a' : '#dc2626' }}>{pos ? '+' : ''}{s.pct.toFixed(1)}%</td>
+                                <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? 'var(--green)' : 'var(--red)', fontWeight: 600 }}>{pos ? '+' : ''}{fmt(s.evalPL)}</td>
+                                <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? 'var(--green)' : 'var(--red)' }}>{pos ? '+' : ''}{s.pct.toFixed(1)}%</td>
                               </tr>
                             )
                           })}
@@ -1340,7 +1340,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                                 <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{s.holdQty % 1 === 0 ? s.holdQty : s.holdQty.toFixed(3)}</td>
                                 <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{fmt(s.avgCost)}</td>
                                 <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink)' }}>{fmt(s.curPrice)}</td>
-                                <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? '#16a34a' : '#dc2626', fontWeight: 700 }}>
+                                <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>
                                   {pos ? '+' : ''}{s.returnPct.toFixed(2)}%
                                 </td>
                               </tr>
@@ -1385,8 +1385,8 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                                     <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{d.qty % 1 === 0 ? d.qty : d.qty.toFixed(3)}</td>
                                     <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{fmt(d.price_start)}</td>
                                     <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: 'var(--ink)' }}>{fmt(d.price_now)}</td>
-                                    <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{pos ? '+' : ''}{fmt(d.pl)}</td>
-                                    <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? '#16a34a' : '#dc2626' }}>{pos ? '+' : ''}{d.pl_pct.toFixed(1)}%</td>
+                                    <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? 'var(--green)' : 'var(--red)', fontWeight: 600 }}>{pos ? '+' : ''}{fmt(d.pl)}</td>
+                                    <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: pos ? 'var(--green)' : 'var(--red)' }}>{pos ? '+' : ''}{d.pl_pct.toFixed(1)}%</td>
                                   </tr>
                                 )
                               })}
@@ -1511,7 +1511,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                           {rows.map((r, i) => (
                             <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
                               <td style={{ padding: '0.3rem 0.4rem', color: 'var(--ink)', fontWeight: i === 0 ? 700 : 500 }}>{r.name}</td>
-                              <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: r.ret == null ? 'var(--ink3)' : r.ret >= 0 ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
+                              <td style={{ padding: '0.3rem 0.4rem', textAlign: 'right', color: r.ret == null ? 'var(--ink3)' : r.ret >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 600 }}>
                                 {r.ret == null ? '—' : `${r.ret >= 0 ? '+' : ''}${r.ret.toFixed(2)}%`}
                               </td>
                             </tr>
@@ -1563,7 +1563,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
             <div className="stats-section">
               <div className="stats-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span>배당금 내역</span>
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#16a34a' }}>합계 ${total.toFixed(2)}</span>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--green)' }}>합계 ${total.toFixed(2)}</span>
               </div>
               {/* 월별 누적 바차트 */}
               <div style={{ fontSize: '0.72rem', color: 'var(--ink3)', marginBottom: '0.3rem' }}>월별 배당금 (종목별)</div>
@@ -1588,7 +1588,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                       {sorted.map(([tk, amt]) => (
                         <tr key={tk} style={{ borderBottom: '1px solid var(--border)' }}>
                           <td style={{ padding: '0.25rem 0.4rem', fontWeight: 600 }}>{tk}</td>
-                          <td style={{ padding: '0.25rem 0.4rem', textAlign: 'right', color: '#16a34a', fontWeight: 600 }}>${amt.toFixed(2)}</td>
+                          <td style={{ padding: '0.25rem 0.4rem', textAlign: 'right', color: 'var(--green)', fontWeight: 600 }}>${amt.toFixed(2)}</td>
                           <td style={{ padding: '0.25rem 0.4rem', textAlign: 'right', color: 'var(--ink3)' }}>{(amt / total * 100).toFixed(1)}%</td>
                         </tr>
                       ))}
@@ -1644,7 +1644,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                         </td>
                       ))}
                       <td style={{ padding: '0.4rem 0.5rem', textAlign: 'center' }}>
-                        <span style={{ display: 'inline-block', padding: '0.15rem 0.45rem', borderRadius: 4, fontSize: '0.7rem', fontWeight: 600, background: r.saved_by === 'backfill' ? 'rgba(37,99,235,0.12)' : 'rgba(22,163,74,0.12)', color: r.saved_by === 'backfill' ? '#2563eb' : '#16a34a' }}>
+                        <span style={{ display: 'inline-block', padding: '0.15rem 0.45rem', borderRadius: 4, fontSize: '0.7rem', fontWeight: 600, background: r.saved_by === 'backfill' ? 'rgba(37,99,235,0.12)' : 'rgba(22,163,74,0.12)', color: r.saved_by === 'backfill' ? 'var(--accent)' : 'var(--green)' }}>
                           {r.saved_by ?? 'frontend'}
                         </span>
                       </td>

@@ -195,14 +195,14 @@ export default function ProfilePage() {
 
   const planLabel = plan === 'premium' ? 'Premium' : 'Free'
   const planStyle = plan === 'premium'
-    ? { background: '#fff3e0', color: '#b56000', border: '1px solid #f0c060' }
-    : { background: '#e8e0d4', color: 'var(--ink2)' }
+    ? { background: '#fff8e6', color: '#b07800', border: '1px solid #f5d67a' }
+    : { background: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <header className="header">
-        <span style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.2rem', color: 'var(--accent2)' }}>
+        <span style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.2rem', color: 'var(--accent)' }}>
           {t(lang, 'profile.myDay')}
         </span>
         <div className="header-right">
@@ -214,7 +214,7 @@ export default function ProfilePage() {
       <div style={{ flex: 1, display: 'flex', justifyContent: 'center', padding: '2rem 1rem 3rem' }}>
         <div style={{
           background: 'var(--card)', borderRadius: 18, border: '1px solid var(--border)',
-          boxShadow: '0 4px 24px rgba(100,70,30,0.10)', padding: '2.2rem 2.4rem',
+          boxShadow: 'var(--shadow-md)', padding: '2.2rem 2.4rem',
           width: '100%', maxWidth: 500,
         }}>
 
@@ -401,7 +401,7 @@ export default function ProfilePage() {
               style={{
                 width: '100%', padding: '0.78rem', fontSize: '0.95rem', fontWeight: 500,
                 cursor: saving ? 'not-allowed' : 'pointer',
-                background: saving ? 'var(--ink3)' : 'var(--accent)', color: saving ? '#fff' : '#3D2009',
+                background: saving ? 'var(--ink3)' : 'var(--accent)', color: '#fff',
                 border: 'none', borderRadius: 10, fontFamily: 'inherit',
                 marginTop: '1.6rem', letterSpacing: '0.02em',
               }}
@@ -416,8 +416,8 @@ export default function ProfilePage() {
               fontSize: '0.82rem', marginTop: '0.9rem', padding: '0.6rem 0.9rem',
               borderRadius: 8, lineHeight: 1.5,
               ...(msg.type === 'success'
-                ? { background: '#e8f5ec', color: 'var(--green)', border: '1px solid #a8d5b5' }
-                : { background: '#fdecea', color: 'var(--red)',   border: '1px solid #f0b0aa' }),
+                ? { background: 'rgba(22,163,74,0.08)', color: 'var(--green)', border: '1px solid rgba(22,163,74,0.25)' }
+                : { background: 'rgba(229,72,77,0.08)', color: 'var(--red)',   border: '1px solid rgba(229,72,77,0.25)' }),
             }}>
               {msg.text}
             </div>
@@ -436,8 +436,8 @@ export default function ProfilePage() {
               onClick={() => setWithdrawModal(true)}
               style={{
                 padding: '0.6rem 1.4rem', fontSize: '0.85rem', fontWeight: 500,
-                background: 'transparent', color: '#c0392b',
-                border: '1.5px solid #c0392b', borderRadius: 8,
+                background: 'transparent', color: 'var(--red)',
+                border: '1.5px solid var(--red)', borderRadius: 8,
                 cursor: 'pointer', fontFamily: 'inherit',
               }}
             >
@@ -459,10 +459,10 @@ export default function ProfilePage() {
           onClick={e => { if (e.target === e.currentTarget) setWithdrawModal(false) }}
         >
           <div style={{
-            background: '#FFFFFF', borderRadius: 16, padding: '2rem',
-            width: '100%', maxWidth: 360, boxShadow: '0 20px 60px rgba(15,23,42,0.18)',
+            background: 'var(--surface)', borderRadius: 'var(--radius-lg)', padding: '2rem',
+            width: '100%', maxWidth: 360, boxShadow: 'var(--shadow-md)',
           }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#c0392b', marginBottom: '0.8rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--red)', marginBottom: '0.8rem' }}>
               {t(lang, 'profile.withdrawConfirmTitle')}
             </h3>
             <p style={{ fontSize: '0.83rem', color: 'var(--ink2)', lineHeight: 1.7, marginBottom: '1.5rem', whiteSpace: 'pre-line' }}>
@@ -487,7 +487,7 @@ export default function ProfilePage() {
                 disabled={withdrawing}
                 style={{
                   flex: 1, padding: '0.65rem', fontSize: '0.88rem', fontWeight: 500,
-                  background: withdrawing ? '#e88' : '#c0392b', color: '#fff',
+                  background: withdrawing ? 'rgba(229,72,77,0.5)' : 'var(--red)', color: '#fff',
                   border: 'none', borderRadius: 8,
                   cursor: withdrawing ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
                 }}

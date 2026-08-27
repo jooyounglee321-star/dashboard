@@ -6,6 +6,40 @@
 
 ## 2026-08-26
 
+### 디자인 토큰 적용 — 나머지 모든 페이지 및 컴포넌트
+
+#### 수정 파일
+- `frontend/src/pages/ProfilePage.jsx`
+- `frontend/src/pages/WithdrawalPendingPage.jsx`
+- `frontend/src/pages/SuperadminPage.jsx`
+- `frontend/src/pages/DietStatsPage.jsx`
+- `frontend/src/pages/index/StockCard.jsx`
+- `frontend/src/pages/index/StockStatsOverlay.jsx`
+- `frontend/src/pages/index/index.css`
+- `frontend/src/components/ConfirmModal.jsx`
+- `frontend/src/components/SharedCalendar.jsx`
+
+#### 공통 변경 패턴
+- `var(--accent2)` → `var(--accent)` 전체 치환
+- `#3D2009` (브라운 텍스트) → `#fff` (파란 accent 위 흰색 텍스트)
+- `#FFFFFF`/`var(--card-bg, #fff)` 등 하드코딩 배경 → `var(--surface)` / `var(--bg)`
+- `rgba(X,0.22~0.18)` 그림자 → `var(--shadow-md)`
+- `borderRadius: 16` → `var(--radius-lg)`
+- `#c0392b` / `#ef4444` 레드 → `var(--red)`
+- `#3b82f6` / `#1d4ed8` 블루 → `var(--accent)` / `var(--accent-h)`
+- `#16a34a` / `#dc2626` P&L 색상 → `var(--green)` / `var(--red)`
+- `var(--border, #e5e7eb)` / `var(--bg2, #f9fafb)` 등 fallback 제거 → 토큰만 사용
+- 성공/오류 메시지 테두리: 하드코딩 → `rgba(green/red, 0.25)` 토큰 기반 rgba
+
+#### 유지한 색상 (의도적 제외)
+- 사회 로그인 브랜드색 (Google/Kakao/Naver/Facebook)
+- YouTube 레드 `#ff0000`
+- `#7855AD` AI 다이어트 분석 퍼플 (기능 전용 브랜드 색상)
+- 주식 마켓 상태 배지 (LIVE/PRE/AFTER/CLOSED)
+- Chart.js 데이터 색상 배열
+
+---
+
 ### 디자인 토큰 적용 — Budget 페이지 5탭 전체
 
 #### 수정 파일

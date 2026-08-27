@@ -6,11 +6,11 @@ const DIM = {
   padding: '1rem',
 }
 const BOX = {
-  background: '#FFFFFF',
-  borderRadius: 16,
+  background: 'var(--surface)',
+  borderRadius: 'var(--radius-lg)',
   width: '100%',
   maxWidth: 400,
-  boxShadow: '0 20px 60px rgba(15,23,42,0.18)',
+  boxShadow: 'var(--shadow-md)',
   overflow: 'hidden',
 }
 
@@ -30,7 +30,7 @@ export default function ConfirmModal({
     <div style={DIM} onClick={e => { if (e.target === e.currentTarget) onCancel() }}>
       <div style={BOX}>
         <div style={{ padding: '1.5rem 1.5rem 1.1rem' }}>
-          <p style={{ fontSize: '0.9rem', color: '#1E293B', lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0 }}>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text)', lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0 }}>
             {message}
           </p>
         </div>

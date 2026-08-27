@@ -29,7 +29,7 @@ function StockNewsRow({ newsConfig, lang, onOpenSettings }) {
   const nLang  = newsConfig?.lang   || 'ko'
 
   const base = {
-    background: 'var(--bg2, #f9fafb)', borderRadius: 6,
+    background: 'var(--bg)', borderRadius: 6,
     padding: '0.28rem 0.6rem', marginTop: '0.45rem',
     fontSize: '0.7rem', display: 'block',
     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -75,10 +75,10 @@ function StockNewsRow({ newsConfig, lang, onOpenSettings }) {
   // 설정 완료 — 미로드 상태
   if (status === 'ready') {
     return (
-      <button style={{ ...base, color: '#3b82f6', cursor: 'pointer' }}
+      <button style={{ ...base, color: 'var(--accent)', cursor: 'pointer' }}
         onClick={e => { e.stopPropagation(); fetchNews() }}
-        onMouseEnter={e => e.currentTarget.style.color = '#1d4ed8'}
-        onMouseLeave={e => e.currentTarget.style.color = '#3b82f6'}
+        onMouseEnter={e => e.currentTarget.style.color = 'var(--accent-h)'}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--accent)'}
       >
         📰 {t(lang, 'stockNewsPrompt')}
       </button>
@@ -91,10 +91,10 @@ function StockNewsRow({ newsConfig, lang, onOpenSettings }) {
 
   if (status === 'err' || !newsList.length) {
     return (
-      <button style={{ ...base, color: '#ef4444', cursor: 'pointer' }}
+      <button style={{ ...base, color: 'var(--red)', cursor: 'pointer' }}
         onClick={e => { e.stopPropagation(); setStatus('ready'); setNewsList([]) }}
-        onMouseEnter={e => e.currentTarget.style.color = '#b91c1c'}
-        onMouseLeave={e => e.currentTarget.style.color = '#ef4444'}
+        onMouseEnter={e => e.currentTarget.style.color = 'var(--red)'}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--red)'}
       >
         📰 {t(lang, 'stockNewsError')}
       </button>
@@ -106,10 +106,10 @@ function StockNewsRow({ newsConfig, lang, onOpenSettings }) {
     <div style={{ marginTop: '0.45rem' }}>
       {newsList.map((item, idx) => (
         <a key={idx} href={item.url} target="_blank" rel="noreferrer"
-          style={{ ...base, marginTop: idx === 0 ? 0 : '0.18rem', color: '#3b82f6', cursor: 'pointer' }}
+          style={{ ...base, marginTop: idx === 0 ? 0 : '0.18rem', color: 'var(--accent)', cursor: 'pointer' }}
           title={item.title}
-          onMouseEnter={e => { e.currentTarget.style.color = '#1d4ed8'; e.currentTarget.style.textDecoration = 'underline' }}
-          onMouseLeave={e => { e.currentTarget.style.color = '#3b82f6'; e.currentTarget.style.textDecoration = 'none' }}
+          onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent-h)'; e.currentTarget.style.textDecoration = 'underline' }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'var(--accent)'; e.currentTarget.style.textDecoration = 'none' }}
         >
           📰 {item.title}{item.published ? ` (${item.published})` : ''}
         </a>
@@ -233,11 +233,11 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
         return (
           <li key={s.ticker} className="stock-item" style={{
             display: 'block', padding: '0.6rem 0.75rem',
-            borderBottom: '1px solid var(--border, #e5e7eb)',
+            borderBottom: '1px solid var(--border)',
             borderRadius: 8,
             transition: 'background 0.12s',
           }}
-            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg2, #f9fafb)'}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg)'}
             onMouseLeave={e => e.currentTarget.style.background = ''}
           >
             {/* 2열 */}
@@ -328,8 +328,8 @@ function StockCard({ groups, priceMap, fxRate, loading, onOpenStats, onOpenSetti
     )
     mTotalBar = (
       <div className="m-total-bar">
-        <span style={{ fontSize: '0.72rem', color: '#a89880' }}>{t(lang, 'stockTotalLabel')}{/* fxNote */}</span>
-        <span style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--accent2)' }}>₩{fmtKRW(tot)}</span>
+        <span style={{ fontSize: '0.72rem', color: 'var(--text-faint)' }}>{t(lang, 'stockTotalLabel')}{/* fxNote */}</span>
+        <span style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--accent)' }}>₩{fmtKRW(tot)}</span>
       </div>
     )
   } else if (totalMode?.toUpperCase() === 'USD') {
