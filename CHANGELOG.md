@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-08-26
+
+### UI 개선 — AI 캡처 확인 모달 (CaptureUploadPanel)
+
+#### 변경 파일: `frontend/src/pages/index/StockSettingsModal.jsx`
+
+- **구분 배지**: `매입` → `매수`로 통일, pill 형태(border-radius: 20)에 white-space: nowrap 적용. 매수=#eaf1ff/#2f6fed, 매도=#fdeceb/#e5484d
+- **티커·종목명 통합**: 티커/종목명 별도 컬럼 → "티커 · 종목명" 단일 컬럼으로 통합. ticker input(굵게, 0.82rem) + name input(작게, 0.71rem, 회색) 2줄 배치
+- **날짜 미입력 강조**: `r.date` 비어있으면 input에 주황 테두리(#f0b445) + 연한 배경(#fff4e5), 아래에 "날짜 확인 필요" 텍스트(#d97706) 표시
+- **숫자 정렬**: 수량/단가 입력 필드에 `fontVariantNumeric: 'tabular-nums'` 적용, 우측 정렬 유지
+- **테이블 카드화**: overflowX 래퍼에 `border: 1px solid var(--border)`, `borderRadius: 10` 적용. 헤더 행 배경 #fafbfc
+- **요약 행 개선**: "신규 N건 인식됨" 배지(#eaf1ff), 우측에 "저장 전 자유롭게 수정할 수 있어요" 힌트 텍스트 추가. captureResultTitle 라인 제거
+- **하단 버튼**: "전체 선택" 체크박스 추가(왼쪽). "다시 업로드" → outline 스타일(border: 1.5px solid, background: transparent). "전체 저장" → 건수를 반투명 흰색 배지로 분리 표시
+
+---
+
 ## 2026-08-25
 
 ### 신규 기능 — 가계부 연도별 탭: 카테고리 × 월별 매트릭스 표

@@ -481,10 +481,13 @@ function CaptureUploadPanel({ g, lang, onSave, onClose }) {
         {results && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {/* 요약 */}
-            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', fontSize: '0.78rem' }}>
-              <span style={{ padding: '0.22rem 0.65rem', borderRadius: 20, background: '#dcfce7', color: '#15803d', fontWeight: 600 }}>신규 {rows.length}건</span>
-              {results.skipped_count > 0 && <span style={{ padding: '0.22rem 0.65rem', borderRadius: 20, background: '#fef9c3', color: '#92400e', fontWeight: 500 }}>{t(lang, 'admin.captureSkipped')}: {results.skipped_count}건</span>}
-              {results.parse_errors?.length > 0 && <span style={{ padding: '0.22rem 0.65rem', borderRadius: 20, background: '#fee2e2', color: '#b91c1c', fontWeight: 500 }}>{t(lang, 'admin.captureParseError')}: {results.parse_errors.length}건</span>}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', fontSize: '0.78rem', alignItems: 'center' }}>
+                <span style={{ padding: '0.22rem 0.65rem', borderRadius: 20, background: '#eaf1ff', color: '#2f6fed', fontWeight: 600 }}>✓ 신규 {rows.length}건 인식됨</span>
+                {results.skipped_count > 0 && <span style={{ padding: '0.22rem 0.65rem', borderRadius: 20, background: '#fef9c3', color: '#92400e', fontWeight: 500 }}>{t(lang, 'admin.captureSkipped')}: {results.skipped_count}건</span>}
+                {results.parse_errors?.length > 0 && <span style={{ padding: '0.22rem 0.65rem', borderRadius: 20, background: '#fee2e2', color: '#b91c1c', fontWeight: 500 }}>{t(lang, 'admin.captureParseError')}: {results.parse_errors.length}건</span>}
+              </div>
+              <span style={{ fontSize: '0.73rem', color: 'var(--ink3)' }}>저장 전 자유롭게 수정할 수 있어요</span>
             </div>
 
             {/* 오류 목록 */}
@@ -504,61 +507,74 @@ function CaptureUploadPanel({ g, lang, onSave, onClose }) {
             {/* 결과 테이블 */}
             {rows.length > 0 && (
               <>
-                <div style={{ fontSize: '0.75rem', color: 'var(--ink2)', marginBottom: '0.2rem' }}>{t(lang, 'admin.captureResultTitle')}</div>
-                <div style={{ overflowX: 'auto' }}>
+                <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 10 }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
                     <thead>
-                      <tr style={{ background: 'var(--card2)', color: 'var(--ink2)' }}>
-                        <th style={{ padding: '0.35rem 0.4rem', textAlign: 'center', fontWeight: 500, borderBottom: '1px solid var(--border)', width: 28 }}>✓</th>
-                        <th style={{ padding: '0.35rem 0.5rem', textAlign: 'left', fontWeight: 500, borderBottom: '1px solid var(--border)' }}>구분</th>
-                        <th style={{ padding: '0.35rem 0.5rem', textAlign: 'left', fontWeight: 500, borderBottom: '1px solid var(--border)' }}>티커</th>
-                        <th style={{ padding: '0.35rem 0.5rem', textAlign: 'left', fontWeight: 500, borderBottom: '1px solid var(--border)' }}>종목명</th>
-                        <th style={{ padding: '0.35rem 0.5rem', textAlign: 'left', fontWeight: 500, borderBottom: '1px solid var(--border)' }}>날짜</th>
-                        <th style={{ padding: '0.35rem 0.5rem', textAlign: 'right', fontWeight: 500, borderBottom: '1px solid var(--border)' }}>수량</th>
-                        <th style={{ padding: '0.35rem 0.5rem', textAlign: 'right', fontWeight: 500, borderBottom: '1px solid var(--border)' }}>단가</th>
+                      <tr style={{ background: '#fafbfc', color: 'var(--ink2)' }}>
+                        <th style={{ padding: '0.4rem 0.5rem', textAlign: 'center', fontWeight: 500, borderBottom: '1px solid var(--border)', width: 32 }}></th>
+                        <th style={{ padding: '0.4rem 0.6rem', textAlign: 'left', fontWeight: 500, borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>구분</th>
+                        <th style={{ padding: '0.4rem 0.6rem', textAlign: 'left', fontWeight: 500, borderBottom: '1px solid var(--border)' }}>티커 · 종목명</th>
+                        <th style={{ padding: '0.4rem 0.6rem', textAlign: 'left', fontWeight: 500, borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>날짜</th>
+                        <th style={{ padding: '0.4rem 0.6rem', textAlign: 'right', fontWeight: 500, borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>수량</th>
+                        <th style={{ padding: '0.4rem 0.6rem', textAlign: 'right', fontWeight: 500, borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>단가</th>
                       </tr>
                     </thead>
                     <tbody>
                       {rows.map(r => (
                         <tr key={r._key} style={{ borderBottom: '1px solid var(--border)', background: r._checked ? '' : 'rgba(0,0,0,0.03)', opacity: r._checked ? 1 : 0.5 }}>
-                          <td style={{ textAlign: 'center', padding: '0.3rem 0.4rem' }}>
+                          <td style={{ textAlign: 'center', padding: '0.45rem 0.5rem' }}>
                             <input type="checkbox" checked={r._checked} onChange={e => updateRow(r._key, '_checked', e.target.checked)} />
                           </td>
-                          <td style={{ padding: '0.3rem 0.5rem' }}>
-                            <span style={{ fontSize: '0.68rem', padding: '0.1rem 0.4rem', borderRadius: 4, fontWeight: 600, background: r.type === 'buy' ? '#dbeafe' : '#fee2e2', color: r.type === 'buy' ? '#1d4ed8' : '#b91c1c' }}>
-                              {r.type === 'buy' ? '매입' : '매도'}
+                          <td style={{ padding: '0.45rem 0.6rem', whiteSpace: 'nowrap' }}>
+                            <span style={{ display: 'inline-block', fontSize: '0.72rem', padding: '0.18rem 0.55rem', borderRadius: 20, fontWeight: 600, whiteSpace: 'nowrap', background: r.type === 'buy' ? '#eaf1ff' : '#fdeceb', color: r.type === 'buy' ? '#2f6fed' : '#e5484d' }}>
+                              {r.type === 'buy' ? '매수' : '매도'}
                             </span>
-                            {r.new_stock && <span style={{ fontSize: '0.63rem', marginLeft: 4, padding: '0.08rem 0.3rem', borderRadius: 3, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>{t(lang, 'admin.captureNewStock')}</span>}
+                            {r.new_stock && <div style={{ fontSize: '0.63rem', marginTop: 3, padding: '0.06rem 0.3rem', borderRadius: 3, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', display: 'inline-block' }}>{t(lang, 'admin.captureNewStock')}</div>}
                           </td>
-                          <td style={{ padding: '0.3rem 0.5rem', fontWeight: 600, color: 'var(--ink)' }}>
-                            <input value={r.ticker} onChange={e => updateRow(r._key, 'ticker', e.target.value.toUpperCase())} style={{ ...inp, width: 90 }} />
+                          <td style={{ padding: '0.45rem 0.6rem', maxWidth: 200 }}>
+                            <input value={r.ticker} onChange={e => updateRow(r._key, 'ticker', e.target.value.toUpperCase())} style={{ ...inp, width: 80, fontWeight: 700, fontSize: '0.82rem', marginBottom: 3 }} />
+                            <input value={r.name} onChange={e => updateRow(r._key, 'name', e.target.value)} style={{ ...inp, fontSize: '0.71rem', color: 'var(--ink3)', minWidth: 120 }} />
                           </td>
-                          <td style={{ padding: '0.3rem 0.5rem', color: 'var(--ink2)' }}>
-                            <input value={r.name} onChange={e => updateRow(r._key, 'name', e.target.value)} style={{ ...inp, minWidth: 80 }} />
+                          <td style={{ padding: '0.45rem 0.6rem' }}>
+                            <input type="date" value={r.date || ''} onChange={e => updateRow(r._key, 'date', e.target.value)}
+                              style={{ ...inp, width: 130, ...(r.date ? {} : { borderColor: '#f0b445', background: '#fff4e5' }) }} />
+                            {!r.date && <div style={{ fontSize: '0.65rem', color: '#d97706', marginTop: 2, fontWeight: 500 }}>날짜 확인 필요</div>}
                           </td>
-                          <td style={{ padding: '0.3rem 0.5rem' }}>
-                            <input type="date" value={r.date || ''} onChange={e => updateRow(r._key, 'date', e.target.value)} style={{ ...inp, width: 120 }} />
+                          <td style={{ padding: '0.45rem 0.6rem', textAlign: 'right' }}>
+                            <input type="number" value={r.qty} onChange={e => updateRow(r._key, 'qty', parseFloat(e.target.value) || 0)} min="0" step="any" style={{ ...inp, width: 72, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }} />
                           </td>
-                          <td style={{ padding: '0.3rem 0.5rem', textAlign: 'right' }}>
-                            <input type="number" value={r.qty} onChange={e => updateRow(r._key, 'qty', parseFloat(e.target.value) || 0)} min="0" step="any" style={{ ...inp, width: 70, textAlign: 'right' }} />
-                          </td>
-                          <td style={{ padding: '0.3rem 0.5rem', textAlign: 'right' }}>
-                            <input type="number" value={r.price} onChange={e => updateRow(r._key, 'price', parseFloat(e.target.value) || 0)} min="0" step="any" style={{ ...inp, width: 90, textAlign: 'right' }} />
+                          <td style={{ padding: '0.45rem 0.6rem', textAlign: 'right' }}>
+                            <input type="number" value={r.price} onChange={e => updateRow(r._key, 'price', parseFloat(e.target.value) || 0)} min="0" step="any" style={{ ...inp, width: 92, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }} />
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '0.3rem' }}>
-                  <button onClick={() => { setResults(null); setFiles([]) }}
-                    style={{ padding: '0.4rem 0.9rem', fontSize: '0.83rem', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--card2)', color: 'var(--ink)', cursor: 'pointer' }}>
-                    다시 업로드
-                  </button>
-                  <button onClick={saveSelected} disabled={saving || !rows.some(r => r._checked)}
-                    style={{ padding: '0.4rem 1.1rem', fontSize: '0.83rem', fontWeight: 600, border: 'none', borderRadius: 7, background: 'var(--accent)', color: '#fff', cursor: 'pointer' }}>
-                    {saving ? '저장 중…' : `${t(lang, 'admin.captureSaveAll')} (${rows.filter(r => r._checked).length}건)`}
-                  </button>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.2rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', cursor: 'pointer', color: 'var(--ink2)', userSelect: 'none' }}>
+                    <input type="checkbox"
+                      checked={rows.length > 0 && rows.every(r => r._checked)}
+                      onChange={e => setRows(prev => prev.map(r => ({ ...r, _checked: e.target.checked })))} />
+                    전체 선택
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button onClick={() => { setResults(null); setFiles([]) }}
+                      style={{ padding: '0.45rem 1rem', fontSize: '0.83rem', fontWeight: 500, border: '1.5px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--ink)', cursor: 'pointer' }}>
+                      다시 업로드
+                    </button>
+                    <button onClick={saveSelected} disabled={saving || !rows.some(r => r._checked)}
+                      style={{ padding: '0.45rem 1.1rem', fontSize: '0.83rem', fontWeight: 600, border: 'none', borderRadius: 8, background: 'var(--accent)', color: '#fff', cursor: saving || !rows.some(r => r._checked) ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.45rem', opacity: saving || !rows.some(r => r._checked) ? 0.7 : 1 }}>
+                      {saving ? '저장 중…' : (
+                        <>
+                          {t(lang, 'admin.captureSaveAll')}
+                          <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: 12, padding: '0.05rem 0.48rem', fontSize: '0.73rem', fontWeight: 700 }}>
+                            {rows.filter(r => r._checked).length}건
+                          </span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </>
             )}
