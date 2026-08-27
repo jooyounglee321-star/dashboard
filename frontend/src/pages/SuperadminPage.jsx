@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Link } from 'react-router-dom'
 import Toast, { useToast } from '../components/Toast'
 import ConfirmModal from '../components/ConfirmModal'
 import { t } from '../i18n'
@@ -285,19 +284,12 @@ export default function SuperadminPage() {
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
-      <header className="header">
-        <div className="header-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {t(lang, 'superadmin.title')}
-          <span style={{ fontSize: '0.65rem', background: 'var(--red)', color: '#fff', padding: '0.15rem 0.5rem', borderRadius: 4, fontFamily: "'Noto Sans KR',sans-serif", fontWeight: 500, letterSpacing: '0.08em' }}>
-            SUPER ADMIN
-          </span>
+      <div className="page-topbar">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)' }}>{t(lang, 'superadmin.title')}</span>
+          <span style={{ fontSize: '0.65rem', background: 'var(--red)', color: '#fff', padding: '0.15rem 0.5rem', borderRadius: 4, fontWeight: 600, letterSpacing: '0.08em' }}>SUPER ADMIN</span>
         </div>
-        <nav className="header-nav">
-          <Link to="/admin" className="nav-link">{t(lang, 'superadmin.dashSettings')}</Link>
-          <Link to="/superadmin" className="nav-link active">{t(lang, 'superadmin.superadminLink')}</Link>
-          <Link to="/" className="nav-link">{t(lang, 'superadmin.homeLink')}</Link>
-        </nav>
-      </header>
+      </div>
 
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '1.5rem 1.2rem' }}>
         {/* 요약 칩 */}

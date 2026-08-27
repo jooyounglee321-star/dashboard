@@ -1,6 +1,5 @@
 import { fmtAmt } from '../utils/format'
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Link } from 'react-router-dom'
 import { t } from '../i18n'
 import RecurringPage from './RecurringPage'
 import { Chart, registerables } from 'chart.js'
@@ -114,21 +113,17 @@ export default function BudgetPage() {
 
   return (
     <div className="bp-wrap">
-      <header className="bp-header">
-        <Link to="/" className="bp-back">← {t(lang, 'budgetBack')}</Link>
-        <h1 className="bp-title">{t(lang, 'budget.budget')}</h1>
-        <div className="bp-header-r">
+      <div className="page-topbar">
+        <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)' }}>📒 {t(lang, 'budget.budget')}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span className="bp-cur-label">{t(lang, 'budget.currency')}</span>
           <select className="bp-cur-sel" value={currency} onChange={e => setCurrency(e.target.value)}>
             {CURRENCIES.map(c => (
               <option key={c} value={c}>{SYM[c]} {t(lang, 'currency.' + c.toLowerCase())}</option>
             ))}
           </select>
+          <button className="bp-recurring-btn" onClick={() => setShowRecurring(true)}>🔄 {t(lang, 'recurring.manage')}</button>
         </div>
-      </header>
-
-      <div className="bp-recurring-wrap">
-        <button className="bp-recurring-btn" onClick={() => setShowRecurring(true)}>🔄 {t(lang, 'recurring.manage')}</button>
       </div>
 
       <nav className="bp-tabs">

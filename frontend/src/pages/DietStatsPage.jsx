@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { t } from '../i18n'
 import SharedCalendar from '../components/SharedCalendar'
 
@@ -133,7 +132,6 @@ function DayDetailModal({ date, dateMap, analysisMap, lang, onClose }) {
 
 export default function DietStatsPage() {
   const lang     = getLang()
-  const navigate = useNavigate()
   const now      = new Date()
 
   const [year,      setYear]      = useState(now.getFullYear())
@@ -193,21 +191,11 @@ export default function DietStatsPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', fontFamily: "'Inter','Noto Sans KR',sans-serif" }}>
 
-      <div style={{
-        position: 'sticky', top: 0, zIndex: 100,
-        background: 'var(--card)',
-        borderBottom: '1px solid var(--border)',
-        padding: '0.85rem 1.2rem',
-        display: 'flex', alignItems: 'center', gap: '0.75rem',
-      }}>
-        <button type="button" onClick={() => navigate('/')}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', color: 'var(--ink2)', padding: 0 }}>
-          ← {lang === 'en' ? 'Back' : '뒤로'}
-        </button>
-        <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--ink)' }}>
+      <div className="page-topbar">
+        <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)' }}>
           🥗 {t(lang, 'diet.statsTitle')}
         </span>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.3rem' }}>
+        <div style={{ display: 'flex', gap: '0.3rem' }}>
           {[['calendar', '📅'], ['list', '📋']].map(([mode, icon]) => (
             <button key={mode} type="button" onClick={() => setViewMode(mode)}
               style={{
