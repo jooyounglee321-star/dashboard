@@ -96,7 +96,7 @@ body {
 /* ── 공통 Card ── */
 .card {
   background: var(--card);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
   overflow: hidden;
@@ -125,7 +125,7 @@ body {
   font-size: 0.78rem;
   cursor: pointer;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-family: inherit;
   font-weight: 500;
   transition: all 0.15s;
@@ -282,7 +282,7 @@ tbody tr:hover td { background: rgba(196, 102, 42, 0.04); }
 .chip {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow);
   padding: 0.75rem 1.2rem;
   min-width: 120px;
