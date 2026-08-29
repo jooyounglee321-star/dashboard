@@ -76,9 +76,9 @@ export default function IndexPage() {
   // localStorage 안전 접근 (Safari Private 모드 등 대비)
   const getLsItem = (k) => { try { return localStorage.getItem(k) } catch { return null } }
 
-  // Stats overlay — sessionStorage 복원 제거 (탭 새로고침 시 오버레이가 닫히지 않는 버그 방지)
-  const [statsOpen, setStatsOpen] = useState(false)
-  const setStatsOpenPersist = (v) => { setStatsOpen(v) }
+  // Stats overlay
+  const [statsOpen, setStatsOpen] = useState(() => sessionStorage.getItem('statsOpen') === 'true')
+  const setStatsOpenPersist = (v) => { sessionStorage.setItem('statsOpen', String(v)); setStatsOpen(v) }
   const [stockSettingsOpen, setStockSettingsOpen] = useState(false)
 
   // 위젯 설정 (localStorage 캐시로 언어 즉시 반영)

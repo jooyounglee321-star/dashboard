@@ -263,6 +263,23 @@ def backfill_portfolio_snapshots(user_id: int, db: Session, force_start_date=Non
     if not ticker_history:
         return {"backfilled": 0, "dates": [], "is_new_user": is_new_user}
 
+    # ── 그룹별 현금 추적 사전 계산 ──
+    # group_first_sell_date: 매도일 없으면 None (납입금 없는 그룹용 — 첫 매도일 이후 매수비용만 차감)
+    # group_contribs: 납입금 목록 (있을 경우 정확한 현금 잔고 계산에 사용)
+    group_first_sell_date: dict[str, str] = {}
+    group_contribs: dict[str, list] = {}
+    for grp in pg_data:
+        gid = grp.get("id") or grp.get("name", "")
+        group_contribs[gid] = grp.get("contributions") or []
+        for st in grp.get("stocks", []):
+            if st.get("is_deleted"):
+                continue
+            for sv in (st.get("sells") or []):
+                d = sv.get("date")
+                if d:
+                    if gid not in group_first_sell_date or d < group_first_sell_date[gid]:
+                        group_first_sell_date[gid] = d
+
     # ④-b stocks 테이블 — name/avg_price 보완용 (quantity 무관 전체 조회)
     stocks_map: dict[str, "Stock"] = {
         s.ticker: s
@@ -351,7 +368,77 @@ def backfill_portfolio_snapshots(user_id: int, db: Session, force_start_date=Non
                     groups[group_id]["total"] + eval_amt, 2
                 )
 
-            # 보유 종목 없고 realized_pl도 없으면 저장 건너뜀
+            # ── 그룹별 현금 잔고 계산 → 매도 후 차트 급락 방지 ──
+            # 납입금 있는 그룹: 그룹 내 전체 매수/매도를 합산해 1회 계산 (티커별 반복 시 납입금 중복 집계 방지)
+            # 납입금 없는 그룹: 티커별 (매도수익 - 첫매도일 이후 재매수비용) 합산
+            group_cash: dict[str, float] = {}
+            td_str = str(target_date)
+
+            # 납입금 있는 그룹: 그룹별 총 매수비용·매도수익 사전 집계
+            group_total_buys: dict[str, float] = {}
+            group_total_sells: dict[str, float] = {}
+            for ticker, hist in ticker_history.items():
+                gid = hist["group_id"]
+                if not group_contribs.get(gid):
+                    continue
+                buy_cost = sum(
+                    float(p.get("price", 0)) * float(p.get("qty", 0))
+                    for p in hist["purchases"]
+                    if not p.get("date") or p["date"] <= td_str
+                )
+                sell_proc = sum(
+                    float(sv.get("price", 0)) * float(sv.get("qty", 0))
+                    for sv in hist["sells"]
+                    if sv.get("date") and sv["date"] <= td_str
+                )
+                group_total_buys[gid]  = group_total_buys.get(gid, 0.0)  + buy_cost
+                group_total_sells[gid] = group_total_sells.get(gid, 0.0) + sell_proc
+
+            # 납입금 있는 그룹: 그룹 단위로 1회 현금 계산
+            for gid, contribs in group_contribs.items():
+                if not contribs:
+                    continue
+                contrib_total = sum(
+                    float(c.get("amount", 0))
+                    for c in contribs
+                    if not c.get("date") or c["date"] <= td_str
+                )
+                cash = contrib_total - group_total_buys.get(gid, 0.0) + group_total_sells.get(gid, 0.0)
+                group_cash[gid] = round(cash, 2)
+
+            # 납입금 없는 그룹: 티커별 매도→재매수 현금 계산 (기존 로직)
+            for ticker, hist in ticker_history.items():
+                gid        = hist["group_id"]
+                if group_contribs.get(gid):
+                    continue  # 납입금 있는 그룹은 이미 처리됨
+                first_sell = group_first_sell_date.get(gid)
+                sell_proceeds = sum(
+                    float(sv.get("price", 0)) * float(sv.get("qty", 0))
+                    for sv in hist["sells"]
+                    if sv.get("date") and sv["date"] <= td_str
+                )
+                if first_sell and sell_proceeds > 0:
+                    buy_after = sum(
+                        float(p.get("price", 0)) * float(p.get("qty", 0))
+                        for p in hist["purchases"]
+                        if p.get("date") and first_sell <= p["date"] <= td_str
+                    )
+                    cash = sell_proceeds - buy_after
+                    group_cash[gid] = round(group_cash.get(gid, 0.0) + cash, 2)
+
+            for gid, cash in group_cash.items():
+                if cash <= 0:
+                    continue
+                if gid in groups:
+                    groups[gid]["total"] = round(groups[gid]["total"] + cash, 2)
+                else:
+                    # 전량 매도 후 현금만 남은 그룹
+                    g_name = next((h["group_name"] for h in ticker_history.values() if h["group_id"] == gid), gid)
+                    g_cur  = next((h["currency"]   for h in ticker_history.values() if h["group_id"] == gid), "USD")
+                    groups[gid] = {"name": g_name, "currency": g_cur, "total": round(cash, 2)}
+
+            # 보유 종목 없어도 realized_pl이나 현금이 있으면 빈 스냅샷 저장
+            # (전량 매도 완료일 이후 날짜가 차트에서 공백으로 빠지는 버그 방지)
             if not groups and total_realized_pl == 0.0:
                 continue
 
