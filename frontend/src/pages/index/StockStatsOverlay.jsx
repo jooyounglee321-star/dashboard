@@ -886,17 +886,23 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   }
 
   // ── 실현 손익 테이블 ──
-  const renderRealizedPL = () => (
+  const renderRealizedPL = () => {
+    const realizedItems = (realizedData?.items ?? []).filter(item =>
+      (!periodCutoff || (item.date && item.date >= periodCutoff)) &&
+      (!periodCutoffEnd || (item.date && item.date <= periodCutoffEnd))
+    )
+    const realizedTotal = realizedItems.reduce((a, item) => a + (item.pl || 0), 0)
+    return (
     <div className="stats-section">
       <div className="stats-section-title">{t(lang, 'statsRealizedTitle')}</div>
       {realizedLoading ? (
         <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)' }}>{t(lang, 'statsRealizedLoading')}</div>
-      ) : !realizedData?.items?.length ? (
+      ) : !realizedItems.length ? (
         <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--ink3)' }}>{t(lang, 'statsRealizedNone')}</div>
       ) : (
         <>
-          <div style={{ marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 700, color: realizedData.total >= 0 ? 'var(--green)' : 'var(--red)' }}>
-            합계: {realizedData.total >= 0 ? '+' : ''}{fmtShort(Math.abs(realizedData.total), 'USD')}
+          <div style={{ marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 700, color: realizedTotal >= 0 ? 'var(--green)' : 'var(--red)' }}>
+            합계: {realizedTotal >= 0 ? '+' : ''}{fmtShort(Math.abs(realizedTotal), 'USD')}
           </div>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
@@ -913,7 +919,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                 </tr>
               </thead>
               <tbody>
-                {realizedData.items.map((item, i) => {
+                {realizedItems.map((item, i) => {
                   const isKRW = item.currency === 'KRW'
                   const fmt = v => isKRW ? '₩' + fmtKRW(v) : '$' + fmtUSD(v)
                   const pos = item.pl >= 0
@@ -939,7 +945,8 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
         </>
       )}
     </div>
-  )
+    )
+  }
 
   const allGroups = stockData?.groups ?? []
   const currencies = [...new Set(allGroups.map(g => g.currency ?? 'USD'))]

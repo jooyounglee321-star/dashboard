@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-09-13 (3차)
+
+### 버그 수정 — 통계 화면 "실현 손익 내역" 기간 선택 미반영
+
+#### 문제
+통계 화면에서 기간(1개월/3개월/6개월/1년 등)을 바꿔도 "실현 손익 내역" 테이블과
+합계가 항상 전체 기간 데이터를 그대로 보여주고 바뀌지 않음.
+
+#### 원인
+`StockStatsOverlay.jsx`의 `renderRealizedPL()`이 `/api/portfolio/realized-pl`에서
+받아온 `realizedData.items`를 기간 필터 없이 그대로 렌더링. 다른 섹션(배당금 내역,
+벤치마크 등)은 전부 `periodCutoff`/`periodCutoffEnd`로 필터링하는데 이 테이블만 누락됨.
+
+#### 수정
+- `renderRealizedPL()` 내부에서 `periodCutoff`/`periodCutoffEnd` 기준으로
+  `realizedData.items`를 필터링한 `realizedItems`를 만들어 테이블에 사용
+- 합계도 필터링된 항목 기준으로 재계산 (`realizedTotal`)
+
+#### 확인
+- 필터 로직 단위 검증(node 스크립트): 기간 밖 데이터 제외, 합계 재계산 정상 동작 확인
+- `npm run build` 성공
+
+---
+
 ## 2026-09-13 (2차)
 
 ### 주식 관리 — CASH/납입금 기능 전면 제거 (순수 주식거래만 계산)
