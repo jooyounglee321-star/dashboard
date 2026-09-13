@@ -4,6 +4,37 @@
 
 ---
 
+## 2026-09-13 (2차)
+
+### 주식 관리 — CASH/납입금 기능 전면 제거 (순수 주식거래만 계산)
+
+#### 배경
+CASH(납입금) 잔고 추적 기능을 완전히 제거하고, 포트폴리오 손익 계산을 오로지
+매수/매도 거래만으로 계산하도록 단순화.
+
+#### 변경 내용
+- `StockSettingsModal.jsx`
+  - `calcCashBalance()`, `CashSection` 컴포넌트, `handleCashUpdate()` 삭제
+  - `addGroup()`에서 `contributions: []` 필드 생성 제거
+  - `submitBuy()`의 "CASH 잔고 부족" 경고 로직 제거 (cashBalance 체크 삭제)
+  - `StockDetailPanel`에서 `cashBalance` prop 제거
+- `StockStatsOverlay.jsx`
+  - "기간별 납입금" 바차트(useEffect + canvas ref) 전체 삭제
+  - 요약 카드의 "CASH 잔고 섹션" 삭제
+  - 전체 기간 수익률 계산: 납입금 대비 → **매수총액(원금) 대비**로 단순화
+  - 특정 기간 수익률 계산: 기간 중 납입금 차감 로직 제거 (스냅샷 시작/종료값 그대로 비교)
+- `routers/portfolio.py`
+  - 백필(historical backfill) 함수에서 그룹별 현금 잔고 계산 블록 전체 제거
+    (`group_contribs`, `group_cash`, `group_first_sell_date` 등)
+  - 히스토리 스냅샷 총액이 이제 순수 보유 종목 평가액만 반영
+
+#### 확인
+- 새 계정으로 그룹 생성 → 종목 추가 → 매입 등록까지 브라우저에서 직접 테스트
+- "CASH", "납입금", "입금", "잔고 부족" 문구가 설정 모달·통계 화면 어디에도 없음을 확인
+- `npm run build` 성공, 백엔드 문법 검증(`ast.parse`) 통과
+
+---
+
 ## 2026-09-13
 
 ### 주식 관리 — 그룹당 종목 수 제한 삭제 + 마지막 거래일 표시

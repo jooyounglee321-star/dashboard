@@ -165,8 +165,6 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
   const divBarChartRef = useRef(null)
   const divPieRef      = useRef(null)
   const divPieChartRef = useRef(null)
-  const contribBarRef     = useRef(null)
-  const contribBarChartRef = useRef(null)
 
   const [benchmarkData, setBenchmarkData] = useState(null)
   const [benchmarkLoading, setBenchmarkLoading] = useState(false)
@@ -752,74 +750,6 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
     return () => { if (divPieChartRef.current) { divPieChartRef.current.destroy(); divPieChartRef.current = null } }
   }, [isOpen, dividendData, overviewPeriod, customFrom, customTo])
 
-  // ── 납입금 바차트 useEffect ──
-  useEffect(() => {
-    if (contribBarChartRef.current) { contribBarChartRef.current.destroy(); contribBarChartRef.current = null }
-    if (!isOpen || !contribBarRef.current || !stockData?.groups) return
-
-    const cutoff    = calcCutoff(overviewPeriod, customFrom)
-    const cutoffEnd = overviewPeriod === 'custom' && customTo ? customTo : null
-
-    // 그룹별로 contributions 수집, 기간 필터 적용
-    const groupColors = ['var(--accent)','var(--green)','#f59e0b','#9333ea','#ef4444','#0891b2']
-    const monthSet = new Set()
-    const groupContribs = []
-
-    ;(stockData.groups || []).forEach((g, gi) => {
-      const contribs = (g.contributions || []).filter(c =>
-        c.date && c.amount > 0 &&
-        (!cutoff    || c.date >= cutoff) &&
-        (!cutoffEnd || c.date <= cutoffEnd)
-      )
-      if (!contribs.length) return
-      const byMonth = {}
-      contribs.forEach(c => {
-        const ym = c.date.slice(0, 7)
-        byMonth[ym] = (byMonth[ym] ?? 0) + c.amount
-        monthSet.add(ym)
-      })
-      groupContribs.push({ name: g.name || g.id || `그룹${gi+1}`, byMonth, color: groupColors[gi % groupColors.length] })
-    })
-
-    if (!monthSet.size) return  // 납입금 데이터 없음
-
-    const months = [...monthSet].sort()
-    const datasets = groupContribs.map(gc => ({
-      label: gc.name,
-      data: months.map(m => gc.byMonth[m] ?? 0),
-      backgroundColor: gc.color,
-      borderRadius: 4,
-    }))
-
-    contribBarChartRef.current = new Chart(contribBarRef.current, {
-      type: 'bar',
-      data: { labels: months, datasets },
-      options: {
-        responsive: true,
-        scales: {
-          x: { stacked: true, ticks: { maxRotation: 45 } },
-          y: { stacked: true, ticks: { callback: v => '$' + (v >= 1000 ? (v/1000).toFixed(0)+'k' : v) } },
-        },
-        plugins: {
-          legend: { position: 'bottom', display: groupContribs.length > 1 },
-          tooltip: {
-            callbacks: {
-              label: ctx => {
-                const sym = (stockData.groups[ctx.datasetIndex]?.currency === 'KRW') ? '₩' : '$'
-                return `${ctx.dataset.label}: ${sym}${ctx.parsed.y.toLocaleString()}`
-              },
-              footer: items => {
-                const total = items.reduce((a, i) => a + i.parsed.y, 0)
-                return `합계: $${total.toLocaleString()}`
-              },
-            },
-          },
-        },
-      },
-    })
-    return () => { if (contribBarChartRef.current) { contribBarChartRef.current.destroy(); contribBarChartRef.current = null } }
-  }, [isOpen, stockData, overviewPeriod, customFrom, customTo])
-
   // ── 데이터 fetch: 기간 시장손익 ──
   useEffect(() => {
     if (!isOpen) return
@@ -1116,42 +1046,6 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                       </div>
                     )}
                   </div>
-                  {/* CASH 잔고 섹션 */}
-                  {(() => {
-                    const cashGroups = (stockData?.groups ?? []).filter(g => {
-                      if (overviewGroup) return cleanStr(g.name, g.id) === overviewGroup
-                      return true
-                    }).filter(g => (g.contributions || []).length > 0)
-                    if (!cashGroups.length) return null
-                    return (
-                      <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ink2)', letterSpacing: '0.08em' }}>CASH</div>
-                        {cashGroups.map(g => {
-                          const contributed = (g.contributions || []).reduce((a, c) => a + (c.amount || 0), 0)
-                          const sym = g.currency === 'USD' ? '$' : '₩'
-                          const fmt = v => g.currency === 'USD' ? fmtUSD(v) : fmtKRW(v)
-                          return (
-                            <div key={g.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.3rem', fontSize: '0.72rem', background: 'var(--card2)', borderRadius: 8, padding: '0.45rem 0.7rem' }}>
-                              <div style={{ color: 'var(--ink3)' }}>{cleanStr(g.name, g.id)}<br /><span style={{ fontSize: '0.65rem' }}>{g.currency}</span></div>
-                              <div style={{ color: 'var(--ink3)' }}>납입금<br /><span style={{ color: 'var(--ink)', fontWeight: 600 }}>{sym}{fmt(contributed)}</span></div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )
-                  })()}
-                </div>
-              )
-            })()}
-
-            {/* ③-b 납입금 바차트 */}
-            {(() => {
-              const hasContribs = (stockData?.groups ?? []).some(g => (g.contributions || []).some(c => c.amount > 0))
-              if (!hasContribs) return null
-              return (
-                <div className="stats-section">
-                  <div className="stats-section-title">기간별 납입금</div>
-                  <div className="stats-chart-wrap"><canvas ref={contribBarRef} /></div>
                 </div>
               )
             })()}
@@ -1442,8 +1336,7 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                       .filter(r => (!cutoff || r.snapshot_date >= cutoff) && (!cutoffEnd || r.snapshot_date <= cutoffEnd))
                       .sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date))
 
-                    // 전체 기간: 납입금(CASH contributions) 대비 현재 평가액
-                    //   contributions 없으면 매수총액으로 폴백
+                    // 전체 기간: 매수총액 대비 현재 평가액
                     // 특정 기간: 기간 시작 스냅샷 vs 기간 종료 스냅샷 비교
                     let portRet = null
                     if (!cutoff) {
@@ -1451,9 +1344,8 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                         if (overviewGroup) return cleanStr(g.name, g.id) === overviewGroup
                         return useKRW ? g.currency === 'KRW' : g.currency !== 'KRW'
                       })
-                      let totalContributed = 0, totalEval = 0, totalBuyCost = 0
+                      let totalEval = 0, totalBuyCost = 0
                       for (const g of targetGroups) {
-                        totalContributed += (g.contributions || []).reduce((a, c) => a + (c.amount || 0), 0)
                         for (const s of g.stocks || []) {
                           if (s.is_deleted) continue
                           const buys = (s.purchases || []).filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
@@ -1469,24 +1361,12 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                           totalBuyCost += buys.reduce((a, p) => a + p.price * p.qty, 0)
                         }
                       }
-                      const base = totalContributed > 0 ? totalContributed : totalBuyCost
-                      if (base > 0 && totalEval > 0) portRet = (totalEval - base) / base * 100
+                      if (totalBuyCost > 0 && totalEval > 0) portRet = (totalEval - totalBuyCost) / totalBuyCost * 100
                     } else {
                       const portStart = filteredHist.length ? getValue(filteredHist[0]) : null
                       const portEnd = filteredHist.length ? getValue(filteredHist[filteredHist.length - 1]) : null
                       if (portStart && portEnd && portStart > 0) {
-                        // 기간 중 추가된 납입금을 차감해야 진짜 수익률이 나옴
-                        const targetGroups = (stockData?.groups ?? []).filter(g => {
-                          if (overviewGroup) return cleanStr(g.name, g.id) === overviewGroup
-                          return useKRW ? g.currency === 'KRW' : g.currency !== 'KRW'
-                        })
-                        const periodContribs = targetGroups.reduce((sum, g) =>
-                          sum + (g.contributions || [])
-                            .filter(c => c.date && c.date >= cutoff)
-                            .reduce((a, c) => a + (c.amount || 0), 0)
-                        , 0)
-                        const netGain = portEnd - portStart - periodContribs
-                        portRet = netGain / (portStart + periodContribs) * 100
+                        portRet = (portEnd - portStart) / portStart * 100
                       }
                     }
 
