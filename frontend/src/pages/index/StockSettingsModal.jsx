@@ -34,7 +34,8 @@ function stockSummary(s) {
   const ws = valid.reduce((a, p) => a + p.price * p.qty, 0)
   const vq = valid.reduce((a, p) => a + p.qty, 0)
   const avgBuyPrice = vq > 0 ? ws / vq : 0
-  return { holdQty, totalBuyQty, totalSellQty, avgBuyPrice }
+  const lastTxDate = [...pp, ...sl].reduce((max, r) => (r.date && (!max || r.date > max) ? r.date : max), null)
+  return { holdQty, totalBuyQty, totalSellQty, avgBuyPrice, lastTxDate }
 }
 
 function useStockSearch() {
@@ -663,7 +664,6 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
     if (!ticker) { showToast('티커 심볼을 입력해주세요', 'err'); return }
     const g = groups.find(g => g.id === gid)
     if (!g) return
-    if (g.stocks.filter(s => !s.is_deleted).length >= 10) { showToast('그룹당 최대 10개까지 가능합니다', 'err'); return }
     const upper = ticker.toUpperCase()
     if (g.stocks.some(s => !s.is_deleted && s.ticker.toUpperCase() === upper)) {
       showToast(`${upper} 은(는) 이미 이 그룹에 있습니다`, 'err'); return
@@ -792,7 +792,7 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
                   <input type="text" value={g.name} placeholder="그룹 이름"
                     onChange={e => updateGroup(g.id, 'name', e.target.value)}
                     style={{ ...inpGrp, flex: 1 }} />
-                  <span style={{ fontSize: '0.72rem', color: col.tx, opacity: 0.7 }}>{g.stocks.length}/10</span>
+                  <span style={{ fontSize: '0.72rem', color: col.tx, opacity: 0.7 }}>{activeStocks.length}개</span>
                   {isPremium && (
                     <button onClick={() => setCaptureGid(g.id)}
                       style={{ padding: '0.28rem 0.65rem', fontSize: '0.78rem', cursor: 'pointer', background: 'rgba(255,255,255,0.7)', color: 'var(--blue)', border: '1px solid rgba(59,130,246,0.4)', borderRadius: 6, fontFamily: 'inherit', fontWeight: 500, whiteSpace: 'nowrap' }}>
@@ -805,7 +805,7 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
                   {!activeStocks.length
                     ? <div style={{ fontSize: '0.78rem', color: 'var(--ink3)', fontStyle: 'italic', textAlign: 'center', padding: '0.4rem 0.8rem' }}>종목이 없습니다. 아래에서 추가하세요.</div>
                     : activeStocks.map(s => {
-                      const { holdQty, totalBuyQty, avgBuyPrice, totalSellQty } = stockSummary(s)
+                      const { holdQty, totalBuyQty, avgBuyPrice, totalSellQty, lastTxDate } = stockSummary(s)
                       const isOpenS = expanded.has(s.id)
                       return (
                         <div key={s.id}>
@@ -818,6 +818,7 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
                                 {totalBuyQty > 0 ? `보유 ${holdQty.toLocaleString()}주` : '수량 미등록'}
                                 {avgBuyPrice > 0 ? ` · 평균 ${sym}${fmtA(avgBuyPrice)}` : ''}
                                 {totalSellQty > 0 ? ` · 매도 ${totalSellQty.toLocaleString()}주` : ''}
+                                {lastTxDate ? ` · 마지막 거래일 ${lastTxDate}` : ''}
                               </div>
                             </div>
                             <button onClick={() => openNewsSettings(s)} style={{ padding: '0.16rem 0.48rem', fontSize: '0.72rem', cursor: 'pointer', border: '1px solid var(--border)', borderRadius: 5, background: 'transparent', color: 'var(--ink2)', fontFamily: 'inherit', transition: 'all 0.12s' }}>📰 {t(lang, 'stock.newsSettings')}</button>
@@ -868,10 +869,7 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
                     })}
                 </div>
                 <CashSection g={g} onUpdate={handleCashUpdate} sym={sym} fmtA={fmtA} />
-                {activeStocks.length < 10
-                  ? <AddStockRow gid={g.id} onAdd={(tk, nm) => addStock(g.id, tk, nm)} />
-                  : <div style={{ fontSize: '0.75rem', color: 'var(--ink3)', textAlign: 'center', padding: '0.4rem' }}>최대 10개 종목 도달</div>
-                }
+                <AddStockRow gid={g.id} onAdd={(tk, nm) => addStock(g.id, tk, nm)} />
               </div>
             )
           })}

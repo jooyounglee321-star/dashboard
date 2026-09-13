@@ -167,7 +167,7 @@
     "usdOnly": "$ USD only",
     "bothFull": "$ + ₩ Both",
     "totalDisplay": "Show Total",
-    "stockHint": "Max 10 groups · Max 10 stocks per group · Yahoo Finance live prices",
+    "stockHint": "Max 10 groups · Yahoo Finance live prices",
     "newGroup": "New Group",
     "delGroup": "Delete Group",
     "delStock": "Delete",

@@ -167,7 +167,7 @@
     "usdOnly": "$ 달러만",
     "bothFull": "$ + ₩ 둘 다",
     "totalDisplay": "합계 표시",
-    "stockHint": "그룹 최대 10개 · 그룹당 종목 최대 10개 · Yahoo Finance 실시간 시세",
+    "stockHint": "그룹 최대 10개 · Yahoo Finance 실시간 시세",
     "newGroup": "새 그룹",
     "delGroup": "그룹 삭제",
     "delStock": "삭제",
