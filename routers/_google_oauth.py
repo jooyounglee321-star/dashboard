@@ -166,8 +166,9 @@ def get_google_email(access_token: str) -> str | None:
         )
         if res.status_code == 200:
             return res.json().get("email")
-    except Exception:
-        pass
+        logger.warning("[GOOGLE OAUTH] 이메일 조회 실패: status=%s", res.status_code)
+    except Exception as e:
+        logger.warning("[GOOGLE OAUTH] 이메일 조회 요청 실패: %s", e)
     return None
 
 

@@ -385,7 +385,8 @@ def google_callback(code: str | None = None, error: str | None = None, db: Sessi
             "redirect_uri": GOOGLE_REDIRECT_URI,
             "grant_type": "authorization_code",
         }, timeout=10)
-    except Exception:
+    except Exception as e:
+        logger.error("[GOOGLE] 토큰 교환 요청 실패: %s", e)
         return RedirectResponse("/login?error=google_token_failed")
 
     if token_res.status_code != 200:
@@ -400,7 +401,8 @@ def google_callback(code: str | None = None, error: str | None = None, db: Sessi
             headers={"Authorization": f"Bearer {access_token}"},
             timeout=10,
         )
-    except Exception:
+    except Exception as e:
+        logger.error("[GOOGLE] 유저 정보 조회 실패: %s", e)
         return RedirectResponse("/login?error=google_userinfo_failed")
 
     if userinfo_res.status_code != 200:
@@ -461,7 +463,8 @@ def facebook_callback(code: str | None = None, error: str | None = None, db: Ses
             "redirect_uri": FACEBOOK_REDIRECT_URI,
             "code": code,
         }, timeout=10)
-    except Exception:
+    except Exception as e:
+        logger.error("[FACEBOOK] 토큰 교환 요청 실패: %s", e)
         return RedirectResponse("/login?error=facebook_token_failed")
 
     if token_res.status_code != 200:
@@ -476,7 +479,8 @@ def facebook_callback(code: str | None = None, error: str | None = None, db: Ses
             params={"access_token": access_token},
             timeout=10,
         )
-    except Exception:
+    except Exception as e:
+        logger.error("[FACEBOOK] 유저 정보 조회 실패: %s", e)
         return RedirectResponse("/login?error=facebook_userinfo_failed")
 
     if userinfo_res.status_code != 200:
@@ -666,7 +670,8 @@ def kakao_callback(code: str | None = None, error: str | None = None, db: Sessio
             headers={"Authorization": f"Bearer {access_token}"},
             timeout=10,
         )
-    except Exception:
+    except Exception as e:
+        logger.error("[KAKAO] 유저 정보 조회 실패: %s", e)
         return RedirectResponse("/login?error=kakao_userinfo_failed")
 
     if userinfo_res.status_code != 200:
@@ -730,7 +735,8 @@ def naver_callback(code: str | None = None, state: str | None = None, error: str
             headers={"Authorization": f"Bearer {access_token}"},
             timeout=10,
         )
-    except Exception:
+    except Exception as e:
+        logger.error("[NAVER] 유저 정보 조회 실패: %s", e)
         return RedirectResponse("/login?error=naver_userinfo_failed")
 
     if userinfo_res.status_code != 200:

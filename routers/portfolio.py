@@ -129,7 +129,8 @@ def backfill_portfolio_snapshots(user_id: int, db: Session, force_start_date=Non
                     len(grp.get("stocks") or []) > 0
                     for grp in pg_check_data
                 )
-            except Exception:
+            except Exception as e:
+                logger.error("[BACKFILL] 신규유저 portfolio_groups 파싱 실패 (user=%s): %s", user_id, e)
                 pg_has_stocks = False
 
         if not pg_has_stocks:
@@ -162,8 +163,8 @@ def backfill_portfolio_snapshots(user_id: int, db: Session, force_start_date=Non
                             d = p.get("date")
                             if d:
                                 all_purchase_dates.append(d)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error("[BACKFILL] 최초 매입일 추출 실패 (user=%s): %s", user_id, e)
 
             if all_purchase_dates:
                 start_date = date.fromisoformat(min(all_purchase_dates))
@@ -231,7 +232,8 @@ def backfill_portfolio_snapshots(user_id: int, db: Session, force_start_date=Non
     if pg_row and pg_row.data:
         try:
             pg_data = json.loads(pg_row.data)
-        except Exception:
+        except Exception as e:
+            logger.error("[BACKFILL] portfolio_groups JSON 파싱 실패 (user=%s): %s", user_id, e)
             pg_data = []
 
     # 그룹명 → 카테고리 역방향 맵 (기존 _CAT_META 그룹명 하위호환용)
@@ -477,8 +479,8 @@ def run_full_backfill(
                                 pass
             if all_dates:
                 earliest_purchase_date = min(all_dates)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error("[BACKFILL] 최초 매입일 계산 실패 (user=%d): %s", current_user.id, e)
 
     # 전체 재계산: 날짜 제한 없이 최초 매입일부터 전부 계산 (override_max_days=0)
     result = backfill_portfolio_snapshots(user_id, db, force_start_date=earliest_purchase_date, override_max_days=0)
@@ -545,7 +547,8 @@ def get_groups(
         return {"data": []}
     try:
         return {"data": json.loads(row.data)}
-    except Exception:
+    except Exception as e:
+        logger.error("[PORTFOLIO GROUPS] JSON 파싱 실패 (user=%d): %s", current_user.id, e)
         return {"data": []}
 
 
@@ -592,8 +595,8 @@ def save_groups(
                 old_name = old_by_id.get(gid, "")
                 if gid and old_name and new_name != old_name:
                     renamed[gid] = new_name
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error("[PORTFOLIO GROUPS] 이름 변경 감지 실패 (user=%d): %s", current_user.id, e)
 
     data_json = json.dumps(groups, ensure_ascii=False)
     if row:
@@ -620,8 +623,8 @@ def save_groups(
                         changed = True
                 if changed:
                     snap.data = json.dumps(parsed, ensure_ascii=False)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("[PORTFOLIO GROUPS] 스냅샷 %s 이름 동기화 실패: %s", snap.snapshot_date, e)
         logger.info("[PORTFOLIO GROUPS] 이름 변경 스냅샷 동기화 (user=%d, %d개 그룹)", current_user.id, len(renamed))
 
     db.commit()
@@ -921,7 +924,8 @@ async def parse_transactions_from_images(
     if pg_row and pg_row.data:
         try:
             pg_data = json.loads(pg_row.data)
-        except Exception:
+        except Exception as e:
+            logger.error("[CAPTURE] portfolio_groups JSON 파싱 실패 (user=%d): %s", current_user.id, e)
             pg_data = []
 
     # 대상 그룹 찾기

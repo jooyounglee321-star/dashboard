@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json
+import logging
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -10,6 +11,7 @@ from models import TimezoneConfig, User
 from routers.auth import get_current_user
 
 router = APIRouter(prefix="/timezone", tags=["timezone"])
+logger = logging.getLogger(__name__)
 
 DEFAULT_ZONES = [
     {"region": "서울", "tz": "Asia/Seoul",       "label": "KST"},
@@ -35,8 +37,8 @@ def _load_zones(row: TimezoneConfig | None) -> list[dict]:
         data = json.loads(row.timezone)
         if isinstance(data, list) and len(data) == 3:
             return data
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("[TIMEZONE] 저장된 timezone 설정 파싱 실패 (user=%s): %s", row.user_id, e)
     return DEFAULT_ZONES
 
 

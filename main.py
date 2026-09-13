@@ -106,7 +106,8 @@ def _migrate_user_columns():
     with engine.connect() as conn:
         try:
             existing = {c["name"] for c in inspect(conn).get_columns("users")}
-        except Exception:
+        except Exception as e:
+            logger.warning("[MIGRATE] users 테이블 스키마 조회 실패, 컬럼 마이그레이션 스킵: %s", e)
             return
         for col_name, col_def in new_cols:
             if col_name not in existing:
@@ -134,7 +135,8 @@ def _migrate_add_user_id():
         try:
             insp = inspect(conn)
             existing_tables = set(insp.get_table_names())
-        except Exception:
+        except Exception as e:
+            logger.warning("[MIGRATE] 테이블 목록 조회 실패, user_id 마이그레이션 스킵: %s", e)
             return
 
         # ── NOT NULL DEFAULT 1 테이블 ──────────────────────────────────────
@@ -143,7 +145,8 @@ def _migrate_add_user_id():
                 continue
             try:
                 existing_cols = {c["name"] for c in insp.get_columns(table)}
-            except Exception:
+            except Exception as e:
+                logger.warning("[MIGRATE] %s 컬럼 조회 실패, 스킵: %s", table, e)
                 continue
             if "user_id" not in existing_cols:
                 try:
@@ -160,7 +163,8 @@ def _migrate_add_user_id():
         if snap in existing_tables:
             try:
                 snap_cols = {c["name"] for c in insp.get_columns(snap)}
-            except Exception:
+            except Exception as e:
+                logger.warning("[MIGRATE] %s 컬럼 조회 실패: %s", snap, e)
                 snap_cols = set()
             if "user_id" not in snap_cols:
                 try:
@@ -213,7 +217,8 @@ def _migrate_add_realized_pl():
     with engine.connect() as conn:
         try:
             existing = {c["name"] for c in inspect(conn).get_columns("daily_portfolio_snapshot")}
-        except Exception:
+        except Exception as e:
+            logger.warning("[MIGRATE] daily_portfolio_snapshot 컬럼 조회 실패, 스킵: %s", e)
             return
         if "realized_pl" not in existing:
             try:
@@ -329,7 +334,8 @@ def _migrate_expense_columns():
     with engine.connect() as conn:
         try:
             existing = {c["name"] for c in inspect(conn).get_columns("expenses")}
-        except Exception:
+        except Exception as e:
+            logger.warning("[MIGRATE] expenses 컬럼 조회 실패, 스킵: %s", e)
             return
         for col_name, col_def in new_cols:
             if col_name not in existing:
@@ -350,7 +356,8 @@ def _migrate_expense_type_column():
     with engine.connect() as conn:
         try:
             existing = {c["name"] for c in inspect(conn).get_columns("expenses")}
-        except Exception:
+        except Exception as e:
+            logger.warning("[MIGRATE] expenses.type 컬럼 조회 실패, 스킵: %s", e)
             return
         if "type" not in existing:
             try:
@@ -626,7 +633,8 @@ def _migrate_add_category_icon():
     with engine.connect() as conn:
         try:
             existing = {c["name"] for c in inspect(conn).get_columns("expense_categories")}
-        except Exception:
+        except Exception as e:
+            logger.warning("[MIGRATE] expense_categories.icon 컬럼 조회 실패, 스킵: %s", e)
             return
         if "icon" not in existing:
             try:
@@ -644,7 +652,8 @@ def _migrate_add_category_code_fields():
     with engine.connect() as conn:
         try:
             existing = {c["name"] for c in inspect(conn).get_columns("expense_categories")}
-        except Exception:
+        except Exception as e:
+            logger.warning("[MIGRATE] expense_categories.code/category_type 컬럼 조회 실패, 스킵: %s", e)
             return
         for col_name, col_def in [
             ("code",          "VARCHAR(30)"),
@@ -666,7 +675,8 @@ def _migrate_todos_start_date():
     with engine.connect() as conn:
         try:
             existing = {c["name"] for c in inspect(conn).get_columns("todos")}
-        except Exception:
+        except Exception as e:
+            logger.warning("[MIGRATE] todos.start_date 컬럼 조회 실패, 스킵: %s", e)
             return
         if "start_date" not in existing:
             try:
@@ -684,7 +694,8 @@ def _migrate_todos_todo_type():
     with engine.connect() as conn:
         try:
             existing = {c["name"] for c in inspect(conn).get_columns("todos")}
-        except Exception:
+        except Exception as e:
+            logger.warning("[MIGRATE] todos.todo_type 컬럼 조회 실패, 스킵: %s", e)
             return
         if "todo_type" not in existing:
             try:
@@ -734,8 +745,8 @@ def _migrate_snapshot_data_to_group_id():
                             name_to_id[gname.lower()] = (gid, gname)
                         if gid and gcur and gcur not in currency_to_id:
                             currency_to_id[gcur] = (gid, gname)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("[MIGRATE] user=%s portfolio_groups 파싱 실패, 이름 매핑 스킵: %s", user_id, e)
 
             snapshots = db.query(DailyPortfolioSnapshot).filter(
                 DailyPortfolioSnapshot.user_id == user_id,
