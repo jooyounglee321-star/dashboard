@@ -1074,38 +1074,50 @@ def _migrate_google_service_tokens():
 
 
 async def _delete_pending_withdrawals_job():
-    """탈퇴 신청 후 30일 지난 유저 자동 삭제 (매일 자정 KST 실행)."""
-    from datetime import timedelta
-    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+    """탈퇴 신청 후 30일 지난 유저 자동 삭제 (매일 자정 KST 실행).
+    유저 1명 삭제 실패가 나머지 대상자 처리를 막지 않도록 유저별로 개별 커밋."""
+    # 모듈 전역의 `timezone`은 routers.timezone 라우터라 datetime.timezone과 이름이
+    # 겹침 — 이 함수 로컬 스코프에서만 표준 라이브러리를 별칭으로 import해 사용
+    from datetime import datetime, timedelta, timezone as dt_timezone
+    cutoff = datetime.now(dt_timezone.utc) - timedelta(days=30)
     db = SessionLocal()
     try:
-        targets = db.query(User).filter(
-            User.withdrawal_status == "pending",
-            User.withdrawal_requested_at < cutoff,
-        ).all()
+        target_ids = [
+            uid for (uid,) in db.query(User.id).filter(
+                User.withdrawal_status == "pending",
+                User.withdrawal_requested_at < cutoff,
+            ).all()
+        ]
         deleted = 0
-        for user in targets:
-            uid = user.id
-            for tbl in [
-                "expenses", "diets", "diet_analyses", "memos", "pinned_memos",
-                "todos", "bookmarks", "youtube_channels", "stock_price_history",
-                "dividend_history", "recurring_expenses", "expense_budgets",
-                "daily_portfolio_snapshot", "portfolio_groups", "stocks",
-                "timezone_config", "google_calendar_tokens", "google_service_tokens",
-            ]:
-                try:
-                    db.execute(text(f"DELETE FROM {tbl} WHERE user_id = :uid"), {"uid": uid})
-                except Exception:
-                    pass
+        for uid in target_ids:
             try:
-                db.execute(text("DELETE FROM widget_configs WHERE user_id = :uid"), {"uid": uid})
-            except Exception:
-                pass
-            db.delete(user)
-            deleted += 1
-            logger.info("[WITHDRAWAL] 유저 삭제 완료: id=%s, email=%s", uid, user.email)
-        db.commit()
-        logger.info("[WITHDRAWAL] 자동 탈퇴 처리 완료: %s명 삭제", deleted)
+                user = db.query(User).filter(User.id == uid).first()
+                if not user:
+                    continue
+                for tbl in [
+                    "expense_categories", "expenses", "diets", "diet_analyses",
+                    "memos", "pinned_memos", "todos", "bookmarks", "youtube_channels",
+                    "stock_price_history", "dividend_history", "recurring_expenses",
+                    "expense_budgets", "daily_portfolio_snapshot", "portfolio_groups",
+                    "stocks", "timezone_config", "google_calendar_tokens",
+                    "google_service_tokens", "widget_configs",
+                ]:
+                    # 존재하지 않는 레거시 테이블(google_calendar_tokens 등)은
+                    # savepoint만 롤백하고 계속 진행 — 실제 FK 제약 위반은
+                    # 아래 db.delete(user)에서 다시 발생해 정상적으로 감지됨
+                    try:
+                        with db.begin_nested():
+                            db.execute(text(f"DELETE FROM {tbl} WHERE user_id = :uid"), {"uid": uid})
+                    except Exception as e:
+                        logger.warning("[WITHDRAWAL] %s 정리 스킵 (id=%s): %s", tbl, uid, e)
+                db.delete(user)
+                db.commit()
+                deleted += 1
+                logger.info("[WITHDRAWAL] 유저 삭제 완료: id=%s, email=%s", uid, user.email)
+            except Exception as e:
+                db.rollback()
+                logger.error("[WITHDRAWAL] 유저 삭제 실패 (id=%s): %s", uid, e)
+        logger.info("[WITHDRAWAL] 자동 탈퇴 처리 완료: %s/%s명 삭제", deleted, len(target_ids))
     except Exception as e:
         logger.error("[WITHDRAWAL] 자동 탈퇴 처리 오류: %s", e)
         db.rollback()

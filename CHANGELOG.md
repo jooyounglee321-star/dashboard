@@ -4,6 +4,43 @@
 
 ---
 
+## 2026-09-13 (4차)
+
+### 심각한 버그 수정 — 탈퇴 30일 후 자동 삭제 job이 처음부터 한 번도 실행된 적 없음
+
+#### 문제
+회원 탈퇴 신청 후 30일이 지나도 계정이 삭제되지 않고 슈퍼어드민 목록에 계속 "활성"으로 남아있음.
+
+#### 원인 (2가지 버그 중첩)
+1. **치명적 버그**: `main.py`의 `_delete_pending_withdrawals_job()`이 시작하자마자
+   `datetime.now(timezone.utc)`를 호출하는데, 이 파일 상단에서
+   `from routers import ... timezone ...`으로 **`routers/timezone.py` 라우터를
+   `timezone`이라는 이름으로 import**하고 있어서 표준 라이브러리 `datetime.timezone`을
+   가려버림(shadowing). 그 결과 함수가 실행될 때마다 최상단 줄에서
+   `NameError: name 'datetime' is not defined`로 즉시 크래시 → try/except가 조용히
+   삼키고 로그만 남김. **이 job은 배포 이후 단 한 번도 정상 실행된 적이 없었음.**
+2. **보조 버그**: 위 문제가 없었다 해도, 유저별 삭제 대상 테이블 목록에
+   `expense_categories`(사용자 커스텀 지출 카테고리)가 빠져있어 해당 테이블에 데이터가
+   있는 유저는 삭제 시 FK 제약으로 실패했을 가능성 있음. 또한 유저 1명 삭제 실패 시
+   같은 배치의 다른 모든 대상자까지 함께 롤백되는 구조였음.
+
+#### 수정
+- `datetime`/`timezone`을 함수 로컬 스코프에서 `timezone as dt_timezone`으로 별칭 import해
+  라우터 이름과의 충돌 제거
+- 정리 대상 테이블 목록에 `expense_categories` 추가
+- 유저별로 개별 커밋하도록 변경 — 한 명 삭제 실패가 다른 대상자 처리를 막지 않음
+- 테이블별 삭제를 SAVEPOINT(`db.begin_nested()`)로 감싸 존재하지 않는 레거시 테이블
+  (예: `google_calendar_tokens`)이 있어도 전체가 중단되지 않고 계속 진행
+
+#### 확인
+- 로컬에서 탈퇴 유예 30일 경과 유저 2명(커스텀 카테고리 보유 1명 포함) 생성 →
+  job 직접 실행 → 유저 2명, 카테고리 데이터까지 정상 삭제 확인
+- 존재하지 않는 테이블(`google_calendar_tokens`, `widget_configs`)에 대해서도
+  스킵 후 계속 진행되는 것 확인 (경고 로그만 남고 크래시 없음)
+- `pytest` 50개 전부 통과
+
+---
+
 ## 2026-09-13 (3차)
 
 ### 버그 수정 — 통계 화면 "실현 손익 내역" 기간 선택 미반영
