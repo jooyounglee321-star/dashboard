@@ -974,7 +974,9 @@ async def parse_transactions_from_images(
         "- date: 반드시 YYYY-MM-DD 형식으로 변환해서 출력. "
         "이미지에 MM/DD/YYYY, MM-DD-YYYY, YYYY.MM.DD 등 다른 형식으로 표기돼 있어도 "
         "YYYY-MM-DD로 변환할 것. 날짜를 알 수 없으면 null\n"
-        "- qty: 수량(소수 가능). 알 수 없으면 null\n"
+        "- qty: 수량(소수 가능), 항상 양수로 출력. "
+        "매도(Sell) 행이 표에 -5, (5) 처럼 음수/괄호로 표기돼 있어도 절대값 5로 변환. "
+        "알 수 없으면 null\n"
         "- price: 단가(소수 가능). 알 수 없으면 null\n"
         "- type: Buy/매수이면 \"buy\", Sell/매도이면 \"sell\"\n\n"
         "JSON 배열만 출력. 설명 텍스트, 마크다운 코드블록(```) 금지."
@@ -1033,8 +1035,10 @@ async def parse_transactions_from_images(
             continue
         tx_type = (tx.get("type") or "buy").lower()
         date_str = _normalize_date_str(tx.get("date")) or ""
-        qty = float(tx.get("qty") or 0)
-        price = float(tx.get("price") or 0)
+        # 증권사 명세서는 매도 수량을 음수(-5)로 표기하는 경우가 많음 —
+        # buy/sell은 type 필드로 이미 구분되므로 qty/price는 항상 절대값으로 저장
+        qty = abs(float(tx.get("qty") or 0))
+        price = abs(float(tx.get("price") or 0))
 
         key = (ticker, date_str, tx_type, qty, price)
         if key in existing_keys or key in seen_in_batch:

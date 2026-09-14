@@ -176,7 +176,8 @@ function StockDetailPanel({ g, s, onUpdate }) {
   }
   async function submitBuy() {
     const qty = parseFloat(buyQty) || 0
-    if (!qty) { showToast('수량을 입력해주세요', 'err'); return }
+    if (qty <= 0) { showToast('수량은 0보다 큰 값을 입력해주세요', 'err'); return }
+    if (parseFloat(buyPrice) < 0) { showToast('단가는 음수일 수 없어요', 'err'); return }
     const date = buyDate || new Date().toISOString().split('T')[0]
     const dup = findDuplicate(s.purchases, date, qty)
     const doSubmit = async () => {
@@ -199,7 +200,8 @@ function StockDetailPanel({ g, s, onUpdate }) {
   }
   async function submitSell() {
     const qty = parseFloat(sellQty) || 0
-    if (!qty) { showToast('수량을 입력해주세요', 'err'); return }
+    if (qty <= 0) { showToast('수량은 0보다 큰 값을 입력해주세요', 'err'); return }
+    if (parseFloat(sellPrice) < 0) { showToast('단가는 음수일 수 없어요', 'err'); return }
     if (qty > holdQty) { showToast(`보유수량(${holdQty})을 초과할 수 없습니다`, 'err'); return }
     const date = sellDate || new Date().toISOString().split('T')[0]
     const dup = findDuplicate(s.sells, date, qty)
@@ -223,8 +225,10 @@ function StockDetailPanel({ g, s, onUpdate }) {
   }
   function saveEdit() {
     const qty = parseFloat(editRec.qty) || 0
-    if (!qty) { showToast('수량을 입력해주세요', 'err'); return }
-    onUpdate(g.id, s.id, 'editRecord', { type: editRec.type, id: editRec.id, date: editRec.date || null, qty, price: parseFloat(editRec.price) || 0 })
+    if (qty <= 0) { showToast('수량은 0보다 큰 값을 입력해주세요', 'err'); return }
+    const editPrice = parseFloat(editRec.price) || 0
+    if (editPrice < 0) { showToast('단가는 음수일 수 없어요', 'err'); return }
+    onUpdate(g.id, s.id, 'editRecord', { type: editRec.type, id: editRec.id, date: editRec.date || null, qty, price: editPrice })
     setEditRec(null)
     showToast('✓ 내역 수정 완료', 'ok')
   }
@@ -357,6 +361,8 @@ function CaptureUploadPanel({ g, lang, onSave, onClose }) {
   }
 
   function updateRow(key, field, value) {
+    // qty/price는 매수·매도 무관 항상 양수로 저장 (type 필드로 이미 구분됨)
+    if (field === 'qty' || field === 'price') value = Math.abs(value)
     setRows(prev => prev.map(r => r._key === key ? { ...r, [field]: value } : r))
   }
 
