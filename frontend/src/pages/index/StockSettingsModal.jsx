@@ -170,34 +170,56 @@ function StockDetailPanel({ g, s, onUpdate }) {
     } catch {}
     return null
   }
+  // 동일 날짜 + 동일 수량 내역이 이미 있으면 중복 후보로 판단 (AI캡처 중복판정과 동일 기준)
+  function findDuplicate(list, date, qty) {
+    return (list || []).find(r => (r.date || '') === date && Number(r.qty) === Number(qty))
+  }
   async function submitBuy() {
     const qty = parseFloat(buyQty) || 0
     if (!qty) { showToast('수량을 입력해주세요', 'err'); return }
-    let price = parseFloat(buyPrice) || 0
-    if (buyDate && !price) {
-      showToast('⏳ 해당일 시세 조회 중…', 'info')
-      const close = await fetchHistPrice(buyDate)
-      if (close != null) { price = close; showToast(`✓ ${buyDate} 종가: ${sym}${close}`, 'ok') }
-      else showToast('⚠ 시세 조회 실패', 'err')
+    const date = buyDate || new Date().toISOString().split('T')[0]
+    const dup = findDuplicate(s.purchases, date, qty)
+    const doSubmit = async () => {
+      let price = parseFloat(buyPrice) || 0
+      if (buyDate && !price) {
+        showToast('⏳ 해당일 시세 조회 중…', 'info')
+        const close = await fetchHistPrice(buyDate)
+        if (close != null) { price = close; showToast(`✓ ${buyDate} 종가: ${sym}${close}`, 'ok') }
+        else showToast('⚠ 시세 조회 실패', 'err')
+      }
+      onUpdate(g.id, s.id, 'addPurchase', { id: genId(), date, qty, price: price || 0 })
+      setBuyDate(''); setBuyQty(''); setBuyPrice('')
+      showToast('✓ 매입 내역 등록', 'ok')
     }
-    onUpdate(g.id, s.id, 'addPurchase', { id: genId(), date: buyDate || new Date().toISOString().split('T')[0], qty, price: price || 0 })
-    setBuyDate(''); setBuyQty(''); setBuyPrice('')
-    showToast('✓ 매입 내역 등록', 'ok')
+    if (dup) {
+      openConfirm(`⚠ 이미 같은 날짜(${date})에 ${qty}주 매입 내역이 있습니다${dup.price ? ` (${sym}${fmtA(dup.price)})` : ''}.\n중복 입력일 수 있어요. 그래도 추가하시겠습니까?`, () => { closeConfirm(); doSubmit() })
+    } else {
+      doSubmit()
+    }
   }
   async function submitSell() {
     const qty = parseFloat(sellQty) || 0
     if (!qty) { showToast('수량을 입력해주세요', 'err'); return }
     if (qty > holdQty) { showToast(`보유수량(${holdQty})을 초과할 수 없습니다`, 'err'); return }
-    let price = parseFloat(sellPrice) || 0
-    if (sellDate && !price) {
-      showToast('⏳ 해당일 시세 조회 중…', 'info')
-      const close = await fetchHistPrice(sellDate)
-      if (close != null) { price = close; showToast(`✓ ${sellDate} 종가: ${sym}${close}`, 'ok') }
-      else showToast('⚠ 시세 조회 실패', 'err')
+    const date = sellDate || new Date().toISOString().split('T')[0]
+    const dup = findDuplicate(s.sells, date, qty)
+    const doSubmit = async () => {
+      let price = parseFloat(sellPrice) || 0
+      if (sellDate && !price) {
+        showToast('⏳ 해당일 시세 조회 중…', 'info')
+        const close = await fetchHistPrice(sellDate)
+        if (close != null) { price = close; showToast(`✓ ${sellDate} 종가: ${sym}${close}`, 'ok') }
+        else showToast('⚠ 시세 조회 실패', 'err')
+      }
+      onUpdate(g.id, s.id, 'addSell', { id: genId(), date, qty, price: price || 0 })
+      setSellDate(''); setSellQty(''); setSellPrice('')
+      showToast('✓ 매도 내역 등록', 'ok')
     }
-    onUpdate(g.id, s.id, 'addSell', { id: genId(), date: sellDate || new Date().toISOString().split('T')[0], qty, price: price || 0 })
-    setSellDate(''); setSellQty(''); setSellPrice('')
-    showToast('✓ 매도 내역 등록', 'ok')
+    if (dup) {
+      openConfirm(`⚠ 이미 같은 날짜(${date})에 ${qty}주 매도 내역이 있습니다${dup.price ? ` (${sym}${fmtA(dup.price)})` : ''}.\n중복 입력일 수 있어요. 그래도 추가하시겠습니까?`, () => { closeConfirm(); doSubmit() })
+    } else {
+      doSubmit()
+    }
   }
   function saveEdit() {
     const qty = parseFloat(editRec.qty) || 0
@@ -244,14 +266,20 @@ function StockDetailPanel({ g, s, onUpdate }) {
       </div>
       {/* 거래 내역 */}
       <div>
-        <div style={{ fontSize: '0.72rem', fontWeight: 500, color: 'var(--ink2)', marginBottom: '0.4rem' }}>📋 거래 내역</div>
+        <div style={{ fontSize: '0.72rem', fontWeight: 500, color: 'var(--ink2)', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          📋 거래 내역
+          {(buyDate || sellDate) && (
+            <span style={{ fontSize: '0.67rem', color: 'var(--warning)', fontWeight: 400 }}>· 입력 중인 날짜와 같은 내역은 노란 테두리로 표시돼요</span>
+          )}
+        </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.28rem' }}>
           {!allRows.length
             ? <div style={{ fontSize: '0.75rem', color: 'var(--ink3)', textAlign: 'center', padding: '0.5rem' }}>아직 내역이 없습니다</div>
             : allRows.map(r => {
               const isBuy = r.type === 'buy'
               const bg = isBuy ? '#eff6ff' : '#fff1f2'
-              const borderC = isBuy ? '#bfdbfe' : '#fecaca'
+              const isSameDateAsInput = r.date && ((buyDate && r.date === buyDate) || (sellDate && r.date === sellDate))
+              const borderC = isSameDateAsInput ? 'var(--warning)' : (isBuy ? '#bfdbfe' : '#fecaca')
               const badgeStyle = { fontSize: '0.65rem', padding: '0.08rem 0.38rem', borderRadius: 4, background: isBuy ? '#dbeafe' : '#fee2e2', color: isBuy ? 'var(--blue)' : 'var(--red)', fontWeight: 600 }
               if (editRec !== null && editRec.id !== undefined && editRec.id === r.id) {
                 return (
@@ -269,11 +297,12 @@ function StockDetailPanel({ g, s, onUpdate }) {
                 )
               }
               return (
-                <div key={r.id} style={{ background: bg, border: `1px solid ${borderC}`, borderRadius: 7, padding: '0.38rem 0.6rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div key={r.id} style={{ background: bg, border: `${isSameDateAsInput ? 2 : 1}px solid ${borderC}`, borderRadius: 7, padding: '0.38rem 0.6rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span style={badgeStyle}>{isBuy ? '매입' : '매도'}</span>
                   <span style={{ fontSize: '0.78rem', color: 'var(--ink2)', minWidth: 72 }}>{r.date || '날짜 없음'}</span>
                   <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--ink)' }}>{(r.qty || 0).toLocaleString()}주</span>
                   <span style={{ fontSize: '0.78rem', color: 'var(--ink2)', flex: 1 }}>{r.price ? sym + fmtA(r.price) : '단가 없음'}</span>
+                  {isSameDateAsInput && <span style={{ fontSize: '0.65rem', color: 'var(--warning)', fontWeight: 600, flexShrink: 0 }}>⚠ 같은 날짜</span>}
                   <div style={{ display: 'flex', gap: '0.22rem', flexShrink: 0 }}>
                     <button onClick={() => setEditRec({ ...r })} style={{ padding: '0.22rem 0.5rem', fontSize: '0.72rem', border: `1px solid ${isBuy ? '#93c5fd' : 'var(--red)'}`, borderRadius: 5, background: 'transparent', color: isBuy ? 'var(--blue)' : 'var(--red)', cursor: 'pointer' }}>수정</button>
                     <button onClick={() => deleteRecord(r.type, r.id)} style={{ padding: '0.22rem 0.5rem', fontSize: '0.72rem', border: '1px solid var(--red)', borderRadius: 5, background: 'transparent', color: 'var(--red)', cursor: 'pointer' }}>삭제</button>
