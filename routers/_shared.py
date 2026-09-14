@@ -59,6 +59,73 @@ def normalize_date_str(raw) -> str | None:
         return None
 
 
+def fifo_calc(purchases: list[dict], sells: list[dict]) -> dict:
+    """FIFO(선입선출) 원가 계산 — 매도 시 가장 먼저 매수한 주식부터 처분된 것으로 간주.
+    증권사(Vanguard 등)의 기본 cost-basis 방식과 동일한 계산.
+    프론트엔드 frontend/src/utils/calcStock.js의 fifoCalc()와 로직 동일하게 유지할 것.
+
+    반환: {"hold_qty", "avg_cost", "realized_pl", "sell_details"}
+    - avg_cost: 현재 남은 보유분(lot)의 가중평균원가
+    - sell_details: 매도 건별 {id, date, qty, sell_price, avg_cost, pl} —
+      avg_cost는 그 매도 건이 소진한 lot들만의 가중평균원가 (건별로 다를 수 있음)
+    """
+    events = [
+        {**p, "kind": "buy"} for p in (purchases or [])
+    ] + [
+        {**s, "kind": "sell"} for s in (sells or [])
+    ]
+
+    def _sort_key(ev):
+        d = ev.get("date") or ""
+        return (d, 0 if ev["kind"] == "buy" else 1)
+
+    events.sort(key=_sort_key)
+
+    lots: list[dict] = []  # FIFO 큐: {"qty", "price"}
+    realized_pl = 0.0
+    sell_details: list[dict] = []
+
+    for ev in events:
+        qty = float(ev.get("qty") or 0)
+        if qty <= 0:
+            continue
+        if ev["kind"] == "buy":
+            lots.append({"qty": qty, "price": float(ev.get("price") or 0)})
+            continue
+        remaining = qty
+        sell_price = float(ev.get("price") or 0)
+        consumed_cost = 0.0   # 이 매도가 소진한 lot들의 원가 합
+        consumed_qty  = 0.0   # 원가가 있는(price>0) lot 중 소진된 수량
+        while remaining > 1e-9 and lots:
+            lot = lots[0]
+            consume = min(lot["qty"], remaining)
+            if lot["price"] > 0:
+                realized_pl += (sell_price - lot["price"]) * consume
+                consumed_cost += lot["price"] * consume
+                consumed_qty += consume
+            lot["qty"] -= consume
+            remaining -= consume
+            if lot["qty"] <= 1e-9:
+                lots.pop(0)
+        sell_avg_cost = (consumed_cost / consumed_qty) if consumed_qty > 0 else 0.0
+        sell_pl = (sell_price - sell_avg_cost) * consumed_qty if sell_avg_cost > 0 else 0.0
+        sell_details.append({
+            "id":         ev.get("id"),
+            "date":       ev.get("date"),
+            "qty":        qty,
+            "sell_price": sell_price,
+            "avg_cost":   sell_avg_cost,
+            "pl":         sell_pl,
+        })
+
+    hold_qty = round(sum(l["qty"] for l in lots), 8)
+    priced_lots = [l for l in lots if l["price"] > 0]
+    priced_qty = sum(l["qty"] for l in priced_lots)
+    avg_cost = (sum(l["qty"] * l["price"] for l in priced_lots) / priced_qty) if priced_qty > 0 else 0.0
+
+    return {"hold_qty": hold_qty, "avg_cost": avg_cost, "realized_pl": realized_pl, "sell_details": sell_details}
+
+
 def resolve_yf_ticker(ticker: str, category: str | None) -> str:
     """카테고리에 따라 Yahoo Finance 조회용 티커를 반환합니다.
 

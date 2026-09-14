@@ -4,6 +4,42 @@
 
 ---
 
+## 2026-09-14 (3차)
+
+### 평균 매입단가 계산 방식을 단순평균 → FIFO로 전환
+
+#### 배경
+실제 증권사 계좌(Vanguard)와 대시보드의 평균 매입단가를 비교해보니 크게 차이남
+(예: SNDK 대시보드 $1,142.97 vs 실제 계좌 ~$1,595.66). 원인은 계산 방식 차이 —
+대시보드는 "지금까지의 모든 매수를 단순 가중평균"했고, 증권사는 매매가 잦은 종목에
+대해 **FIFO(선입선출)** — 가장 먼저 산 주식부터 판 것으로 간주해 "지금 남아있는
+주식"의 원가만 계산 — 를 기본으로 씀. 미국 증권사 대부분이 주식/ETF에 FIFO를 기본
+cost-basis로 사용함.
+
+#### 변경 내용
+- `frontend/src/utils/calcStock.js`: `fifoCalc(purchases, sells)` 신규 — 매수/매도를
+  날짜순으로 정렬해 이벤트로 병합, FIFO 큐로 lot을 소진시키며 잔여 보유분의
+  가중평균원가와 실현손익을 계산. 기존 `calcStock()`(위젯 표시)이 이 함수 사용하도록 교체
+- `StockSettingsModal.jsx`의 `stockSummary()` (내 주식 설정 모달 표시)도 FIFO로 교체
+- `StockStatsOverlay.jsx`의 전체 기간 수익률 계산 중 가격 없을 때 폴백하는 평균단가도 FIFO로
+- `routers/_shared.py`: Python 동일 로직의 `fifo_calc()` 신규 — 매도 건별 개별 원가·손익
+  (`sell_details`)까지 반환 (같은 종목이라도 매도 시점마다 소진되는 lot이 달라 원가가
+  다를 수 있음)
+- `routers/portfolio.py`
+  - `/api/portfolio/realized-pl`: 매도 건별 실현손익을 FIFO 기준으로 재계산
+  - `/api/portfolio/period-pl`: 보유 종목 평균단가를 FIFO로
+  - 히스토리 백필(`backfill_portfolio_snapshots`)의 날짜별 평균단가·누적실현손익도 FIFO로
+    (기존 `Stock.avg_price` 폴백 로직은 그대로 유지)
+
+#### 확인
+- 실제 SNDK 거래내역(매수 9건·매도 6건)으로 JS/Python 양쪽에 동일 데이터 넣어 검증:
+  보유수량 10주(실제와 일치), 평균단가 $1,595.87 (실제 계좌 ~$1,595.66과 거의 일치,
+  차이는 스크린샷 반올림 오차로 추정)
+- 매도 건별 실현손익도 FIFO lot 소진 순서대로 정확히 계산됨을 확인
+- `pytest` 50개, `npm run build` 통과
+
+---
+
 ## 2026-09-14 (2차)
 
 ### 버그 수정 — 매도 수량이 음수(-5주)로 저장되는 문제

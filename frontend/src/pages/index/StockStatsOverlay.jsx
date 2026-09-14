@@ -3,6 +3,7 @@ import { Chart, registerables } from 'chart.js'
 import 'chartjs-adapter-date-fns'
 import { t } from './i18n'
 import { fmtKRW, fmtUSD, fmtKRWShort, fmtUSDShort, fmtShort } from '../../utils/format'
+import { fifoCalc } from '../../utils/calcStock'
 import { apiFetch } from '../../api'
 import PeriodSelector from '../../components/PeriodSelector'
 import Toast, { useToast } from '../../components/Toast'
@@ -1361,8 +1362,8 @@ export default function StockStatsOverlay({ isOpen, onClose, stockData, lang = '
                           const sellQty = sells.reduce((a, p) => a + (p.qty || 0), 0)
                           const holdQty = Math.max(0, buyQty - sellQty)
                           if (holdQty <= 0) { totalBuyCost += buys.reduce((a, p) => a + p.price * p.qty, 0); continue }
-                          // 현재가 없으면 평균단가로 폴백 (가격 누락 시 수익률 왜곡 방지)
-                          const avgCost = buyQty > 0 ? buys.reduce((a, p) => a + p.price * p.qty, 0) / buyQty : 0
+                          // 현재가 없으면 FIFO 평균단가로 폴백 (가격 누락 시 수익률 왜곡 방지)
+                          const { avgCost } = fifoCalc(buys, sells)
                           const cur = stockData?.priceMap?.[s.ticker]?.current_price ?? avgCost
                           if (cur > 0) totalEval += holdQty * cur
                           totalBuyCost += buys.reduce((a, p) => a + p.price * p.qty, 0)

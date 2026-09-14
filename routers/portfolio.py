@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import DailyPortfolioSnapshot, DividendHistory, ExchangeRate, PortfolioGroups, Stock, User
 from routers.auth import get_current_user
-from routers._shared import normalize_date_str as _normalize_date_str, require_premium_or_admin, resolve_yf_ticker as _backfill_resolve_ticker
+from routers._shared import fifo_calc, normalize_date_str as _normalize_date_str, require_premium_or_admin, resolve_yf_ticker as _backfill_resolve_ticker
 from schemas import PortfolioSnapshotCreate, PortfolioSnapshotOut
 
 logger = logging.getLogger(__name__)
@@ -311,24 +311,22 @@ def backfill_portfolio_snapshots(user_id: int, db: Session, force_start_date=Non
                 sell_qty = sum(float(sv.get("qty", 0)) for sv in valid_sells)
                 qty = max(0.0, buy_qty - sell_qty)
 
-                # 날짜 기준 가중평균 매수가 (qty 체크 전에 계산 — realized_pl에도 필요)
-                priced = [p for p in valid_pp if (p.get("price") or 0) > 0]
-                ws  = sum(float(p["price"]) * float(p.get("qty", 0)) for p in priced)
-                vqt = sum(float(p.get("qty", 0)) for p in priced)
+                # 날짜 기준 FIFO 평균원가 (qty 체크 전에 계산 — realized_pl에도 필요)
+                fifo_hist = fifo_calc(valid_pp, valid_sells)
                 s_row = stocks_map.get(ticker)
-                avg = (
-                    round(ws / vqt, 4) if vqt > 0
-                    else (float(s_row.avg_price) if s_row and s_row.avg_price else None)
-                )
-
                 # 실현 손익: target_date 이전 매도 기준 (전량 매도 종목도 포함)
-                # avg is not None 체크 — avg=0.0 이어도 계산 수행 (if avg: 는 0.0을 False로 평가)
-                ticker_real_pl = 0.0
-                if avg is not None:
-                    ticker_real_pl = sum(
-                        (float(sv.get("price", 0)) - avg) * float(sv.get("qty", 0))
-                        for sv in valid_sells
-                    )
+                if fifo_hist["avg_cost"] > 0:
+                    avg = round(fifo_hist["avg_cost"], 4)
+                    ticker_real_pl = fifo_hist["realized_pl"]
+                else:
+                    # 기간 내 가격 있는 매수가 없으면 Stock.avg_price로 폴백 (레거시)
+                    avg = float(s_row.avg_price) if s_row and s_row.avg_price else None
+                    ticker_real_pl = 0.0
+                    if avg is not None:
+                        ticker_real_pl = sum(
+                            (float(sv.get("price", 0)) - avg) * float(sv.get("qty", 0))
+                            for sv in valid_sells
+                        )
                 total_realized_pl = round(total_realized_pl + ticker_real_pl, 2)
 
                 if qty <= 0:
@@ -725,19 +723,14 @@ def get_period_pl(
                 continue
             purchases = s.get("purchases", [])
             sells     = s.get("sells", [])
-            total_buy = sum(p.get("qty", 0) for p in purchases)
-            total_sell= sum(p.get("qty", 0) for p in sells)
-            total_hq  = max(0.0, total_buy - total_sell)
-            if total_hq <= 0:
+            fifo = fifo_calc(purchases, sells)
+            if fifo["hold_qty"] <= 0:
                 continue
-            all_valid = [p for p in purchases if (p.get("price") or 0) > 0 and (p.get("qty") or 0) > 0]
-            ws  = sum(p["price"] * p["qty"] for p in all_valid)
-            vqt = sum(p["qty"] for p in all_valid)
             holdings.append({
                 "ticker":   s.get("ticker", ""),
                 "name":     s.get("name") or s.get("ticker", ""),
-                "qty":      total_hq,
-                "avg_cost": ws / vqt if vqt > 0 else 0,
+                "qty":      fifo["hold_qty"],
+                "avg_cost": fifo["avg_cost"],
                 "currency": currency,
                 "category": category,
                 "group":    g.get("name", ""),
@@ -834,7 +827,7 @@ def get_realized_pl(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """실현 손익 내역. 취득단가 = 종목 전체 매입의 가중평균 (단순 AVCO)."""
+    """실현 손익 내역. 취득단가 = FIFO(선입선출) 방식 — 증권사 기본 cost-basis와 동일."""
     pg = db.query(PortfolioGroups).filter(PortfolioGroups.user_id == current_user.id).first()
     if not pg or not pg.data:
         return {"total": 0, "items": []}
@@ -854,28 +847,21 @@ def get_realized_pl(
             if not sells:
                 continue
             purchases = s.get("purchases", []) or []
-            # 전체 가중평균 단가
-            all_valid = [p for p in purchases if (p.get("price") or 0) > 0 and (p.get("qty") or 0) > 0]
-            ws = sum(p["price"] * p["qty"] for p in all_valid)
-            vqt = sum(p["qty"] for p in all_valid)
-            avg_cost = ws / vqt if vqt > 0 else 0
+            fifo = fifo_calc(purchases, sells)
 
-            for sell in sells:
-                sell_date = sell.get("date", "")
-                sell_qty = sell.get("qty", 0) or 0
-                sell_price = sell.get("price", 0) or 0
-                if sell_qty <= 0 or avg_cost <= 0:
+            for detail in fifo["sell_details"]:
+                if detail["qty"] <= 0 or detail["avg_cost"] <= 0:
                     continue
-                pl = (sell_price - avg_cost) * sell_qty
-                pl_pct = (sell_price - avg_cost) / avg_cost * 100
+                pl = detail["pl"]
+                pl_pct = (detail["sell_price"] - detail["avg_cost"]) / detail["avg_cost"] * 100
                 total_pl += pl
                 items.append({
                     "ticker": ticker,
                     "group": group_name,
-                    "date": sell_date,
-                    "qty": sell_qty,
-                    "sell_price": sell_price,
-                    "avg_cost": round(avg_cost, 4),
+                    "date": detail["date"] or "",
+                    "qty": detail["qty"],
+                    "sell_price": detail["sell_price"],
+                    "avg_cost": round(detail["avg_cost"], 4),
                     "pl": round(pl, 4),
                     "pl_pct": round(pl_pct, 2),
                     "currency": currency,

@@ -4,6 +4,7 @@ import ConfirmModal from '../../components/ConfirmModal'
 import { t } from './i18n'
 
 import { apiFetch } from '../../api'
+import { fifoCalc } from '../../utils/calcStock'
 /* ── 유틸 ── */
 const sv = (k, v) => localStorage.setItem(k, JSON.stringify(v))
 const ld = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d } catch { return d } }
@@ -20,11 +21,7 @@ function stockSummary(s) {
   const pp = s.purchases || [], sl = s.sells || []
   const totalBuyQty  = pp.reduce((a, p) => a + (p.qty || 0), 0)
   const totalSellQty = sl.reduce((a, p) => a + (p.qty || 0), 0)
-  const holdQty = Math.max(0, totalBuyQty - totalSellQty)
-  const valid = pp.filter(p => (p.price || 0) > 0 && (p.qty || 0) > 0)
-  const ws = valid.reduce((a, p) => a + p.price * p.qty, 0)
-  const vq = valid.reduce((a, p) => a + p.qty, 0)
-  const avgBuyPrice = vq > 0 ? ws / vq : 0
+  const { holdQty, avgCost: avgBuyPrice } = fifoCalc(pp, sl)
   const lastTxDate = [...pp, ...sl].reduce((max, r) => (r.date && (!max || r.date > max) ? r.date : max), null)
   return { holdQty, totalBuyQty, totalSellQty, avgBuyPrice, lastTxDate }
 }
