@@ -922,6 +922,7 @@ async def parse_transactions_from_images(
     # 기존 거래 내역을 중복 체크용 집합으로 변환
     # key: (ticker_upper, date_str, type_str, qty_float, price_float)
     existing_keys: set[tuple] = set()
+    existing_reinvest_keys: set[tuple] = set()  # 이미 source=reinvestment로 태그된 매입 건 — 재분류 후보 제외용
     existing_tickers: set[str] = set()
     for st in target_group.get("stocks", []):
         if st.get("is_deleted"):
@@ -929,10 +930,13 @@ async def parse_transactions_from_images(
         ticker_up = (st.get("ticker") or "").strip().upper()
         existing_tickers.add(ticker_up)
         for p in st.get("purchases") or []:
-            existing_keys.add((
+            key = (
                 ticker_up, str(p.get("date") or ""), "buy",
                 float(p.get("qty") or 0), float(p.get("price") or 0),
-            ))
+            )
+            existing_keys.add(key)
+            if p.get("source") == "reinvestment":
+                existing_reinvest_keys.add(key)
         for s in st.get("sells") or []:
             existing_keys.add((
                 ticker_up, str(s.get("date") or ""), "sell",
@@ -950,7 +954,9 @@ async def parse_transactions_from_images(
         "Reinvestment는 배당금으로 추가 주식을 매수한 것이므로 type=\"reinvest\"로 추출 "
         "(예: NVDY, VTSAX 같은 고배당 ETF는 Reinvestment 행이 매우 잦으니 절대 누락 금지).\n"
         "3. 제외 대상: Dividend(배당금 현금 지급 자체), Sweep In, Sweep Out, Interest, "
-        "Fee, Transfer 등 주식 수량과 무관한 행은 완전히 무시.\n"
+        "Fee, Transfer 등 주식 수량과 무관한 행은 완전히 무시. "
+        "머니마켓/결제계좌(예: VMFXX, Money Market, Settlement Fund 등) 행은 Reinvestment라고 "
+        "적혀 있어도 수량(Quantity) 칸이 \"—\"나 빈칸으로 실제 주식 수량 변화가 없으면 제외.\n"
         "   주의: 같은 날짜에 Dividend 행과 Reinvestment 행이 쌍으로 나오는 경우, "
         "Dividend는 제외하고 Reinvestment만 type=\"reinvest\"로 추출할 것.\n"
         "4. 표에 보이는 Buy/Sell/Reinvestment 행 개수를 먼저 세고, "
@@ -1016,8 +1022,10 @@ async def parse_transactions_from_images(
 
     # 중복 제거 + 신규 종목 플래그
     new_transactions: list[dict] = []
+    retag_candidates: list[dict] = []  # 이미 "매입"으로 저장된 건 중 재투자로 재분류 가능한 건
     skipped = 0
     seen_in_batch: set[tuple] = set()  # 이번 업로드 내 중복 방지
+    seen_retag_in_batch: set[tuple] = set()
 
     for tx in all_parsed:
         ticker = (tx.get("ticker") or "").upper().strip()
@@ -1033,10 +1041,21 @@ async def parse_transactions_from_images(
         # buy/sell은 type 필드로 이미 구분되므로 qty/price는 항상 절대값으로 저장
         qty = abs(float(tx.get("qty") or 0))
         price = abs(float(tx.get("price") or 0))
+        if qty <= 0:
+            # 머니마켓/결제계좌 Reinvestment처럼 실제 주식 수량이 없는 행은 무시
+            continue
 
         key = (ticker, date_str, tx_type, qty, price)
         if key in existing_keys or key in seen_in_batch:
             skipped += 1
+            # 이미 "매입"으로 저장돼 있지만 아직 재투자 태그가 안 붙은 건은
+            # 재분류 후보로 별도 제안 (일반 매수/매도 중복은 그냥 스킵)
+            if is_reinvest and key not in existing_reinvest_keys and key not in seen_retag_in_batch:
+                seen_retag_in_batch.add(key)
+                retag_candidates.append({
+                    "ticker": ticker, "name": tx.get("name") or "",
+                    "date": date_str or None, "qty": qty, "price": price,
+                })
             continue
 
         seen_in_batch.add(key)
@@ -1052,15 +1071,97 @@ async def parse_transactions_from_images(
         })
 
     logger.info(
-        "[PARSE-TX] user=%d group=%s 이미지=%d건, 신규=%d건, 중복=%d건, 오류=%d건",
-        current_user.id, group_id, len(images), len(new_transactions), skipped, len(parse_errors),
+        "[PARSE-TX] user=%d group=%s 이미지=%d건, 신규=%d건, 재분류후보=%d건, 중복=%d건, 오류=%d건",
+        current_user.id, group_id, len(images), len(new_transactions), len(retag_candidates), skipped, len(parse_errors),
     )
 
     return {
         "new_transactions": new_transactions,
+        "retag_candidates": retag_candidates,
         "skipped_count": skipped,
         "parse_errors": parse_errors,
     }
+
+
+# ── POST /api/portfolio/retag-reinvestment ───────────────────────────────────
+@router.post("/retag-reinvestment")
+def retag_reinvestment(
+    body: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_premium_or_admin),
+):
+    """이미 "매입"으로 저장된 거래 중 실제로는 배당 재투자였던 건을 소급 태그.
+
+    /parse-transactions가 반환한 retag_candidates 중 사용자가 선택한 항목들을
+    받아 (ticker, date, qty, price)가 정확히 일치하고 아직 재투자 태그가 없는
+    매입 건 1개씩을 찾아 source="reinvestment"로 표시하고, 배당금 내역에도
+    (수량 × 단가)만큼 1건씩 추가.
+
+    body: {"group_id": str, "items": [{"ticker","date","qty","price"}, ...]}
+    """
+    group_id = body.get("group_id")
+    items = body.get("items") or []
+    if not group_id or not items:
+        raise HTTPException(status_code=400, detail="group_id와 items가 필요합니다.")
+
+    pg_row = db.query(PortfolioGroups).filter(PortfolioGroups.user_id == current_user.id).first()
+    if not pg_row or not pg_row.data:
+        raise HTTPException(status_code=404, detail="포트폴리오 데이터가 없습니다.")
+    try:
+        pg_data = json.loads(pg_row.data)
+    except Exception as e:
+        logger.error("[RETAG] portfolio_groups JSON 파싱 실패 (user=%d): %s", current_user.id, e)
+        raise HTTPException(status_code=500, detail="포트폴리오 데이터를 읽을 수 없습니다.")
+
+    target_group = next((g for g in pg_data if g.get("id") == group_id), None)
+    if target_group is None:
+        raise HTTPException(status_code=404, detail="그룹을 찾을 수 없습니다.")
+    currency = target_group.get("currency", "USD")
+
+    retagged = 0
+    dividends_added = 0
+    for item in items:
+        ticker = (item.get("ticker") or "").strip().upper()
+        date_str = _normalize_date_str(item.get("date")) or ""
+        qty = abs(float(item.get("qty") or 0))
+        price = abs(float(item.get("price") or 0))
+        if not ticker or qty <= 0:
+            continue
+
+        matched = False
+        for st in target_group.get("stocks", []):
+            if matched or st.get("is_deleted"):
+                continue
+            if (st.get("ticker") or "").strip().upper() != ticker:
+                continue
+            for p in st.get("purchases") or []:
+                if p.get("source") == "reinvestment":
+                    continue
+                if str(p.get("date") or "") != date_str:
+                    continue
+                if abs(float(p.get("qty") or 0) - qty) > 1e-6:
+                    continue
+                if abs(float(p.get("price") or 0) - price) > 1e-6:
+                    continue
+                p["source"] = "reinvestment"
+                retagged += 1
+                matched = True
+                db.add(DividendHistory(
+                    user_id=current_user.id, date=date_str, ticker=ticker,
+                    amount=qty * price, currency=currency,
+                ))
+                dividends_added += 1
+                break
+
+    pg_row.data = json.dumps(pg_data)
+    db.commit()
+
+    logger.info(
+        "[RETAG] user=%d group=%s 요청=%d건, 재분류=%d건, 배당추가=%d건",
+        current_user.id, group_id, len(items), retagged, dividends_added,
+    )
+
+    return {"retagged": retagged, "dividends_added": dividends_added}
 
 
 # ── GET /api/portfolio/dividends ─────────────────────────────────────────────

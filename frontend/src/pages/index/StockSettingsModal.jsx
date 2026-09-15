@@ -330,9 +330,11 @@ function StockDetailPanel({ g, s, onUpdate }) {
 function CaptureUploadPanel({ g, lang, onSave, onClose }) {
   const [files,    setFiles]    = useState([])
   const [loading,  setLoading]  = useState(false)
-  const [results,  setResults]  = useState(null)  // {new_transactions, skipped_count, parse_errors}
+  const [results,  setResults]  = useState(null)  // {new_transactions, retag_candidates, skipped_count, parse_errors}
   const [rows,     setRows]     = useState([])    // 수정 가능한 결과 행
   const [saving,   setSaving]   = useState(false)
+  const [retagRows,    setRetagRows]    = useState([])  // 재투자 재분류 후보 행
+  const [retagging,    setRetagging]    = useState(false)
   const { toast, showToast }    = useToast()
   const fileRef = useRef(null)
 
@@ -344,6 +346,7 @@ function CaptureUploadPanel({ g, lang, onSave, onClose }) {
     setLoading(true)
     setResults(null)
     setRows([])
+    setRetagRows([])
     try {
       const fd = new FormData()
       fd.append('group_id', g.id)
@@ -351,6 +354,7 @@ function CaptureUploadPanel({ g, lang, onSave, onClose }) {
       const res = await apiFetch('/api/portfolio/parse-transactions', { method: 'POST', body: fd })
       setResults(res)
       setRows((res.new_transactions || []).map((tx, i) => ({ ...tx, _key: i, _checked: true })))
+      setRetagRows((res.retag_candidates || []).map((tx, i) => ({ ...tx, _key: i, _checked: true })))
     } catch (e) {
       showToast('AI 인식 실패: ' + (e?.message || '알 수 없는 오류'), 'err')
     } finally {
@@ -379,6 +383,29 @@ function CaptureUploadPanel({ g, lang, onSave, onClose }) {
     } finally {
       setSaving(false)
     }
+  }
+
+  async function saveRetag() {
+    const selected = retagRows.filter(r => r._checked)
+    if (!selected.length) { showToast('재분류할 항목을 선택해주세요', 'err'); return }
+    setRetagging(true)
+    try {
+      const res = await apiFetch('/api/portfolio/retag-reinvestment', {
+        method: 'POST',
+        body: JSON.stringify({ group_id: g.id, items: selected.map(({ ticker, date, qty, price }) => ({ ticker, date, qty, price })) }),
+      })
+      showToast(`✓ ${res.retagged}건 재투자로 재분류 + 배당금 ${res.dividends_added}건 추가`, 'ok')
+      const savedKeys = new Set(selected.map(r => r._key))
+      setRetagRows(prev => prev.filter(r => !savedKeys.has(r._key)))
+    } catch {
+      showToast('재분류 실패 — 다시 시도해주세요', 'err')
+    } finally {
+      setRetagging(false)
+    }
+  }
+
+  function updateRetagRow(key, field, value) {
+    setRetagRows(prev => prev.map(r => r._key === key ? { ...r, [field]: value } : r))
   }
 
   const inp = { padding: '0.28rem 0.4rem', fontSize: '0.78rem', border: '1px solid var(--border)', borderRadius: 5, background: 'var(--bg)', color: 'var(--ink)', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' }
@@ -430,6 +457,7 @@ function CaptureUploadPanel({ g, lang, onSave, onClose }) {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
               <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', fontSize: '0.78rem', alignItems: 'center' }}>
                 <span style={{ padding: '0.22rem 0.65rem', borderRadius: 20, background: '#eaf1ff', color: '#2f6fed', fontWeight: 600 }}>✓ 신규 {rows.length}건 인식됨</span>
+                {retagRows.length > 0 && <span style={{ padding: '0.22rem 0.65rem', borderRadius: 20, background: '#f3e8ff', color: '#9333ea', fontWeight: 600 }}>⟳ 재투자 재분류 후보 {retagRows.length}건</span>}
                 {results.skipped_count > 0 && <span style={{ padding: '0.22rem 0.65rem', borderRadius: 20, background: '#fef9c3', color: '#92400e', fontWeight: 500 }}>{t(lang, 'admin.captureSkipped')}: {results.skipped_count}건</span>}
                 {results.parse_errors?.length > 0 && <span style={{ padding: '0.22rem 0.65rem', borderRadius: 20, background: '#fee2e2', color: 'var(--red)', fontWeight: 500 }}>{t(lang, 'admin.captureParseError')}: {results.parse_errors.length}건</span>}
               </div>
@@ -444,7 +472,7 @@ function CaptureUploadPanel({ g, lang, onSave, onClose }) {
             )}
 
             {/* 결과 없음 */}
-            {!rows.length && (
+            {!rows.length && !retagRows.length && (
               <div style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--ink3)', padding: '1.5rem 0' }}>
                 {t(lang, 'admin.captureNoNew')}
               </div>
@@ -523,6 +551,56 @@ function CaptureUploadPanel({ g, lang, onSave, onClose }) {
                   </div>
                 </div>
               </>
+            )}
+
+            {/* 재투자 재분류 후보 — 이미 "매입"으로 저장된 건 중 배당 재투자였던 건 */}
+            {retagRows.length > 0 && (
+              <div style={{ border: '1px solid #e9d5ff', borderRadius: 10, background: '#faf5ff', padding: '0.75rem 0.9rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#9333ea' }}>
+                  ⟳ 이미 "매입"으로 저장된 건 중 배당 재투자로 확인된 항목
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--ink3)' }}>
+                  체크 후 저장하면 해당 매입 기록이 "재투자" 배지로 바뀌고, 배당금 내역에도 자동 추가돼요.
+                </div>
+                <div style={{ overflowX: 'auto', border: '1px solid #e9d5ff', borderRadius: 8 }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.76rem' }}>
+                    <thead>
+                      <tr style={{ background: '#f3e8ff', color: '#7e22ce' }}>
+                        <th style={{ padding: '0.35rem 0.5rem', textAlign: 'center', fontWeight: 500, width: 32 }}></th>
+                        <th style={{ padding: '0.35rem 0.6rem', textAlign: 'left', fontWeight: 500 }}>티커</th>
+                        <th style={{ padding: '0.35rem 0.6rem', textAlign: 'left', fontWeight: 500, whiteSpace: 'nowrap' }}>날짜</th>
+                        <th style={{ padding: '0.35rem 0.6rem', textAlign: 'right', fontWeight: 500, whiteSpace: 'nowrap' }}>수량</th>
+                        <th style={{ padding: '0.35rem 0.6rem', textAlign: 'right', fontWeight: 500, whiteSpace: 'nowrap' }}>단가</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {retagRows.map(r => (
+                        <tr key={r._key} style={{ borderTop: '1px solid #e9d5ff', opacity: r._checked ? 1 : 0.5 }}>
+                          <td style={{ textAlign: 'center', padding: '0.35rem 0.5rem' }}>
+                            <input type="checkbox" checked={r._checked} onChange={e => updateRetagRow(r._key, '_checked', e.target.checked)} />
+                          </td>
+                          <td style={{ padding: '0.35rem 0.6rem', fontWeight: 700 }}>{r.ticker}{r.name ? ` · ${r.name}` : ''}</td>
+                          <td style={{ padding: '0.35rem 0.6rem', whiteSpace: 'nowrap' }}>{r.date || '날짜 없음'}</td>
+                          <td style={{ padding: '0.35rem 0.6rem', textAlign: 'right' }}>{r.qty}</td>
+                          <td style={{ padding: '0.35rem 0.6rem', textAlign: 'right' }}>{sym}{fmtP(r.price)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', cursor: 'pointer', color: '#7e22ce', userSelect: 'none' }}>
+                    <input type="checkbox"
+                      checked={retagRows.length > 0 && retagRows.every(r => r._checked)}
+                      onChange={e => setRetagRows(prev => prev.map(r => ({ ...r, _checked: e.target.checked })))} />
+                    전체 선택
+                  </label>
+                  <button onClick={saveRetag} disabled={retagging || !retagRows.some(r => r._checked)}
+                    style={{ padding: '0.4rem 1rem', fontSize: '0.8rem', fontWeight: 600, border: 'none', borderRadius: 8, background: '#9333ea', color: '#fff', cursor: retagging || !retagRows.some(r => r._checked) ? 'default' : 'pointer', opacity: retagging || !retagRows.some(r => r._checked) ? 0.7 : 1 }}>
+                    {retagging ? '재분류 중…' : `재투자로 재분류 (${retagRows.filter(r => r._checked).length}건)`}
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         )}

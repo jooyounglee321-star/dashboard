@@ -4,6 +4,41 @@
 
 ---
 
+## 2026-09-15 (4차)
+
+### 기능 추가 — 이미 저장된 매입 기록을 배당 재투자로 소급 재분류하는 기능
+
+#### 배경
+사용자의 실제 계좌 명세서를 확인해보니 NVDY 외에도 QQQ, NVDA, GOOGL, META, VOO,
+VTSAX, SCHD, VUSTX 등 여러 종목에서 수개월치 배당 재투자(Reinvestment) 행이
+40건 넘게 있었음. 이 건들은 3차 수정(재투자 태그 기능) 이전에 이미 일반 "매입"으로
+저장돼 있어서, 거래내역 수정화면에서 하나씩 체크하는 방식은 너무 번거로움.
+
+#### 수정
+- `routers/portfolio.py`
+  - AI 캡처 프롬프트에 머니마켓/결제계좌(VMFXX 등) Reinvestment 행 제외 규칙 추가 —
+    수량(Quantity) 칸이 "—"인 행은 실제 주식 매수가 아니므로 무시하도록 명시
+  - `/api/portfolio/parse-transactions`: 수량 0 이하 행은 방어적으로 스킵하도록 추가.
+    AI가 `type: "reinvest"`로 인식했는데 이미 "매입"으로 저장돼 있고 아직 재투자
+    태그가 안 붙은 건은 `retag_candidates` 목록으로 별도 반환
+  - `/api/portfolio/retag-reinvestment`(신규 POST): 선택된 재분류 후보들을
+    (ticker, date, qty, price)로 매칭해 기존 매입 기록에 `source: "reinvestment"`
+    태그를 붙이고, 배당금 내역(dividend_history)에도 1건씩 자동 추가
+- `frontend/src/pages/index/StockSettingsModal.jsx`
+  - `CaptureUploadPanel`에 "재투자 재분류 후보" 섹션 추가 — 체크박스로 선택 후
+    저장하면 기존 매입 건이 "재투자"로 재분류되고 배당금도 함께 기록됨
+
+#### 확인
+- `npm run build` 성공
+- `pytest tests/` 50개 통과
+- grep으로 `retagRows`/`retag_candidates`/`retag-reinvestment` 저장·렌더링 로직 존재 확인
+
+#### 참고
+- 매칭은 ticker+date+qty+price 정확히 일치하는 매입 1건만 대상으로 함(중복 매칭 방지).
+  사용자는 기존에 이미 캡처했던 명세서 스크린샷을 그대로 다시 업로드하면 됨.
+
+---
+
 ## 2026-09-15 (3차)
 
 ### 기능 추가 — 배당 재투자(Reinvestment) 매수를 일반 매수와 구분해서 표시 + 배당 내역 자동 기록
