@@ -1,6 +1,37 @@
 # 프로젝트 결정 기록
 
 ---
+## 2026-09-15 — 배당 재투자(Reinvestment) 매수를 일반 매수와 별도 태그로 구분 (Option B)
+
+**결정:** AI 캡처가 인식한 배당 재투자 매수 건을 `source: "reinvestment"` 플래그로 태그해
+(a) 거래내역 UI에서 "매입" 대신 "재투자" 배지로 구분 표시하고 (b) 저장 시 배당금 내역
+(dividends)에도 자동으로 함께 기록.
+
+**이유:** 직전 결정(NVDY Reinvestment 인식 버그 수정)으로 재투자 매수가 보유수량엔
+반영되게 됐지만, 겉보기엔 일반 매수와 똑같이 보여서 사용자가 "이 매수가 현금으로 산
+건지 배당금으로 산 건지" 구분할 수 없었음. 또한 재투자는 경제적으로 배당 수령 +
+재매수 두 이벤트가 겹친 거라 배당금 내역에도 반영돼야 정확한 배당 통계가 나옴.
+
+**검토한 대안:**
+- A안(현행 유지): Reinvestment도 그냥 "매입"으로만 저장. 구현 간단하지만 사용자가
+  재투자분을 구분 못 하고, 배당 통계에도 못 잡힘
+- B안(채택): `purchases[]`에 `source` 플래그 추가 + 저장 시 배당 API 호출로 dividends
+  테이블에도 기록. 기존 배당 추적 기능·FIFO 계산 로직을 그대로 재사용하면서(둘 다
+  `purchases`/`sells` 배열을 구조 무관하게 순회) 표시만 갈라주는 방식이라 수정 범위가
+  예상보다 작았음(백엔드 프롬프트/응답 필드 + 프론트 저장·배지 로직)
+
+**영향 범위:** `routers/portfolio.py`(`PROMPT`, `parse_transactions_from_images`의
+`new_transactions` 응답에 `source` 필드 추가), `frontend/src/pages/index/StockSettingsModal.jsx`
+(`CaptureUploadPanel` 배지, `handleCaptureSuccess`의 배당 API 연동, `StockDetailPanel`
+거래내역 배지). DB 스키마 변경 없음 — `source`는 `portfolio_groups.data` JSON 블롭 내
+purchase 레코드의 선택적 필드이고, dividends는 기존 `dividend_history` 테이블·엔드포인트
+그대로 사용.
+
+**주의:** 이 태그는 소급 적용 안 됨 — 기존에 이미 "매입"으로 저장된 과거 재투자 건은
+재배지/배당기록이 자동으로 붙지 않음. 사용자가 기존 데이터를 정리하려면 수동으로
+확인·재입력 필요.
+
+---
 ## 2026-09-14 — 평균 매입단가 계산: 단순 가중평균 → FIFO(선입선출)로 전환
 
 **결정:** 종목 평균 매입단가·실현손익 계산 방식을 "전체 매수 내역의 단순 가중평균"에서

@@ -278,10 +278,11 @@ function StockDetailPanel({ g, s, onUpdate }) {
             ? <div style={{ fontSize: '0.75rem', color: 'var(--ink3)', textAlign: 'center', padding: '0.5rem' }}>아직 내역이 없습니다</div>
             : allRows.map(r => {
               const isBuy = r.type === 'buy'
+              const isReinvest = isBuy && r.source === 'reinvestment'
               const bg = isBuy ? '#eff6ff' : '#fff1f2'
               const isSameDateAsInput = r.date && ((buyDate && r.date === buyDate) || (sellDate && r.date === sellDate))
               const borderC = isSameDateAsInput ? 'var(--warning)' : (isBuy ? '#bfdbfe' : '#fecaca')
-              const badgeStyle = { fontSize: '0.65rem', padding: '0.08rem 0.38rem', borderRadius: 4, background: isBuy ? '#dbeafe' : '#fee2e2', color: isBuy ? 'var(--blue)' : 'var(--red)', fontWeight: 600 }
+              const badgeStyle = { fontSize: '0.65rem', padding: '0.08rem 0.38rem', borderRadius: 4, background: isReinvest ? '#f3e8ff' : (isBuy ? '#dbeafe' : '#fee2e2'), color: isReinvest ? '#9333ea' : (isBuy ? 'var(--blue)' : 'var(--red)'), fontWeight: 600 }
               if (editRec !== null && editRec.id !== undefined && editRec.id === r.id) {
                 return (
                   <div key={r.id} style={{ background: bg, border: `1px solid ${borderC}`, borderRadius: 7, padding: '0.45rem 0.6rem' }}>
@@ -299,7 +300,7 @@ function StockDetailPanel({ g, s, onUpdate }) {
               }
               return (
                 <div key={r.id} style={{ background: bg, border: `${isSameDateAsInput ? 2 : 1}px solid ${borderC}`, borderRadius: 7, padding: '0.38rem 0.6rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={badgeStyle}>{isBuy ? '매입' : '매도'}</span>
+                  <span style={badgeStyle}>{isReinvest ? '재투자' : (isBuy ? '매입' : '매도')}</span>
                   <span style={{ fontSize: '0.78rem', color: 'var(--ink2)', minWidth: 72 }}>{r.date || '날짜 없음'}</span>
                   <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--ink)' }}>{(r.qty || 0).toLocaleString()}주</span>
                   <span style={{ fontSize: '0.78rem', color: 'var(--ink2)', flex: 1 }}>{r.price ? sym + fmtA(r.price) : '단가 없음'}</span>
@@ -471,8 +472,8 @@ function CaptureUploadPanel({ g, lang, onSave, onClose }) {
                             <input type="checkbox" checked={r._checked} onChange={e => updateRow(r._key, '_checked', e.target.checked)} />
                           </td>
                           <td style={{ padding: '0.45rem 0.6rem', whiteSpace: 'nowrap' }}>
-                            <span style={{ display: 'inline-block', fontSize: '0.72rem', padding: '0.18rem 0.55rem', borderRadius: 20, fontWeight: 600, whiteSpace: 'nowrap', background: r.type === 'buy' ? '#eaf1ff' : '#fdeceb', color: r.type === 'buy' ? '#2f6fed' : '#e5484d' }}>
-                              {r.type === 'buy' ? '매수' : '매도'}
+                            <span style={{ display: 'inline-block', fontSize: '0.72rem', padding: '0.18rem 0.55rem', borderRadius: 20, fontWeight: 600, whiteSpace: 'nowrap', background: r.source === 'reinvestment' ? '#f3e8ff' : (r.type === 'buy' ? '#eaf1ff' : '#fdeceb'), color: r.source === 'reinvestment' ? '#9333ea' : (r.type === 'buy' ? '#2f6fed' : '#e5484d') }}>
+                              {r.source === 'reinvestment' ? '재투자' : (r.type === 'buy' ? '매수' : '매도')}
                             </span>
                             {r.new_stock && <div style={{ fontSize: '0.63rem', marginTop: 3, padding: '0.06rem 0.3rem', borderRadius: 3, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', display: 'inline-block' }}>{t(lang, 'admin.captureNewStock')}</div>}
                           </td>
@@ -649,6 +650,8 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
   }
 
   async function handleCaptureSuccess(gid, transactions) {
+    const targetGroup = groups.find(g => g.id === gid)
+    const dividendJobs = []
     const next = groups.map(g => {
       if (g.id !== gid) return g
       let stocks = [...(g.stocks || [])]
@@ -659,17 +662,32 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
           stocks.push({ id: genId(), ticker, name: tx.name || '', purchases: [], sells: [] })
           stockIdx = stocks.length - 1
         }
-        const record = { id: genId(), date: tx.date || null, qty: tx.qty, price: tx.price }
+        const isReinvest = tx.source === 'reinvestment'
+        const record = { id: genId(), date: tx.date || null, qty: tx.qty, price: tx.price, ...(isReinvest ? { source: 'reinvestment' } : {}) }
         if (tx.type === 'buy') {
           stocks[stockIdx] = { ...stocks[stockIdx], purchases: [...(stocks[stockIdx].purchases || []), record] }
         } else {
           stocks[stockIdx] = { ...stocks[stockIdx], sells: [...(stocks[stockIdx].sells || []), record] }
+        }
+        // 배당 재투자는 매수 내역 반영과 동시에 배당금 내역에도 기록 (배당금 = 수량 × 단가)
+        if (isReinvest && tx.date && tx.qty && tx.price) {
+          dividendJobs.push({
+            date: tx.date, ticker, amount: tx.qty * tx.price,
+            currency: targetGroup?.currency || 'USD',
+          })
         }
       }
       return { ...g, stocks }
     })
     setGroups(next)
     await apiFetch('/api/portfolio/groups', { method: 'POST', body: JSON.stringify({ data: next }) })
+    for (const div of dividendJobs) {
+      try {
+        await apiFetch('/api/portfolio/dividends', { method: 'POST', body: JSON.stringify(div) })
+      } catch (e) {
+        console.error('배당 재투자 내역 저장 실패:', div, e)
+      }
+    }
   }
 
   function confirmDelStock(gid, sid) { setDeleteModal({ gid, sid }) }

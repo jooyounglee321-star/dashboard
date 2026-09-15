@@ -947,17 +947,17 @@ async def parse_transactions_from_images(
         "같은 종목이 여러 행에 걸쳐 나와도 절대 합치거나 요약하지 말 것. "
         "표에 NVDY 관련 행이 3개면 JSON 객체도 3개.\n"
         "2. 추출 대상: Buy(매수), Sell(매도), **Reinvestment(배당 재투자)**. "
-        "Reinvestment는 배당금으로 추가 주식을 매수한 것이므로 type=\"buy\"로 추출 "
+        "Reinvestment는 배당금으로 추가 주식을 매수한 것이므로 type=\"reinvest\"로 추출 "
         "(예: NVDY, VTSAX 같은 고배당 ETF는 Reinvestment 행이 매우 잦으니 절대 누락 금지).\n"
         "3. 제외 대상: Dividend(배당금 현금 지급 자체), Sweep In, Sweep Out, Interest, "
         "Fee, Transfer 등 주식 수량과 무관한 행은 완전히 무시.\n"
         "   주의: 같은 날짜에 Dividend 행과 Reinvestment 행이 쌍으로 나오는 경우, "
-        "Dividend는 제외하고 Reinvestment만 buy로 추출할 것.\n"
+        "Dividend는 제외하고 Reinvestment만 type=\"reinvest\"로 추출할 것.\n"
         "4. 표에 보이는 Buy/Sell/Reinvestment 행 개수를 먼저 세고, "
         "최종 JSON 배열 원소 개수가 그 개수와 정확히 일치하도록 빠짐없이 출력.\n\n"
         "=== 출력 형식 ===\n"
         "각 항목: {\"ticker\": \"종목코드\", \"name\": \"종목명\", "
-        "\"type\": \"buy\" 또는 \"sell\", "
+        "\"type\": \"buy\" 또는 \"sell\" 또는 \"reinvest\", "
         "\"date\": \"YYYY-MM-DD\", \"qty\": 숫자, \"price\": 숫자}\n\n"
         "=== 필드별 규칙 ===\n"
         "- ticker: 티커 심볼 대문자. 한국 주식이면 6자리숫자.KS 형태(예: 005930.KS)\n"
@@ -968,7 +968,7 @@ async def parse_transactions_from_images(
         "매도(Sell) 행이 표에 -5, (5) 처럼 음수/괄호로 표기돼 있어도 절대값 5로 변환. "
         "알 수 없으면 null\n"
         "- price: 단가(소수 가능). 알 수 없으면 null\n"
-        "- type: Buy/매수/Reinvestment/재투자이면 \"buy\", Sell/매도이면 \"sell\"\n\n"
+        "- type: Buy/매수이면 \"buy\", Sell/매도이면 \"sell\", Reinvestment/재투자이면 \"reinvest\"\n\n"
         "JSON 배열만 출력. 설명 텍스트, 마크다운 코드블록(```) 금지."
     )
 
@@ -1023,7 +1023,11 @@ async def parse_transactions_from_images(
         ticker = (tx.get("ticker") or "").upper().strip()
         if not ticker:
             continue
-        tx_type = (tx.get("type") or "buy").lower()
+        raw_type = (tx.get("type") or "buy").lower()
+        # 배당 재투자(reinvest)는 보유 수량 관점에서는 매수와 동일하게 처리하되
+        # source 플래그로 일반 매수와 구분해 배당 내역에도 함께 반영한다
+        is_reinvest = raw_type == "reinvest"
+        tx_type = "buy" if is_reinvest else raw_type
         date_str = _normalize_date_str(tx.get("date")) or ""
         # 증권사 명세서는 매도 수량을 음수(-5)로 표기하는 경우가 많음 —
         # buy/sell은 type 필드로 이미 구분되므로 qty/price는 항상 절대값으로 저장
@@ -1040,6 +1044,7 @@ async def parse_transactions_from_images(
             "ticker": ticker,
             "name": tx.get("name") or "",
             "type": tx_type,
+            "source": "reinvestment" if is_reinvest else None,
             "date": date_str or None,
             "qty": qty,
             "price": price,
@@ -1091,7 +1096,7 @@ def add_dividend(
     row = DividendHistory(
         user_id  = current_user.id,
         date     = body["date"],
-        ticker   = body["ticker"].upper(),
+        ticker   = body["ticker"].strip().upper(),
         amount   = body["amount"],
         currency = body.get("currency", "USD"),
     )

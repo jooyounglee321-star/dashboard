@@ -4,6 +4,45 @@
 
 ---
 
+## 2026-09-15 (3차)
+
+### 기능 추가 — 배당 재투자(Reinvestment) 매수를 일반 매수와 구분해서 표시 + 배당 내역 자동 기록
+
+#### 배경
+직전(2차) 수정으로 AI 캡처가 Reinvestment 행을 매수로 인식은 하게 됐지만, 저장되면
+그냥 "매입"으로만 보여서 일반 현금 매수와 구분이 안 됐음. 또한 재투자로 산 주식은
+경제적으로 배당금 수령 + 그 돈으로 재매수 두 가지 이벤트가 겹친 거라, 배당금 내역
+(dividends)에도 반영이 안 되고 있었음.
+
+#### 수정
+- `routers/portfolio.py`
+  - AI 캡처 프롬프트: Reinvestment 행을 이제 `type: "reinvest"`로 별도 추출하도록 변경
+    (일반 Buy/Sell과 구분되는 3번째 타입)
+  - `/api/portfolio/parse-transactions`: `type: "reinvest"` 행은 보유수량 계산 관점에서
+    `type: "buy"`로 변환해 반환하되, `source: "reinvestment"` 플래그를 추가해 프론트에서
+    구분 가능하게 함
+  - `/api/portfolio/dividends`(POST): ticker에 `.strip()` 누락돼 있던 것 추가 (다른
+    엔드포인트들과 일관성 맞춤)
+- `frontend/src/pages/index/StockSettingsModal.jsx`
+  - AI 캡처 검토 화면(`CaptureUploadPanel`)에서 재투자 행은 "매수" 대신 보라색 "재투자"
+    배지로 표시
+  - `handleCaptureSuccess`: 재투자 태그가 있는 거래는 매수 내역(purchases)에
+    `source: "reinvestment"`로 저장하는 동시에, `POST /api/portfolio/dividends`를
+    호출해 배당금 내역에도 자동 기록 (배당금 금액 = 수량 × 단가)
+  - 거래 내역 목록(`StockDetailPanel`)에서도 재투자로 저장된 매수 건은 "매입" 대신
+    "재투자" 배지로 구분 표시
+
+#### 확인
+- `npm run build` 성공
+- `pytest tests/` 50개 통과
+- grep으로 `reinvest`/`source` 키워드 저장·렌더링 로직 존재 확인
+
+#### 참고
+- 기존에 이미 저장된 재투자 매수 건(예: NVDY 과거분)은 소급으로 배지/배당내역이
+  붙지 않음. 앞으로 새로 AI 캡처하는 건부터 적용됨.
+
+---
+
 ## 2026-09-15 (2차)
 
 ### 버그 수정 — AI 캡처가 배당 재투자(Reinvestment) 매수를 전부 누락시키던 문제
