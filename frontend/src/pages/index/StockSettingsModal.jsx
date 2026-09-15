@@ -106,7 +106,7 @@ function AddStockRow({ gid, onAdd }) {
     search(q, results => {
       setDdResults(results)
       if (!isKorean(q) && !isNumeric(q)) {
-        const exact = results.find(r => r.ticker.toUpperCase() === q.toUpperCase())
+        const exact = results.find(r => r.ticker.toUpperCase() === q.trim().toUpperCase())
         if (exact && !name) setName(exact.name)
       }
     })
@@ -360,6 +360,8 @@ function CaptureUploadPanel({ g, lang, onSave, onClose }) {
   function updateRow(key, field, value) {
     // qty/price는 매수·매도 무관 항상 양수로 저장 (type 필드로 이미 구분됨)
     if (field === 'qty' || field === 'price') value = Math.abs(value)
+    // ticker 앞뒤 공백은 같은 종목이 다른 종목으로 중복 등록되는 원인이 되므로 제거
+    if (field === 'ticker') value = value.trim()
     setRows(prev => prev.map(r => r._key === key ? { ...r, [field]: value } : r))
   }
 
@@ -590,11 +592,11 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
     saveGroupsToDB(groups.map(g => g.id === gid ? { ...g, [field]: value } : g))
   }
   function addStock(gid, ticker, name) {
-    if (!ticker) { showToast('티커 심볼을 입력해주세요', 'err'); return }
+    if (!ticker || !ticker.trim()) { showToast('티커 심볼을 입력해주세요', 'err'); return }
     const g = groups.find(g => g.id === gid)
     if (!g) return
-    const upper = ticker.toUpperCase()
-    if (g.stocks.some(s => !s.is_deleted && s.ticker.toUpperCase() === upper)) {
+    const upper = ticker.trim().toUpperCase()
+    if (g.stocks.some(s => !s.is_deleted && (s.ticker || '').trim().toUpperCase() === upper)) {
       showToast(`${upper} 은(는) 이미 이 그룹에 있습니다`, 'err'); return
     }
     saveGroupsToDB(groups.map(gr => gr.id === gid
@@ -651,8 +653,8 @@ export default function StockSettingsModal({ isOpen, onClose, lang = 'ko', embed
       if (g.id !== gid) return g
       let stocks = [...(g.stocks || [])]
       for (const tx of transactions) {
-        const ticker = tx.ticker.toUpperCase()
-        let stockIdx = stocks.findIndex(s => !s.is_deleted && s.ticker.toUpperCase() === ticker)
+        const ticker = tx.ticker.trim().toUpperCase()
+        let stockIdx = stocks.findIndex(s => !s.is_deleted && (s.ticker || '').trim().toUpperCase() === ticker)
         if (stockIdx === -1) {
           stocks.push({ id: genId(), ticker, name: tx.name || '', purchases: [], sells: [] })
           stockIdx = stocks.length - 1

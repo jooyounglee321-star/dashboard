@@ -926,7 +926,7 @@ async def parse_transactions_from_images(
     for st in target_group.get("stocks", []):
         if st.get("is_deleted"):
             continue
-        ticker_up = (st.get("ticker") or "").upper()
+        ticker_up = (st.get("ticker") or "").strip().upper()
         existing_tickers.add(ticker_up)
         for p in st.get("purchases") or []:
             existing_keys.add((
